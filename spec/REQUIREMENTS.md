@@ -6,7 +6,7 @@ This document records the business requirements agreed so far. It describes beha
 ## 1. Board and Chapter
 
 - **R1.1** The board is a single page showing an event-modeling canvas. Time flows left to right. The board holds one or more Chapters (section 1a).
-- **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements. (Formerly "timeline".)
+- **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
 - **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart"). Its elements carry their names as titles.
