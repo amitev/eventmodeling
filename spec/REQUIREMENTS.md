@@ -21,7 +21,8 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Moving the Chapter
 
-- **R1.10** The Chapter can be moved on the canvas. A **Chapter** handle sits above the slices; dragging it moves the lanes, slices and elements together as one unit.
+- **R1.10** The Chapter can be moved on the canvas, in three ways: by dragging the **Chapter** handle above the slices, by dragging any of its **lane headers** (the vertical label column), or by dragging any of its **slice headers**. Whichever is used, the lanes, slices and elements move together as one unit, the Chapter snaps to the 20px grid, and the Chapter becomes the active one (R1a.4). A header that is only clicked or double-clicked (to rename it) does not move the Chapter, and neither does the lane **×** button or a name that is being edited.
+- **R1.10a** Moving a Chapter never moves the view: the canvas stays where it is while a Chapter is dragged, whichever way it is moved (R1.10), including when the Chapter is dragged towards the edge of the screen. The user pans the view separately, by dragging empty canvas.
 - **R1.11** Moving the Chapter does not change anything inside it: the relative positions of lanes, slices and elements stay the same, and so do the connections.
 - **R1.12** A Chapter's position is saved with the board and restored on reload. A Chapter cannot be deleted with the keyboard; it is removed with its own button (R1a.6).
 - **R1.13** Elements and slices keep their positions relative to the Chapter, so the layout rules in this document (slice layout, centring, margins) apply regardless of where the Chapter is on the canvas. An element dropped from the toolbar is placed where it is released, whatever the Chapter position.
@@ -49,7 +50,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
 - **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom of the active Chapter (R1a.4) with the name "New Lane" and the current Chapter width.
 - **R2.4** Each lane has a reserved label zone, a narrow 48px strip at its left edge, that holds the lane name and the **×** button (the button at the top). The lane name is written vertically, reading from bottom to top; a name that does not fit is cut off with an ellipsis, and the full name shows when hovering over it. Slices can never enter this zone (see R5.7).
-- **R2.4a** The user can rename a lane by double-clicking its name. While renaming, the name is edited in a normal horizontal text field shown over the lane; Enter, Esc and clicking away save it.
+- **R2.4a** The user can rename a lane by double-clicking its name. The name is edited **in place**: the vertical title itself becomes editable text, keeping its orientation, with a caret and a highlighted outline, and all of it selected to start. Enter, Esc and clicking away save it. The name is a single line, and an empty name is ignored (the previous name is kept).
 - **R2.5** The user can remove a lane with its **×** button.
   - Lanes below it move up to close the gap.
   - Notes in the removed lane are deleted, together with the connections attached to them.
@@ -107,7 +108,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices are laid out automatically as one contiguous run. The first slice starts at the beginning of the slice area, right after the lane label zone (R2.4), and each following slice starts exactly where the previous one ends. There are no gaps and slices never overlap.
-- **R5.8** The order of slices is fixed. Slices cannot be dragged, and have no left resize handle. New slices are always appended at the end.
+- **R5.8** The order of slices is fixed. Slices cannot be dragged to a different position within the Chapter, and have no left resize handle. Dragging a slice header moves the whole Chapter instead (R1.10). New slices are always appended at the end.
 - **R5.9** The user resizes a slice by dragging its right edge, with a minimum width of 120px. There are no resize buttons.
 - **R5.10** Resizing a slice moves all following slices with it, so they stay attached. The preceding slices do not move.
 - **R5.11** Deleting a slice closes the gap: the following slices move left, and the next slice becomes first if the first was deleted.

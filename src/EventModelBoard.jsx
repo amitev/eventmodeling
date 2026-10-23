@@ -272,7 +272,52 @@ function useHorizontalDrag() {
   };
 }
 
+// Lanes and slices are children of a Chapter, so React Flow cannot drag the Chapter
+// from them. This returns a pointer-down handler that moves the Chapter that owns the
+// node `nodeId`: snapped to the grid, one undo step, and the Chapter becomes the active
+// one. A press that does not move (a click or double-click) is left alone, so renaming
+// still works. `skip` lets the caller veto a press (e.g. while editing).
+function useChapterDrag(nodeId, skip) {
+  const { setNodes, getNodes } = useReactFlow();
+  const zoom = useStore((s) => s.transform[2]);
+  const history = useContext(HistoryContext);
+  const { activate } = useContext(BoardActions);
+  return (e) => {
+    if (e.button !== 0 || e.target.closest('button, input') || skip?.()) return;
+    const chapterId = getNodes().find((n) => n.id === nodeId)?.parentNode;
+    const chapter = getNodes().find((n) => n.id === chapterId);
+    if (!chapter) return;
+    const start = { ...chapter.position };
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let started = false;
+    const move = (ev) => {
+      if (!started) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;
+        started = true;
+        history.begin();
+        activate(chapterId);
+      }
+      const x = snap(start.x + (ev.clientX - sx) / zoom);
+      const y = snap(start.y + (ev.clientY - sy) / zoom);
+      setNodes((ns) =>
+        ns.map((n) => (n.id === chapterId ? { ...n, position: { x, y } } : n))
+      );
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (started) history.end();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+}
+
 const BoardActions = createContext({
+  activate: () => {},
   removeLane: () => {},
   removeChapter: () => {},
   activeId: null,
@@ -308,45 +353,66 @@ function LaneNode({ id, data }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    if (editing) ref.current?.select();
+    const el = ref.current;
+    if (!editing || !el) return;
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
   }, [editing]);
 
-  const rename = (label) => {
+  const rename = (text) => {
     setEditing(false);
+    const label = text.replace(/\s+/g, ' ').trim();
+    if (!label) return; // keep the old name rather than leaving the lane unnamed
     setNodes((ns) =>
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n))
     );
   };
+
+  // Dragging a lane header moves the whole Chapter, like its handle does.
+  const startChapterDrag = useChapterDrag(id, () => editing);
 
   return (
     <div
       className={`lane${data.alt ? ' alt' : ''}${edges}`}
       style={{ width: data.width ?? LANE_WIDTH, height: data.height }}
     >
-      <div className="lane-header nodrag nopan" style={{ width: LABEL_ZONE }}>
+      <div
+        className="lane-header nodrag nopan"
+        style={{ width: LABEL_ZONE }}
+        onPointerDown={startChapterDrag}
+      >
         {canRemove && (
           <button className="lane-remove" title="Remove lane" onClick={() => removeLane(id)}>
             ×
           </button>
         )}
-        {editing ? (
-          <input
-            ref={ref}
-            defaultValue={data.label}
-            onBlur={(e) => rename(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
-            }}
-          />
-        ) : (
-          <span
-            className="lane-label"
-            title={`${data.label} (double-click to rename)`}
-            onDoubleClick={() => setEditing(true)}
-          >
-            {data.label}
-          </span>
-        )}
+        {/* Edited in place: the same rotated element becomes editable text. */}
+        <span
+          ref={ref}
+          className={`lane-label${editing ? ' editing' : ''}`}
+          title={editing ? undefined : `${data.label} (double-click to rename, drag to move the Chapter)`}
+          contentEditable={editing ? 'plaintext-only' : undefined}
+          suppressContentEditableWarning
+          spellCheck={false}
+          onDoubleClick={() => setEditing(true)}
+          onBlur={editing ? (e) => rename(e.currentTarget.textContent) : undefined}
+          onKeyDown={
+            editing
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }
+              : undefined
+          }
+        >
+          {data.label}
+        </span>
       </div>
     </div>
   );
@@ -493,6 +559,10 @@ function SliceNode({ id, data, selected }) {
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
     );
 
+  // Dragging a slice header moves the whole Chapter (slices themselves never move on
+  // their own: their order and position come from the layout).
+  const startChapterDrag = useChapterDrag(id, () => editing);
+
   // Each drag is computed from a snapshot taken at pointer-down, so the following
   // slices, their elements and a grown Chapter follow the edge both ways.
   const resizeRight = (e) => {
@@ -519,7 +589,12 @@ function SliceNode({ id, data, selected }) {
       className={`slice ${selected ? 'selected' : ''}`}
       style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
     >
-      <div className="slice-header" onDoubleClick={() => setEditing(true)}>
+      <div
+        className="slice-header nodrag nopan"
+        title="Drag to move the Chapter, double-click to rename"
+        onPointerDown={startChapterDrag}
+        onDoubleClick={() => setEditing(true)}
+      >
         {editing ? (
           <input
             ref={ref}
@@ -585,7 +660,7 @@ function ChapterNode({ id, data }) {
       <Handle type="target" position={Position.Left} className="chapter-port" />
       <Handle type="source" position={Position.Right} className="chapter-port" />
       <div
-        className={`chapter-handle ${activeId === id ? 'active' : ''}`}
+        className={`chapter-handle nopan ${activeId === id ? 'active' : ''}`}
         title="Drag to move the Chapter"
       >
         {editing ? (
@@ -1005,7 +1080,13 @@ function Board() {
   );
 
   const boardActions = useMemo(
-    () => ({ removeLane, removeChapter, activeId: activeChapterId, chapterCount: chapters.length }),
+    () => ({
+      activate: setActiveId,
+      removeLane,
+      removeChapter,
+      activeId: activeChapterId,
+      chapterCount: chapters.length,
+    }),
     [removeLane, removeChapter, activeChapterId, chapters.length]
   );
 
@@ -1357,6 +1438,7 @@ function Board() {
           defaultViewport={{ x: 20, y: 40, zoom: 0.9 }}
           minZoom={0.2}
           snapToGrid
+          autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
           deleteKeyCode={['Backspace', 'Delete']}
         >
