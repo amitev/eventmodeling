@@ -14,9 +14,10 @@ import ReactFlow, {
   useStore,
 } from 'reactflow';
 
-// Event modeling: time flows left to right across swimlanes. Everything on the board
-// (lanes, slices, elements) lives inside one Chapter node, so moving the Chapter
-// moves it all. Child positions are relative to the Chapter.
+// Event modeling: time flows left to right across swimlanes. The board holds one or
+// more Chapters. Each Chapter owns its lanes, slices and elements as child nodes
+// (positions relative to the Chapter), so moving a Chapter moves all of it. Chapters
+// are linked with arrows from the right side of one to the left side of another.
 const LANE_WIDTH = 3200;
 const LABEL_ZONE = 180; // reserved strip at the left of each lane; slices stay out of it
 const LANES = [
@@ -25,7 +26,7 @@ const LANES = [
   { id: 'lane-evt', label: 'Events', y: 440, height: 220 },
 ];
 
-const CHAPTER_ID = 'chapter';
+const CHAPTER_ID = 'chapter'; // id of the first Chapter
 const SLICE_Y = -40;
 const SLICE_HEADER = 40;
 const LANE_HEIGHT = 220;
@@ -48,8 +49,15 @@ const snap = (v) => Math.round(v / GRID) * GRID;
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
 const SLICE_MIN_X = LABEL_ZONE;
-const slices = (nodes) =>
-  nodes.filter((n) => n.type === 'slice').sort((a, b) => a.position.x - b.position.x);
+const slices = (nodes, chapterId) =>
+  nodes
+    .filter((n) => n.type === 'slice' && (chapterId === undefined || n.parentNode === chapterId))
+    .sort((a, b) => a.position.x - b.position.x);
+const lanesOf = (nodes, chapterId) =>
+  nodes
+    .filter((n) => n.type === 'lane' && n.parentNode === chapterId)
+    .sort((a, b) => a.position.y - b.position.y);
+const chaptersOf = (nodes) => nodes.filter((n) => n.type === 'chapter');
 
 const setSliceWidth = (nodes, id, width) =>
   nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, width } } : n));
@@ -63,7 +71,10 @@ function membersOf(nodes) {
   for (const n of nodes) {
     if (n.type !== 'sticky') continue;
     const sl = ss.find(
-      (x) => centreX(n) >= x.position.x && centreX(n) < x.position.x + x.data.width
+      (x) =>
+        x.parentNode === n.parentNode &&
+        centreX(n) >= x.position.x &&
+        centreX(n) < x.position.x + x.data.width
     );
     if (sl) map.get(sl.id).push(n);
   }
@@ -77,15 +88,18 @@ function membersOf(nodes) {
 // `ref` is the board before any width change, so membership is not skewed by a
 // slice that is mid-resize. Returns the same array when nothing changes.
 function layoutSlices(nodes, ref = nodes) {
-  const ordered = slices(nodes);
-  const refX = new Map(slices(ref).map((n) => [n.id, n.position.x]));
   const newX = new Map();
-  let cursor = SLICE_MIN_X;
-  for (const n of ordered) {
-    newX.set(n.id, cursor);
-    cursor += n.data.width;
+  const widths = new Map(); // chapter id -> width
+  for (const c of chaptersOf(nodes)) {
+    let cursor = SLICE_MIN_X;
+    const ordered = slices(nodes, c.id);
+    for (const n of ordered) {
+      newX.set(n.id, cursor);
+      cursor += n.data.width;
+    }
+    widths.set(c.id, ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH);
   }
-  const chapterWidth = ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH;
+  const refX = new Map(slices(ref).map((n) => [n.id, n.position.x]));
   const shift = new Map();
   for (const [sid, els] of membersOf(ref)) {
     const d = (newX.get(sid) ?? refX.get(sid)) - refX.get(sid);
@@ -93,13 +107,13 @@ function layoutSlices(nodes, ref = nodes) {
   }
   let changed = false;
   const next = nodes.map((n) => {
-    if (n.type === 'slice' && newX.get(n.id) !== n.position.x) {
+    if (n.type === 'slice' && newX.has(n.id) && newX.get(n.id) !== n.position.x) {
       changed = true;
       return { ...n, position: { ...n.position, x: newX.get(n.id) } };
     }
-    if (n.type === 'lane' && n.data.width !== chapterWidth) {
+    if (n.type === 'lane' && widths.has(n.parentNode) && n.data.width !== widths.get(n.parentNode)) {
       changed = true;
-      return { ...n, data: { ...n.data, width: chapterWidth } };
+      return { ...n, data: { ...n.data, width: widths.get(n.parentNode) } };
     }
     if (shift.has(n.id)) {
       changed = true;
@@ -125,6 +139,7 @@ function settleStickies(nodes, only) {
     let best = null;
     let bestOverlap = 0;
     for (const sl of ss) {
+      if (sl.parentNode !== n.parentNode) continue; // only slices of the element's own Chapter
       const overlap =
         Math.min(l + w, sl.position.x + sl.data.width) - Math.max(l, sl.position.x);
       if (overlap > bestOverlap) {
@@ -163,13 +178,58 @@ function centerStickies(nodes, only) {
     const h = n.height ?? STICKY_H;
     const mid = n.position.y + h / 2;
     const lane = lanes.find(
-      (l) => mid >= l.position.y && mid < l.position.y + l.data.height
+      (l) =>
+        l.parentNode === n.parentNode &&
+        mid >= l.position.y &&
+        mid < l.position.y + l.data.height
     );
     if (!lane) return n;
     const y = lane.position.y + Math.max(0, (lane.data.height - h) / 2);
     if (y === n.position.y) return n;
     changed = true;
     return { ...n, position: { ...n.position, y } };
+  });
+  return changed ? next : nodes;
+}
+
+// The lane area of a Chapter in canvas coordinates (its slices sit just above it).
+function chapterBox(nodes, c) {
+  let width = 0;
+  let height = 0;
+  for (const l of nodes) {
+    if (l.type === 'lane' && l.parentNode === c.id) {
+      width = Math.max(width, l.data.width ?? LANE_WIDTH);
+      height += l.data.height;
+    }
+  }
+  return { x: c.position.x, y: c.position.y, width, height };
+}
+
+const boxContains = (b, x, y) => x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+
+// An element dragged so that its centre is over another Chapter becomes part of that
+// Chapter (its position is converted to the new Chapter's coordinates). `only` limits
+// it to those ids. Elements dropped outside every Chapter stay where they were.
+function adoptStickies(nodes, only) {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const boxes = chaptersOf(nodes).map((c) => ({ c, box: chapterBox(nodes, c) }));
+  let changed = false;
+  const next = nodes.map((n) => {
+    if (n.type !== 'sticky' || !only.has(n.id)) return n;
+    const parent = byId.get(n.parentNode);
+    if (!parent) return n;
+    const ax = parent.position.x + n.position.x;
+    const ay = parent.position.y + n.position.y;
+    const cx = ax + (n.width ?? STICKY_W) / 2;
+    const cy = ay + (n.height ?? STICKY_H) / 2;
+    const target = boxes.find(({ box }) => boxContains(box, cx, cy));
+    if (!target || target.c.id === n.parentNode) return n;
+    changed = true;
+    return {
+      ...n,
+      parentNode: target.c.id,
+      position: { x: ax - target.c.position.x, y: ay - target.c.position.y },
+    };
   });
   return changed ? next : nodes;
 }
@@ -212,11 +272,25 @@ function useHorizontalDrag() {
   };
 }
 
-const LaneActions = createContext({ removeLane: () => {}, canRemove: false });
+const BoardActions = createContext({
+  removeLane: () => {},
+  removeChapter: () => {},
+  activeId: null,
+  chapterCount: 1,
+});
 
 function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeLane, canRemove } = useContext(LaneActions);
+  const { removeLane } = useContext(BoardActions);
+  // The last lane of a Chapter cannot be removed.
+  const canRemove = useStore((s) => {
+    const parent = s.nodeInternals.get(id)?.parentNode;
+    let count = 0;
+    s.nodeInternals.forEach((n) => {
+      if (n.type === 'lane' && n.parentNode === parent) count++;
+    });
+    return count > 1;
+  });
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
 
@@ -362,9 +436,10 @@ function SliceNode({ id, data, selected }) {
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
   const lanesHeight = useStore((s) => {
+    const parent = s.nodeInternals.get(id)?.parentNode;
     let sum = 0;
     s.nodeInternals.forEach((n) => {
-      if (n.type === 'lane') sum += n.data.height;
+      if (n.type === 'lane' && n.parentNode === parent) sum += n.data.height;
     });
     return sum;
   });
@@ -431,14 +506,70 @@ function SliceNode({ id, data, selected }) {
   );
 }
 
-// The Chapter itself is invisible except for a handle above the slices; dragging
-// the handle moves the whole Chapter. (The 1px box keeps React Flow from treating
-// the node as unmeasured and hiding it.)
-function ChapterNode() {
+// A Chapter node is a transparent box over its lanes, with a handle above the slices
+// (drag it to move the Chapter, double-click to rename) and two connection ports:
+// incoming on the left side, outgoing on the right side.
+function ChapterNode({ id, data }) {
+  const { setNodes } = useReactFlow();
+  const { removeChapter, activeId, chapterCount } = useContext(BoardActions);
+  const [editing, setEditing] = useState(false);
+  const ref = useRef(null);
+  const width = useStore((s) => {
+    let w = 0;
+    s.nodeInternals.forEach((n) => {
+      if (n.type === 'lane' && n.parentNode === id) w = Math.max(w, n.data.width ?? LANE_WIDTH);
+    });
+    return w || 1;
+  });
+  const height = useStore((s) => {
+    let h = 0;
+    s.nodeInternals.forEach((n) => {
+      if (n.type === 'lane' && n.parentNode === id) h += n.data.height;
+    });
+    return h || 1;
+  });
+
+  useEffect(() => {
+    if (editing) ref.current?.select();
+  }, [editing]);
+
+  const rename = (name) => {
+    setEditing(false);
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, name } } : n))
+    );
+  };
+
   return (
-    <div style={{ width: 1, height: 1 }}>
-      <div className="chapter-handle" title="Drag to move the Chapter">
-        ⠿ Chapter
+    <div style={{ width, height }}>
+      <Handle type="target" position={Position.Left} className="chapter-port" />
+      <Handle type="source" position={Position.Right} className="chapter-port" />
+      <div
+        className={`chapter-handle ${activeId === id ? 'active' : ''}`}
+        title="Drag to move the Chapter"
+      >
+        {editing ? (
+          <input
+            ref={ref}
+            className="nodrag"
+            defaultValue={data.name}
+            onBlur={(e) => rename(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+            }}
+          />
+        ) : (
+          <span onDoubleClick={() => setEditing(true)}>⠿ {data.name}</span>
+        )}
+        {chapterCount > 1 && (
+          <button
+            className="chapter-remove nodrag"
+            title="Remove this Chapter"
+            onClick={() => removeChapter(id)}
+          >
+            ×
+          </button>
+        )}
       </div>
     </div>
   );
@@ -446,41 +577,51 @@ function ChapterNode() {
 
 const nodeTypes = { lane: LaneNode, sticky: StickyNode, slice: SliceNode, chapter: ChapterNode };
 
-const makeChapter = (x = 0, y = 0) => ({
-  id: CHAPTER_ID,
+const chapterDefaults = {
+  dragHandle: '.chapter-handle',
+  deletable: false, // removed with the × button, never with the keyboard
+  connectable: true,
+  // Only the handle and the ports take the mouse; lanes and elements below stay usable.
+  style: { pointerEvents: 'none' },
+};
+
+const makeChapter = (id = CHAPTER_ID, x = 0, y = 0, name = 'Chapter 1') => ({
+  id,
   type: 'chapter',
   position: { x, y },
-  data: {},
-  dragHandle: '.chapter-handle',
-  deletable: false,
-  connectable: false,
+  data: { name },
+  ...chapterDefaults,
 });
 
-const makeSlice = (id, x, width, name) => ({
+const makeSlice = (id, x, width, name, chapterId = CHAPTER_ID) => ({
   id,
   type: 'slice',
   position: { x, y: SLICE_Y },
   data: { name, width },
-  parentNode: CHAPTER_ID,
+  parentNode: chapterId,
   draggable: false,
   zIndex: -1,
   // Only the header takes pointer events, so notes under the band stay usable.
   style: { pointerEvents: 'none' },
 });
 
-const laneNodes = LANES.map((l, i) => ({
-  id: l.id,
+const makeLane = (id, chapterId, label, y, alt, width) => ({
+  id,
   type: 'lane',
-  position: { x: 0, y: l.y },
-  parentNode: CHAPTER_ID,
-  data: { label: l.label, height: l.height, alt: i % 2 === 1 },
+  position: { x: 0, y },
+  parentNode: chapterId,
+  data: { label, height: LANE_HEIGHT, width, alt },
   draggable: false,
   selectable: false,
   connectable: false,
   deletable: false,
   focusable: false,
   zIndex: -1,
-}));
+});
+
+const laneNodes = LANES.map((l, i) =>
+  makeLane(l.id, CHAPTER_ID, l.label, l.y, i % 2 === 1, LANE_WIDTH)
+);
 
 const sticky = (id, kind, col, text) => ({
   id,
@@ -507,6 +648,12 @@ const edgeDefaults = {
   style: { strokeWidth: 2 },
 };
 
+// Arrows between Chapters are heavier and darker than arrows between elements.
+const chapterEdgeDefaults = {
+  markerEnd: { type: MarkerType.ArrowClosed, color: '#5b5b6b' },
+  style: { strokeWidth: 3, stroke: '#5b5b6b' },
+};
+
 const initialEdges = [
   { id: 'e1', source: 'n1', target: 'n2' },
   { id: 'e2', source: 'n2', target: 'n3' },
@@ -531,6 +678,17 @@ function load() {
           ...saved.nodes.map((n) => ({ ...n, parentNode: CHAPTER_ID })),
         ];
       }
+      // Every Chapter gets a name, and picks up the current defaults of the node.
+      let chapterNo = 0;
+      saved.nodes = saved.nodes.map((nd) => {
+        if (nd.type !== 'chapter') return nd;
+        chapterNo += 1;
+        return {
+          ...nd,
+          ...chapterDefaults,
+          data: { ...nd.data, name: nd.data?.name ?? `Chapter ${chapterNo}` },
+        };
+      });
       saved.nodes = normalize(saved.nodes);
       return saved;
     }
@@ -549,7 +707,17 @@ function Board() {
     saved ? saved.edges : initialEdges
   );
   const { screenToFlowPosition, getNodes } = useReactFlow();
+  const canvasRef = useRef(null);
   const counter = useRef(Date.now());
+
+  // Toolbar buttons that add things (elements, slices, lanes) act on the active Chapter:
+  // the one last clicked or dragged, or the first one.
+  const [activeId, setActiveId] = useState(null);
+  const chapters = nodes.filter((n) => n.type === 'chapter');
+  const active = chapters.find((c) => c.id === activeId) ?? chapters[0];
+  const activeChapterId = active?.id;
+  const focusChapter = (node) =>
+    setActiveId(node.type === 'chapter' ? node.id : node.parentNode ?? null);
 
   useEffect(() => {
     try {
@@ -679,7 +847,8 @@ function Board() {
       onNodesChange(kept);
       if (sliceRemoved) setNodes((ns) => layoutSlices(ns));
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
-      if (kept.some((c) => c.type === 'dimensions')) {
+      const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
+      if (kept.some((c) => c.type === 'dimensions' && stickyIds.has(c.id))) {
         silentAt.current = performance.now();
         setNodes((ns) => centerStickies(settleStickies(ns)));
       }
@@ -688,48 +857,43 @@ function Board() {
   );
 
   const addSlice = () => {
+    if (!activeChapterId) return;
     const id = `slice-${counter.current++}`;
-    const end = nodes
-      .filter((n) => n.type === 'slice')
-      .reduce((max, n) => Math.max(max, n.position.x + n.data.width), SLICE_MIN_X);
-    // (end is the right edge of the last slice; layout then widens the Chapter if needed)
-    setNodes((ns) => layoutSlices([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice')]));
+    setNodes((ns) => {
+      // (end is the right edge of the last slice; layout then widens the Chapter if needed)
+      const end = slices(ns, activeChapterId).reduce(
+        (max, n) => Math.max(max, n.position.x + n.data.width),
+        SLICE_MIN_X
+      );
+      return layoutSlices([
+        ...ns,
+        makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId),
+      ]);
+    });
   };
 
-  const lanes = nodes
-    .filter((n) => n.type === 'lane')
-    .sort((a, b) => a.position.y - b.position.y);
-
   const addLane = () => {
-    const y = lanes.reduce((sum, l) => sum + l.data.height, 0);
+    if (!activeChapterId) return;
     const id = `lane-${counter.current++}`;
-    setNodes((ns) => [
-      ...ns,
-      {
-        ...laneNodes[0],
-        id,
-        position: { x: 0, y },
-        data: {
-          label: 'New Lane',
-          height: LANE_HEIGHT,
-          width: lanes[0]?.data.width ?? LANE_WIDTH,
-          alt: lanes.length % 2 === 1,
-        },
-      },
-    ]);
+    setNodes((ns) => {
+      const ls = lanesOf(ns, activeChapterId);
+      const y = ls.reduce((sum, l) => sum + l.data.height, 0);
+      const width = ls[0]?.data.width ?? LANE_WIDTH;
+      return [...ns, makeLane(id, activeChapterId, 'New Lane', y, ls.length % 2 === 1, width)];
+    });
   };
 
   const removeLane = useCallback(
     (laneId) => {
-      const ordered = nodes
-        .filter((n) => n.type === 'lane')
-        .sort((a, b) => a.position.y - b.position.y);
-      const lane = ordered.find((l) => l.id === laneId);
-      if (!lane || ordered.length <= 1) return;
+      const lane = nodes.find((n) => n.id === laneId);
+      if (!lane) return;
+      const chapterId = lane.parentNode;
+      if (lanesOf(nodes, chapterId).length <= 1) return;
       const top = lane.position.y;
       const bottom = top + lane.data.height;
+      const mine = (n) => n.parentNode === chapterId;
       const inLane = (n) =>
-        n.type === 'sticky' && n.position.y >= top && n.position.y < bottom;
+        n.type === 'sticky' && mine(n) && n.position.y >= top && n.position.y < bottom;
       const doomed = nodes.filter(inLane);
       if (
         doomed.length &&
@@ -741,74 +905,126 @@ function Board() {
       setNodes(
         nodes
           .filter((n) => !gone.has(n.id))
-          .map((n) => {
-            const shifted =
-              (n.type === 'sticky' || n.type === 'lane') && n.position.y >= bottom
-                ? { ...n, position: { ...n.position, y: n.position.y - lane.data.height } }
-                : n;
-            return shifted;
-          })
-          .map((n) => {
-            if (n.type !== 'lane') return n;
-            return { ...n, data: { ...n.data, alt: laneIndex++ % 2 === 1 } };
-          })
+          .map((n) =>
+            mine(n) && (n.type === 'sticky' || n.type === 'lane') && n.position.y >= bottom
+              ? { ...n, position: { ...n.position, y: n.position.y - lane.data.height } }
+              : n
+          )
+          .map((n) =>
+            n.type === 'lane' && mine(n)
+              ? { ...n, data: { ...n.data, alt: laneIndex++ % 2 === 1 } }
+              : n
+          )
       );
       setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
     },
     [nodes, setNodes, setEdges]
   );
 
-  const laneActions = useMemo(
-    () => ({ removeLane, canRemove: lanes.length > 1 }),
-    [removeLane, lanes.length]
+  // A new Chapter starts empty (default lanes, no slices) to the right of the others,
+  // and the view pans to it.
+  const addChapter = () => {
+    const id = `chapter-${counter.current++}`;
+    const laneIds = LANES.map(() => `lane-${counter.current++}`);
+    const sliceId = `slice-${counter.current++}`;
+    const width = SLICE_MIN_X + DEFAULT_SLICE_WIDTH;
+    // Centre the new Chapter on the middle of what is currently visible.
+    const box = canvasRef.current?.getBoundingClientRect();
+    const mid = box
+      ? screenToFlowPosition({ x: box.left + box.width / 2, y: box.top + box.height / 2 })
+      : { x: width / 2, y: (LANES.length * LANE_HEIGHT) / 2 };
+    const x = snap(mid.x - width / 2);
+    const y = snap(mid.y - (LANES.length * LANE_HEIGHT) / 2);
+    setNodes((ns) => [
+      ...ns,
+      makeChapter(id, x, y, `Chapter ${chapters.length + 1}`),
+      ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, i % 2 === 1, width)),
+      makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
+    ]);
+    setActiveId(id);
+  };
+
+  const removeChapter = useCallback(
+    (chapterId) => {
+      if (chaptersOf(nodes).length <= 1) return;
+      const kids = nodes.filter((n) => n.parentNode === chapterId);
+      const sliceCount = kids.filter((n) => n.type === 'slice').length;
+      const elementCount = kids.filter((n) => n.type === 'sticky').length;
+      if (
+        (sliceCount || elementCount) &&
+        !window.confirm(
+          `Remove this Chapter with its ${sliceCount} slice(s) and ${elementCount} element(s)?`
+        )
+      )
+        return;
+      const gone = new Set([chapterId, ...kids.map((n) => n.id)]);
+      setNodes(nodes.filter((n) => !gone.has(n.id)));
+      setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+    },
+    [nodes, setNodes, setEdges]
   );
 
-  // A note belongs to the slice whose horizontal span contains its centre.
+  const boardActions = useMemo(
+    () => ({ removeLane, removeChapter, activeId: activeChapterId, chapterCount: chapters.length }),
+    [removeLane, removeChapter, activeChapterId, chapters.length]
+  );
+
+  // An element belongs to the slice (of its own Chapter) whose span contains its centre.
   const exportJson = () => {
-    const laneOf = (n) => {
-      const cy = n.position.y + (n.height ?? 80) / 2;
-      let found = lanes[0];
-      for (const l of lanes) if (cy >= l.position.y) found = l;
-      return found;
-    };
-    const toElement = (n) => ({
-      id: n.id,
-      type: n.data.kind,
-      text: n.data.text,
-      ...(n.data.html ? { html: n.data.html } : {}),
-      lane: laneOf(n)?.data.label ?? null,
-      position: { x: n.position.x, y: n.position.y },
-    });
-    const stickies = nodes
-      .filter((n) => n.type === 'sticky')
-      .sort((a, b) => a.position.x - b.position.x);
-    const centreX = (n) => n.position.x + (n.width ?? 160) / 2;
-    const slices = nodes
-      .filter((n) => n.type === 'slice')
-      .sort((a, b) => a.position.x - b.position.x);
+    const typeOf = new Map(nodes.map((n) => [n.id, n.type]));
+    const outChapters = chaptersOf(nodes)
+      .sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y)
+      .map((ch) => {
+        const kids = nodes.filter((n) => n.parentNode === ch.id);
+        const chLanes = lanesOf(nodes, ch.id);
+        const laneOf = (n) => {
+          const cy = n.position.y + (n.height ?? STICKY_H) / 2;
+          let found = chLanes[0];
+          for (const l of chLanes) if (cy >= l.position.y) found = l;
+          return found;
+        };
+        const toElement = (n) => ({
+          id: n.id,
+          type: n.data.kind,
+          text: n.data.text,
+          ...(n.data.html ? { html: n.data.html } : {}),
+          lane: laneOf(n)?.data.label ?? null,
+          position: { x: n.position.x, y: n.position.y },
+        });
+        const stickies = kids
+          .filter((n) => n.type === 'sticky')
+          .sort((a, b) => a.position.x - b.position.x);
+        const assigned = new Set();
+        const outSlices = slices(nodes, ch.id).map((sl) => {
+          const members = stickies.filter(
+            (n) => centreX(n) >= sl.position.x && centreX(n) < sl.position.x + sl.data.width
+          );
+          members.forEach((n) => assigned.add(n.id));
+          return {
+            id: sl.id,
+            name: sl.data.name,
+            x: sl.position.x,
+            width: sl.data.width,
+            elements: members.map(toElement),
+          };
+        });
+        return {
+          id: ch.id,
+          name: ch.data.name,
+          x: ch.position.x,
+          y: ch.position.y,
+          lanes: chLanes.map((l) => l.data.label),
+          slices: outSlices,
+          unassignedElements: stickies.filter((n) => !assigned.has(n.id)).map(toElement),
+        };
+      });
 
-    const assigned = new Set();
-    const out = slices.map((sl) => {
-      const members = stickies.filter(
-        (n) => centreX(n) >= sl.position.x && centreX(n) < sl.position.x + sl.data.width
-      );
-      members.forEach((n) => assigned.add(n.id));
-      return {
-        id: sl.id,
-        name: sl.data.name,
-        x: sl.position.x,
-        width: sl.data.width,
-        elements: members.map(toElement),
-      };
-    });
-
+    const link = (e) => ({ id: e.id, source: e.source, target: e.target });
     const data = {
       exportedAt: new Date().toISOString(),
-      chapter: { ...(nodes.find((n) => n.id === CHAPTER_ID)?.position ?? { x: 0, y: 0 }) },
-      lanes: lanes.map((l) => l.data.label),
-      slices: out,
-      unassignedElements: stickies.filter((n) => !assigned.has(n.id)).map(toElement),
-      connections: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+      chapters: outChapters,
+      connections: edges.filter((e) => typeOf.get(e.source) !== 'chapter').map(link),
+      chapterConnections: edges.filter((e) => typeOf.get(e.source) === 'chapter').map(link),
     };
 
     const url = URL.createObjectURL(
@@ -824,78 +1040,104 @@ function Board() {
   const fileInput = useRef(null);
 
   // Rebuild the whole board from an exported file; the inverse of exportJson.
+  // Files written before the board had several Chapters (top-level lanes and slices)
+  // are read as a single Chapter.
   const buildBoard = (data) => {
-    if (!data || !Array.isArray(data.slices)) {
-      throw new Error('Missing "slices" array.');
-    }
-    const laneNames =
-      Array.isArray(data.lanes) && data.lanes.length
-        ? data.lanes.map(String)
-        : laneNodes.map((l) => l.data.label);
+    const chapterData = Array.isArray(data?.chapters)
+      ? data.chapters
+      : Array.isArray(data?.slices)
+        ? [
+            {
+              id: CHAPTER_ID,
+              name: 'Chapter 1',
+              x: data.chapter?.x,
+              y: data.chapter?.y,
+              lanes: data.lanes,
+              slices: data.slices,
+              unassignedElements: data.unassignedElements,
+            },
+          ]
+        : null;
+    if (!chapterData) throw new Error('Missing "chapters" array.');
+    if (!chapterData.length) throw new Error('The file contains no chapters.');
 
-    const newLanes = laneNames.map((label, i) => ({
-      ...laneNodes[0],
-      id: `lane-${counter.current++}`,
-      position: { x: 0, y: i * LANE_HEIGHT },
-      data: { label, height: LANE_HEIGHT, width: LANE_WIDTH, alt: i % 2 === 1 },
-    }));
+    const num = (v, fallback) => (Number.isFinite(v) ? v : fallback);
+    const used = new Set(); // chapter, slice and element ids share one namespace
+    const claim = (id) => {
+      if (used.has(id)) throw new Error(`Duplicate id "${id}".`);
+      used.add(id);
+      return id;
+    };
+    const out = [];
 
-    const newSlices = data.slices.map((sl, i) => ({
-      ...makeSlice(
-        String(sl.id ?? `slice-${counter.current++}`),
-        Number(sl.x) || 0,
-        Math.max(SLICE_MIN_WIDTH, Number(sl.width) || 220),
-        String(sl.name ?? `Slice ${i + 1}`)
-      ),
-    }));
+    chapterData.forEach((c, ci) => {
+      if (!Array.isArray(c.slices)) throw new Error('Missing "slices" array.');
+      const chapterId = claim(String(c.id ?? `chapter-${counter.current++}`));
+      out.push(
+        makeChapter(chapterId, num(c.x, 0), num(c.y, 0), String(c.name ?? `Chapter ${ci + 1}`))
+      );
 
-    const elements = [
-      ...data.slices.flatMap((sl) => sl.elements ?? []),
-      ...(data.unassignedElements ?? []),
-    ];
-    const seen = new Set();
-    const origin = data.chapter ?? {};
-    const newStickies = elements.map((el, i) => {
-      if (!KINDS[el.type]) throw new Error(`Unknown element type "${el.type}".`);
-      const id = String(el.id ?? `n${counter.current++}`);
-      if (seen.has(id)) throw new Error(`Duplicate element id "${id}".`);
-      seen.add(id);
-      return {
-        id,
-        type: 'sticky',
-        parentNode: CHAPTER_ID,
-        position: {
-          x: Number.isFinite(el.position?.x) ? el.position.x : 200 + i * 20,
-          y: Number.isFinite(el.position?.y) ? el.position.y : 40,
-        },
-        data: {
-          kind: el.type,
-          text: String(el.text ?? ''),
-          ...(el.html ? { html: String(el.html) } : {}),
-        },
-      };
+      const laneNames =
+        Array.isArray(c.lanes) && c.lanes.length ? c.lanes.map(String) : LANES.map((l) => l.label);
+      laneNames.forEach((label, i) =>
+        out.push(
+          makeLane(`lane-${counter.current++}`, chapterId, label, i * LANE_HEIGHT, i % 2 === 1, LANE_WIDTH)
+        )
+      );
+
+      c.slices.forEach((sl, i) => {
+        const id = claim(String(sl.id ?? `slice-${counter.current++}`));
+        out.push(
+          makeSlice(
+            id,
+            Number(sl.x) || 0,
+            Math.max(SLICE_MIN_WIDTH, Number(sl.width) || DEFAULT_SLICE_WIDTH),
+            String(sl.name ?? `Slice ${i + 1}`),
+            chapterId
+          )
+        );
+      });
+
+      const elements = [
+        ...c.slices.flatMap((sl) => sl.elements ?? []),
+        ...(c.unassignedElements ?? []),
+      ];
+      elements.forEach((el, i) => {
+        if (!KINDS[el.type]) throw new Error(`Unknown element type "${el.type}".`);
+        const id = claim(String(el.id ?? `n${counter.current++}`));
+        out.push({
+          id,
+          type: 'sticky',
+          parentNode: chapterId,
+          position: { x: num(el.position?.x, 200 + i * 20), y: num(el.position?.y, 40) },
+          data: {
+            kind: el.type,
+            text: String(el.text ?? ''),
+            ...(el.html ? { html: String(el.html) } : {}),
+          },
+        });
+      });
     });
 
-    const newEdges = (data.connections ?? [])
-      .filter((c) => seen.has(String(c.source)) && seen.has(String(c.target)))
-      .map((c, i) => ({
-        id: String(c.id ?? `e-import-${i}`),
-        source: String(c.source),
-        target: String(c.target),
-        ...edgeDefaults,
-      }));
+    const typeOf = new Map(out.map((n) => [n.id, n.type]));
+    const links = (list, type, prefix, style) =>
+      (list ?? [])
+        .filter(
+          (c) => typeOf.get(String(c.source)) === type && typeOf.get(String(c.target)) === type
+        )
+        .map((c, i) => ({
+          id: String(c.id ?? `${prefix}-${i}`),
+          source: String(c.source),
+          target: String(c.target),
+          ...style,
+        }));
 
     return {
-      nodes: normalize([
-        makeChapter(
-          Number.isFinite(origin.x) ? origin.x : 0,
-          Number.isFinite(origin.y) ? origin.y : 0
-        ),
-        ...newLanes,
-        ...newSlices,
-        ...newStickies,
-      ]),
-      edges: newEdges,
+      nodes: normalize(out),
+      edges: [
+        ...links(data.connections, 'sticky', 'e-import', edgeDefaults),
+        ...links(data.chapterConnections, 'chapter', 'ce-import', chapterEdgeDefaults),
+      ],
     };
   };
 
@@ -913,33 +1155,53 @@ function Board() {
     }
   };
 
-  const onConnect = useCallback(
-    (c) => setEdges((es) => addEdge({ ...c, ...edgeDefaults }, es)),
-    [setEdges]
+  // Elements connect to elements and Chapters to Chapters, never across the two.
+  const isValidConnection = useCallback(
+    (c) => {
+      if (c.source === c.target) return false;
+      const ns = getNodes();
+      const a = ns.find((n) => n.id === c.source)?.type;
+      const b = ns.find((n) => n.id === c.target)?.type;
+      return a === b && (a === 'sticky' || a === 'chapter');
+    },
+    [getNodes]
   );
 
-  const addSticky = (kind, position) => {
-    const lane = lanes[Math.min(KINDS[kind].lane, lanes.length - 1)];
-    const laneY = lane ? lane.position.y : 0;
+  const onConnect = useCallback(
+    (c) => {
+      const fromChapter = getNodes().find((n) => n.id === c.source)?.type === 'chapter';
+      setEdges((es) =>
+        addEdge({ ...c, ...(fromChapter ? chapterEdgeDefaults : edgeDefaults) }, es)
+      );
+    },
+    [setEdges, getNodes]
+  );
+
+  const addSticky = (kind, position, chapterId = activeChapterId) => {
+    if (!chapterId) return;
     const id = `n${counter.current++}`;
-    setNodes((ns) =>
-      centerStickies(
+    setNodes((ns) => {
+      const ls = lanesOf(ns, chapterId);
+      const lane = ls[Math.min(KINDS[kind].lane, ls.length - 1)];
+      const laneY = lane ? lane.position.y : 0;
+      const only = new Set([id]);
+      return centerStickies(
         settleStickies(
-        [
-          ...ns,
-          {
-            id,
-            type: 'sticky',
-            parentNode: CHAPTER_ID,
-            position: position ?? { x: 200, y: laneY + 40 },
-            data: { kind, text: `New ${KINDS[kind].label}` },
-          },
-        ],
-        new Set([id])
+          [
+            ...ns,
+            {
+              id,
+              type: 'sticky',
+              parentNode: chapterId,
+              position: position ?? { x: 200, y: laneY + 40 },
+              data: { kind, text: `New ${KINDS[kind].label}` },
+            },
+          ],
+          only
         ),
-        new Set([id])
-      )
-    );
+        only
+      );
+    });
   };
 
   const onDragOver = (e) => {
@@ -947,13 +1209,22 @@ function Board() {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  // A dropped element joins the Chapter it lands on, else the active Chapter.
   const onDrop = (e) => {
     e.preventDefault();
     const kind = e.dataTransfer.getData('application/event-model');
     if (!KINDS[kind]) return;
     const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    const origin = getNodes().find((n) => n.id === CHAPTER_ID)?.position ?? { x: 0, y: 0 };
-    addSticky(kind, { x: p.x - 80 - origin.x, y: p.y - 40 - origin.y });
+    const ns = getNodes();
+    const target =
+      chaptersOf(ns).find((c) => boxContains(chapterBox(ns, c), p.x, p.y)) ??
+      ns.find((n) => n.id === activeChapterId);
+    if (!target) return;
+    addSticky(
+      kind,
+      { x: p.x - 80 - target.position.x, y: p.y - 40 - target.position.y },
+      target.id
+    );
   };
 
   const reset = () => {
@@ -971,6 +1242,9 @@ function Board() {
         <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
           ↷ Redo
         </button>
+        <span className="target" title="New elements, slices and lanes are added to this Chapter">
+          Add to: <strong>{active?.data.name}</strong>
+        </span>
         {Object.entries(KINDS).map(([kind, k]) => (
           <button
             key={kind}
@@ -989,9 +1263,12 @@ function Board() {
         <button className="chip" onClick={addLane} title="Add a lane at the bottom">
           + Lane
         </button>
+        <button className="chip chapter-btn" onClick={addChapter} title="Add a new Chapter">
+          + Chapter
+        </button>
         <span className="spacer" />
         <span className="hint">
-          Double-click to edit · Backspace deletes selection · Drag handles to connect
+          Double-click to edit · Backspace deletes selection · Drag from a handle to connect (Chapters: right side → left side)
         </span>
         <input
           ref={fileInput}
@@ -1008,25 +1285,30 @@ function Board() {
         </button>
         <button onClick={reset}>Reset</button>
       </header>
-      <div className="canvas">
+      <div className="canvas" ref={canvasRef}>
         <HistoryContext.Provider value={historyApi}>
-        <LaneActions.Provider value={laneActions}>
+        <BoardActions.Provider value={boardActions}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
-          onNodeDragStart={historyApi.begin}
+          onNodeClick={(_, node) => focusChapter(node)}
+          onNodeDragStart={(_, node) => {
+            historyApi.begin();
+            focusChapter(node);
+          }}
           onSelectionDragStart={historyApi.begin}
           onSelectionDragStop={historyApi.end}
           onNodeDragStop={(_, __, dragged) => {
             setNodes((ns) => {
               const ids = new Set(dragged.map((n) => n.id));
-              return centerStickies(settleStickies(ns, ids), ids);
+              return centerStickies(settleStickies(adoptStickies(ns, ids), ids), ids);
             });
             historyApi.end();
           }}
           onEdgesChange={onEdgesChange}
+          isValidConnection={isValidConnection}
           onConnect={onConnect}
           onDrop={onDrop}
           onDragOver={onDragOver}
@@ -1041,10 +1323,10 @@ function Board() {
           <MiniMap
             pannable
             zoomable
-            nodeColor={(n) => KINDS[n.data?.kind]?.color ?? '#eee'}
+            nodeColor={(n) => (n.type === 'chapter' ? 'rgba(0, 0, 0, 0.06)' : KINDS[n.data?.kind]?.color ?? '#eee')}
           />
         </ReactFlow>
-        </LaneActions.Provider>
+        </BoardActions.Provider>
         </HistoryContext.Provider>
       </div>
     </div>

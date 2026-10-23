@@ -5,13 +5,13 @@ This document records the business requirements agreed so far. It describes beha
 
 ## 1. Board and Chapter
 
-- **R1.1** The board is a single page showing an event-modeling canvas. Time flows left to right.
-- **R1.1a** The term **Chapter** denotes the whole modelled area: the lanes, the slices and the elements in them. (It was previously called the timeline; "Chapter" is the term to use from now on.)
+- **R1.1** The board is a single page showing an event-modeling canvas. Time flows left to right. The board holds one or more Chapters (section 1a).
+- **R1.1a** The term **Chapter** denotes one modelled area: its lanes, its slices and the elements in them. (It was previously called the timeline; "Chapter" is the term to use from now on.)
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
-- **R1.4** The board starts with a sample flow ("Add Item" and "View Cart") so there is something to look at.
+- **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart") so there is something to look at.
 - **R1.5** A **Reset** button restores the sample flow.
-- **R1.6** The board is saved automatically in the browser and restored on reload. This covers lanes, slices, elements and connections.
+- **R1.6** The board is saved automatically in the browser and restored on reload. This covers Chapters, lanes, slices, elements and all connections.
 
 ### Chapter width
 
@@ -23,21 +23,38 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1.10** The Chapter can be moved on the canvas. A **Chapter** handle sits above the slices; dragging it moves the lanes, slices and elements together as one unit.
 - **R1.11** Moving the Chapter does not change anything inside it: the relative positions of lanes, slices and elements stay the same, and so do the connections.
-- **R1.12** The Chapter cannot be deleted. Its position is saved with the board and restored on reload.
+- **R1.12** A Chapter's position is saved with the board and restored on reload. A Chapter cannot be deleted with the keyboard; it is removed with its own button (R1a.6).
 - **R1.13** Elements and slices keep their positions relative to the Chapter, so the layout rules in this document (slice layout, centring, margins) apply regardless of where the Chapter is on the canvas. An element dropped from the toolbar is placed where it is released, whatever the Chapter position.
+
+## 1a. Multiple Chapters
+
+- **R1a.1** The board can hold any number of Chapters. Each Chapter has its own lanes, slices and elements, and is laid out independently: resizing a slice or adding a lane in one Chapter never changes another Chapter. All rules in sections 2 to 5 apply per Chapter.
+- **R1a.2** A **+ Chapter** button in the header adds a new Chapter. It starts with the three default lanes and one default slice, named "New Slice" and 220px wide (as if **+ Slice** had been used once), but no elements. Its width is therefore the label zone plus that slice. It appears in the middle of the part of the canvas that is currently visible (its lane area is centred on the centre of the viewport, snapped to the grid), so the user sees it straight away. The view does not pan or zoom. If it lands on top of another Chapter, the user can drag it away by its handle.
+- **R1a.3** Each Chapter has a name, shown in its handle ("Chapter 1", "Chapter 2", ... by default). The user renames it by double-clicking the name. The first Chapter of the sample board is "Chapter 1".
+- **R1a.4** **Active Chapter.** The header's add buttons (**+ Command**, **+ Slice**, **+ Lane**, and so on) act on the active Chapter. This is the Chapter the user last clicked or dragged something in; initially the first Chapter. The header shows its name next to "Add to:". An element dragged from the header onto the board joins the Chapter it is released over; if it is released over no Chapter, it joins the active Chapter.
+- **R1a.5** An element can be moved to another Chapter by dragging it so that its centre is over that Chapter's lanes. It then becomes part of that Chapter, follows its layout rules (R3.6a, R5.13 to R5.17), and its position is converted so it stays where it was released. An element released outside every Chapter stays in its own Chapter. Connections of a moved element are kept.
+- **R1a.6** A Chapter is removed with the **×** button in its handle. The button is hidden when only one Chapter is left, because the board always has at least one. Removing a Chapter also removes its lanes, slices, elements and every connection attached to them or to the Chapter. If it holds slices or elements, the user is asked to confirm first.
+
+### Connecting Chapters
+
+- **R1a.7** Chapters are connected with arrows to show how the model flows from one Chapter to the next. Each Chapter has an **outgoing** connection point on its **right** side and an **incoming** one on its **left** side, both at its vertical middle.
+- **R1a.8** The user creates a Chapter connection by dragging from one Chapter's right point to another Chapter's left point.
+- **R1a.9** Chapter connections look different from element connections: darker, thicker arrows with a larger arrowhead, and larger connection points.
+- **R1a.10** Chapters connect only to Chapters, and elements only to elements. A connection between a Chapter and an element is refused, and so is a connection from a Chapter to itself.
+- **R1a.11** Selected Chapter connections can be deleted with Backspace or Delete, like element connections (R4.4). Moving a Chapter keeps its connections attached and following it.
 
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
-- **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom with the name "New Lane" and the current Chapter width.
+- **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom of the active Chapter (R1a.4) with the name "New Lane" and the current Chapter width.
 - **R2.4** Each lane has a reserved label zone, a 180px strip at its left edge, that holds the lane name and the **×** button. Slices can never enter this zone (see R5.7).
 - **R2.4a** The user can rename a lane by double-clicking its label.
 - **R2.5** The user can remove a lane with its **×** button.
   - Lanes below it move up to close the gap.
   - Notes in the removed lane are deleted, together with the connections attached to them.
   - If the lane contains notes, the user is asked to confirm first.
-  - The last remaining lane cannot be removed.
+  - The last remaining lane of a Chapter cannot be removed.
 - **R2.6** Lanes have alternating shading, re-applied after any add or remove.
 - **R2.7** Lanes cannot be dragged, selected or deleted with the keyboard.
 
@@ -56,7 +73,7 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
   | Processor | lavender, shown with a ⚙️ gear emoji | second |
 
 - **R3.2** Default lane means the lane a new element is placed in. If that lane doesn't exist, the last lane is used. Elements can be dragged anywhere.
-- **R3.3** The user adds an element by clicking its toolbar button, or by dragging the button onto the board to choose the position.
+- **R3.3** The user adds an element by clicking its toolbar button (it joins the active Chapter, R1a.4), or by dragging the button onto the board to choose the position (it joins the Chapter it is released over).
 - **R3.4** Double-clicking an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
 - **R3.6** Only Processor carries an icon; other types show their text label.
@@ -82,7 +99,7 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
 A slice is a vertical band across all lanes that groups the elements of one piece of behaviour.
 
 - **R5.1** Each slice has a name and a width, and sits in the Chapter above the lanes.
-- **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice, with the name "New Slice".
+- **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice of the active Chapter (R1a.4), with the name "New Slice".
 - **R5.3** The user renames a slice by double-clicking its header.
 - **R5.4** Selected slices can be deleted with Backspace or Delete.
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
@@ -108,36 +125,38 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R6.1** An **Export JSON** button downloads `event-model.json`.
 - **R6.2** The file contains:
   - `exportedAt`: an ISO timestamp.
-  - `chapter`: the Chapter's position on the canvas (`x`, `y`).
-  - `lanes`: lane names, top to bottom.
-  - `slices`: each with `id`, `name`, `x`, `width` and `elements`.
-  - `unassignedElements`: elements outside every slice.
-  - `connections`: each with `id`, `source` and `target` (element ids).
-- **R6.3** Each element has `id`, `type`, `text`, `lane` (the lane name), `position` (relative to the Chapter) and, for Screens with a mockup, `html`.
-- **R6.4** An element belongs to the slice whose horizontal span contains the element's centre. Slices and their elements are listed left to right.
-- **R6.5** Connections are listed once at the top level, because they can cross slices.
+  - `chapters`: the Chapters, ordered left to right. Each has `id`, `name`, `x` and `y` (its position on the canvas), `lanes` (lane names, top to bottom), `slices` and `unassignedElements`.
+    - each slice has `id`, `name`, `x`, `width` and `elements`;
+    - `unassignedElements` are the Chapter's elements that sit outside every slice.
+  - `connections`: element connections, each with `id`, `source` and `target` (element ids).
+  - `chapterConnections`: Chapter connections, each with `id`, `source` and `target` (Chapter ids, from the right side of the source to the left side of the target).
+- **R6.3** Each element has `id`, `type`, `text`, `lane` (the lane name), `position` (relative to its Chapter) and, for Screens with a mockup, `html`.
+- **R6.4** An element belongs to the slice of its own Chapter whose horizontal span contains the element's centre. Slices and their elements are listed left to right.
+- **R6.5** Connections are listed once at the top level, because they can cross slices and Chapters.
 
 ## 7. Import
 
-- **R7.1** An **Import JSON** button loads a file in the export format and rebuilds the whole board from it. It replaces the current board; it does not merge.
+- **R7.1** An **Import JSON** button loads a file in the export format and rebuilds the whole board from it, with all its Chapters and connections. It replaces the current board; it does not merge.
 - **R7.2** The user must confirm before the current board is replaced.
 - **R7.3** Export followed by import reproduces the same board. `exportedAt` is ignored.
 - **R7.4** A file is rejected with an error message, and the board is left untouched, when:
-  - the `slices` array is missing;
+  - the `chapters` array is missing or empty (see R7.6 for older files);
+  - a Chapter has no `slices` array;
   - an element has an unknown type;
-  - two elements share an id.
-- **R7.5** Connections that refer to elements not in the file are dropped.
+  - two Chapters, slices or elements share an id.
+- **R7.5** Connections that refer to elements or Chapters not in the file are dropped. An element connection must join two elements, and a Chapter connection two Chapters.
 - **R7.6** Older files stay valid:
+  - a file written before the board had several Chapters (top-level `lanes`, `slices`, `unassignedElements` and a `chapter` position, but no `chapters`) is read as a single Chapter named "Chapter 1";
   - a missing `lanes` list falls back to the three default lanes;
-  - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8);
-  - a missing `chapter` position falls back to the origin, `(0, 0)`.
+  - a missing Chapter position falls back to the origin, `(0, 0)`;
+  - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8).
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone. This covers: adding, editing (text and HTML), moving and deleting elements; creating and deleting connections; adding, renaming, resizing and deleting slices; adding, renaming and removing lanes; moving the Chapter; import; and Reset.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone. This covers: adding, editing (text and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; adding, renaming and removing lanes; adding, renaming, moving and removing Chapters; import; and Reset.
 - **R8.2** **Undo** and **Redo** buttons sit in the header at the top of the board, next to the title. A button is disabled when there is nothing to undo or redo.
 - **R8.3** Keyboard shortcuts: Ctrl+Z (Cmd+Z) undoes, Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies there.
-- **R8.4** A continuous gesture is one step: dragging an element or the Chapter, or resizing a slice, is recorded once when it ends, not once per movement.
+- **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends, not once per movement.
 - **R8.5** An operation and the automatic adjustments it triggers (re-settling elements inside slices, centring in lanes, shifting following slices) are one step. Undo restores the board exactly as it was before the operation.
 - **R8.6** Selecting items, panning and zooming are not operations and are not recorded.
 - **R8.7** Making a new change after an undo discards the redo history.
