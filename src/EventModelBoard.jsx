@@ -21,6 +21,12 @@ const LANES = [
   { id: 'lane-evt', label: 'Events', y: 360, height: 180 },
 ];
 
+const SLICE_Y = -40;
+const SLICE_HEADER = 40;
+const SLICE_BODY = LANES.reduce((sum, l) => sum + l.height, 0);
+const SLICE_STEP = 20;
+const SLICE_MIN_WIDTH = 120;
+
 const KINDS = {
   screen: { label: 'Screen', lane: 0, color: '#f5f5f5' },
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
@@ -84,7 +90,66 @@ function StickyNode({ id, data, selected }) {
   );
 }
 
-const nodeTypes = { lane: LaneNode, sticky: StickyNode };
+// A slice is a vertical band across all lanes: one end-to-end piece of behavior.
+function SliceNode({ id, data, selected }) {
+  const { setNodes } = useReactFlow();
+  const [editing, setEditing] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (editing) ref.current?.select();
+  }, [editing]);
+
+  const update = (patch) =>
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
+    );
+
+  const resize = (delta) =>
+    update({ width: Math.max(SLICE_MIN_WIDTH, data.width + delta) });
+
+  return (
+    <div
+      className={`slice ${selected ? 'selected' : ''}`}
+      style={{ width: data.width, height: SLICE_HEADER + SLICE_BODY }}
+    >
+      <div className="slice-header" onDoubleClick={() => setEditing(true)}>
+        {editing ? (
+          <input
+            ref={ref}
+            className="nodrag"
+            defaultValue={data.name}
+            onBlur={(e) => {
+              setEditing(false);
+              update({ name: e.target.value });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+            }}
+          />
+        ) : (
+          <span className="slice-name">{data.name}</span>
+        )}
+        <span className="slice-controls nodrag">
+          <button title="Narrower" onClick={() => resize(-SLICE_STEP)}>−</button>
+          <button title="Wider" onClick={() => resize(SLICE_STEP)}>+</button>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = { lane: LaneNode, sticky: StickyNode, slice: SliceNode };
+
+const makeSlice = (id, x, width, name) => ({
+  id,
+  type: 'slice',
+  position: { x, y: SLICE_Y },
+  data: { name, width },
+  zIndex: -1,
+  // Only the header takes pointer events, so notes under the band stay usable.
+  style: { pointerEvents: 'none' },
+});
 
 const laneNodes = LANES.map((l, i) => ({
   id: l.id,
@@ -108,6 +173,8 @@ const sticky = (id, kind, col, text) => ({
 
 const initialNodes = [
   ...laneNodes,
+  makeSlice('slice-1', 180, 440, 'Add Item'),
+  makeSlice('slice-2', 640, 220, 'View Cart'),
   sticky('n1', 'screen', 0, 'Add Item form'),
   sticky('n2', 'command', 0, 'Add Item'),
   sticky('n3', 'event', 1, 'Item Added'),
@@ -151,13 +218,34 @@ function Board() {
   const counter = useRef(Date.now());
 
   useEffect(() => {
-    const stickies = nodes.filter((n) => n.type === 'sticky');
+    const saveable = nodes.filter((n) => n.type !== 'lane');
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes: stickies, edges }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes: saveable, edges }));
     } catch {
       // ignore unavailable storage
     }
   }, [nodes, edges]);
+
+  // Slices slide along the timeline only; keep them pinned above the lanes.
+  const handleNodesChange = useCallback(
+    (changes) =>
+      onNodesChange(
+        changes.map((c) =>
+          c.type === 'position' && c.position && c.id.startsWith('slice-')
+            ? { ...c, position: { x: c.position.x, y: SLICE_Y } }
+            : c
+        )
+      ),
+    [onNodesChange]
+  );
+
+  const addSlice = () => {
+    const id = `slice-${counter.current++}`;
+    const end = nodes
+      .filter((n) => n.type === 'slice')
+      .reduce((max, n) => Math.max(max, n.position.x + n.data.width), 160);
+    setNodes((ns) => [...ns, makeSlice(id, end + 20, 220, 'New Slice')]);
+  };
 
   const onConnect = useCallback(
     (c) => setEdges((es) => addEdge({ ...c, ...edgeDefaults }, es)),
@@ -212,6 +300,9 @@ function Board() {
             + {k.label}
           </button>
         ))}
+        <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the timeline">
+          + Slice
+        </button>
         <span className="spacer" />
         <span className="hint">
           Double-click to edit · Backspace deletes selection · Drag handles to connect
@@ -223,7 +314,7 @@ function Board() {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onDrop={onDrop}
