@@ -31,7 +31,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .lane.first { border-top: 2px solid var(--chapter-border); }
 .lane.last { border-bottom: 2px solid var(--chapter-border); }
-.lane.alt { background: rgba(232, 238, 255, 0.6); }
+/* Lane colours: a light, transparent tint over the base; `none` leaves it as is. */
+.lane.color-orange, .swatch.color-orange { --lane-rgb: 255, 159, 64; }
+.lane.color-red, .swatch.color-red { --lane-rgb: 239, 83, 80; }
+.lane.color-green, .swatch.color-green { --lane-rgb: 102, 187, 106; }
+.lane.color-blue, .swatch.color-blue { --lane-rgb: 66, 165, 245; }
+.lane.color-purple, .swatch.color-purple { --lane-rgb: 171, 71, 188; }
+.lane.color-yellow, .swatch.color-yellow { --lane-rgb: 255, 214, 10; }
+.lane.color-brown, .swatch.color-brown { --lane-rgb: 141, 110, 99; }
+.lane.color-gray, .swatch.color-gray { --lane-rgb: 120, 120, 120; }
+.lane[class*="color-"]:not(.color-none) {
+  background-image: linear-gradient(rgba(var(--lane-rgb), 0.18), rgba(var(--lane-rgb), 0.18));
+}
 .lane-label {
   display: inline-block; margin: 6px 8px;
   font-size: 12px; font-weight: 700; text-transform: uppercase; color: #667;
@@ -122,6 +133,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .lane-remove {
   width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
+}
+.swatch {
+  box-sizing: border-box; width: 16px; height: 16px; padding: 0; cursor: pointer;
+  border: 1px solid #889; border-radius: 3px; background: #fff;
+}
+.swatch[class*="color-"]:not(.color-none) { background: rgb(var(--lane-rgb)); }
+.swatch.current { outline: 2px solid #1a73e8; outline-offset: 1px; }
+.lane-color-btn { width: 18px; height: 18px; }
+.lane-palette {
+  position: absolute; z-index: 6; left: 0; top: 56px; width: 100%; box-sizing: border-box; padding: 6px 4px;
+  display: grid; grid-template-columns: repeat(2, 16px); gap: 4px; justify-content: center;
+  background: #fff; border-top: 1px solid #aab; border-bottom: 1px solid #aab;
 }
 
 .chip.processor { background: var(--processor) !important; }

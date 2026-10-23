@@ -56,13 +56,13 @@ This document records the business requirements agreed so far. It describes beha
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
 - **R2.3** **+ Lane** appends a lane named "New Lane" at the bottom of the active Chapter (R1a.4), with the current Chapter width.
-- **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name and the **×** button (at the top). The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
+- **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name, the **×** button (at the top) and the colour button (R2.6) under it. The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
 - **R2.4a** Double-clicking a lane name renames it **in place**: the vertical title becomes editable text, keeping its orientation, with a caret and highlighted outline, all selected. Enter, Esc and clicking away save. The name is one line; an empty name is ignored (previous kept).
 - **R2.5** The **×** button removes a lane.
   - Lanes below move up to close the gap.
   - Notes in it are deleted with their connections; if there are any, the user confirms first.
   - A Chapter's last lane cannot be removed.
-- **R2.6** Lanes have alternating shading, re-applied after any add or remove.
+- **R2.6** A lane has a colour: `none` (default, no tint), `orange`, `red`, `green`, `blue`, `purple`, `yellow`, `brown` or `gray`. Each is a light, transparent tint, not intrusive. There is no alternating shading. A colour button under the **×** button in the label zone opens a small palette of the nine colours; picking one applies it and closes the palette, as does clicking elsewhere. The button shows the current colour. The last lane's button works the same.
 - **R2.6a** Every Chapter has a clear, dark 2px outline around its whole area, including the label column: left and right edges on every lane, top on the first, bottom on the last. Lanes are separated by a thin light line, the label column by a line of the dark colour. Adding or removing lanes keeps it correct.
 - **R2.7** Lanes cannot be dragged, selected or deleted with the keyboard.
 - **R2.8** An element sits in exactly one lane of its Chapter: the one it is vertically centred in (R3.6a). Moving between lanes: R5.14.
@@ -147,7 +147,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5a.1** A **Cell** is the intersection of one lane and one slice of a Chapter: a box of its grid (lanes are rows, slices columns). 3 lanes and 2 slices make 6 Cells. The label zone is not part of any Cell.
 - **R5a.2** A Cell is not a stored object; it follows from lanes and slices: adding, removing, renaming or resizing them changes the Cells, and moving the Chapter moves them. It has no data of its own, so it is not saved, exported or imported. (An element's Cell comes from the slice it is listed under and its lane id, R6.4, R6.5.)
-- **R5a.3** A Cell has no colour of its own; it shows its lane's shading (R2.6).
+- **R5a.3** A Cell has no colour of its own; it shows its lane's colour (R2.6).
 - **R5a.4** A Cell holds any number of elements, freely positioned: an element sits in the Cell of its lane and slice (R5.13), can be dragged freely, ends up in the Cell it is released over (R5.14), and is vertically centred in the lane (R3.6a).
 - **R5a.5** Clicking a Cell selects it: a thin (2px), slightly transparent blue border around the whole Cell, above its elements, visible but not intrusive. One Cell is selected at a time; clicking another moves the selection. Its Chapter becomes active (R1a.4).
 - **R5a.6** Clicking an element, slice header, lane header, Chapter handle or connection selects that item and clears any Cell selection, as do starting to drag an element and undo or redo.
@@ -173,7 +173,7 @@ The export file is the single, complete description of a board, written and read
   - `id`, `name`;
   - `x`, `y`: the Chapter's position on the canvas;
   - `connectsTo`: the ids of the Chapters this Chapter has an arrow to (R6.7);
-  - `lanes`: the lanes from top to bottom, each with `id` and `name`;
+  - `lanes`: the lanes from top to bottom, each with `id`, `name` and `color`;
   - `slices`: the slices from left to right.
 - **R6.4** Each slice has exactly these fields, in order: `id`, `name`, `width`, `elements`. `elements` lists the elements in that slice. An element is listed under exactly one slice; there is no other place for elements, so one outside a slice cannot be written (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
@@ -195,8 +195,8 @@ The export file is the single, complete description of a board, written and read
   The JSON is indented with 2 spaces. No person is expected to read the file, but the indentation makes a failed import or a diff between exports easy to inspect; its size cost is irrelevant (correctness before size).
 - **R6.9** The same board always produces the same file, byte for byte.
 - **R6.10** What the file stores, and what it does not.
-  - **Stored:** all ids, names, titles and mockups; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
-  - **Not stored, worked out on load:** a slice's own position (slices form one run, R5.7); the widths of the lanes and of the Chapter (R1.8); the lane height; an element's vertical position (centred in its lane, R3.6a); the lane shading. Also not stored: the selected Cell, the active Chapter, the undo history and the pan and zoom of the view.
+  - **Stored:** all ids, names, titles and mockups; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
+  - **Not stored, worked out on load:** a slice's own position (slices form one run, R5.7); the widths of the lanes and of the Chapter (R1.8); the lane height; an element's vertical position (centred in its lane, R3.6a). Also not stored: the selected Cell, the active Chapter, the undo history and the pan and zoom of the view.
 
 ## 7. Import
 
@@ -207,14 +207,14 @@ The export file is the single, complete description of a board, written and read
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19).
   - **Ids.** Every id is a text of at least 8 letters, digits, `-` or `_`. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
-  - **Values.** `name` of a Chapter, lane or slice is not empty. `type` is one of the five element types. `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
+  - **Values.** `name` of a Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the nine colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 20. Every element fits its slice with the 20px margins: `x` plus displayed width plus 20 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; adding, renaming, moving and removing Chapters; import; and Reset.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; adding, renaming, moving and removing Chapters; import; and Reset.
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies.
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends.

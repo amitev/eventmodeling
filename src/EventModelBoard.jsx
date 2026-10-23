@@ -46,6 +46,8 @@ const KINDS = {
 };
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'purple', 'yellow', 'brown', 'gray'];
+
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -400,7 +402,23 @@ function LaneNode({ id, data }) {
     return `${first ? ' first' : ''}${last ? ' last' : ''}`;
   });
   const [editing, setEditing] = useState(false);
+  const [picking, setPicking] = useState(false);
   const ref = useRef(null);
+  const colorRef = useRef(null);
+
+  useEffect(() => {
+    if (!picking) return;
+    const close = (e) => {
+      if (!colorRef.current?.contains(e.target)) setPicking(false);
+    };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [picking]);
+
+  const setColor = (color) => {
+    setPicking(false);
+    setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, color } } : n)));
+  };
 
   useEffect(() => {
     const el = ref.current;
@@ -427,7 +445,7 @@ function LaneNode({ id, data }) {
 
   return (
     <div
-      className={`lane${data.alt ? ' alt' : ''}${edges}`}
+      className={`lane color-${data.color}${edges}`}
       style={{ width: data.width ?? LANE_WIDTH, height: data.height }}
     >
       <div
@@ -440,6 +458,25 @@ function LaneNode({ id, data }) {
             ×
           </button>
         )}
+        <div className="lane-color" ref={colorRef}>
+          <button
+            className={`lane-color-btn swatch color-${data.color}`}
+            title="Lane colour"
+            onClick={() => setPicking((v) => !v)}
+          />
+          {picking && (
+            <div className="lane-palette">
+              {LANE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  className={`swatch color-${c}${c === data.color ? ' current' : ''}`}
+                  title={c}
+                  onClick={() => setColor(c)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
         {/* Edited in place: the same rotated element becomes editable text. */}
         <span
           ref={ref}
@@ -758,12 +795,12 @@ const makeSlice = (id, x, width, name, chapterId) => ({
   style: { pointerEvents: 'none' },
 });
 
-const makeLane = (id, chapterId, label, y, alt, width) => ({
+const makeLane = (id, chapterId, label, y, color, width) => ({
   id,
   type: 'lane',
   position: { x: 0, y },
   parentNode: chapterId,
-  data: { label, height: LANE_HEIGHT, width, alt },
+  data: { label, height: LANE_HEIGHT, width, color },
   draggable: false,
   selectable: false,
   connectable: false,
@@ -812,7 +849,7 @@ function makeSample() {
   ];
   const nodes = normalize([
     makeChapter(chapterId, 0, 0, 'Chapter 1'),
-    ...LANES.map((l, i) => makeLane(id(), chapterId, l.label, l.y, i % 2 === 1, LANE_WIDTH)),
+    ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
     makeSlice(id(), LABEL_ZONE, 440, 'Add Item', chapterId),
     makeSlice(id(), LABEL_ZONE + 440, 220, 'View Cart', chapterId),
     n1,
@@ -880,7 +917,7 @@ function serialize(nodes, edges) {
         x: ch.position.x,
         y: ch.position.y,
         connectsTo,
-        lanes: lanes.map((l) => ({ id: l.id, name: l.data.label })),
+        lanes: lanes.map((l) => ({ id: l.id, name: l.data.label, color: l.data.color })),
         slices: chapterSlices.map((sl) => ({
           id: sl.id,
           name: sl.data.name,
@@ -995,11 +1032,14 @@ function parseBoard(text) {
     const laneY = new Map();
     c.lanes.forEach((l, li) => {
       const lp = `${cp}.lanes[${li}]`;
-      object(l, ['id', 'name'], lp);
+      object(l, ['id', 'name', 'color'], lp);
       claim(l.id, 'lane', at(lp, 'id'));
       name(l.name, at(lp, 'name'));
+      if (!LANE_COLORS.includes(l.color)) {
+        fail(at(lp, 'color'), `must be one of ${LANE_COLORS.join(', ')}`);
+      }
       laneY.set(l.id, li * LANE_HEIGHT);
-      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, li % 2 === 1, LANE_WIDTH));
+      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH));
     });
 
     let cursor = SLICE_MIN_X;
@@ -1356,7 +1396,7 @@ function Board() {
       const ls = lanesOf(ns, activeChapterId);
       const y = ls.reduce((sum, l) => sum + l.data.height, 0);
       const width = ls[0]?.data.width ?? LANE_WIDTH;
-      return [...ns, makeLane(id, activeChapterId, 'New Lane', y, ls.length % 2 === 1, width)];
+      return [...ns, makeLane(id, activeChapterId, 'New Lane', y, 'none', width)];
     });
   };
 
@@ -1378,18 +1418,12 @@ function Board() {
       )
         return;
       const gone = new Set([laneId, ...doomed.map((n) => n.id)]);
-      let laneIndex = 0;
       setNodes(
         nodes
           .filter((n) => !gone.has(n.id))
           .map((n) =>
             mine(n) && (n.type === 'sticky' || n.type === 'lane') && n.position.y >= bottom
               ? { ...n, position: { ...n.position, y: n.position.y - lane.data.height } }
-              : n
-          )
-          .map((n) =>
-            n.type === 'lane' && mine(n)
-              ? { ...n, data: { ...n.data, alt: laneIndex++ % 2 === 1 } }
               : n
           )
       );
@@ -1413,7 +1447,7 @@ function Board() {
     setNodes((ns) => [
       ...ns,
       makeChapter(id, x, y, `Chapter ${chapters.length + 1}`),
-      ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, i % 2 === 1, width)),
+      ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, 'none', width)),
       makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
     ]);
     setActiveId(id);
