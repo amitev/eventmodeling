@@ -105,7 +105,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice of the active Chapter (R1a.4), with the name "New Slice".
 - **R5.2a** Every slice has a **+** button at the very right end of its header. It adds a new slice immediately after that slice, named "New Slice" and 220px wide. The slices after it, together with their elements, move to the right to make room (R5.7, R5.15). The Chapter becomes the active one (R1a.4). The button does not start a drag of the Chapter and does not trigger renaming.
 - **R5.3** The user renames a slice by double-clicking its header.
-- **R5.4** Selected slices can be deleted with Backspace or Delete.
+- **R5.4** Slices can be selected by pressing or clicking their header, and a selected slice is outlined. Selecting works in every state of the header: when it is the start of a drag that moves the Chapter (R1.10), and when its name is being edited (R5.3). A selected slice can be deleted with Backspace or Delete (see R5.11 and R5.18).
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices are laid out automatically as one contiguous run. The first slice starts at the beginning of the slice area, right after the lane label zone (R2.4), and each following slice starts exactly where the previous one ends. There are no gaps and slices never overlap.

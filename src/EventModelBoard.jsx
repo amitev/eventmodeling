@@ -12,6 +12,7 @@ import ReactFlow, {
   useNodesState,
   useReactFlow,
   useStore,
+  useStoreApi,
 } from 'reactflow';
 
 // Event modeling: time flows left to right across swimlanes. The board holds one or
@@ -276,14 +277,22 @@ function useHorizontalDrag() {
 // from them. This returns a pointer-down handler that moves the Chapter that owns the
 // node `nodeId`: snapped to the grid, one undo step, and the Chapter becomes the active
 // one. A press that does not move (a click or double-click) is left alone, so renaming
-// still works. `skip` lets the caller veto a press (e.g. while editing).
-function useChapterDrag(nodeId, skip) {
+// still works. `skip` lets the caller veto a press (e.g. while editing). With `select`,
+// pressing also selects `nodeId`, so the node stays selectable by its header even while it
+// is being renamed or its Chapter is being dragged.
+function useChapterDrag(nodeId, skip, select = false) {
   const { setNodes, getNodes } = useReactFlow();
+  const storeApi = useStoreApi();
   const zoom = useStore((s) => s.transform[2]);
   const history = useContext(HistoryContext);
   const { activate } = useContext(BoardActions);
   return (e) => {
-    if (e.button !== 0 || e.target.closest('button, input') || skip?.()) return;
+    if (e.button !== 0) return;
+    if (select && !e.target.closest('button')) {
+      const { addSelectedNodes, nodeInternals } = storeApi.getState();
+      if (!nodeInternals.get(nodeId)?.selected) addSelectedNodes([nodeId]);
+    }
+    if (e.target.closest('button, input') || skip?.()) return;
     const chapterId = getNodes().find((n) => n.id === nodeId)?.parentNode;
     const chapter = getNodes().find((n) => n.id === chapterId);
     if (!chapter) return;
@@ -562,7 +571,7 @@ function SliceNode({ id, data, selected }) {
 
   // Dragging a slice header moves the whole Chapter (slices themselves never move on
   // their own: their order and position come from the layout).
-  const startChapterDrag = useChapterDrag(id, () => editing);
+  const startChapterDrag = useChapterDrag(id, () => editing, true);
   const { addSliceAfter } = useContext(BoardActions);
 
   // Each drag is computed from a snapshot taken at pointer-down, so the following
