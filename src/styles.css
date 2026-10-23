@@ -153,7 +153,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .react-flow__handle.chapter-port {
   width: 12px; height: 12px; background: #5b5b6b; border: 2px solid #fff; border-radius: 50%;
+  opacity: 0.3;
 }
+.react-flow__handle.chapter-port:hover, .react-flow__handle.chapter-port.connectingfrom,
+.react-flow__handle.chapter-port.connectingto { opacity: 1; }
 .react-flow__handle.chapter-port.react-flow__handle-left { left: -10px; }
 .react-flow__handle.chapter-port.react-flow__handle-right { right: -10px; }
 .chip.chapter-btn { background: #d6d6e0 !important; }
