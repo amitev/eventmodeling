@@ -146,7 +146,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .chapter-handle.active { background: #1a73e8; }
 .chapter-handle input { width: 150px; font: inherit; font-size: 12px; font-weight: 700; }
-.chapter-remove {
+.chapter-remove,
+.chapter-compact {
   width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; background: transparent; color: #fff;
 }

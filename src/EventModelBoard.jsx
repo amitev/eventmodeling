@@ -369,6 +369,7 @@ const BoardActions = createContext({
   addSliceAfter: () => {},
   removeLane: () => {},
   removeChapter: () => {},
+  compactChapter: () => {},
   activeId: null,
   chapterCount: 1,
 });
@@ -654,7 +655,7 @@ function SliceNode({ id, data, selected }) {
 // incoming on the left side, outgoing on the right side.
 function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeChapter, activeId, chapterCount } = useContext(BoardActions);
+  const { removeChapter, compactChapter, activeId, chapterCount } = useContext(BoardActions);
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
   const width = useStore((s) => {
@@ -706,6 +707,13 @@ function ChapterNode({ id, data }) {
         ) : (
           <span onDoubleClick={() => setEditing(true)}>⠿ {data.name}</span>
         )}
+        <button
+          className="chapter-compact nodrag"
+          title="Compact the slices"
+          onClick={() => compactChapter(id)}
+        >
+          ↔
+        </button>
         {chapterCount > 1 && (
           <button
             className="chapter-remove nodrag"
@@ -1431,6 +1439,39 @@ function Board() {
     [nodes, setNodes, setEdges]
   );
 
+  // Each slice shrinks (or grows) to its elements plus the minimal margins, and the group of
+  // elements is centred in it; empty slices get the default width. Later slices move left.
+  const compactChapter = useCallback(
+    (chapterId) => {
+      setNodes((ns) => {
+        const members = membersOf(ns);
+        const widths = new Map();
+        const shifts = new Map();
+        for (const sl of slices(ns, chapterId)) {
+          const els = members.get(sl.id) ?? [];
+          if (!els.length) {
+            widths.set(sl.id, DEFAULT_SLICE_WIDTH);
+            continue;
+          }
+          const left = Math.min(...els.map((n) => n.position.x));
+          const right = Math.max(...els.map((n) => n.position.x + (n.width ?? STICKY_W)));
+          const width = Math.max(SLICE_MIN_WIDTH, snapUp(right - left + 2 * SLICE_PADDING));
+          const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
+          widths.set(sl.id, width);
+          els.forEach((n) => shifts.set(n.id, dx));
+        }
+        const moved = ns.map((n) => {
+          if (widths.has(n.id)) return { ...n, data: { ...n.data, width: widths.get(n.id) } };
+          if (shifts.has(n.id)) return { ...n, position: { ...n.position, x: n.position.x + shifts.get(n.id) } };
+          return n;
+        });
+        return layoutSlices(moved, ns);
+      });
+      setActiveId(chapterId);
+    },
+    [setNodes]
+  );
+
   const boardActions = useMemo(
     () => ({
       activate: setActiveId,
@@ -1438,10 +1479,11 @@ function Board() {
       addSliceAfter,
       removeLane,
       removeChapter,
+      compactChapter,
       activeId: activeChapterId,
       chapterCount: chapters.length,
     }),
-    [removeLane, removeChapter, addSliceAfter, activeChapterId, chapters.length]
+    [removeLane, removeChapter, compactChapter, addSliceAfter, activeChapterId, chapters.length]
   );
 
   const exportJson = () => {
