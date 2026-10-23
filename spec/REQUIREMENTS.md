@@ -29,7 +29,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Identifiers
 
-- **R1.14** Every Chapter, lane, slice and element has an **id**: a text of 12 characters from `a-z` and `0-9`, generated at random when the item is created, from the browser's secure random source (not from a counter or the time). An id is unique among all items of the board, whatever their kind, and never changes during the item's life: renaming, moving, resizing or reordering an item keeps its id.
+- **R1.14** Every Chapter, lane, slice and element has an **id**: a text of 8 characters from `a-z` and `0-9`, generated at random when the item is created, from the browser's secure random source (not from a counter or the time). An id is unique among all items of the board, whatever their kind, and never changes during the item's life: renaming, moving, resizing or reordering an item keeps its id.
 - **R1.15** Everything that creates items uses such ids: the sample board (R1.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. If a generated id happens to be in use already, another one is generated.
 - **R1.16** Connections (arrows) have no id. A connection is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by their names and titles. Items refer to each other by id, never by name, so renaming an item cannot break a reference (for lanes see R2.9).
@@ -39,7 +39,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R1a.1** The board can hold any number of Chapters. Each Chapter has its own lanes, slices and elements, and is laid out independently: resizing a slice or adding a lane in one Chapter never changes another Chapter. All rules in sections 2 to 5 apply per Chapter.
 - **R1a.2** A **+ Chapter** button in the header adds a new Chapter. It starts with the three default lanes and one default slice, named "New Slice" and 220px wide (as if **+ Slice** had been used once), but no elements. Its width is therefore the label zone plus that slice. It appears in the middle of the part of the canvas that is currently visible (its lane area is centred on the centre of the viewport, snapped to the grid), so the user sees it straight away. The view does not pan or zoom. If it lands on top of another Chapter, the user can drag it away by its handle.
 - **R1a.3** Each Chapter has a name, shown in its handle ("Chapter 1", "Chapter 2", ... by default). The user renames it by double-clicking the name. The first Chapter of the sample board is "Chapter 1". A Chapter's name can never be empty: renaming it to nothing is ignored and the previous name is kept, as for lanes (R2.4a).
-- **R1a.4** **Active Chapter.** The header's add buttons (**+ Command**, **+ Slice**, **+ Lane**, and so on) act on the active Chapter. This is the Chapter the user last clicked or dragged something in; initially the first Chapter. The header shows its name next to "Add to:". An element dragged from the header onto the board joins the Chapter it is released over; if it is released over no Chapter, it joins the active Chapter.
+- **R1a.4** **Active Chapter.** The header's add buttons for slices and lanes (**+ Slice**, **+ Lane**) act on the active Chapter. The element buttons do not: they act on the selected Cell (R3.3). This is the Chapter the user last clicked or dragged something in; initially the first Chapter. The header shows its name next to "Add to:". An element dragged from the header onto the board joins the Chapter of the Cell it is released over (R3.3); if it is released over no Cell, nothing is added.
 - **R1a.5** An element can be moved to another Chapter by dragging it and releasing it with its centre over a Cell of that Chapter (R5.14). It then becomes part of that Chapter, in that Cell's lane and slice, and follows its layout rules (R3.6a, R5.13 to R5.17). An element released anywhere else, including over another Chapter's lane label zone, stays in its own Chapter and returns to where the drag started (R5.14). Connections of a moved element are kept.
 - **R1a.6** A Chapter is removed with the **×** button in its handle. The button is hidden when only one Chapter is left, because the board always has at least one. Removing a Chapter also removes its lanes, slices, elements and every connection attached to them or to the Chapter. If it holds slices or elements, the user is asked to confirm first.
 
@@ -73,18 +73,18 @@ This document records the business requirements agreed so far. It describes beha
 
 An element is a sticky note placed on the board. Each has an id (R1.14), a type, a title, a text and a position, and it always sits in exactly one Cell: one lane and one slice of one Chapter (R2.8, R5.13). An element cannot exist outside a Cell.
 
-- **R3.1** Element types and default placement:
+- **R3.1** Element types:
 
-  | Type | Colour | Default lane |
-  |------|--------|--------------|
-  | Screen | light grey | first |
-  | Command | blue | second |
-  | Read Model | green | second |
-  | Event | orange | third |
-  | Processor | lavender, shown with a ⚙️ gear emoji | second |
+  | Type | Colour |
+  |------|--------|
+  | Screen | light grey |
+  | Command | blue |
+  | Read Model | green |
+  | Event | orange |
+  | Processor | lavender, shown with a ⚙️ gear emoji |
 
-- **R3.2** Default lane means the lane a new element is placed in when no Cell is selected. If that lane doesn't exist, the last lane is used. Elements can be dragged freely, but always end up inside a Cell (R5.14).
-- **R3.3** The user adds an element by clicking its toolbar button, or by dragging the button onto the board. A clicked button puts the element in the selected Cell if there is one (R5a.10); otherwise it joins the active Chapter (R1a.4), in the default lane of its type (R3.2) and in the last slice of that Chapter, at the first free spot from the left (as in R5a.10). A button released over a Cell adds the element in that Cell, at the horizontal position where it was released, kept inside the slice's margins (R5.14). A button released anywhere that is not over a Cell is treated like a click. An element is never created outside a Cell.
+- **R3.2** An element has no default lane: it goes in the lane of the Cell it is added to (R3.3). Elements can be dragged freely, but always end up inside a Cell (R5.14).
+- **R3.3** The user adds an element by clicking its toolbar button, or by dragging the button onto the board. A clicked button puts the element in the selected Cell (R5a.10); with no selected Cell, the click does nothing. A button released over a Cell adds the element in that Cell, at the horizontal position where it was released, kept inside the slice's margins (R5.14). A button released anywhere that is not over a Cell adds nothing. An element is never created outside a Cell.
 - **R3.4** Double-clicking the body of an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
 - **R3.4a** Double-clicking the header of an element edits its title (see R3.6b). Enter, Esc and clicking away save it. The title is a single line.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
@@ -95,7 +95,7 @@ An element is a sticky note placed on the board. Each has an id (R1.14), a type,
 ### Screen elements
 
 - **R3.7** A Screen element can hold an HTML mockup, edited through a `</>` button on the element.
-- **R3.8** When a Screen has HTML, the element widens and shows the HTML in an iframe preview.
+- **R3.8** The HTML is optional. When a Screen has HTML, the element widens and shows the HTML in an iframe preview. When it has none, the Screen shows nothing in place of the mockup.
 - **R3.9** The preview is sandboxed with no permissions: scripts and form submissions do not run.
 - **R3.10** The preview does not capture the mouse, so the element can still be dragged, selected and connected.
 
@@ -116,7 +116,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice of the active Chapter (R1a.4), with the name "New Slice".
 - **R5.2a** Every slice has a **+** button at the very right end of its header. It adds a new slice immediately after that slice, named "New Slice" and 220px wide. The slices after it, together with their elements, move to the right to make room (R5.7, R5.15). The Chapter becomes the active one (R1a.4). The button does not start a drag of the Chapter and does not trigger renaming.
 - **R5.3** The user renames a slice by double-clicking its header. A slice's name can never be empty: renaming it to nothing is ignored and the previous name is kept, as for lanes (R2.4a).
-- **R5.4** Slices can be selected by pressing or clicking their header, and a selected slice is outlined. Selecting works in every state of the header: when it is the start of a drag that moves the Chapter (R1.10), and when its name is being edited (R5.3). A selected slice can be deleted with Backspace or Delete (see R5.11, R5.18 and R5.19).
+- **R5.4** Slices can be selected by pressing or clicking their header, and a selected slice is outlined. Selecting works in every state of the header: when it is the start of a drag that moves the Chapter (R1.10), and when its name is being edited (R5.3). Only one slice can be selected at a time: selecting a slice deselects any other slice. A selected slice can be deleted with Backspace or Delete (see R5.11, R5.18 and R5.19).
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices are laid out automatically as one contiguous run. The first slice starts at the beginning of the slice area, right after the lane label zone (R2.4), and each following slice starts exactly where the previous one ends. There are no gaps and slices never overlap.
@@ -124,7 +124,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.9** The user resizes a slice by dragging its right edge, with a minimum width of 120px. There are no resize buttons.
 - **R5.10** Resizing a slice moves all following slices with it, so they stay attached. The preceding slices do not move.
 - **R5.11** Deleting a slice closes the gap: the following slices move left, and the next slice becomes first if the first was deleted.
-- **R5.12** Saved boards and imported files are laid out the same way on load: slices are packed together in the order in which they are stored (the order of the file's `slices` list), and their elements move with them. Each element is then kept inside its slice with the 20px margin (R5.14, R5.16, R5.17).
+- **R5.12** Saved boards and imported files are laid out the same way on load: slices are packed together in the order in which they are stored (the order of the file's `slices` list), and their elements move with them. A saved board that fails the checks of R7.4 is treated as unreadable (R1.6).
 
 ### Elements and slices
 
@@ -139,7 +139,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.16** A slice cannot be made narrower than its elements plus a 20px margin between the elements and the slice borders (left and right).
 - **R5.17** If an element is wider than its slice (for example a Screen that widens to show an HTML mockup), it is moved inside, and the slice grows to fit it, including the 20px margin, when it would not fit otherwise.
 - **R5.18** Deleting a slice always deletes the elements inside it and the connections attached to them, and closes the gap. If the slice holds elements, the user is asked to confirm first.
-- **R5.19** A Chapter always has at least one slice, because elements can only exist inside a slice. The last slice of a Chapter cannot be deleted: Backspace and Delete do nothing to it. A deletion that would remove every slice of a Chapter at once is refused as a whole.
+- **R5.19** A Chapter always has at least one slice, because elements can only exist inside a slice. The last slice of a Chapter cannot be deleted: Backspace and Delete do nothing to it. Other selected items are deleted as usual.
 
 **Learning (implementation).** While the board is at rest, the slice an element is in is the one that holds its left edge (an element is kept at least 20px inside its slice and may only grow to the right), not the one that holds its centre: a Screen that widens to show a mockup has its centre outside its slice until the slice has grown, and would otherwise be handed to the next slice.
 
@@ -154,7 +154,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.7** A click on the canvas outside every Cell (empty canvas, the lane label zone, or the area above the slices) clears the Cell selection.
 - **R5a.8** The selected Cell's border follows the Cell: it stays on it when the view is panned or zoomed, when the Chapter is moved, and when its slice is resized or shifted. If the Cell's lane or slice is removed, the selection disappears.
 - **R5a.9** Selecting a Cell is not an operation: it is not recorded for undo (R8.6), and there is nothing to delete, so Backspace and Delete do nothing to a selected Cell.
-- **R5a.10** When a Cell is selected, clicking an element button in the header adds the new element **in that Cell**, whatever the element's default lane (R3.2): it goes in the Cell's lane and slice, vertically centred in the lane (R3.6a), at the first free spot from the left, inside the slice's margins (R5.14), where it does not overlap the elements already in the Cell. If the Cell has no room left, the element is placed after the last element and the Cell's slice grows to fit it; the slices after it, with their elements, move right (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto the board is not affected: the element goes where it is released. With no Cell selected, or if its lane or slice no longer exists, the element is added as described in R3.3.
+- **R5a.10** When a Cell is selected, clicking an element button in the header adds the new element **in that Cell**, whatever the element's type (R3.2): it goes in the Cell's lane and slice, vertically centred in the lane (R3.6a), at the first free spot from the left, inside the slice's margins (R5.14), where it does not overlap the elements already in the Cell. If the Cell has no room left, the element is placed after the last element and the Cell's slice grows to fit it; the slices after it, with their elements, move right (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto the board is not affected: the element goes where it is released (R3.3). With no Cell selected, or if its lane or slice no longer exists, clicking an element button does nothing (R3.3).
 
 **Learning (implementation).** The lanes of a Chapter cover its whole Cell area, so a click on the empty part of a Cell is received by a lane, not by the canvas behind it. Cell selection therefore has to be handled for clicks on lanes as well as on the canvas, using the click position to find the Cell (R5a.5, R5a.7). The first version listened only to canvas clicks and nothing was ever selected.
 
@@ -181,10 +181,10 @@ The export file is the single, complete description of a board. It is written an
   - `type`: `screen`, `command`, `readmodel`, `event` or `processor`;
   - `lane`: the **id** of the element's lane, which must be a lane of the same Chapter (R2.9). Never the lane's name;
   - `title`, `text`: free text, empty (`""`) when not set;
-  - `html`: the Screen mockup. For every type other than `screen` it is `""`;
+  - `html`: the Screen mockup. Optional: it is written only for a `screen` that has HTML, and left out otherwise;
   - `x`: the horizontal position of the element **relative to the left edge of its slice**, in pixels. It is stored exactly and restored exactly;
   - `connectsTo`: the ids of the elements this element has an arrow to (R6.7).
-- **R6.6** Every field above is written for every item. No field is left out because it is empty or has its default value: an empty title is `""` and an item with no connections has `"connectsTo": []`.
+- **R6.6** Every field above is written for every item, except `html` (R6.5). No other field is left out because it is empty or has its default value: an empty title is `""` and an item with no connections has `"connectsTo": []`.
 - **R6.7** A connection is stored on the item it leaves: the `connectsTo` of the source lists the ids of its targets, and the direction is from the owner to each listed id. Element connections go from element to element. Chapter connections go from Chapter to Chapter, from the right side of the owner to the left side of the target (R1a.7). A connection is written once, on its source. There is no separate connection list and connections have no id (R1.16).
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
@@ -204,11 +204,12 @@ The export file is the single, complete description of a board. It is written an
 - **R7.2** The user must confirm before the current board is replaced.
 - **R7.3** Export followed by import reproduces the same board exactly, and exporting that board again gives an identical file (R6.9).
 - **R7.4** The whole file is checked before anything is changed. If any check fails, the file is rejected, the board is left untouched, and an error message names the first problem and where it is, for example `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks are:
-  - **Structure.** The file is valid JSON. `format` is `"event-model"` and `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type, and no other fields are present. `chapters` is not empty, and every Chapter has at least one lane and at least one slice (R2.5, R5.19).
+  - **Structure.** The file is valid JSON. `format` is `"event-model"` and `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` may be missing), and no other fields are present. `chapters` is not empty, and every Chapter has at least one lane and at least one slice (R2.5, R5.19).
   - **Ids.** Every id is a text of at least 8 characters, using only letters, digits, `-` and `_`. Ids are unique across the whole file: no two Chapters, lanes, slices or elements share an id, whatever their kind (R1.14).
   - **References.** Each element's `lane` is the id of a lane of the element's own Chapter. Each entry of a `connectsTo` is the id of an existing item of the same kind as its owner (an element's entries are elements, a Chapter's entries are Chapters). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
-  - **Values.** `name` of a Chapter, lane or slice is not empty. `type` is one of the five element types. `html` is `""` for every type other than `screen`. `x`, `y` and `width` are finite numbers.
-- **R7.5** When the file is accepted, the geometry is brought in line with the layout rules, the same as for a saved board (R5.12): slices are packed together in file order; a slice narrower than 120px is widened to 120px; an element `x` below 20 is raised to 20; a slice that is too narrow for its elements plus the 20px margins is widened (R5.16, R5.17); elements are centred in their lanes (R3.6a). A file written by the app already satisfies these rules, so for such a file nothing changes. After the import no Cell is selected, the first Chapter is the active one, and the import is one undo step (R8.1).
+  - **Values.** `name` of a Chapter, lane or slice is not empty. `type` is one of the five element types. `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
+  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 20. Every element fits in its slice with the 20px margins: its `x` plus its displayed width plus 20 is not more than the slice `width` (R5.16, R5.17). Nothing is corrected; a file that breaks one of these is rejected.
+- **R7.5** When the file is accepted, the board is laid out as for a saved board (R5.12): slices are packed together in file order and elements are centred in their lanes (R3.6a). A file written by the app already satisfies the checks of R7.4. After the import no Cell is selected, the first Chapter is the active one, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are not supported. They are rejected by the checks in R7.4 (no `format` field), with a message saying so.
 
 ## 8. Undo and redo
@@ -228,13 +229,4 @@ The export file is the single, complete description of a board. It is written an
 
 ## Open points
 
-Choices made while writing this specification that were not stated by the user. They are the first thing to confirm.
-
-1. **Adding an element with no Cell selected (R3.3):** it goes in the last slice of the active Chapter, in the default lane of its type.
-2. **A toolbar button released over no Cell (R3.3):** treated like a click, not ignored.
-3. **Characters allowed in imported ids (R7.4):** letters, digits, `-` and `_`, at least 8 characters, no upper limit. Generated ids always have 12 characters from `a-z0-9` (R1.14).
-4. **`html` on non-Screen elements (R6.5, R7.4):** written as `""` and rejected on import if it is not empty.
-5. **Unknown fields (R7.4):** rejected, so that a misspelt field name is reported instead of silently ignored.
-6. **Element position in a file not written by the app (R7.5):** a position that breaks the margin rule is corrected on load, not rejected.
-7. **Indentation (R6.8):** the file is indented with 2 spaces even though only software reads it.
-8. **Refused deletion of every slice (R5.19):** only the slice deletions of that Chapter are refused; other selected items are deleted as usual.
+None at the moment.

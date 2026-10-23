@@ -32,6 +32,7 @@ const LANE_HEIGHT = 220;
 const GRID = 20;
 const SLICE_PADDING = 20; // minimum gap between a slice border and its elements
 const STICKY_W = 160; // width of an element before it is measured
+const STICKY_WIDE_W = 240; // width of a Screen that shows an HTML mockup
 const STICKY_H = 80; // height of an element before it is measured
 const DEFAULT_SLICE_WIDTH = 220;
 const SLICE_MIN_WIDTH = 120;
@@ -48,9 +49,9 @@ const snap = (v) => Math.round(v / GRID) * GRID;
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const ID_LENGTH = 12;
+const ID_LENGTH = 8;
 
-// 12 characters of a-z0-9 from the secure random source (R1.14).
+// 8 characters of a-z0-9 from the secure random source (R1.14).
 function randomId() {
   let id = '';
   while (id.length < ID_LENGTH) {
@@ -925,7 +926,7 @@ function serialize(nodes, edges) {
                 lane: lane.id,
                 title: n.data.title ?? '',
                 text: n.data.text ?? '',
-                html: n.data.kind === 'screen' ? (n.data.html ?? '') : '',
+                ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
               };
@@ -946,6 +947,7 @@ const boardText = (nodes, edges) => JSON.stringify(serialize(nodes, edges), null
 const ID_PATTERN = /^[A-Za-z0-9_-]{8,}$/;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const stickyWidth = (kind, html) => (kind === 'screen' && html ? STICKY_WIDE_W : STICKY_W);
 
 // Reads the export file (section 7). The whole file is checked before anything is built; the
 // first problem throws an Error that names where it is. Returns { nodes, edges }.
@@ -954,10 +956,12 @@ function parseBoard(text) {
     throw new Error(`${path || 'file'}: ${message}`);
   };
   const at = (path, key) => (path ? `${path}.${key}` : key);
-  const object = (v, keys, path) => {
+  const object = (v, keys, path, optional = []) => {
     if (!isObject(v)) fail(path, 'must be an object');
     for (const k of keys) if (!hasKey(v, k)) fail(at(path, k), 'is missing');
-    for (const k of Object.keys(v)) if (!keys.includes(k)) fail(at(path, k), 'is not allowed');
+    for (const k of Object.keys(v)) {
+      if (!keys.includes(k) && !optional.includes(k)) fail(at(path, k), 'is not allowed');
+    }
   };
   const list = (v, path, nonEmpty) => {
     if (!Array.isArray(v)) fail(path, 'must be a list');
@@ -1029,13 +1033,14 @@ function parseBoard(text) {
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
       number(sl.width, at(sp, 'width'));
+      if (sl.width < SLICE_MIN_WIDTH) fail(at(sp, 'width'), `must be at least ${SLICE_MIN_WIDTH}`);
       list(sl.elements, at(sp, 'elements'));
-      const width = Math.max(SLICE_MIN_WIDTH, sl.width);
+      const width = sl.width;
       nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id));
 
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
-        object(el, ['id', 'type', 'lane', 'title', 'text', 'html', 'x', 'connectsTo'], ep);
+        object(el, ['id', 'type', 'lane', 'title', 'text', 'x', 'connectsTo'], ep, ['html']);
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
           fail(at(ep, 'type'), `must be one of ${Object.keys(KINDS).join(', ')}`);
@@ -1046,18 +1051,27 @@ function parseBoard(text) {
         }
         string(el.title, at(ep, 'title'));
         string(el.text, at(ep, 'text'));
-        string(el.html, at(ep, 'html'));
-        if (el.type !== 'screen' && el.html !== '') {
-          fail(at(ep, 'html'), 'must be "" for an element that is not a screen');
+        if (hasKey(el, 'html')) {
+          string(el.html, at(ep, 'html'));
+          if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
+          if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
         }
         number(el.x, at(ep, 'x'));
+        if (el.x < SLICE_PADDING) fail(at(ep, 'x'), `must be at least ${SLICE_PADDING}`);
+        const w = stickyWidth(el.type, el.html);
+        if (el.x + w + SLICE_PADDING > sl.width) {
+          fail(
+            at(ep, 'x'),
+            `the element (x ${el.x}, width ${w}) does not fit in the slice with ${SLICE_PADDING}px margins (width ${sl.width})`
+          );
+        }
         list(el.connectsTo, at(ep, 'connectsTo'));
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
         nodes.push({
           id: el.id,
           type: 'sticky',
           parentNode: c.id,
-          position: { x: cursor + Math.max(SLICE_PADDING, el.x), y: laneY.get(el.lane) + 40 },
+          position: { x: cursor + el.x, y: laneY.get(el.lane) + 40 },
           data: {
             kind: el.type,
             title: el.title,
@@ -1270,7 +1284,7 @@ function Board() {
 
   // Slices are laid out automatically, so they cannot be dragged. Deleting a slice also
   // deletes its elements (after confirmation) and closes the gap it leaves. The last slice of
-  // a Chapter cannot be deleted: a deletion that would remove all of them is refused.
+  // a Chapter cannot be deleted. Only one slice is selected at a time.
   const handleNodesChange = useCallback(
     (changes) => {
       const current = getNodes();
@@ -1278,11 +1292,17 @@ function Board() {
       const isSliceRemoval = (c) => c.type === 'remove' && isSliceId(c.id);
       let kept = changes.filter((c) => !(c.type === 'position' && isSliceId(c.id)));
       let sliceRemoved = false;
-      const asked = new Set(kept.filter(isSliceRemoval).map((c) => c.id));
+      const isSliceSelect = (c) => c.type === 'select' && c.selected && isSliceId(c.id);
+      const picked = kept.filter(isSliceSelect).at(-1)?.id;
+      if (picked) {
+        kept = kept.filter((c) => !isSliceSelect(c) || c.id === picked);
+        const others = current.filter((n) => n.type === 'slice' && n.selected && n.id !== picked);
+        kept = [...kept, ...others.map((n) => ({ type: 'select', id: n.id, selected: false }))];
+      }
       const refused = new Set();
       for (const ch of chaptersOf(current)) {
         const all = slices(current, ch.id);
-        if (all.length && all.every((s) => asked.has(s.id))) all.forEach((s) => refused.add(s.id));
+        if (all.length === 1) refused.add(all[0].id);
       }
       kept = kept.filter((c) => !(isSliceRemoval(c) && refused.has(c.id)));
       const removed = kept.filter(isSliceRemoval);
@@ -1510,24 +1530,18 @@ function Board() {
     [setEdges, getNodes, isValidConnection]
   );
 
-  // An element is always created in a Cell. A `drop` ({ cell, x }) puts it in that Cell at
-  // x (relative to its Chapter); else the selected Cell is used (see spotInCell); else the
-  // default lane of its type in the last slice of the active Chapter.
+  // An element is only created in a Cell. A `drop` ({ cell, x }) puts it in that Cell at
+  // x (relative to its Chapter); else the selected Cell is used (see spotInCell); with
+  // neither, nothing is added.
   const addSticky = (kind, drop) => {
     const [id] = newIds();
     setNodes((ns) => {
       const find = (i) => ns.find((n) => n.id === i);
       const cellRef = drop?.cell ?? selectedCell;
-      let lane = cellRef && find(cellRef.laneId);
-      let slice = cellRef && find(cellRef.sliceId);
-      let x = lane && slice ? drop?.x : undefined;
-      if (!lane || !slice) {
-        if (!activeChapterId) return ns;
-        const ls = lanesOf(ns, activeChapterId);
-        lane = ls[Math.min(KINDS[kind].lane, ls.length - 1)];
-        slice = slices(ns, activeChapterId).at(-1);
-        if (!lane || !slice) return ns;
-      }
+      const lane = cellRef && find(cellRef.laneId);
+      const slice = cellRef && find(cellRef.sliceId);
+      if (!lane || !slice) return ns;
+      const x = drop?.x;
 
       let base = ns;
       let pos;
@@ -1566,7 +1580,7 @@ function Board() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  // A button released over a Cell adds the element there; anywhere else it acts like a click.
+  // A button released over a Cell adds the element there; anywhere else adds nothing.
   const onDrop = (e) => {
     e.preventDefault();
     const kind = e.dataTransfer.getData('application/event-model');
@@ -1574,10 +1588,7 @@ function Board() {
     const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
     const ns = getNodes();
     const cell = cellAt(ns, p);
-    if (!cell) {
-      addSticky(kind);
-      return;
-    }
+    if (!cell) return;
     const chapter = ns.find((n) => n.id === cell.chapterId);
     addSticky(kind, { cell, x: p.x - STICKY_W / 2 - chapter.position.x });
   };
@@ -1627,7 +1638,7 @@ function Board() {
         <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
           ↷ Redo
         </button>
-        <span className="target" title="New elements, slices and lanes are added to this Chapter">
+        <span className="target" title="New slices and lanes are added to this Chapter">
           Add to: <strong>{active?.data.name}</strong>
         </span>
         {Object.entries(KINDS).map(([kind, k]) => (
@@ -1637,7 +1648,7 @@ function Board() {
             draggable
             onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
             onClick={() => addSticky(kind)}
-            title="Click to add, or drag onto the board"
+            title="Select a Cell and click to add, or drag onto a Cell"
           >
             + {k.icon && `${k.icon} `}{k.label}
           </button>
