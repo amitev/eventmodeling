@@ -22,7 +22,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .canvas { flex: 1; min-height: 0; }
 
 .lane {
-  box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb;
+  position: relative; box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb;
   background: rgba(255, 255, 255, 0.55); pointer-events: none;
 }
 .lane.alt { background: rgba(232, 238, 255, 0.6); }
@@ -50,7 +50,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 
 .chip.slice-btn { background: #fff8c5 !important; }
 .slice {
-  box-sizing: border-box; pointer-events: none;
+  position: relative; box-sizing: border-box; pointer-events: none;
   border: 2px dashed #8a7fc9; border-radius: 6px; background: rgba(138, 127, 201, 0.07);
 }
 .slice.selected { border-color: #1a73e8; background: rgba(26, 115, 232, 0.08); }
@@ -61,11 +61,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .slice-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
-.slice-controls { display: flex; gap: 2px; }
-.slice-controls button {
-  width: 20px; height: 20px; padding: 0; line-height: 1; cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; background: transparent; color: #fff;
-}
 
 .sticky.wide { width: 240px; }
 .sticky .kind { display: flex; justify-content: space-between; align-items: center; }
@@ -90,3 +85,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 
 .chip.processor { background: var(--processor) !important; }
 .sticky.processor { background: var(--processor); }
+
+.resize-handle { position: absolute; z-index: 5; pointer-events: auto; touch-action: none; }
+.resize-handle:hover, .resize-handle:active { background: rgba(26, 115, 232, 0.35); }
+.timeline-handle { top: 0; bottom: 0; right: 0; width: 10px; cursor: ew-resize; background: rgba(0, 0, 0, 0.12); }
+.slice-handle { top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
+.slice-handle.left { left: -4px; }
+.slice-handle.right { right: -4px; }
