@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,19 +11,20 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStore,
 } from 'reactflow';
 
 // Event modeling: time flows left to right across swimlanes.
 const LANE_WIDTH = 3200;
 const LANES = [
-  { id: 'lane-ui', label: 'UI / Actors', y: 0, height: 180 },
-  { id: 'lane-cmd', label: 'Commands / Read Models', y: 180, height: 180 },
-  { id: 'lane-evt', label: 'Events', y: 360, height: 180 },
+  { id: 'lane-ui', label: 'UI / Actors', y: 0, height: 220 },
+  { id: 'lane-cmd', label: 'Commands / Read Models', y: 220, height: 220 },
+  { id: 'lane-evt', label: 'Events', y: 440, height: 220 },
 ];
 
 const SLICE_Y = -40;
 const SLICE_HEADER = 40;
-const SLICE_BODY = LANES.reduce((sum, l) => sum + l.height, 0);
+const LANE_HEIGHT = 220;
 const SLICE_STEP = 20;
 const SLICE_MIN_WIDTH = 120;
 
@@ -34,13 +35,55 @@ const KINDS = {
   event: { label: 'Event', lane: 2, color: '#ffb366' },
 };
 
-function LaneNode({ data }) {
+const LaneActions = createContext({ removeLane: () => {}, canRemove: false });
+
+function LaneNode({ id, data }) {
+  const { setNodes } = useReactFlow();
+  const { removeLane, canRemove } = useContext(LaneActions);
+  const [editing, setEditing] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (editing) ref.current?.select();
+  }, [editing]);
+
+  const rename = (label) => {
+    setEditing(false);
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, label } } : n))
+    );
+  };
+
   return (
     <div
       className={`lane ${data.alt ? 'alt' : ''}`}
       style={{ width: LANE_WIDTH, height: data.height }}
     >
-      <span className="lane-label">{data.label}</span>
+      <div className="lane-header nodrag nopan">
+        {editing ? (
+          <input
+            ref={ref}
+            defaultValue={data.label}
+            onBlur={(e) => rename(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+            }}
+          />
+        ) : (
+          <span
+            className="lane-label"
+            title="Double-click to rename"
+            onDoubleClick={() => setEditing(true)}
+          >
+            {data.label}
+          </span>
+        )}
+        {canRemove && (
+          <button className="lane-remove" title="Remove lane" onClick={() => removeLane(id)}>
+            ×
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -54,20 +97,60 @@ function StickyNode({ id, data, selected }) {
     if (editing) ref.current?.focus();
   }, [editing]);
 
+  const [editingHtml, setEditingHtml] = useState(false);
+  const isScreen = data.kind === 'screen';
+
+  const update = (patch) =>
+    setNodes((ns) =>
+      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
+    );
+
   const commit = (text) => {
     setEditing(false);
-    setNodes((ns) =>
-      ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n))
-    );
+    update({ text });
   };
 
   return (
     <div
-      className={`sticky ${data.kind} ${selected ? 'selected' : ''}`}
+      className={`sticky ${data.kind} ${isScreen && data.html ? 'wide' : ''} ${selected ? 'selected' : ''}`}
       onDoubleClick={() => setEditing(true)}
     >
-      <Handle type="target" position={Position.Left} />
-      <div className="kind">{KINDS[data.kind].label}</div>
+      <Handle type="target" position={Position.Top} />
+      <div className="kind">
+        {KINDS[data.kind].label}
+        {isScreen && (
+          <button
+            className="html-btn nodrag"
+            title="Edit HTML mockup"
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={() => setEditingHtml((v) => !v)}
+          >
+            {'</>'}
+          </button>
+        )}
+      </div>
+      {isScreen && editingHtml && (
+        <textarea
+          className="nodrag nowheel html-editor"
+          autoFocus
+          placeholder="<h1>Hello</h1>"
+          defaultValue={data.html ?? ''}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onBlur={(e) => {
+            update({ html: e.target.value });
+            setEditingHtml(false);
+          }}
+          onKeyDown={(e) => e.key === 'Escape' && e.target.blur()}
+        />
+      )}
+      {isScreen && data.html && !editingHtml && (
+        <iframe
+          className="screen-frame"
+          title={data.text}
+          sandbox=""
+          srcDoc={data.html}
+        />
+      )}
       {editing ? (
         <textarea
           ref={ref}
@@ -85,7 +168,7 @@ function StickyNode({ id, data, selected }) {
       ) : (
         <div className="text">{data.text}</div>
       )}
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }
@@ -95,6 +178,13 @@ function SliceNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
+  const lanesHeight = useStore((s) => {
+    let sum = 0;
+    s.nodeInternals.forEach((n) => {
+      if (n.type === 'lane') sum += n.data.height;
+    });
+    return sum;
+  });
 
   useEffect(() => {
     if (editing) ref.current?.select();
@@ -111,7 +201,7 @@ function SliceNode({ id, data, selected }) {
   return (
     <div
       className={`slice ${selected ? 'selected' : ''}`}
-      style={{ width: data.width, height: SLICE_HEADER + SLICE_BODY }}
+      style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
     >
       <div className="slice-header" onDoubleClick={() => setEditing(true)}>
         {editing ? (
@@ -199,7 +289,13 @@ const STORAGE_KEY = 'event-model-board';
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved?.nodes && saved?.edges) return saved;
+    if (saved?.nodes && saved?.edges) {
+      // Boards saved before lanes were editable don't include lane nodes.
+      if (!saved.nodes.some((n) => n.type === 'lane')) {
+        saved.nodes = [...laneNodes, ...saved.nodes];
+      }
+      return saved;
+    }
   } catch {
     // ignore corrupt or unavailable storage
   }
@@ -209,7 +305,7 @@ function load() {
 function Board() {
   const saved = useMemo(load, []);
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    saved ? [...laneNodes, ...saved.nodes] : initialNodes
+    saved ? saved.nodes : initialNodes
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     saved ? saved.edges : initialEdges
@@ -218,9 +314,8 @@ function Board() {
   const counter = useRef(Date.now());
 
   useEffect(() => {
-    const saveable = nodes.filter((n) => n.type !== 'lane');
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes: saveable, edges }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
     } catch {
       // ignore unavailable storage
     }
@@ -247,20 +342,140 @@ function Board() {
     setNodes((ns) => [...ns, makeSlice(id, end + 20, 220, 'New Slice')]);
   };
 
+  const lanes = nodes
+    .filter((n) => n.type === 'lane')
+    .sort((a, b) => a.position.y - b.position.y);
+
+  const addLane = () => {
+    const y = lanes.reduce((sum, l) => sum + l.data.height, 0);
+    const id = `lane-${counter.current++}`;
+    setNodes((ns) => [
+      ...ns,
+      {
+        ...laneNodes[0],
+        id,
+        position: { x: 0, y },
+        data: { label: 'New Lane', height: LANE_HEIGHT, alt: lanes.length % 2 === 1 },
+      },
+    ]);
+  };
+
+  const removeLane = useCallback(
+    (laneId) => {
+      const ordered = nodes
+        .filter((n) => n.type === 'lane')
+        .sort((a, b) => a.position.y - b.position.y);
+      const lane = ordered.find((l) => l.id === laneId);
+      if (!lane || ordered.length <= 1) return;
+      const top = lane.position.y;
+      const bottom = top + lane.data.height;
+      const inLane = (n) =>
+        n.type === 'sticky' && n.position.y >= top && n.position.y < bottom;
+      const doomed = nodes.filter(inLane);
+      if (
+        doomed.length &&
+        !window.confirm(`Remove this lane and its ${doomed.length} note(s)?`)
+      )
+        return;
+      const gone = new Set([laneId, ...doomed.map((n) => n.id)]);
+      let laneIndex = 0;
+      setNodes(
+        nodes
+          .filter((n) => !gone.has(n.id))
+          .map((n) => {
+            const shifted =
+              n.type !== 'slice' && n.position.y >= bottom
+                ? { ...n, position: { ...n.position, y: n.position.y - lane.data.height } }
+                : n;
+            return shifted;
+          })
+          .map((n) => {
+            if (n.type !== 'lane') return n;
+            return { ...n, data: { ...n.data, alt: laneIndex++ % 2 === 1 } };
+          })
+      );
+      setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+    },
+    [nodes, setNodes, setEdges]
+  );
+
+  const laneActions = useMemo(
+    () => ({ removeLane, canRemove: lanes.length > 1 }),
+    [removeLane, lanes.length]
+  );
+
+  // A note belongs to the slice whose horizontal span contains its centre.
+  const exportJson = () => {
+    const laneOf = (n) => {
+      const cy = n.position.y + (n.height ?? 80) / 2;
+      let found = lanes[0];
+      for (const l of lanes) if (cy >= l.position.y) found = l;
+      return found;
+    };
+    const toElement = (n) => ({
+      id: n.id,
+      type: n.data.kind,
+      text: n.data.text,
+      ...(n.data.html ? { html: n.data.html } : {}),
+      lane: laneOf(n)?.data.label ?? null,
+      position: { x: n.position.x, y: n.position.y },
+    });
+    const stickies = nodes
+      .filter((n) => n.type === 'sticky')
+      .sort((a, b) => a.position.x - b.position.x);
+    const centreX = (n) => n.position.x + (n.width ?? 160) / 2;
+    const slices = nodes
+      .filter((n) => n.type === 'slice')
+      .sort((a, b) => a.position.x - b.position.x);
+
+    const assigned = new Set();
+    const out = slices.map((sl) => {
+      const members = stickies.filter(
+        (n) => centreX(n) >= sl.position.x && centreX(n) < sl.position.x + sl.data.width
+      );
+      members.forEach((n) => assigned.add(n.id));
+      return {
+        id: sl.id,
+        name: sl.data.name,
+        x: sl.position.x,
+        width: sl.data.width,
+        elements: members.map(toElement),
+      };
+    });
+
+    const data = {
+      exportedAt: new Date().toISOString(),
+      lanes: lanes.map((l) => l.data.label),
+      slices: out,
+      unassignedElements: stickies.filter((n) => !assigned.has(n.id)).map(toElement),
+      connections: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+    };
+
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'event-model.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const onConnect = useCallback(
     (c) => setEdges((es) => addEdge({ ...c, ...edgeDefaults }, es)),
     [setEdges]
   );
 
   const addSticky = (kind, position) => {
-    const lane = LANES[KINDS[kind].lane];
+    const lane = lanes[Math.min(KINDS[kind].lane, lanes.length - 1)];
+    const laneY = lane ? lane.position.y : 0;
     const id = `n${counter.current++}`;
     setNodes((ns) => [
       ...ns,
       {
         id,
         type: 'sticky',
-        position: position ?? { x: 200, y: lane.y + 40 },
+        position: position ?? { x: 200, y: laneY + 40 },
         data: { kind, text: `New ${KINDS[kind].label}` },
       },
     ]);
@@ -303,13 +518,20 @@ function Board() {
         <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the timeline">
           + Slice
         </button>
+        <button className="chip" onClick={addLane} title="Add a lane at the bottom">
+          + Lane
+        </button>
         <span className="spacer" />
         <span className="hint">
           Double-click to edit · Backspace deletes selection · Drag handles to connect
         </span>
+        <button onClick={exportJson} title="Download slices and their elements as JSON">
+          Export JSON
+        </button>
         <button onClick={reset}>Reset</button>
       </header>
       <div className="canvas">
+        <LaneActions.Provider value={laneActions}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -333,6 +555,7 @@ function Board() {
             nodeColor={(n) => KINDS[n.data?.kind]?.color ?? '#eee'}
           />
         </ReactFlow>
+        </LaneActions.Provider>
       </div>
     </div>
   );
