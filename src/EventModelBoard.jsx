@@ -257,6 +257,11 @@ function adoptStickies(nodes, only, origin) {
 
 const normalize = (nodes) => centerStickies(settleStickies(layoutSlices(nodes)));
 
+// Items are drawn in list order (a child's z-index never goes below its parent's), so lanes
+// must come before slices and elements to stay under their tint.
+const LAYER = { chapter: 0, lane: 1, slice: 2, sticky: 3 };
+const layered = (nodes) => [...nodes].sort((a, b) => LAYER[a.type] - LAYER[b.type]);
+
 // A Cell is the intersection of a lane and a slice of one Chapter: one box of the
 // Chapter's grid (lanes are the rows, slices the columns). It is not stored anywhere;
 // it follows from the lanes and slices. This finds the Cell under a canvas point
@@ -1406,7 +1411,7 @@ function Board() {
       const ls = lanesOf(ns, activeChapterId);
       const y = ls.reduce((sum, l) => sum + l.data.height, 0);
       const width = ls[0]?.data.width ?? LANE_WIDTH;
-      return [...ns, makeLane(id, activeChapterId, 'New Lane', y, 'none', width)];
+      return layered([...ns, makeLane(id, activeChapterId, 'New Lane', y, 'none', width)]);
     });
   };
 
@@ -1424,10 +1429,10 @@ function Board() {
           ? { ...n, position: { ...n.position, y: n.position.y + LANE_HEIGHT } }
           : n
       );
-      return [
+      return layered([
         ...shifted,
         makeLane(id, lane.parentNode, 'New Lane', below, 'none', lane.data.width),
-      ];
+      ]);
     });
     setActiveId(nodes.find((n) => n.id === laneId)?.parentNode ?? null);
   };
@@ -1476,12 +1481,14 @@ function Board() {
       : { x: width / 2, y: (LANES.length * LANE_HEIGHT) / 2 };
     const x = snap(mid.x - width / 2);
     const y = snap(mid.y - (LANES.length * LANE_HEIGHT) / 2);
-    setNodes((ns) => [
-      ...ns,
-      makeChapter(id, x, y, `Chapter ${chapters.length + 1}`),
-      ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, 'none', width)),
-      makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
-    ]);
+    setNodes((ns) =>
+      layered([
+        ...ns,
+        makeChapter(id, x, y, `Chapter ${chapters.length + 1}`),
+        ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, 'none', width)),
+        makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
+      ])
+    );
     setActiveId(id);
   };
 

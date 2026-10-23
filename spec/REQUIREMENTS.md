@@ -69,6 +69,8 @@ This document records the business requirements agreed so far. It describes beha
 - **R2.8** An element sits in exactly one lane of its Chapter: the one it is vertically centred in (R3.6a). Moving between lanes: R5.14.
 - **R2.9** A lane is referred to by **id**, never by name, so renaming (R2.4a) changes only the displayed name. The export file likewise names an element's lane by id (R6.5).
 
+**Learning (implementation).** Lanes and slices are translucent and overlap. A lane added later was drawn above the slices and looked lighter than the older lanes, until a reload reordered the items. Items are drawn in list order (a child's z-index cannot go below its parent's), so lanes are always kept before slices and elements in the list.
+
 ## 3. Elements
 
 An element is a sticky note with an id (R1.14), a type, a title and a position. It always sits in exactly one Cell: one lane and slice of one Chapter (R2.8, R5.13), and cannot exist outside one.
