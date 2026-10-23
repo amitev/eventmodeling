@@ -318,6 +318,7 @@ function useChapterDrag(nodeId, skip) {
 
 const BoardActions = createContext({
   activate: () => {},
+  addSliceAfter: () => {},
   removeLane: () => {},
   removeChapter: () => {},
   activeId: null,
@@ -562,6 +563,7 @@ function SliceNode({ id, data, selected }) {
   // Dragging a slice header moves the whole Chapter (slices themselves never move on
   // their own: their order and position come from the layout).
   const startChapterDrag = useChapterDrag(id, () => editing);
+  const { addSliceAfter } = useContext(BoardActions);
 
   // Each drag is computed from a snapshot taken at pointer-down, so the following
   // slices, their elements and a grown Chapter follow the edge both ways.
@@ -611,6 +613,14 @@ function SliceNode({ id, data, selected }) {
         ) : (
           <span className="slice-name">{data.name}</span>
         )}
+        <button
+          className="slice-add nodrag"
+          title="Add a slice right after this one"
+          onDoubleClick={(e) => e.stopPropagation()}
+          onClick={() => addSliceAfter(id)}
+        >
+          +
+        </button>
       </div>
       <div
         className="resize-handle slice-handle right nodrag nopan"
@@ -987,6 +997,26 @@ function Board() {
     });
   };
 
+  // Inserts a slice immediately after `sliceId`. The later slices (and their elements)
+  // move right to make room. The new slice starts 1px before the next slice so that the
+  // layout, which orders slices by position, puts it between the two.
+  const addSliceAfter = (sliceId) => {
+    const id = `slice-${counter.current++}`;
+    setNodes((ns) => {
+      const cur = ns.find((n) => n.id === sliceId);
+      if (!cur) return ns;
+      const added = makeSlice(
+        id,
+        cur.position.x + cur.data.width - 1,
+        DEFAULT_SLICE_WIDTH,
+        'New Slice',
+        cur.parentNode
+      );
+      return layoutSlices([...ns, added], ns);
+    });
+    setActiveId(nodes.find((n) => n.id === sliceId)?.parentNode ?? null);
+  };
+
   const addLane = () => {
     if (!activeChapterId) return;
     const id = `lane-${counter.current++}`;
@@ -1082,12 +1112,13 @@ function Board() {
   const boardActions = useMemo(
     () => ({
       activate: setActiveId,
+      addSliceAfter,
       removeLane,
       removeChapter,
       activeId: activeChapterId,
       chapterCount: chapters.length,
     }),
-    [removeLane, removeChapter, activeChapterId, chapters.length]
+    [removeLane, removeChapter, addSliceAfter, activeChapterId, chapters.length]
   );
 
   // An element belongs to the slice (of its own Chapter) whose span contains its centre.

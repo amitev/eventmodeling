@@ -103,12 +103,13 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.1** Each slice has a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice of the active Chapter (R1a.4), with the name "New Slice".
+- **R5.2a** Every slice has a **+** button at the very right end of its header. It adds a new slice immediately after that slice, named "New Slice" and 220px wide. The slices after it, together with their elements, move to the right to make room (R5.7, R5.15). The Chapter becomes the active one (R1a.4). The button does not start a drag of the Chapter and does not trigger renaming.
 - **R5.3** The user renames a slice by double-clicking its header.
 - **R5.4** Selected slices can be deleted with Backspace or Delete.
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices are laid out automatically as one contiguous run. The first slice starts at the beginning of the slice area, right after the lane label zone (R2.4), and each following slice starts exactly where the previous one ends. There are no gaps and slices never overlap.
-- **R5.8** The order of slices is fixed. Slices cannot be dragged to a different position within the Chapter, and have no left resize handle. Dragging a slice header moves the whole Chapter instead (R1.10). New slices are always appended at the end.
+- **R5.8** The order of slices is fixed. Slices cannot be dragged to a different position within the Chapter, and have no left resize handle. Dragging a slice header moves the whole Chapter instead (R1.10). New slices are added at the end with **+ Slice**, or right after a given slice with the **+** button in its header (R5.2a).
 - **R5.9** The user resizes a slice by dragging its right edge, with a minimum width of 120px. There are no resize buttons.
 - **R5.10** Resizing a slice moves all following slices with it, so they stay attached. The preceding slices do not move.
 - **R5.11** Deleting a slice closes the gap: the following slices move left, and the next slice becomes first if the first was deleted.
