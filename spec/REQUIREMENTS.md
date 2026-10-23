@@ -52,6 +52,8 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
 - **R3.4** Double-clicking an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
 - **R3.6** Only Processor carries an icon; other types show their text label.
+- **R3.6a** Elements are always vertically centred in the lane that holds them. This applies when an element is added, dropped or dragged (it snaps to the centre of the lane it was released in), when its size changes (for example while editing its text or showing a Screen mockup), and when a board is loaded or imported. An element taller than its lane is aligned to the lane's top edge.
+- **R3.6b** Every element has a header bar and a body. The header holds the element's type (with its icon, if any) and is filled with the type's colour from R3.1. The body is white and holds the element's text, and for Screens the mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out from the white body. Backgrounds are opaque.
 
 ### Screen elements
 

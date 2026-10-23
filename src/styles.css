@@ -1,5 +1,5 @@
 :root {
-  --screen: #f5f5f5;
+  --screen: #e2e2e2;
   --command: #7cc3f2;
   --readmodel: #8fd694;
   --event: #ffb366;
@@ -32,16 +32,21 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 
 .sticky {
-  width: 160px; min-height: 80px; box-sizing: border-box; padding: 6px 8px;
-  border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 3px;
+  width: 160px; min-height: 80px; box-sizing: border-box; padding: 0;
+  display: flex; flex-direction: column; background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 4px;
   box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2); font-size: 13px;
 }
 .sticky.selected { outline: 2px solid #1a73e8; }
-.sticky.screen { background: var(--screen); }
-.sticky.command { background: var(--command); }
-.sticky.readmodel { background: var(--readmodel); }
-.sticky.event { background: var(--event); }
-.sticky .kind { font-size: 10px; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; }
+.sticky.screen { --kind-color: var(--screen); }
+.sticky.command { --kind-color: var(--command); }
+.sticky.readmodel { --kind-color: var(--readmodel); }
+.sticky.event { --kind-color: var(--event); }
+.sticky .sticky-header {
+  background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
+  padding: 4px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: rgba(0, 0, 0, 0.75);
+}
+.sticky .sticky-body { flex: 1; background: #fff; border-radius: 0 0 3px 3px; padding: 6px 8px 8px; }
 .sticky .text { font-weight: 600; white-space: pre-wrap; word-break: break-word; }
 .sticky textarea {
   width: 100%; box-sizing: border-box; min-height: 48px; resize: none;
@@ -88,7 +93,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 
 .chip.processor { background: var(--processor) !important; }
-.sticky.processor { background: var(--processor); }
+.sticky.processor { --kind-color: var(--processor); }
 
 .resize-handle { position: absolute; z-index: 5; pointer-events: auto; touch-action: none; }
 .resize-handle:hover, .resize-handle:active { background: rgba(26, 115, 232, 0.35); }

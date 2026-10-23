@@ -29,11 +29,12 @@ const LANE_HEIGHT = 220;
 const GRID = 20;
 const SLICE_PADDING = 20; // minimum gap between a slice border and its elements
 const STICKY_W = 160; // width of an element before it is measured
+const STICKY_H = 80; // height of an element before it is measured
 const DEFAULT_SLICE_WIDTH = 220;
 const SLICE_MIN_WIDTH = 120;
 
 const KINDS = {
-  screen: { label: 'Screen', lane: 0, color: '#f5f5f5' },
+  screen: { label: 'Screen', lane: 0, color: '#e2e2e2' },
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
   readmodel: { label: 'Read Model', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
@@ -148,7 +149,29 @@ function settleStickies(nodes, only) {
   );
 }
 
-const normalize = (nodes) => settleStickies(layoutSlices(nodes));
+// Elements are vertically centred in the lane that holds their centre. An element
+// taller than its lane is aligned to the lane top. `only` limits it to those ids.
+function centerStickies(nodes, only) {
+  const lanes = nodes.filter((n) => n.type === 'lane');
+  if (!lanes.length) return nodes;
+  let changed = false;
+  const next = nodes.map((n) => {
+    if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
+    const h = n.height ?? STICKY_H;
+    const mid = n.position.y + h / 2;
+    const lane = lanes.find(
+      (l) => mid >= l.position.y && mid < l.position.y + l.data.height
+    );
+    if (!lane) return n;
+    const y = lane.position.y + Math.max(0, (lane.data.height - h) / 2);
+    if (y === n.position.y) return n;
+    changed = true;
+    return { ...n, position: { ...n.position, y } };
+  });
+  return changed ? next : nodes;
+}
+
+const normalize = (nodes) => centerStickies(settleStickies(layoutSlices(nodes)));
 
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 function useHorizontalDrag() {
@@ -251,7 +274,7 @@ function StickyNode({ id, data, selected }) {
       onDoubleClick={() => setEditing(true)}
     >
       <Handle type="target" position={Position.Top} />
-      <div className="kind">
+      <div className="kind sticky-header">
         <span>
           {KINDS[data.kind].icon && `${KINDS[data.kind].icon} `}
           {KINDS[data.kind].label}
@@ -267,6 +290,7 @@ function StickyNode({ id, data, selected }) {
           </button>
         )}
       </div>
+      <div className="sticky-body">
       {isScreen && editingHtml && (
         <textarea
           className="nodrag nowheel html-editor"
@@ -306,6 +330,7 @@ function StickyNode({ id, data, selected }) {
       ) : (
         <div className="text">{data.text}</div>
       )}
+      </div>
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -351,7 +376,7 @@ function SliceNode({ id, data, selected }) {
         const width = Math.max(SLICE_MIN_WIDTH, snapUp(needed), snap(startW + dx));
         setNodes(layoutSlices(setSliceWidth(base, id, width), base));
       },
-      () => setNodes((ns) => settleStickies(ns))
+      () => setNodes((ns) => centerStickies(settleStickies(ns)))
     );
   };
 
@@ -515,7 +540,7 @@ function Board() {
       if (sliceRemoved) setNodes((ns) => layoutSlices(ns));
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
       if (kept.some((c) => c.type === 'dimensions')) {
-        setNodes((ns) => settleStickies(ns));
+        setNodes((ns) => centerStickies(settleStickies(ns)));
       }
     },
     [onNodesChange, getNodes, setNodes, setEdges]
@@ -746,7 +771,8 @@ function Board() {
     const laneY = lane ? lane.position.y : 0;
     const id = `n${counter.current++}`;
     setNodes((ns) =>
-      settleStickies(
+      centerStickies(
+        settleStickies(
         [
           ...ns,
           {
@@ -756,6 +782,8 @@ function Board() {
             data: { kind, text: `New ${KINDS[kind].label}` },
           },
         ],
+        new Set([id])
+        ),
         new Set([id])
       )
     );
@@ -828,7 +856,10 @@ function Board() {
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
           onNodeDragStop={(_, __, dragged) =>
-            setNodes((ns) => settleStickies(ns, new Set(dragged.map((n) => n.id))))
+            setNodes((ns) => {
+              const ids = new Set(dragged.map((n) => n.id));
+              return centerStickies(settleStickies(ns, ids), ids);
+            })
           }
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
