@@ -3,6 +3,7 @@
   --command: #7cc3f2;
   --readmodel: #8fd694;
   --event: #ffb366;
+  --processor: #d9c2f0;
 }
 html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
 .app { display: flex; flex-direction: column; height: 100%; }
@@ -86,3 +87,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
 }
+
+.chip.processor { background: var(--processor) !important; }
+.sticky.processor { background: var(--processor); }

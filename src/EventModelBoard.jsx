@@ -33,6 +33,7 @@ const KINDS = {
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
   readmodel: { label: 'Read Model', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
+  processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
 };
 
 const LaneActions = createContext({ removeLane: () => {}, canRemove: false });
@@ -117,7 +118,10 @@ function StickyNode({ id, data, selected }) {
     >
       <Handle type="target" position={Position.Top} />
       <div className="kind">
-        {KINDS[data.kind].label}
+        <span>
+          {KINDS[data.kind].icon && `${KINDS[data.kind].icon} `}
+          {KINDS[data.kind].label}
+        </span>
         {isScreen && (
           <button
             className="html-btn nodrag"
@@ -461,6 +465,85 @@ function Board() {
     URL.revokeObjectURL(url);
   };
 
+  const fileInput = useRef(null);
+
+  // Rebuild the whole board from an exported file; the inverse of exportJson.
+  const buildBoard = (data) => {
+    if (!data || !Array.isArray(data.slices)) {
+      throw new Error('Missing "slices" array.');
+    }
+    const laneNames =
+      Array.isArray(data.lanes) && data.lanes.length
+        ? data.lanes.map(String)
+        : laneNodes.map((l) => l.data.label);
+
+    const newLanes = laneNames.map((label, i) => ({
+      ...laneNodes[0],
+      id: `lane-${counter.current++}`,
+      position: { x: 0, y: i * LANE_HEIGHT },
+      data: { label, height: LANE_HEIGHT, alt: i % 2 === 1 },
+    }));
+
+    const newSlices = data.slices.map((sl, i) => ({
+      ...makeSlice(
+        String(sl.id ?? `slice-${counter.current++}`),
+        Number(sl.x) || 0,
+        Math.max(SLICE_MIN_WIDTH, Number(sl.width) || 220),
+        String(sl.name ?? `Slice ${i + 1}`)
+      ),
+    }));
+
+    const elements = [
+      ...data.slices.flatMap((sl) => sl.elements ?? []),
+      ...(data.unassignedElements ?? []),
+    ];
+    const seen = new Set();
+    const newStickies = elements.map((el, i) => {
+      if (!KINDS[el.type]) throw new Error(`Unknown element type "${el.type}".`);
+      const id = String(el.id ?? `n${counter.current++}`);
+      if (seen.has(id)) throw new Error(`Duplicate element id "${id}".`);
+      seen.add(id);
+      return {
+        id,
+        type: 'sticky',
+        position: {
+          x: Number.isFinite(el.position?.x) ? el.position.x : 200 + i * 20,
+          y: Number.isFinite(el.position?.y) ? el.position.y : 40,
+        },
+        data: {
+          kind: el.type,
+          text: String(el.text ?? ''),
+          ...(el.html ? { html: String(el.html) } : {}),
+        },
+      };
+    });
+
+    const newEdges = (data.connections ?? [])
+      .filter((c) => seen.has(String(c.source)) && seen.has(String(c.target)))
+      .map((c, i) => ({
+        id: String(c.id ?? `e-import-${i}`),
+        source: String(c.source),
+        target: String(c.target),
+        ...edgeDefaults,
+      }));
+
+    return { nodes: [...newLanes, ...newSlices, ...newStickies], edges: newEdges };
+  };
+
+  const importJson = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-importing the same file
+    if (!file) return;
+    try {
+      const board = buildBoard(JSON.parse(await file.text()));
+      if (!window.confirm('Replace the current board with the imported one?')) return;
+      setNodes(board.nodes);
+      setEdges(board.edges);
+    } catch (err) {
+      window.alert(`Could not import "${file.name}": ${err.message}`);
+    }
+  };
+
   const onConnect = useCallback(
     (c) => setEdges((es) => addEdge({ ...c, ...edgeDefaults }, es)),
     [setEdges]
@@ -512,7 +595,7 @@ function Board() {
             onClick={() => addSticky(kind)}
             title="Click to add, or drag onto the board"
           >
-            + {k.label}
+            + {k.icon && `${k.icon} `}{k.label}
           </button>
         ))}
         <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the timeline">
@@ -525,6 +608,16 @@ function Board() {
         <span className="hint">
           Double-click to edit · Backspace deletes selection · Drag handles to connect
         </span>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={importJson}
+        />
+        <button onClick={() => fileInput.current?.click()} title="Load a board from an exported JSON file">
+          Import JSON
+        </button>
         <button onClick={exportJson} title="Download slices and their elements as JSON">
           Export JSON
         </button>
