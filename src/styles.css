@@ -53,9 +53,13 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
   padding: 4px 8px; font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.8);
 }
-.sticky-header .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sticky-header .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 16px; }
 .sticky-header .title.empty { font-weight: 400; font-style: italic; opacity: 0.35; }
-.sticky-header .title-input { flex: 1; min-width: 0; font: inherit; }
+.sticky-header .title-input {
+  flex: 1; min-width: 0; height: 16px; margin: 0; padding: 0; border: 0; border-radius: 0;
+  font: inherit; line-height: 16px; color: inherit; background: transparent;
+  outline: 1px solid rgba(0, 0, 0, 0.45); outline-offset: 2px; /* no layout space */
+}
 .sticky .sticky-body { flex: 1; background: #fff; border-radius: 0 0 3px 3px; padding: 6px 8px 8px; }
 .sticky .text { font-weight: 600; white-space: pre-wrap; word-break: break-word; }
 .sticky textarea {
