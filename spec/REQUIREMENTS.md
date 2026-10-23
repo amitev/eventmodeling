@@ -45,7 +45,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Connecting Chapters
 
-- **R1a.7** Chapters are connected with arrows to show how the model flows from one Chapter to the next. Each Chapter has an **outgoing** connection point on its **right** side and an **incoming** one on its **left** side, both at its vertical middle.
+- **R1a.7** Chapters are connected with arrows to show how the model flows from one Chapter to the next. Each Chapter has an **outgoing** connection point on its **right** side and an **incoming** one on its **left** side, both at its vertical middle. The points sit just outside the Chapter's outline, clear of its border, so they are easy to reach.
 - **R1a.8** The user creates a Chapter connection by dragging from one Chapter's right point to another Chapter's left point.
 - **R1a.9** Chapter connections look different from element connections: darker, thicker arrows with a larger arrowhead, and larger connection points.
 - **R1a.10** Chapters connect only to Chapters, and elements only to elements. A connection between a Chapter and an element is refused, and so is a connection from a Chapter to itself.
