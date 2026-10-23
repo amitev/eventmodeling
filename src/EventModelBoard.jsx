@@ -237,6 +237,25 @@ function adoptStickies(nodes, only) {
 
 const normalize = (nodes) => centerStickies(settleStickies(layoutSlices(nodes)));
 
+// A Cell is the intersection of a lane and a slice of one Chapter: one box of the
+// Chapter's grid (lanes are the rows, slices the columns). It is not stored anywhere;
+// it follows from the lanes and slices. This finds the Cell under a canvas point
+// (flow coordinates), or null when the point is not inside any Cell.
+function cellAt(nodes, p) {
+  for (const c of chaptersOf(nodes)) {
+    const lane = lanesOf(nodes, c.id).find(
+      (l) =>
+        p.y >= c.position.y + l.position.y && p.y < c.position.y + l.position.y + l.data.height
+    );
+    const slice = slices(nodes, c.id).find(
+      (sl) =>
+        p.x >= c.position.x + sl.position.x && p.x < c.position.x + sl.position.x + sl.data.width
+    );
+    if (lane && slice) return { chapterId: c.id, laneId: lane.id, sliceId: slice.id };
+  }
+  return null;
+}
+
 // Undo/redo works on whole-board snapshots. A continuous gesture (dragging a note,
 // resizing a slice) brackets itself with begin/end so it records a single entry.
 const HistoryContext = createContext({ begin: () => {}, end: () => {} });
@@ -285,9 +304,10 @@ function useChapterDrag(nodeId, skip, select = false) {
   const storeApi = useStoreApi();
   const zoom = useStore((s) => s.transform[2]);
   const history = useContext(HistoryContext);
-  const { activate } = useContext(BoardActions);
+  const { activate, clearCell } = useContext(BoardActions);
   return (e) => {
     if (e.button !== 0) return;
+    clearCell(); // pressing a header selects something else
     if (select && !e.target.closest('button')) {
       const { addSelectedNodes, nodeInternals } = storeApi.getState();
       if (!nodeInternals.get(nodeId)?.selected) addSelectedNodes([nodeId]);
@@ -327,6 +347,7 @@ function useChapterDrag(nodeId, skip, select = false) {
 
 const BoardActions = createContext({
   activate: () => {},
+  clearCell: () => {},
   addSliceAfter: () => {},
   removeLane: () => {},
   removeChapter: () => {},
@@ -832,6 +853,27 @@ function load() {
   return null;
 }
 
+// Draws the border of the selected Cell above everything else. It is positioned from the
+// canvas transform, so it follows panning, zooming and moving the Chapter.
+function CellHighlight({ cell }) {
+  const box = useStore((s) => {
+    if (!cell) return null;
+    const lane = s.nodeInternals.get(cell.laneId);
+    const slice = s.nodeInternals.get(cell.sliceId);
+    if (!lane || !slice) return null; // the lane or slice was removed
+    const [tx, ty, zoom] = s.transform;
+    return [
+      slice.positionAbsolute.x * zoom + tx,
+      lane.positionAbsolute.y * zoom + ty,
+      slice.data.width * zoom,
+      lane.data.height * zoom,
+    ].join(',');
+  });
+  if (!box) return null;
+  const [left, top, width, height] = box.split(',').map(Number);
+  return <div className="cell-highlight" style={{ left, top, width, height }} />;
+}
+
 function Board() {
   const saved = useMemo(load, []);
   const [nodes, setNodes, onNodesChange] = useNodesState(
@@ -850,6 +892,10 @@ function Board() {
   const chapters = nodes.filter((n) => n.type === 'chapter');
   const active = chapters.find((c) => c.id === activeId) ?? chapters[0];
   const activeChapterId = active?.id;
+
+  // The selected Cell, if any: { chapterId, laneId, sliceId }. Selection only: it is not
+  // saved, exported or recorded for undo.
+  const [selectedCell, setSelectedCell] = useState(null);
   const focusChapter = (node) =>
     setActiveId(node.type === 'chapter' ? node.id : node.parentNode ?? null);
 
@@ -909,6 +955,7 @@ function Board() {
     (snap) => {
       setNodes(snap.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)));
       setEdges(snap.edges.map((e) => (e.selected ? { ...e, selected: false } : e)));
+      setSelectedCell(null);
     },
     [setNodes, setEdges]
   );
@@ -1121,6 +1168,7 @@ function Board() {
   const boardActions = useMemo(
     () => ({
       activate: setActiveId,
+      clearCell: () => setSelectedCell(null),
       addSliceAfter,
       removeLane,
       removeChapter,
@@ -1311,6 +1359,7 @@ function Board() {
     try {
       const board = buildBoard(JSON.parse(await file.text()));
       if (!window.confirm('Replace the current board with the imported one?')) return;
+      setSelectedCell(null);
       setNodes(board.nodes);
       setEdges(board.edges);
     } catch (err) {
@@ -1390,7 +1439,15 @@ function Board() {
     );
   };
 
+  // Selects the Cell under the click, or clears the selection when it is outside every Cell.
+  const selectCellAt = (e) => {
+    const cell = cellAt(getNodes(), screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    setSelectedCell(cell);
+    if (cell) setActiveId(cell.chapterId);
+  };
+
   const reset = () => {
+    setSelectedCell(null);
     setNodes(initialNodes);
     setEdges(initialEdges);
   };
@@ -1456,9 +1513,20 @@ function Board() {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
-          onNodeClick={(_, node) => focusChapter(node)}
+          onNodeClick={(e, node) => {
+            // Lanes cover the whole Cell area, so a click on the empty part of a Cell is
+            // delivered to a lane node, not to the canvas: treat it as a click on the canvas.
+            if (node.type === 'lane') selectCellAt(e);
+            else {
+              setSelectedCell(null);
+              focusChapter(node);
+            }
+          }}
+          onEdgeClick={() => setSelectedCell(null)}
+          onPaneClick={selectCellAt}
           onNodeDragStart={(_, node) => {
             historyApi.begin();
+            setSelectedCell(null);
             focusChapter(node);
           }}
           onSelectionDragStart={historyApi.begin}
@@ -1482,6 +1550,7 @@ function Board() {
           snapGrid={[20, 20]}
           deleteKeyCode={['Backspace', 'Delete']}
         >
+          <CellHighlight cell={selectedCell} />
           <Background gap={20} />
           <Controls />
           <MiniMap

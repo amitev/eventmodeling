@@ -124,6 +124,20 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.17** If an element is wider than its slice (for example a Screen that widens to show an HTML mockup), it is moved inside, and the slice grows to fit it, including the 20px margin, when it would not fit otherwise.
 - **R5.18** Deleting a slice always deletes the elements inside it and the connections attached to them, and closes the gap. If the slice holds elements, the user is asked to confirm first.
 
+## 5a. Cells
+
+- **R5a.1** A **Cell** is the intersection of one lane and one slice of a Chapter: one box of the Chapter's grid, with the lanes as rows and the slices as columns. A Chapter with 3 lanes and 2 slices has 6 Cells. The lane label zone is not part of any Cell.
+- **R5a.2** A Cell is not a separate object that is stored. It follows from the lanes and slices: adding, removing, renaming or resizing them adds, removes or resizes the Cells, and moving the Chapter moves its Cells. A Cell has no data of its own, so it is not exported or imported, and is not saved with the board.
+- **R5a.3** A Cell has no colour of its own. It shows the shading of its lane (R2.6).
+- **R5a.4** A Cell can hold any number of elements. They stay freely positioned, as before: an element sits in the Cell of its lane and slice (R5.13), can be dragged anywhere within it, and is vertically centred in the lane (R3.6a).
+- **R5a.5** Clicking on a Cell selects it: a thin (2px), slightly transparent blue border is drawn around the whole Cell, above its elements. It is meant to be visible without being intrusive. Only one Cell is selected at a time, and clicking another Cell moves the selection. The Chapter of the Cell becomes the active Chapter (R1a.4).
+- **R5a.6** Clicking on an element, a slice header, a lane header, a Chapter handle or a connection does not select a Cell; it selects that item, and clears any Cell selection. So does starting to drag an element, and undo or redo.
+- **R5a.7** A click on the canvas outside every Cell (empty canvas, the lane label zone, or the area above the slices) clears the Cell selection.
+- **R5a.8** The selected Cell's border follows the Cell: it stays on it when the view is panned or zoomed, when the Chapter is moved, and when its slice is resized or shifted. If the Cell's lane or slice is removed, the selection disappears.
+- **R5a.9** Selecting a Cell is not an operation: it is not recorded for undo (R8.6), and there is nothing to delete, so Backspace and Delete do nothing to a selected Cell.
+
+**Learning (implementation).** The lanes of a Chapter cover its whole Cell area, so a click on the empty part of a Cell is received by a lane, not by the canvas behind it. Cell selection therefore has to be handled for clicks on lanes as well as on the canvas, using the click position to find the Cell (R5a.5, R5a.7). The first version listened only to canvas clicks and nothing was ever selected.
+
 ## 6. Export
 
 - **R6.1** An **Export JSON** button downloads `event-model.json`.
@@ -163,7 +177,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R8.3** Keyboard shortcuts: Ctrl+Z (Cmd+Z) undoes, Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies there.
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends, not once per movement.
 - **R8.5** An operation and the automatic adjustments it triggers (re-settling elements inside slices, centring in lanes, shifting following slices) are one step. Undo restores the board exactly as it was before the operation.
-- **R8.6** Selecting items, panning and zooming are not operations and are not recorded.
+- **R8.6** Selecting items (including Cells, R5a.9), panning and zooming are not operations and are not recorded.
 - **R8.7** Making a new change after an undo discards the redo history.
 - **R8.8** History keeps the last 100 operations. It lives in memory only: it is lost when the page is reloaded, and the board itself is still saved as before (R1.6).
 
