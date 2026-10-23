@@ -30,7 +30,7 @@ const SLICE_Y = -40;
 const SLICE_HEADER = 40;
 const LANE_HEIGHT = 220;
 const GRID = 20;
-const SLICE_PADDING = 20; // minimum gap between a slice border and its elements
+const SLICE_PADDING = 40; // minimum gap between a slice border and its elements
 const STICKY_W = 160; // width of an element before it is measured
 const STICKY_WIDE_W = 240; // width of a Screen that shows an HTML mockup
 const STICKY_H = 132; // height of an element before it is measured (26px header + 104px body)
@@ -848,10 +848,11 @@ function makeSample() {
   const used = new Set();
   const id = () => uniqueId(used);
   const chapterId = id();
+  const colX = [SLICE_PADDING, 240, 440 + SLICE_PADDING]; // relative to the slice area
   const sticky = (kind, col, title) => ({
     id: id(),
     type: 'sticky',
-    position: { x: LABEL_ZONE + 20 + col * 220, y: LANES[KINDS[kind].lane].y + 40 },
+    position: { x: LABEL_ZONE + colX[col], y: LANES[KINDS[kind].lane].y + 40 },
     parentNode: chapterId,
     data: { kind, title },
   });
@@ -866,7 +867,7 @@ function makeSample() {
     makeChapter(chapterId, 0, 0, 'Chapter 1'),
     ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
     makeSlice(id(), LABEL_ZONE, 440, 'Add Item', chapterId),
-    makeSlice(id(), LABEL_ZONE + 440, 220, 'View Cart', chapterId),
+    makeSlice(id(), LABEL_ZONE + 440, 240, 'View Cart', chapterId),
     n1,
     n2,
     n3,
@@ -1512,12 +1513,19 @@ function Board() {
     [nodes, setNodes, setEdges]
   );
 
-  // Each slice shrinks (or grows) to its elements plus the minimal margins, and the group of
-  // elements is centred in it; empty slices get the default width. Later slices move left.
+  // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
+  // the default width. If no Cell of a slice holds more than one element, every element is
+  // centred horizontally first; otherwise the group keeps its layout and is centred as a unit.
+  // Later slices move left.
   const compactChapter = useCallback(
     (chapterId) => {
       setNodes((ns) => {
         const members = membersOf(ns);
+        const lanes = lanesOf(ns, chapterId);
+        const laneIdOf = (n) => {
+          const mid = n.position.y + (n.height ?? STICKY_H) / 2;
+          return lanes.find((l) => mid >= l.position.y && mid < l.position.y + l.data.height)?.id;
+        };
         const widths = new Map();
         const shifts = new Map();
         for (const sl of slices(ns, chapterId)) {
@@ -1526,8 +1534,19 @@ function Board() {
             widths.set(sl.id, DEFAULT_SLICE_WIDTH);
             continue;
           }
+          const w = (n) => n.width ?? STICKY_W;
+          const perCell = new Map();
+          for (const n of els) perCell.set(laneIdOf(n), (perCell.get(laneIdOf(n)) ?? 0) + 1);
+          if ([...perCell.values()].every((c) => c === 1)) {
+            const width = Math.max(SLICE_MIN_WIDTH, snapUp(Math.max(...els.map(w)) + 2 * SLICE_PADDING));
+            widths.set(sl.id, width);
+            for (const n of els) {
+              shifts.set(n.id, Math.floor((width - w(n)) / 2) - (n.position.x - sl.position.x));
+            }
+            continue;
+          }
           const left = Math.min(...els.map((n) => n.position.x));
-          const right = Math.max(...els.map((n) => n.position.x + (n.width ?? STICKY_W)));
+          const right = Math.max(...els.map((n) => n.position.x + w(n)));
           const width = Math.max(SLICE_MIN_WIDTH, snapUp(right - left + 2 * SLICE_PADDING));
           const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
           widths.set(sl.id, width);
