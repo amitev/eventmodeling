@@ -10,21 +10,21 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.3** Items snap to a 20px grid.
 - **R1.4** The board starts with a sample flow ("Add Item" and "View Cart") so there is something to look at.
 - **R1.5** A **Reset** button restores the sample flow.
-- **R1.6** The board is saved automatically in the browser and restored on reload. This covers lanes, slices, elements, connections and the timeline width.
+- **R1.6** The board is saved automatically in the browser and restored on reload. This covers lanes, slices, elements and connections.
 
 ### Timeline width
 
 - **R1.7** The timeline has one width shared by all lanes.
-- **R1.8** The user resizes the timeline by dragging a handle at the right end of a lane. There are no resize buttons.
-- **R1.9** The timeline has a minimum width of 800px and can never be narrower than the slices it contains.
-- **R1.10** The timeline grows automatically when a slice is added, moved or resized past its end.
+- **R1.8** The timeline is exactly as wide as its slices: it starts at the left edge of the lanes and ends where the last slice ends. It can be neither longer nor shorter, so it cannot be resized on its own. There is no timeline resize handle.
+- **R1.9** The timeline therefore grows and shrinks automatically when a slice is added, resized or deleted. With no slices it is as wide as the label zone plus one default slice (220px).
 
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
 - **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom with the name "New Lane" and the current timeline width.
-- **R2.4** The user can rename a lane by double-clicking its label.
+- **R2.4** Each lane has a reserved label zone, a 180px strip at its left edge, that holds the lane name and the **×** button. Slices can never enter this zone (see R5.7).
+- **R2.4a** The user can rename a lane by double-clicking its label.
 - **R2.5** The user can remove a lane with its **×** button.
   - Lanes below it move up to close the gap.
   - Notes in the removed lane are deleted, together with the connections attached to them.
@@ -72,26 +72,26 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
 A slice is a vertical band across all lanes that groups the elements of one piece of behaviour.
 
 - **R5.1** Each slice has a name and a width, and sits on the timeline above the lanes.
-- **R5.2** The user adds a slice with **+ Slice**. It is placed directly after the last slice, with the name "New Slice".
+- **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice, with the name "New Slice".
 - **R5.3** The user renames a slice by double-clicking its header.
 - **R5.4** Selected slices can be deleted with Backspace or Delete.
 - **R5.5** A slice's height always covers all current lanes, including after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
-- **R5.7** A slice moves along the timeline only, by dragging its header.
-- **R5.8** The user resizes a slice by dragging its left or right edge, with a minimum width of 120px. There are no resize buttons.
+- **R5.7** Slices are laid out automatically as one contiguous run. The first slice starts at the beginning of the slice area, right after the lane label zone (R2.4), and each following slice starts exactly where the previous one ends. There are no gaps and slices never overlap.
+- **R5.8** The order of slices is fixed. Slices cannot be dragged, and have no left resize handle. New slices are always appended at the end.
+- **R5.9** The user resizes a slice by dragging its right edge, with a minimum width of 120px. There are no resize buttons.
+- **R5.10** Resizing a slice moves all following slices with it, so they stay attached. The preceding slices do not move.
+- **R5.11** Deleting a slice closes the gap: the following slices move left, and the next slice becomes first if the first was deleted.
+- **R5.12** Saved boards and imported files are laid out the same way on load: slices are ordered by their stored `x`, packed together, and their elements move with them and are settled inside a single slice (R5.13).
 
-### Non-overlap
+### Elements and slices
 
-- **R5.9** Slices never overlap. A slice cannot start before the start of the timeline.
-- **R5.10** Moving a slice stops at its neighbours.
-- **R5.11** Resizing a slice pushes its neighbours: the right edge pushes slices to the right, the left edge pushes slices to the left.
-  - Pushed slices return to their original positions if the drag is reversed before release.
-  - A left-edge drag cannot go past the start of the timeline.
-- **R5.12** Slices on saved boards or imported files that overlap are pushed apart on load.
-
-### Known limitation
-
-- **R5.13** Elements do not move with their slice. If a slice is moved or pushed, its elements stay where they were and may end up under a different slice or none.
+- **R5.13** An element never crosses two slices. It sits entirely inside one slice, or entirely outside every slice. An element belongs to the slice that contains its centre.
+- **R5.14** When an element is added, dropped or dragged so that it overlaps a slice, it is moved fully inside the slice it overlaps most, keeping at least 20px of space from the slice borders. Elements clear of every slice stay where they are.
+- **R5.15** Elements move with their slice. When a slice is resized, the following slices shift and take their elements with them, keeping each element's position relative to its slice. Elements of the resized slice itself stay put.
+- **R5.16** A slice cannot be made narrower than its elements plus a 20px margin between the elements and the slice borders (left and right).
+- **R5.17** If an element is wider than its slice (for example a Screen that widens to show an HTML mockup), it is moved inside, and the slice grows to fit it, including the 20px margin, when it would not fit otherwise.
+- **R5.18** Deleting a slice always deletes the elements inside it and the connections attached to them, and closes the gap. If the slice holds elements, the user is asked to confirm first.
 
 ## 6. Export
 
@@ -99,7 +99,6 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R6.2** The file contains:
   - `exportedAt`: an ISO timestamp.
   - `lanes`: lane names, top to bottom.
-  - `timelineWidth`: the shared timeline width.
   - `slices`: each with `id`, `name`, `x`, `width` and `elements`.
   - `unassignedElements`: elements outside every slice.
   - `connections`: each with `id`, `source` and `target` (element ids).
@@ -119,9 +118,8 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R7.5** Connections that refer to elements not in the file are dropped.
 - **R7.6** Older files stay valid:
   - a missing `lanes` list falls back to the three default lanes;
-  - a missing `timelineWidth` falls back to the default width.
+  - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8).
 
 ## Out of scope for now
 
-- Moving elements together with their slice (see R5.13).
 - Icons for element types other than Processor.

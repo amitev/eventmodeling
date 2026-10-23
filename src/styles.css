@@ -22,7 +22,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .canvas { flex: 1; min-height: 0; }
 
 .lane {
-  position: relative; box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb;
+  position: relative; box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb; border-right: 2px solid #bbb;
   background: rgba(255, 255, 255, 0.55); pointer-events: none;
 }
 .lane.alt { background: rgba(232, 238, 255, 0.6); }
@@ -55,7 +55,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .slice.selected { border-color: #1a73e8; background: rgba(26, 115, 232, 0.08); }
 .slice-header {
-  pointer-events: auto; cursor: grab; height: 40px; box-sizing: border-box;
+  pointer-events: auto; height: 40px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
   padding: 0 8px; background: #8a7fc9; color: #fff; border-radius: 4px 4px 0 0;
 }
@@ -75,9 +75,13 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid #aaa; background: #fff;
 }
 
-.lane-header { pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; margin: 6px 8px; }
-.lane-header .lane-label { margin: 0; cursor: text; }
-.lane-header input { font: inherit; font-size: 12px; font-weight: 700; }
+.lane-header {
+  pointer-events: auto; position: absolute; top: 0; bottom: 0; left: 0; width: 180px; box-sizing: border-box;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; padding: 8px;
+  background: rgba(255, 255, 255, 0.9); border-right: 2px solid #bbb;
+}
+.lane-header .lane-label { margin: 0; cursor: text; overflow-wrap: anywhere; }
+.lane-header input { min-width: 0; flex: 1; font: inherit; font-size: 12px; font-weight: 700; }
 .lane-remove {
   width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
@@ -88,7 +92,5 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 
 .resize-handle { position: absolute; z-index: 5; pointer-events: auto; touch-action: none; }
 .resize-handle:hover, .resize-handle:active { background: rgba(26, 115, 232, 0.35); }
-.timeline-handle { top: 0; bottom: 0; right: 0; width: 10px; cursor: ew-resize; background: rgba(0, 0, 0, 0.12); }
 .slice-handle { top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
-.slice-handle.left { left: -4px; }
 .slice-handle.right { right: -4px; }

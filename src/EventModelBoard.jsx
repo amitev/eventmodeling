@@ -16,6 +16,7 @@ import ReactFlow, {
 
 // Event modeling: time flows left to right across swimlanes.
 const LANE_WIDTH = 3200;
+const LABEL_ZONE = 180; // reserved strip at the left of each lane; slices stay out of it
 const LANES = [
   { id: 'lane-ui', label: 'UI / Actors', y: 0, height: 220 },
   { id: 'lane-cmd', label: 'Commands / Read Models', y: 220, height: 220 },
@@ -26,7 +27,9 @@ const SLICE_Y = -40;
 const SLICE_HEADER = 40;
 const LANE_HEIGHT = 220;
 const GRID = 20;
-const MIN_TIMELINE_WIDTH = 800;
+const SLICE_PADDING = 20; // minimum gap between a slice border and its elements
+const STICKY_W = 160; // width of an element before it is measured
+const DEFAULT_SLICE_WIDTH = 220;
 const SLICE_MIN_WIDTH = 120;
 
 const KINDS = {
@@ -38,60 +41,119 @@ const KINDS = {
 };
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
-const SLICE_MIN_X = 0;
+const SLICE_MIN_X = LABEL_ZONE;
 const slices = (nodes) =>
   nodes.filter((n) => n.type === 'slice').sort((a, b) => a.position.x - b.position.x);
 
-const patchSlice = (nodes, id, { x, width }) =>
-  nodes.map((n) =>
-    n.id !== id
-      ? n
-      : {
-          ...n,
-          position: x === undefined ? n.position : { ...n.position, x },
-          data: width === undefined ? n.data : { ...n.data, width },
-        }
-  );
+const setSliceWidth = (nodes, id, width) =>
+  nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, width } } : n));
 
-// Keeps slices from overlapping and the timeline wide enough to contain them.
-// The pinned slice stays where it is: later slices are pushed right, earlier
-// ones left. With no pin, everything is only pushed right. Returns the same
-// array when nothing needs to change.
-function layoutSlices(nodes, pinId) {
-  const ordered = slices(nodes);
-  if (!ordered.length) return nodes;
-  const xs = ordered.map((n) => n.position.x);
-  const w = ordered.map((n) => n.data.width);
-  const pin = ordered.findIndex((n) => n.id === pinId);
+const centreX = (n) => n.position.x + (n.width ?? STICKY_W) / 2;
 
-  if (pin < 0) xs[0] = Math.max(xs[0], SLICE_MIN_X);
-  for (let i = Math.max(pin, 0) + 1; i < xs.length; i++) {
-    xs[i] = Math.max(xs[i], xs[i - 1] + w[i - 1]);
+// Elements belong to the slice that contains their centre: slice id -> elements.
+function membersOf(nodes) {
+  const ss = slices(nodes);
+  const map = new Map(ss.map((sl) => [sl.id, []]));
+  for (const n of nodes) {
+    if (n.type !== 'sticky') continue;
+    const sl = ss.find(
+      (x) => centreX(n) >= x.position.x && centreX(n) < x.position.x + x.data.width
+    );
+    if (sl) map.get(sl.id).push(n);
   }
-  for (let i = pin - 1; i >= 0; i--) xs[i] = Math.min(xs[i], xs[i + 1] - w[i]);
+  return map;
+}
 
-  const end = Math.max(...xs.map((x, i) => x + w[i]));
-  const newX = new Map(ordered.map((n, i) => [n.id, xs[i]]));
+// Slices form one contiguous run: the first starts at the beginning of the slice
+// area and each next one starts where the previous ends. Elements move with the
+// slice they belong to. The timeline is exactly as wide as the slices: it ends
+// where the last slice ends (and has room for one default slice when empty).
+// `ref` is the board before any width change, so membership is not skewed by a
+// slice that is mid-resize. Returns the same array when nothing changes.
+function layoutSlices(nodes, ref = nodes) {
+  const ordered = slices(nodes);
+  const refX = new Map(slices(ref).map((n) => [n.id, n.position.x]));
+  const newX = new Map();
+  let cursor = SLICE_MIN_X;
+  for (const n of ordered) {
+    newX.set(n.id, cursor);
+    cursor += n.data.width;
+  }
+  const timelineWidth = ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH;
+  const shift = new Map();
+  for (const [sid, els] of membersOf(ref)) {
+    const d = (newX.get(sid) ?? refX.get(sid)) - refX.get(sid);
+    if (d) els.forEach((el) => shift.set(el.id, d));
+  }
   let changed = false;
   const next = nodes.map((n) => {
     if (n.type === 'slice' && newX.get(n.id) !== n.position.x) {
       changed = true;
       return { ...n, position: { ...n.position, x: newX.get(n.id) } };
     }
-    if (n.type === 'lane' && (n.data.width ?? LANE_WIDTH) < end) {
+    if (n.type === 'lane' && n.data.width !== timelineWidth) {
       changed = true;
-      return { ...n, data: { ...n.data, width: end } };
+      return { ...n, data: { ...n.data, width: timelineWidth } };
+    }
+    if (shift.has(n.id)) {
+      changed = true;
+      return { ...n, position: { ...n.position, x: n.position.x + shift.get(n.id) } };
     }
     return n;
   });
   return changed ? next : nodes;
 }
 
+// An element never straddles a slice boundary: one that overlaps a slice is moved
+// fully inside the slice it overlaps most (keeping SLICE_PADDING from its borders),
+// and that slice grows if the element does not fit. Elements clear of every slice are left alone.
+function settleStickies(nodes, only) {
+  const ss = slices(nodes);
+  if (!ss.length) return nodes;
+  const widen = new Map();
+  let changed = false;
+  const placed = nodes.map((n) => {
+    if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
+    const w = n.width ?? STICKY_W;
+    const l = n.position.x;
+    let best = null;
+    let bestOverlap = 0;
+    for (const sl of ss) {
+      const overlap =
+        Math.min(l + w, sl.position.x + sl.data.width) - Math.max(l, sl.position.x);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        best = sl;
+      }
+    }
+    if (!best) return n;
+    const room = Math.max(best.data.width, snapUp(w + 2 * SLICE_PADDING));
+    if (room > best.data.width) widen.set(best.id, Math.max(widen.get(best.id) ?? 0, room));
+    const x = Math.min(
+      Math.max(l, best.position.x + SLICE_PADDING),
+      best.position.x + room - w - SLICE_PADDING
+    );
+    if (x === l) return n;
+    changed = true;
+    return { ...n, position: { ...n.position, x } };
+  });
+  if (!widen.size) return changed ? placed : nodes;
+  return layoutSlices(
+    placed.map((n) =>
+      widen.has(n.id) ? { ...n, data: { ...n.data, width: widen.get(n.id) } } : n
+    ),
+    placed
+  );
+}
+
+const normalize = (nodes) => settleStickies(layoutSlices(nodes));
+
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 function useHorizontalDrag() {
   const zoom = useStore((s) => s.transform[2]);
-  return (e, onMove) => {
+  return (e, onMove, onEnd) => {
     e.stopPropagation();
     e.preventDefault();
     const startX = e.clientX;
@@ -100,6 +162,7 @@ function useHorizontalDrag() {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
+      onEnd?.();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -112,7 +175,6 @@ const LaneActions = createContext({ removeLane: () => {}, canRemove: false });
 function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeLane, canRemove } = useContext(LaneActions);
-  const startDrag = useHorizontalDrag();
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
 
@@ -127,28 +189,11 @@ function LaneNode({ id, data }) {
     );
   };
 
-  // All lanes share one width: resizing any lane's end resizes the whole timeline.
-  const resizeTimeline = (e) => {
-    const startW = data.width ?? LANE_WIDTH;
-    startDrag(e, (dx) => {
-      setNodes((ns) => {
-        const sliceEnd = Math.max(0, ...slices(ns).map((n) => n.position.x + n.data.width));
-        const width = Math.max(MIN_TIMELINE_WIDTH, sliceEnd, snap(startW + dx));
-        return ns.map((n) => (n.type === 'lane' ? { ...n, data: { ...n.data, width } } : n));
-      });
-    });
-  };
-
   return (
     <div
       className={`lane ${data.alt ? 'alt' : ''}`}
       style={{ width: data.width ?? LANE_WIDTH, height: data.height }}
     >
-      <div
-        className="resize-handle timeline-handle nodrag nopan"
-        title="Drag to resize the timeline"
-        onPointerDown={resizeTimeline}
-      />
       <div className="lane-header nodrag nopan">
         {editing ? (
           <input
@@ -289,29 +334,25 @@ function SliceNode({ id, data, selected }) {
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
     );
 
-  // Each drag is computed from a snapshot taken at pointer-down, so pushed
-  // neighbours (and a grown timeline) spring back if the drag is reversed.
+  // Each drag is computed from a snapshot taken at pointer-down, so the following
+  // slices, their elements and a grown timeline follow the edge both ways.
   const resizeRight = (e) => {
     const base = getNodes();
-    const startW = data.width;
-    startDrag(e, (dx) => {
-      const width = Math.max(SLICE_MIN_WIDTH, snap(startW + dx));
-      setNodes(layoutSlices(patchSlice(base, id, { width }), id));
-    });
-  };
-
-  const resizeLeft = (e) => {
-    const base = getNodes();
     const me = base.find((n) => n.id === id);
-    const startX = me.position.x;
-    const right = startX + data.width;
-    const room = slices(base)
-      .filter((n) => n.id !== id && n.position.x < startX)
-      .reduce((sum, n) => sum + n.data.width, 0);
-    startDrag(e, (dx) => {
-      const x = Math.max(SLICE_MIN_X + room, Math.min(snap(startX + dx), right - SLICE_MIN_WIDTH));
-      setNodes(layoutSlices(patchSlice(base, id, { x, width: right - x }), id));
-    });
+    // Cannot be narrower than the elements it holds.
+    const needed = (membersOf(base).get(id) ?? []).reduce(
+      (m, n) => Math.max(m, n.position.x + (n.width ?? STICKY_W) + SLICE_PADDING - me.position.x),
+      0
+    );
+    const startW = data.width;
+    startDrag(
+      e,
+      (dx) => {
+        const width = Math.max(SLICE_MIN_WIDTH, snapUp(needed), snap(startW + dx));
+        setNodes(layoutSlices(setSliceWidth(base, id, width), base));
+      },
+      () => setNodes((ns) => settleStickies(ns))
+    );
   };
 
   return (
@@ -338,11 +379,6 @@ function SliceNode({ id, data, selected }) {
         )}
       </div>
       <div
-        className="resize-handle slice-handle left nodrag nopan"
-        title="Drag to resize"
-        onPointerDown={resizeLeft}
-      />
-      <div
         className="resize-handle slice-handle right nodrag nopan"
         title="Drag to resize"
         onPointerDown={resizeRight}
@@ -358,6 +394,7 @@ const makeSlice = (id, x, width, name) => ({
   type: 'slice',
   position: { x, y: SLICE_Y },
   data: { name, width },
+  draggable: false,
   zIndex: -1,
   // Only the header takes pointer events, so notes under the band stay usable.
   style: { pointerEvents: 'none' },
@@ -383,16 +420,16 @@ const sticky = (id, kind, col, text) => ({
   data: { kind, text },
 });
 
-const initialNodes = [
+const initialNodes = normalize([
   ...laneNodes,
   makeSlice('slice-1', 180, 440, 'Add Item'),
-  makeSlice('slice-2', 640, 220, 'View Cart'),
+  makeSlice('slice-2', 620, 220, 'View Cart'),
   sticky('n1', 'screen', 0, 'Add Item form'),
   sticky('n2', 'command', 0, 'Add Item'),
   sticky('n3', 'event', 1, 'Item Added'),
   sticky('n4', 'readmodel', 2, 'Cart Items'),
   sticky('n5', 'screen', 2, 'Cart view'),
-];
+]);
 
 const edgeDefaults = {
   markerEnd: { type: MarkerType.ArrowClosed },
@@ -416,7 +453,7 @@ function load() {
       if (!saved.nodes.some((n) => n.type === 'lane')) {
         saved.nodes = [...laneNodes, ...saved.nodes];
       }
-      saved.nodes = layoutSlices(saved.nodes, null);
+      saved.nodes = normalize(saved.nodes);
       return saved;
     }
   } catch {
@@ -444,37 +481,53 @@ function Board() {
     }
   }, [nodes, edges]);
 
-  // Slices slide along the timeline only. They stop at their neighbours
-  // instead of overlapping them, and the timeline grows if one is moved past its end.
+  // Slices are laid out automatically, so they cannot be dragged. Deleting a slice
+  // also deletes its elements (after confirmation) and closes the gap it leaves.
   const handleNodesChange = useCallback(
     (changes) => {
-      const current = getNodes();
-      let movedSlice = false;
-      onNodesChange(
-        changes.map((c) => {
-          if (c.type !== 'position' || !c.position || !c.id.startsWith('slice-')) return c;
-          movedSlice = true;
-          const me = current.find((n) => n.id === c.id);
-          const others = slices(current).filter((n) => n.id !== c.id);
-          const before = others.filter((n) => n.position.x < me.position.x);
-          const after = others.filter((n) => n.position.x >= me.position.x);
-          const lo = Math.max(SLICE_MIN_X, ...before.map((n) => n.position.x + n.data.width));
-          const hi = Math.min(Infinity, ...after.map((n) => n.position.x)) - me.data.width;
-          return { ...c, position: { x: Math.min(Math.max(c.position.x, lo), hi), y: SLICE_Y } };
-        })
-      );
-      if (movedSlice) setNodes((ns) => layoutSlices(ns, null));
+      const isSliceId = (id) => String(id).startsWith('slice-');
+      const isSliceRemoval = (c) => c.type === 'remove' && isSliceId(c.id);
+      let kept = changes.filter((c) => !(c.type === 'position' && isSliceId(c.id)));
+      let sliceRemoved = false;
+      const removed = kept.filter(isSliceRemoval);
+      if (removed.length) {
+        const members = membersOf(getNodes());
+        const doomed = removed.flatMap((c) => members.get(c.id) ?? []);
+        if (
+          doomed.length &&
+          !window.confirm(`Delete the slice and its ${doomed.length} element(s)?`)
+        ) {
+          kept = kept.filter((c) => !isSliceRemoval(c));
+        } else {
+          sliceRemoved = true;
+          const already = new Set(kept.filter((c) => c.type === 'remove').map((c) => c.id));
+          kept = [
+            ...kept,
+            ...doomed.filter((n) => !already.has(n.id)).map((n) => ({ type: 'remove', id: n.id })),
+          ];
+          if (doomed.length) {
+            const gone = new Set(doomed.map((n) => n.id));
+            setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+          }
+        }
+      }
+      onNodesChange(kept);
+      if (sliceRemoved) setNodes((ns) => layoutSlices(ns));
+      // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
+      if (kept.some((c) => c.type === 'dimensions')) {
+        setNodes((ns) => settleStickies(ns));
+      }
     },
-    [onNodesChange, getNodes, setNodes]
+    [onNodesChange, getNodes, setNodes, setEdges]
   );
 
   const addSlice = () => {
     const id = `slice-${counter.current++}`;
     const end = nodes
       .filter((n) => n.type === 'slice')
-      .reduce((max, n) => Math.max(max, n.position.x + n.data.width), 160);
+      .reduce((max, n) => Math.max(max, n.position.x + n.data.width), SLICE_MIN_X);
     // (end is the right edge of the last slice; layout then widens the timeline if needed)
-    setNodes((ns) => layoutSlices([...ns, makeSlice(id, end, 220, 'New Slice')], null));
+    setNodes((ns) => layoutSlices([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice')]));
   };
 
   const lanes = nodes
@@ -586,7 +639,6 @@ function Board() {
     const data = {
       exportedAt: new Date().toISOString(),
       lanes: lanes.map((l) => l.data.label),
-      timelineWidth: lanes[0]?.data.width ?? LANE_WIDTH,
       slices: out,
       unassignedElements: stickies.filter((n) => !assigned.has(n.id)).map(toElement),
       connections: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
@@ -614,16 +666,11 @@ function Board() {
         ? data.lanes.map(String)
         : laneNodes.map((l) => l.data.label);
 
-    const timelineWidth = Math.max(
-      MIN_TIMELINE_WIDTH,
-      Number.isFinite(data.timelineWidth) ? data.timelineWidth : LANE_WIDTH
-    );
-
     const newLanes = laneNames.map((label, i) => ({
       ...laneNodes[0],
       id: `lane-${counter.current++}`,
       position: { x: 0, y: i * LANE_HEIGHT },
-      data: { label, height: LANE_HEIGHT, width: timelineWidth, alt: i % 2 === 1 },
+      data: { label, height: LANE_HEIGHT, width: LANE_WIDTH, alt: i % 2 === 1 },
     }));
 
     const newSlices = data.slices.map((sl, i) => ({
@@ -670,7 +717,7 @@ function Board() {
       }));
 
     return {
-      nodes: layoutSlices([...newLanes, ...newSlices, ...newStickies], null),
+      nodes: normalize([...newLanes, ...newSlices, ...newStickies]),
       edges: newEdges,
     };
   };
@@ -698,15 +745,20 @@ function Board() {
     const lane = lanes[Math.min(KINDS[kind].lane, lanes.length - 1)];
     const laneY = lane ? lane.position.y : 0;
     const id = `n${counter.current++}`;
-    setNodes((ns) => [
-      ...ns,
-      {
-        id,
-        type: 'sticky',
-        position: position ?? { x: 200, y: laneY + 40 },
-        data: { kind, text: `New ${KINDS[kind].label}` },
-      },
-    ]);
+    setNodes((ns) =>
+      settleStickies(
+        [
+          ...ns,
+          {
+            id,
+            type: 'sticky',
+            position: position ?? { x: 200, y: laneY + 40 },
+            data: { kind, text: `New ${KINDS[kind].label}` },
+          },
+        ],
+        new Set([id])
+      )
+    );
   };
 
   const onDragOver = (e) => {
@@ -775,6 +827,9 @@ function Board() {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
+          onNodeDragStop={(_, __, dragged) =>
+            setNodes((ns) => settleStickies(ns, new Set(dragged.map((n) => n.id))))
+          }
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onDrop={onDrop}
