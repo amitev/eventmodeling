@@ -132,6 +132,17 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8);
   - a missing `chapter` position falls back to the origin, `(0, 0)`.
 
+## 8. Undo and redo
+
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone. This covers: adding, editing (text and HTML), moving and deleting elements; creating and deleting connections; adding, renaming, resizing and deleting slices; adding, renaming and removing lanes; moving the Chapter; import; and Reset.
+- **R8.2** **Undo** and **Redo** buttons sit in the header at the top of the board, next to the title. A button is disabled when there is nothing to undo or redo.
+- **R8.3** Keyboard shortcuts: Ctrl+Z (Cmd+Z) undoes, Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies there.
+- **R8.4** A continuous gesture is one step: dragging an element or the Chapter, or resizing a slice, is recorded once when it ends, not once per movement.
+- **R8.5** An operation and the automatic adjustments it triggers (re-settling elements inside slices, centring in lanes, shifting following slices) are one step. Undo restores the board exactly as it was before the operation.
+- **R8.6** Selecting items, panning and zooming are not operations and are not recorded.
+- **R8.7** Making a new change after an undo discards the redo history.
+- **R8.8** History keeps the last 100 operations. It lives in memory only: it is lost when the page is reloaded, and the board itself is still saved as before (R1.6).
+
 ## Out of scope for now
 
 - Icons for element types other than Processor.
