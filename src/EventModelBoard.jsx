@@ -853,6 +853,32 @@ function load() {
   return null;
 }
 
+// Where a new element goes in a Cell (a lane crossed with a slice): the first spot from
+// the left, inside the slice's margins, that does not overlap an element already in the
+// Cell. When the Cell is full it goes after the last element and the slice has to grow:
+// `sliceWidth` is the width the slice needs (the current width when nothing changes).
+function spotInCell(nodes, lane, slice) {
+  const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
+    const mid = n.position.y + (n.height ?? STICKY_H) / 2;
+    return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+  });
+  const left = slice.position.x + SLICE_PADDING;
+  const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - STICKY_W;
+  const free = (x) =>
+    !inCell.some(
+      (m) => x < m.position.x + (m.width ?? STICKY_W) + GRID && m.position.x < x + STICKY_W + GRID
+    );
+  let x = left;
+  while (x <= lastFit && !free(x)) x += GRID;
+  if (x > lastFit) {
+    // Full: continue after the right-most element, widening the slice.
+    const after = inCell.reduce((m, n) => Math.max(m, n.position.x + (n.width ?? STICKY_W)), left - GRID);
+    x = Math.max(left, snapUp(after + GRID));
+  }
+  const need = snapUp(x + STICKY_W + SLICE_PADDING - slice.position.x);
+  return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need) };
+}
+
 // Draws the border of the selected Cell above everything else. It is positioned from the
 // canvas transform, so it follows panning, zooming and moving the Chapter.
 function CellHighlight({ cell }) {
@@ -1389,23 +1415,42 @@ function Board() {
     [setEdges, getNodes]
   );
 
+  // A clicked toolbar button puts the new element in the selected Cell (see spotInCell),
+  // else in the active Chapter's default lane for its type. A given `position` (an element
+  // dropped on the board) always wins.
   const addSticky = (kind, position, chapterId = activeChapterId) => {
-    if (!chapterId) return;
     const id = `n${counter.current++}`;
     setNodes((ns) => {
-      const ls = lanesOf(ns, chapterId);
-      const lane = ls[Math.min(KINDS[kind].lane, ls.length - 1)];
-      const laneY = lane ? lane.position.y : 0;
+      const lane = selectedCell && ns.find((n) => n.id === selectedCell.laneId);
+      const slice = selectedCell && ns.find((n) => n.id === selectedCell.sliceId);
+      const cell = !position && lane && slice ? { lane, slice } : null;
+      const target = cell ? cell.slice.parentNode : chapterId;
+      if (!target) return ns;
+
+      let base = ns;
+      let pos = position;
+      if (cell) {
+        const spot = spotInCell(ns, cell.lane, cell.slice);
+        pos = { x: spot.x, y: spot.y };
+        if (spot.sliceWidth > cell.slice.data.width) {
+          // Make room: widen the slice; the slices after it (and their elements) move right.
+          base = layoutSlices(setSliceWidth(ns, cell.slice.id, spot.sliceWidth), ns);
+        }
+      } else if (!pos) {
+        const ls = lanesOf(ns, target);
+        const laneForKind = ls[Math.min(KINDS[kind].lane, ls.length - 1)];
+        pos = { x: 200, y: (laneForKind ? laneForKind.position.y : 0) + 40 };
+      }
       const only = new Set([id]);
       return centerStickies(
         settleStickies(
           [
-            ...ns,
+            ...base,
             {
               id,
               type: 'sticky',
-              parentNode: chapterId,
-              position: position ?? { x: 200, y: laneY + 40 },
+              parentNode: target,
+              position: pos,
               data: { kind, title: '', text: `New ${KINDS[kind].label}` },
             },
           ],

@@ -75,7 +75,7 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
   | Processor | lavender, shown with a ⚙️ gear emoji | second |
 
 - **R3.2** Default lane means the lane a new element is placed in. If that lane doesn't exist, the last lane is used. Elements can be dragged anywhere.
-- **R3.3** The user adds an element by clicking its toolbar button (it joins the active Chapter, R1a.4), or by dragging the button onto the board to choose the position (it joins the Chapter it is released over).
+- **R3.3** The user adds an element by clicking its toolbar button, or by dragging the button onto the board to choose the position (it joins the Chapter it is released over). A clicked button puts the element in the selected Cell if there is one (R5a.10); otherwise it joins the active Chapter (R1a.4), in the default lane of its type (R3.2).
 - **R3.4** Double-clicking the body of an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
 - **R3.4a** Double-clicking the header of an element edits its title (see R3.6b). Enter, Esc and clicking away save it. The title is a single line.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
@@ -135,6 +135,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.7** A click on the canvas outside every Cell (empty canvas, the lane label zone, or the area above the slices) clears the Cell selection.
 - **R5a.8** The selected Cell's border follows the Cell: it stays on it when the view is panned or zoomed, when the Chapter is moved, and when its slice is resized or shifted. If the Cell's lane or slice is removed, the selection disappears.
 - **R5a.9** Selecting a Cell is not an operation: it is not recorded for undo (R8.6), and there is nothing to delete, so Backspace and Delete do nothing to a selected Cell.
+- **R5a.10** When a Cell is selected, clicking an element button in the header adds the new element **in that Cell**, whatever the element's default lane (R3.2): it goes in the Cell's lane and slice, vertically centred in the lane (R3.6a), at the first free spot from the left, inside the slice's margins (R5.14), where it does not overlap the elements already in the Cell. If the Cell has no room left, the element is placed after the last element and the Cell's slice grows to fit it; the slices after it, with their elements, move right (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto the board is not affected: the element goes where it is released. With no Cell selected, or if its lane or slice no longer exists, the element is added as described in R3.3.
 
 **Learning (implementation).** The lanes of a Chapter cover its whole Cell area, so a click on the empty part of a Cell is received by a lane, not by the canvas behind it. Cell selection therefore has to be handled for clicks on lanes as well as on the canvas, using the click position to find the Cell (R5a.5, R5a.7). The first version listened only to canvas clicks and nothing was ever selected.
 
