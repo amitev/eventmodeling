@@ -33,7 +33,7 @@ const GRID = 20;
 const SLICE_PADDING = 20; // minimum gap between a slice border and its elements
 const STICKY_W = 160; // width of an element before it is measured
 const STICKY_WIDE_W = 240; // width of a Screen that shows an HTML mockup
-const STICKY_H = 80; // height of an element before it is measured
+const STICKY_H = 132; // height of an element before it is measured (26px header + 104px body)
 const DEFAULT_SLICE_WIDTH = 220;
 const SLICE_MIN_WIDTH = 120;
 
@@ -469,14 +469,8 @@ function LaneNode({ id, data }) {
 
 function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
-  const [editing, setEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
-  const ref = useRef(null);
   const titleRef = useRef(null);
-
-  useEffect(() => {
-    if (editing) ref.current?.focus();
-  }, [editing]);
 
   useEffect(() => {
     if (editingTitle) titleRef.current?.select();
@@ -489,11 +483,6 @@ function StickyNode({ id, data, selected }) {
     setNodes((ns) =>
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
     );
-
-  const commit = (text) => {
-    setEditing(false);
-    update({ text });
-  };
 
   const commitTitle = (title) => {
     setEditingTitle(false);
@@ -508,10 +497,7 @@ function StickyNode({ id, data, selected }) {
       <div
         className="sticky-header"
         title="Double-click to edit the title"
-        onDoubleClick={(e) => {
-          e.stopPropagation(); // the body's double-click edits the text instead
-          setEditingTitle(true);
-        }}
+        onDoubleClick={() => setEditingTitle(true)}
       >
         {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
         {editingTitle ? (
@@ -538,7 +524,7 @@ function StickyNode({ id, data, selected }) {
           </button>
         )}
       </div>
-      <div className="sticky-body" onDoubleClick={() => setEditing(true)}>
+      <div className="sticky-body">
       {isScreen && editingHtml && (
         <textarea
           className="nodrag nowheel html-editor"
@@ -556,27 +542,10 @@ function StickyNode({ id, data, selected }) {
       {isScreen && data.html && !editingHtml && (
         <iframe
           className="screen-frame"
-          title={data.title || data.text}
+          title={data.title || 'Screen mockup'}
           sandbox=""
           srcDoc={data.html}
         />
-      )}
-      {editing ? (
-        <textarea
-          ref={ref}
-          className="nodrag nowheel"
-          defaultValue={data.text}
-          onBlur={(e) => commit(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') e.target.blur();
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              e.target.blur();
-            }
-          }}
-        />
-      ) : (
-        <div className="text">{data.text}</div>
       )}
       </div>
       <Handle type="source" position={Position.Bottom} />
@@ -819,12 +788,12 @@ function makeSample() {
   const used = new Set();
   const id = () => uniqueId(used);
   const chapterId = id();
-  const sticky = (kind, col, text) => ({
+  const sticky = (kind, col, title) => ({
     id: id(),
     type: 'sticky',
     position: { x: LABEL_ZONE + 20 + col * 220, y: LANES[KINDS[kind].lane].y + 40 },
     parentNode: chapterId,
-    data: { kind, title: '', text },
+    data: { kind, title },
   });
   const [n1, n2, n3, n4, n5] = [
     sticky('screen', 0, 'Add Item form'),
@@ -925,7 +894,6 @@ function serialize(nodes, edges) {
                 type: n.data.kind,
                 lane: lane.id,
                 title: n.data.title ?? '',
-                text: n.data.text ?? '',
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
@@ -1040,7 +1008,7 @@ function parseBoard(text) {
 
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
-        object(el, ['id', 'type', 'lane', 'title', 'text', 'x', 'connectsTo'], ep, ['html']);
+        object(el, ['id', 'type', 'lane', 'title', 'x', 'connectsTo'], ep, ['html']);
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
           fail(at(ep, 'type'), `must be one of ${Object.keys(KINDS).join(', ')}`);
@@ -1050,7 +1018,6 @@ function parseBoard(text) {
           fail(at(ep, 'lane'), `no lane with id "${el.lane}" in this chapter`);
         }
         string(el.title, at(ep, 'title'));
-        string(el.text, at(ep, 'text'));
         if (hasKey(el, 'html')) {
           string(el.html, at(ep, 'html'));
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
@@ -1075,7 +1042,6 @@ function parseBoard(text) {
           data: {
             kind: el.type,
             title: el.title,
-            text: el.text,
             ...(el.html ? { html: el.html } : {}),
           },
         });
@@ -1565,7 +1531,7 @@ function Board() {
               type: 'sticky',
               parentNode: slice.parentNode,
               position: pos,
-              data: { kind, title: '', text: `New ${KINDS[kind].label}` },
+              data: { kind, title: '' },
             },
           ],
           only

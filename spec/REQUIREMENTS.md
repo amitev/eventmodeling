@@ -9,7 +9,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.1a** The term **Chapter** denotes one modelled area: its lanes, its slices and the elements in them. (It was previously called the timeline; "Chapter" is the term to use from now on.)
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
-- **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart") so there is something to look at.
+- **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart") so there is something to look at. Its elements carry their names as titles.
 - **R1.5** A **Reset** button restores the sample flow.
 - **R1.6** The board is saved automatically in the browser and restored on reload. What is saved is exactly the information of the export file (R6.10), with the same ids, so nothing is lost or renumbered by a reload. If the saved board is missing or cannot be read, the sample board (R1.4) is shown.
 
@@ -71,7 +71,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ## 3. Elements
 
-An element is a sticky note placed on the board. Each has an id (R1.14), a type, a title, a text and a position, and it always sits in exactly one Cell: one lane and one slice of one Chapter (R2.8, R5.13). An element cannot exist outside a Cell.
+An element is a sticky note placed on the board. Each has an id (R1.14), a type, a title and a position, and it always sits in exactly one Cell: one lane and one slice of one Chapter (R2.8, R5.13). An element cannot exist outside a Cell.
 
 - **R3.1** Element types:
 
@@ -85,12 +85,12 @@ An element is a sticky note placed on the board. Each has an id (R1.14), a type,
 
 - **R3.2** An element has no default lane: it goes in the lane of the Cell it is added to (R3.3). Elements can be dragged freely, but always end up inside a Cell (R5.14).
 - **R3.3** The user adds an element by clicking its toolbar button, or by dragging the button onto the board. A clicked button puts the element in the selected Cell (R5a.10); with no selected Cell, the click does nothing. A button released over a Cell adds the element in that Cell, at the horizontal position where it was released, kept inside the slice's margins (R5.14). A button released anywhere that is not over a Cell adds nothing. An element is never created outside a Cell.
-- **R3.4** Double-clicking the body of an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
+- **R3.4** The body of an element holds no text and cannot be edited, for now: it only shows the Screen mockup (R3.7 to R3.10). Double-clicking it does nothing. An element has no `text` field, and a new element is created with an empty title (R3.6b).
 - **R3.4a** Double-clicking the header of an element edits its title (see R3.6b). Enter, Esc and clicking away save it. The title is a single line. The editor looks like the title itself, in the same place and font, with only a thin outline, so the element does not change size or move while the title is edited.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
 - **R3.6** Only Processor carries an icon (⚙️), shown at the start of its header; other types have no icon. The element type is shown by the header colour (R3.1), not by a label.
-- **R3.6a** Elements are always vertically centred in the lane that holds them. This applies when an element is added, dropped or dragged (it snaps to the centre of the lane it was released in), when its size changes (for example while editing its text or showing a Screen mockup), and when a board is loaded or imported. An element taller than its lane is aligned to the lane's top edge.
-- **R3.6b** Every element has a header bar and a body. The header holds the element's **title** and is filled with the type's colour from R3.1. The title is free text chosen by the user. It has **no default value**: a new element has an empty title, shown as a faint "Title" placeholder in the header (the placeholder is not saved or exported). A long title is cut off with an ellipsis. The body is white and holds the element's text, and for Screens the mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out from the white body. Backgrounds are opaque.
+- **R3.6a** Elements are always vertically centred in the lane that holds them. This applies when an element is added, dropped or dragged (it snaps to the centre of the lane it was released in), when its size changes (for example while showing a Screen mockup), and when a board is loaded or imported. An element taller than its lane is aligned to the lane's top edge.
+- **R3.6b** Every element has a header bar and a body. The header holds the element's **title** and is filled with the type's colour from R3.1. The title is free text chosen by the user. It has **no default value**: a new element has an empty title, shown as a faint "Title" placeholder in the header (the placeholder is not saved or exported). A long title is cut off with an ellipsis. The body is white and holds nothing, except for Screens the mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out from the white body. Backgrounds are opaque. The body is at least 104px high (twice its former height), so an element is at least 132px tall with its 26px header; it grows beyond that when its content needs it.
 
 ### Screen elements
 
@@ -180,7 +180,7 @@ The export file is the single, complete description of a board. It is written an
   - `id`;
   - `type`: `screen`, `command`, `readmodel`, `event` or `processor`;
   - `lane`: the **id** of the element's lane, which must be a lane of the same Chapter (R2.9). Never the lane's name;
-  - `title`, `text`: free text, empty (`""`) when not set;
+  - `title`: free text, empty (`""`) when not set;
   - `html`: the Screen mockup. Optional: it is written only for a `screen` that has HTML, and left out otherwise;
   - `x`: the horizontal position of the element **relative to the left edge of its slice**, in pixels. It is stored exactly and restored exactly;
   - `connectsTo`: the ids of the elements this element has an arrow to (R6.7).
@@ -195,7 +195,7 @@ The export file is the single, complete description of a board. It is written an
   The JSON is indented with 2 spaces. Although no person is expected to read the file, the indentation is kept because it makes a failed import or a difference between two exports easy to inspect; the size it costs is not a concern (correctness comes before size).
 - **R6.9** The same board always produces the same file, byte for byte.
 - **R6.10** What the file stores, and what it does not.
-  - **Stored:** all ids, names, titles, texts and mockups; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
+  - **Stored:** all ids, names, titles and mockups; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
   - **Not stored, worked out on load:** a slice's own position (slices form one run, R5.7); the widths of the lanes and of the Chapter (R1.8); the lane height; an element's vertical position (centred in its lane, R3.6a); the lane shading. Also not stored: the selected Cell, the active Chapter, the undo history and the pan and zoom of the view.
 
 ## 7. Import
@@ -214,7 +214,7 @@ The export file is the single, complete description of a board. It is written an
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone. This covers: adding, editing (text and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; adding, renaming and removing lanes; adding, renaming, moving and removing Chapters; import; and Reset.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone. This covers: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; adding, renaming and removing lanes; adding, renaming, moving and removing Chapters; import; and Reset.
 - **R8.2** **Undo** and **Redo** buttons sit in the header at the top of the board, next to the title. A button is disabled when there is nothing to undo or redo.
 - **R8.3** Keyboard shortcuts: Ctrl+Z (Cmd+Z) undoes, Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies there.
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends, not once per movement.
