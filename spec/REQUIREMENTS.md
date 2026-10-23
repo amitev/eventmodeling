@@ -56,7 +56,8 @@ This document records the business requirements agreed so far. It describes beha
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
 - **R2.3** **+ Lane** appends a lane named "New Lane" at the bottom of the active Chapter (R1a.4), with the current Chapter width.
-- **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name, the **×** button (at the top) and the colour button (R2.6) under it. The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
+- **R2.3a** Every lane has a **+** button at the bottom of its label zone. It adds a lane named "New Lane", colour `none`, right below that lane; lanes below it, with their elements, move down. The Chapter becomes active (R1a.4).
+- **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name, the **×** button (at the top) and the colour button (R2.6) under it, and the **+** button (R2.3a) at the bottom. The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
 - **R2.4a** Double-clicking a lane name renames it **in place**: the vertical title becomes editable text, keeping its orientation, with a caret and highlighted outline, all selected. Enter, Esc and clicking away save. The name is one line; an empty name is ignored (previous kept).
 - **R2.5** The **×** button removes a lane.
   - Lanes below move up to close the gap.

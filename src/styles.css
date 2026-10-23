@@ -136,10 +136,19 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   text-overflow: clip; cursor: text; outline: 2px solid #1a73e8; outline-offset: 1px;
   background: #fff; border-radius: 2px; user-select: text; min-height: 2em;
 }
-.lane-remove {
-  width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
+.lane-remove, .lane-add {
+  position: relative; flex: none; width: 18px; height: 18px; padding: 0; cursor: pointer;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
 }
+.lane-add { color: #2e7d32; }
+/* Icons are drawn (two bars), not text, so they are exactly centred. */
+.lane-remove::before, .lane-remove::after, .lane-add::before, .lane-add::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 10px; height: 2px;
+  background: currentColor; border-radius: 1px; transform: translate(-50%, -50%);
+}
+.lane-remove::before { transform: translate(-50%, -50%) rotate(45deg); }
+.lane-remove::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.lane-add::after { transform: translate(-50%, -50%) rotate(90deg); }
 .swatch {
   box-sizing: border-box; width: 16px; height: 16px; padding: 0; cursor: pointer;
   border: 1px solid #889; border-radius: 3px; background: #fff;

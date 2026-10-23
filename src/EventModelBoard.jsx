@@ -370,6 +370,7 @@ const BoardActions = createContext({
   clearCell: () => {},
   addSliceAfter: () => {},
   removeLane: () => {},
+  addLaneAfter: () => {},
   removeChapter: () => {},
   compactChapter: () => {},
   activeId: null,
@@ -378,7 +379,7 @@ const BoardActions = createContext({
 
 function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeLane } = useContext(BoardActions);
+  const { removeLane, addLaneAfter } = useContext(BoardActions);
   // The last lane of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
     const parent = s.nodeInternals.get(id)?.parentNode;
@@ -454,9 +455,12 @@ function LaneNode({ id, data }) {
         onPointerDown={startChapterDrag}
       >
         {canRemove && (
-          <button className="lane-remove" title="Remove lane" onClick={() => removeLane(id)}>
-            ×
-          </button>
+          <button
+            className="lane-remove"
+            title="Remove lane"
+            aria-label="Remove lane"
+            onClick={() => removeLane(id)}
+          />
         )}
         <div className="lane-color" ref={colorRef}>
           <button
@@ -500,6 +504,12 @@ function LaneNode({ id, data }) {
         >
           {data.label}
         </span>
+        <button
+          className="lane-add"
+          title="Add a lane below"
+          aria-label="Add a lane below"
+          onClick={() => addLaneAfter(id)}
+        />
       </div>
     </div>
   );
@@ -1400,6 +1410,28 @@ function Board() {
     });
   };
 
+  // Inserts a lane right below `laneId`; the lanes below it and their elements move down.
+  const addLaneAfter = (laneId) => {
+    const [id] = newIds();
+    setNodes((ns) => {
+      const lane = ns.find((n) => n.id === laneId);
+      if (!lane) return ns;
+      const below = lane.position.y + lane.data.height;
+      const shifted = ns.map((n) =>
+        n.parentNode === lane.parentNode &&
+        (n.type === 'lane' || n.type === 'sticky') &&
+        n.position.y >= below
+          ? { ...n, position: { ...n.position, y: n.position.y + LANE_HEIGHT } }
+          : n
+      );
+      return [
+        ...shifted,
+        makeLane(id, lane.parentNode, 'New Lane', below, 'none', lane.data.width),
+      ];
+    });
+    setActiveId(nodes.find((n) => n.id === laneId)?.parentNode ?? null);
+  };
+
   const removeLane = useCallback(
     (laneId) => {
       const lane = nodes.find((n) => n.id === laneId);
@@ -1511,13 +1543,14 @@ function Board() {
       activate: setActiveId,
       clearCell: () => setSelectedCell(null),
       addSliceAfter,
+      addLaneAfter,
       removeLane,
       removeChapter,
       compactChapter,
       activeId: activeChapterId,
       chapterCount: chapters.length,
     }),
-    [removeLane, removeChapter, compactChapter, addSliceAfter, activeChapterId, chapters.length]
+    [removeLane, removeChapter, compactChapter, addSliceAfter, addLaneAfter, activeChapterId, chapters.length]
   );
 
   const exportJson = () => {
