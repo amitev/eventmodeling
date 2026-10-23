@@ -14,7 +14,9 @@ import ReactFlow, {
   useStore,
 } from 'reactflow';
 
-// Event modeling: time flows left to right across swimlanes.
+// Event modeling: time flows left to right across swimlanes. Everything on the board
+// (lanes, slices, elements) lives inside one Chapter node, so moving the Chapter
+// moves it all. Child positions are relative to the Chapter.
 const LANE_WIDTH = 3200;
 const LABEL_ZONE = 180; // reserved strip at the left of each lane; slices stay out of it
 const LANES = [
@@ -23,6 +25,7 @@ const LANES = [
   { id: 'lane-evt', label: 'Events', y: 440, height: 220 },
 ];
 
+const CHAPTER_ID = 'chapter';
 const SLICE_Y = -40;
 const SLICE_HEADER = 40;
 const LANE_HEIGHT = 220;
@@ -69,7 +72,7 @@ function membersOf(nodes) {
 
 // Slices form one contiguous run: the first starts at the beginning of the slice
 // area and each next one starts where the previous ends. Elements move with the
-// slice they belong to. The timeline is exactly as wide as the slices: it ends
+// slice they belong to. The Chapter is exactly as wide as the slices: it ends
 // where the last slice ends (and has room for one default slice when empty).
 // `ref` is the board before any width change, so membership is not skewed by a
 // slice that is mid-resize. Returns the same array when nothing changes.
@@ -82,7 +85,7 @@ function layoutSlices(nodes, ref = nodes) {
     newX.set(n.id, cursor);
     cursor += n.data.width;
   }
-  const timelineWidth = ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH;
+  const chapterWidth = ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH;
   const shift = new Map();
   for (const [sid, els] of membersOf(ref)) {
     const d = (newX.get(sid) ?? refX.get(sid)) - refX.get(sid);
@@ -94,9 +97,9 @@ function layoutSlices(nodes, ref = nodes) {
       changed = true;
       return { ...n, position: { ...n.position, x: newX.get(n.id) } };
     }
-    if (n.type === 'lane' && n.data.width !== timelineWidth) {
+    if (n.type === 'lane' && n.data.width !== chapterWidth) {
       changed = true;
-      return { ...n, data: { ...n.data, width: timelineWidth } };
+      return { ...n, data: { ...n.data, width: chapterWidth } };
     }
     if (shift.has(n.id)) {
       changed = true;
@@ -360,7 +363,7 @@ function SliceNode({ id, data, selected }) {
     );
 
   // Each drag is computed from a snapshot taken at pointer-down, so the following
-  // slices, their elements and a grown timeline follow the edge both ways.
+  // slices, their elements and a grown Chapter follow the edge both ways.
   const resizeRight = (e) => {
     const base = getNodes();
     const me = base.find((n) => n.id === id);
@@ -412,13 +415,37 @@ function SliceNode({ id, data, selected }) {
   );
 }
 
-const nodeTypes = { lane: LaneNode, sticky: StickyNode, slice: SliceNode };
+// The Chapter itself is invisible except for a handle above the slices; dragging
+// the handle moves the whole Chapter. (The 1px box keeps React Flow from treating
+// the node as unmeasured and hiding it.)
+function ChapterNode() {
+  return (
+    <div style={{ width: 1, height: 1 }}>
+      <div className="chapter-handle" title="Drag to move the Chapter">
+        ⠿ Chapter
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = { lane: LaneNode, sticky: StickyNode, slice: SliceNode, chapter: ChapterNode };
+
+const makeChapter = (x = 0, y = 0) => ({
+  id: CHAPTER_ID,
+  type: 'chapter',
+  position: { x, y },
+  data: {},
+  dragHandle: '.chapter-handle',
+  deletable: false,
+  connectable: false,
+});
 
 const makeSlice = (id, x, width, name) => ({
   id,
   type: 'slice',
   position: { x, y: SLICE_Y },
   data: { name, width },
+  parentNode: CHAPTER_ID,
   draggable: false,
   zIndex: -1,
   // Only the header takes pointer events, so notes under the band stay usable.
@@ -429,6 +456,7 @@ const laneNodes = LANES.map((l, i) => ({
   id: l.id,
   type: 'lane',
   position: { x: 0, y: l.y },
+  parentNode: CHAPTER_ID,
   data: { label: l.label, height: l.height, alt: i % 2 === 1 },
   draggable: false,
   selectable: false,
@@ -442,10 +470,12 @@ const sticky = (id, kind, col, text) => ({
   id,
   type: 'sticky',
   position: { x: 200 + col * 220, y: LANES[KINDS[kind].lane].y + 40 },
+  parentNode: CHAPTER_ID,
   data: { kind, text },
 });
 
 const initialNodes = normalize([
+  makeChapter(),
   ...laneNodes,
   makeSlice('slice-1', 180, 440, 'Add Item'),
   makeSlice('slice-2', 620, 220, 'View Cart'),
@@ -477,6 +507,13 @@ function load() {
       // Boards saved before lanes were editable don't include lane nodes.
       if (!saved.nodes.some((n) => n.type === 'lane')) {
         saved.nodes = [...laneNodes, ...saved.nodes];
+      }
+      // Boards saved before the Chapter existed: wrap everything in one at the origin.
+      if (!saved.nodes.some((n) => n.type === 'chapter')) {
+        saved.nodes = [
+          makeChapter(),
+          ...saved.nodes.map((n) => ({ ...n, parentNode: CHAPTER_ID })),
+        ];
       }
       saved.nodes = normalize(saved.nodes);
       return saved;
@@ -551,7 +588,7 @@ function Board() {
     const end = nodes
       .filter((n) => n.type === 'slice')
       .reduce((max, n) => Math.max(max, n.position.x + n.data.width), SLICE_MIN_X);
-    // (end is the right edge of the last slice; layout then widens the timeline if needed)
+    // (end is the right edge of the last slice; layout then widens the Chapter if needed)
     setNodes((ns) => layoutSlices([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice')]));
   };
 
@@ -602,7 +639,7 @@ function Board() {
           .filter((n) => !gone.has(n.id))
           .map((n) => {
             const shifted =
-              n.type !== 'slice' && n.position.y >= bottom
+              (n.type === 'sticky' || n.type === 'lane') && n.position.y >= bottom
                 ? { ...n, position: { ...n.position, y: n.position.y - lane.data.height } }
                 : n;
             return shifted;
@@ -663,6 +700,7 @@ function Board() {
 
     const data = {
       exportedAt: new Date().toISOString(),
+      chapter: { ...(nodes.find((n) => n.id === CHAPTER_ID)?.position ?? { x: 0, y: 0 }) },
       lanes: lanes.map((l) => l.data.label),
       slices: out,
       unassignedElements: stickies.filter((n) => !assigned.has(n.id)).map(toElement),
@@ -712,6 +750,7 @@ function Board() {
       ...(data.unassignedElements ?? []),
     ];
     const seen = new Set();
+    const origin = data.chapter ?? {};
     const newStickies = elements.map((el, i) => {
       if (!KINDS[el.type]) throw new Error(`Unknown element type "${el.type}".`);
       const id = String(el.id ?? `n${counter.current++}`);
@@ -720,6 +759,7 @@ function Board() {
       return {
         id,
         type: 'sticky',
+        parentNode: CHAPTER_ID,
         position: {
           x: Number.isFinite(el.position?.x) ? el.position.x : 200 + i * 20,
           y: Number.isFinite(el.position?.y) ? el.position.y : 40,
@@ -742,7 +782,15 @@ function Board() {
       }));
 
     return {
-      nodes: normalize([...newLanes, ...newSlices, ...newStickies]),
+      nodes: normalize([
+        makeChapter(
+          Number.isFinite(origin.x) ? origin.x : 0,
+          Number.isFinite(origin.y) ? origin.y : 0
+        ),
+        ...newLanes,
+        ...newSlices,
+        ...newStickies,
+      ]),
       edges: newEdges,
     };
   };
@@ -778,6 +826,7 @@ function Board() {
           {
             id,
             type: 'sticky',
+            parentNode: CHAPTER_ID,
             position: position ?? { x: 200, y: laneY + 40 },
             data: { kind, text: `New ${KINDS[kind].label}` },
           },
@@ -799,7 +848,8 @@ function Board() {
     const kind = e.dataTransfer.getData('application/event-model');
     if (!KINDS[kind]) return;
     const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    addSticky(kind, { x: p.x - 80, y: p.y - 40 });
+    const origin = getNodes().find((n) => n.id === CHAPTER_ID)?.position ?? { x: 0, y: 0 };
+    addSticky(kind, { x: p.x - 80 - origin.x, y: p.y - 40 - origin.y });
   };
 
   const reset = () => {
@@ -823,7 +873,7 @@ function Board() {
             + {k.icon && `${k.icon} `}{k.label}
           </button>
         ))}
-        <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the timeline">
+        <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the Chapter">
           + Slice
         </button>
         <button className="chip" onClick={addLane} title="Add a lane at the bottom">

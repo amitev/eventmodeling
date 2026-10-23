@@ -3,26 +3,34 @@
 A browser-based board for event modeling, built with React and React Flow (`reactflow`).
 This document records the business requirements agreed so far. It describes behaviour, not implementation.
 
-## 1. Board and timeline
+## 1. Board and Chapter
 
 - **R1.1** The board is a single page showing an event-modeling canvas. Time flows left to right.
+- **R1.1a** The term **Chapter** denotes the whole modelled area: the lanes, the slices and the elements in them. (It was previously called the timeline; "Chapter" is the term to use from now on.)
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
 - **R1.4** The board starts with a sample flow ("Add Item" and "View Cart") so there is something to look at.
 - **R1.5** A **Reset** button restores the sample flow.
 - **R1.6** The board is saved automatically in the browser and restored on reload. This covers lanes, slices, elements and connections.
 
-### Timeline width
+### Chapter width
 
-- **R1.7** The timeline has one width shared by all lanes.
-- **R1.8** The timeline is exactly as wide as its slices: it starts at the left edge of the lanes and ends where the last slice ends. It can be neither longer nor shorter, so it cannot be resized on its own. There is no timeline resize handle.
-- **R1.9** The timeline therefore grows and shrinks automatically when a slice is added, resized or deleted. With no slices it is as wide as the label zone plus one default slice (220px).
+- **R1.7** The Chapter has one width shared by all lanes.
+- **R1.8** The Chapter is exactly as wide as its slices: it starts at the left edge of the lanes and ends where the last slice ends. It can be neither longer nor shorter, so it cannot be resized on its own. There is no Chapter resize handle.
+- **R1.9** The Chapter therefore grows and shrinks automatically when a slice is added, resized or deleted. With no slices it is as wide as the label zone plus one default slice (220px).
+
+### Moving the Chapter
+
+- **R1.10** The Chapter can be moved on the canvas. A **Chapter** handle sits above the slices; dragging it moves the lanes, slices and elements together as one unit.
+- **R1.11** Moving the Chapter does not change anything inside it: the relative positions of lanes, slices and elements stay the same, and so do the connections.
+- **R1.12** The Chapter cannot be deleted. Its position is saved with the board and restored on reload.
+- **R1.13** Elements and slices keep their positions relative to the Chapter, so the layout rules in this document (slice layout, centring, margins) apply regardless of where the Chapter is on the canvas. An element dropped from the toolbar is placed where it is released, whatever the Chapter position.
 
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
-- **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom with the name "New Lane" and the current timeline width.
+- **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom with the name "New Lane" and the current Chapter width.
 - **R2.4** Each lane has a reserved label zone, a 180px strip at its left edge, that holds the lane name and the **×** button. Slices can never enter this zone (see R5.7).
 - **R2.4a** The user can rename a lane by double-clicking its label.
 - **R2.5** The user can remove a lane with its **×** button.
@@ -73,7 +81,7 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
 
 A slice is a vertical band across all lanes that groups the elements of one piece of behaviour.
 
-- **R5.1** Each slice has a name and a width, and sits on the timeline above the lanes.
+- **R5.1** Each slice has a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** The user adds a slice with **+ Slice**. It is appended after the last slice, with the name "New Slice".
 - **R5.3** The user renames a slice by double-clicking its header.
 - **R5.4** Selected slices can be deleted with Backspace or Delete.
@@ -100,11 +108,12 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R6.1** An **Export JSON** button downloads `event-model.json`.
 - **R6.2** The file contains:
   - `exportedAt`: an ISO timestamp.
+  - `chapter`: the Chapter's position on the canvas (`x`, `y`).
   - `lanes`: lane names, top to bottom.
   - `slices`: each with `id`, `name`, `x`, `width` and `elements`.
   - `unassignedElements`: elements outside every slice.
   - `connections`: each with `id`, `source` and `target` (element ids).
-- **R6.3** Each element has `id`, `type`, `text`, `lane` (the lane name), `position` and, for Screens with a mockup, `html`.
+- **R6.3** Each element has `id`, `type`, `text`, `lane` (the lane name), `position` (relative to the Chapter) and, for Screens with a mockup, `html`.
 - **R6.4** An element belongs to the slice whose horizontal span contains the element's centre. Slices and their elements are listed left to right.
 - **R6.5** Connections are listed once at the top level, because they can cross slices.
 
@@ -120,7 +129,8 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R7.5** Connections that refer to elements not in the file are dropped.
 - **R7.6** Older files stay valid:
   - a missing `lanes` list falls back to the three default lanes;
-  - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8).
+  - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8);
+  - a missing `chapter` position falls back to the origin, `(0, 0)`.
 
 ## Out of scope for now
 
