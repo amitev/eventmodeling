@@ -1,0 +1,48 @@
+:root {
+  --screen: #f5f5f5;
+  --command: #7cc3f2;
+  --readmodel: #8fd694;
+  --event: #ffb366;
+}
+html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+.app { display: flex; flex-direction: column; height: 100%; }
+.toolbar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-bottom: 1px solid #ddd; background: #fff; flex-wrap: wrap;
+}
+.toolbar button { padding: 4px 10px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
+.toolbar .chip { cursor: grab; border-color: #555; }
+.chip.screen { background: var(--screen) !important; }
+.chip.command { background: var(--command) !important; }
+.chip.readmodel { background: var(--readmodel) !important; }
+.chip.event { background: var(--event) !important; }
+.spacer { flex: 1; }
+.hint { color: #666; font-size: 12px; }
+.canvas { flex: 1; min-height: 0; }
+
+.lane {
+  box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb;
+  background: rgba(255, 255, 255, 0.55); pointer-events: none;
+}
+.lane.alt { background: rgba(232, 238, 255, 0.6); }
+.lane-label {
+  display: inline-block; margin: 6px 8px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; color: #667;
+}
+
+.sticky {
+  width: 160px; min-height: 80px; box-sizing: border-box; padding: 6px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 3px;
+  box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2); font-size: 13px;
+}
+.sticky.selected { outline: 2px solid #1a73e8; }
+.sticky.screen { background: var(--screen); }
+.sticky.command { background: var(--command); }
+.sticky.readmodel { background: var(--readmodel); }
+.sticky.event { background: var(--event); }
+.sticky .kind { font-size: 10px; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; }
+.sticky .text { font-weight: 600; white-space: pre-wrap; word-break: break-word; }
+.sticky textarea {
+  width: 100%; box-sizing: border-box; min-height: 48px; resize: none;
+  font: inherit; font-weight: 600; background: rgba(255, 255, 255, 0.7); border: 1px solid #666;
+}
