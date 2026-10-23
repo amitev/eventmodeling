@@ -36,6 +36,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .lane.color-red, .swatch.color-red { --lane-rgb: 239, 83, 80; }
 .lane.color-green, .swatch.color-green { --lane-rgb: 102, 187, 106; }
 .lane.color-blue, .swatch.color-blue { --lane-rgb: 66, 165, 245; }
+.lane.color-pink, .swatch.color-pink { --lane-rgb: 240, 98, 146; }
 .lane.color-purple, .swatch.color-purple { --lane-rgb: 171, 71, 188; }
 .lane.color-yellow, .swatch.color-yellow { --lane-rgb: 255, 214, 10; }
 .lane.color-brown, .swatch.color-brown { --lane-rgb: 141, 110, 99; }

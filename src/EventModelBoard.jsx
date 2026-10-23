@@ -46,7 +46,7 @@ const KINDS = {
 };
 
 const snap = (v) => Math.round(v / GRID) * GRID;
-const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'purple', 'yellow', 'brown', 'gray'];
+const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
 
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
