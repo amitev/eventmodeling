@@ -19,7 +19,7 @@ import ReactFlow, {
 // (positions relative to the Chapter), so moving a Chapter moves all of it. Chapters
 // are linked with arrows from the right side of one to the left side of another.
 const LANE_WIDTH = 3200;
-const LABEL_ZONE = 180; // reserved strip at the left of each lane; slices stay out of it
+const LABEL_ZONE = 48; // reserved strip at the left of each lane; slices stay out of it
 const LANES = [
   { id: 'lane-ui', label: 'UI / Actors', y: 0, height: 220 },
   { id: 'lane-cmd', label: 'Commands / Read Models', y: 220, height: 220 },
@@ -291,6 +291,19 @@ function LaneNode({ id, data }) {
     });
     return count > 1;
   });
+  // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
+  const edges = useStore((s) => {
+    const me = s.nodeInternals.get(id);
+    if (!me) return '';
+    let first = true;
+    let last = true;
+    s.nodeInternals.forEach((n) => {
+      if (n.type !== 'lane' || n.parentNode !== me.parentNode || n.id === id) return;
+      if (n.position.y < me.position.y) first = false;
+      if (n.position.y > me.position.y) last = false;
+    });
+    return `${first ? ' first' : ''}${last ? ' last' : ''}`;
+  });
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
 
@@ -307,10 +320,15 @@ function LaneNode({ id, data }) {
 
   return (
     <div
-      className={`lane ${data.alt ? 'alt' : ''}`}
+      className={`lane${data.alt ? ' alt' : ''}${edges}`}
       style={{ width: data.width ?? LANE_WIDTH, height: data.height }}
     >
-      <div className="lane-header nodrag nopan">
+      <div className="lane-header nodrag nopan" style={{ width: LABEL_ZONE }}>
+        {canRemove && (
+          <button className="lane-remove" title="Remove lane" onClick={() => removeLane(id)}>
+            ×
+          </button>
+        )}
         {editing ? (
           <input
             ref={ref}
@@ -323,16 +341,11 @@ function LaneNode({ id, data }) {
         ) : (
           <span
             className="lane-label"
-            title="Double-click to rename"
+            title={`${data.label} (double-click to rename)`}
             onDoubleClick={() => setEditing(true)}
           >
             {data.label}
           </span>
-        )}
-        {canRemove && (
-          <button className="lane-remove" title="Remove lane" onClick={() => removeLane(id)}>
-            ×
-          </button>
         )}
       </div>
     </div>
@@ -342,11 +355,17 @@ function LaneNode({ id, data }) {
 function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editing, setEditing] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
   const ref = useRef(null);
+  const titleRef = useRef(null);
 
   useEffect(() => {
     if (editing) ref.current?.focus();
   }, [editing]);
+
+  useEffect(() => {
+    if (editingTitle) titleRef.current?.select();
+  }, [editingTitle]);
 
   const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
@@ -361,17 +380,38 @@ function StickyNode({ id, data, selected }) {
     update({ text });
   };
 
+  const commitTitle = (title) => {
+    setEditingTitle(false);
+    update({ title: title.trim() });
+  };
+
   return (
     <div
       className={`sticky ${data.kind} ${isScreen && data.html ? 'wide' : ''} ${selected ? 'selected' : ''}`}
-      onDoubleClick={() => setEditing(true)}
     >
       <Handle type="target" position={Position.Top} />
-      <div className="kind sticky-header">
-        <span>
-          {KINDS[data.kind].icon && `${KINDS[data.kind].icon} `}
-          {KINDS[data.kind].label}
-        </span>
+      <div
+        className="sticky-header"
+        title="Double-click to edit the title"
+        onDoubleClick={(e) => {
+          e.stopPropagation(); // the body's double-click edits the text instead
+          setEditingTitle(true);
+        }}
+      >
+        {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
+        {editingTitle ? (
+          <input
+            ref={titleRef}
+            className="nodrag title-input"
+            defaultValue={data.title ?? ''}
+            onBlur={(e) => commitTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+            }}
+          />
+        ) : (
+          <span className={`title ${data.title ? '' : 'empty'}`}>{data.title || 'Title'}</span>
+        )}
         {isScreen && (
           <button
             className="html-btn nodrag"
@@ -383,7 +423,7 @@ function StickyNode({ id, data, selected }) {
           </button>
         )}
       </div>
-      <div className="sticky-body">
+      <div className="sticky-body" onDoubleClick={() => setEditing(true)}>
       {isScreen && editingHtml && (
         <textarea
           className="nodrag nowheel html-editor"
@@ -401,7 +441,7 @@ function StickyNode({ id, data, selected }) {
       {isScreen && data.html && !editingHtml && (
         <iframe
           className="screen-frame"
-          title={data.text}
+          title={data.title || data.text}
           sandbox=""
           srcDoc={data.html}
         />
@@ -626,7 +666,7 @@ const laneNodes = LANES.map((l, i) =>
 const sticky = (id, kind, col, text) => ({
   id,
   type: 'sticky',
-  position: { x: 200 + col * 220, y: LANES[KINDS[kind].lane].y + 40 },
+  position: { x: LABEL_ZONE + 20 + col * 220, y: LANES[KINDS[kind].lane].y + 40 },
   parentNode: CHAPTER_ID,
   data: { kind, text },
 });
@@ -634,8 +674,8 @@ const sticky = (id, kind, col, text) => ({
 const initialNodes = normalize([
   makeChapter(),
   ...laneNodes,
-  makeSlice('slice-1', 180, 440, 'Add Item'),
-  makeSlice('slice-2', 620, 220, 'View Cart'),
+  makeSlice('slice-1', LABEL_ZONE, 440, 'Add Item'),
+  makeSlice('slice-2', LABEL_ZONE + 440, 220, 'View Cart'),
   sticky('n1', 'screen', 0, 'Add Item form'),
   sticky('n2', 'command', 0, 'Add Item'),
   sticky('n3', 'event', 1, 'Item Added'),
@@ -986,6 +1026,7 @@ function Board() {
         const toElement = (n) => ({
           id: n.id,
           type: n.data.kind,
+          ...(n.data.title ? { title: n.data.title } : {}),
           text: n.data.text,
           ...(n.data.html ? { html: n.data.html } : {}),
           lane: laneOf(n)?.data.label ?? null,
@@ -1112,6 +1153,7 @@ function Board() {
           position: { x: num(el.position?.x, 200 + i * 20), y: num(el.position?.y, 40) },
           data: {
             kind: el.type,
+            ...(el.title ? { title: String(el.title) } : {}),
             text: String(el.text ?? ''),
             ...(el.html ? { html: String(el.html) } : {}),
           },
@@ -1194,7 +1236,7 @@ function Board() {
               type: 'sticky',
               parentNode: chapterId,
               position: position ?? { x: 200, y: laneY + 40 },
-              data: { kind, text: `New ${KINDS[kind].label}` },
+              data: { kind, title: '', text: `New ${KINDS[kind].label}` },
             },
           ],
           only

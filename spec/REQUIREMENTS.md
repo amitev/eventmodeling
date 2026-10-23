@@ -48,14 +48,15 @@ This document records the business requirements agreed so far. It describes beha
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
 - **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
 - **R2.3** The user can add a lane with **+ Lane**. It is appended at the bottom of the active Chapter (R1a.4) with the name "New Lane" and the current Chapter width.
-- **R2.4** Each lane has a reserved label zone, a 180px strip at its left edge, that holds the lane name and the **×** button. Slices can never enter this zone (see R5.7).
-- **R2.4a** The user can rename a lane by double-clicking its label.
+- **R2.4** Each lane has a reserved label zone, a narrow 48px strip at its left edge, that holds the lane name and the **×** button (the button at the top). The lane name is written vertically, reading from bottom to top; a name that does not fit is cut off with an ellipsis, and the full name shows when hovering over it. Slices can never enter this zone (see R5.7).
+- **R2.4a** The user can rename a lane by double-clicking its name. While renaming, the name is edited in a normal horizontal text field shown over the lane; Enter, Esc and clicking away save it.
 - **R2.5** The user can remove a lane with its **×** button.
   - Lanes below it move up to close the gap.
   - Notes in the removed lane are deleted, together with the connections attached to them.
   - If the lane contains notes, the user is asked to confirm first.
   - The last remaining lane of a Chapter cannot be removed.
 - **R2.6** Lanes have alternating shading, re-applied after any add or remove.
+- **R2.6a** Every Chapter has a clear, dark outline (2px) around its whole area, including the lane label column: the left and right edges on every lane, the top edge on the first lane and the bottom edge on the last lane. Lanes are separated by a thin light line. The label column is separated from the slice area by a line in the same dark colour. Adding or removing lanes keeps the outline correct.
 - **R2.7** Lanes cannot be dragged, selected or deleted with the keyboard.
 
 ## 3. Elements
@@ -74,11 +75,12 @@ An element is a sticky note placed on the board. Each has a type, a text and a p
 
 - **R3.2** Default lane means the lane a new element is placed in. If that lane doesn't exist, the last lane is used. Elements can be dragged anywhere.
 - **R3.3** The user adds an element by clicking its toolbar button (it joins the active Chapter, R1a.4), or by dragging the button onto the board to choose the position (it joins the Chapter it is released over).
-- **R3.4** Double-clicking an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
+- **R3.4** Double-clicking the body of an element edits its text. Enter saves, Shift+Enter inserts a newline, Esc and clicking away also save.
+- **R3.4a** Double-clicking the header of an element edits its title (see R3.6b). Enter, Esc and clicking away save it. The title is a single line.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
-- **R3.6** Only Processor carries an icon; other types show their text label.
+- **R3.6** Only Processor carries an icon (⚙️), shown at the start of its header; other types have no icon. The element type is shown by the header colour (R3.1), not by a label.
 - **R3.6a** Elements are always vertically centred in the lane that holds them. This applies when an element is added, dropped or dragged (it snaps to the centre of the lane it was released in), when its size changes (for example while editing its text or showing a Screen mockup), and when a board is loaded or imported. An element taller than its lane is aligned to the lane's top edge.
-- **R3.6b** Every element has a header bar and a body. The header holds the element's type (with its icon, if any) and is filled with the type's colour from R3.1. The body is white and holds the element's text, and for Screens the mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out from the white body. Backgrounds are opaque.
+- **R3.6b** Every element has a header bar and a body. The header holds the element's **title** and is filled with the type's colour from R3.1. The title is free text chosen by the user. It has **no default value**: a new element has an empty title, shown as a faint "Title" placeholder in the header (the placeholder is not saved or exported). A long title is cut off with an ellipsis. The body is white and holds the element's text, and for Screens the mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out from the white body. Backgrounds are opaque.
 
 ### Screen elements
 
@@ -130,7 +132,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
     - `unassignedElements` are the Chapter's elements that sit outside every slice.
   - `connections`: element connections, each with `id`, `source` and `target` (element ids).
   - `chapterConnections`: Chapter connections, each with `id`, `source` and `target` (Chapter ids, from the right side of the source to the left side of the target).
-- **R6.3** Each element has `id`, `type`, `text`, `lane` (the lane name), `position` (relative to its Chapter) and, for Screens with a mockup, `html`.
+- **R6.3** Each element has `id`, `type`, `title` (omitted when empty), `text`, `lane` (the lane name), `position` (relative to its Chapter) and, for Screens with a mockup, `html`.
 - **R6.4** An element belongs to the slice of its own Chapter whose horizontal span contains the element's centre. Slices and their elements are listed left to right.
 - **R6.5** Connections are listed once at the top level, because they can cross slices and Chapters.
 
@@ -150,6 +152,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - a missing `lanes` list falls back to the three default lanes;
   - a missing Chapter position falls back to the origin, `(0, 0)`;
   - a `timelineWidth` field from older exports is ignored, because the width is derived from the slices (R1.8).
+  - an element without a `title` gets an empty title (R3.6b).
 
 ## 8. Undo and redo
 

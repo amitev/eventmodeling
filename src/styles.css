@@ -4,6 +4,7 @@
   --readmodel: #8fd694;
   --event: #ffb366;
   --processor: #d9c2f0;
+  --chapter-border: #5b5b6b;
 }
 html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
 .app { display: flex; flex-direction: column; height: 100%; }
@@ -22,9 +23,14 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .canvas { flex: 1; min-height: 0; }
 
 .lane {
-  position: relative; box-sizing: border-box; border-top: 2px solid #bbb; border-bottom: 1px solid #bbb; border-right: 2px solid #bbb;
-  background: rgba(255, 255, 255, 0.55); pointer-events: none;
+  position: relative; box-sizing: border-box; pointer-events: none;
+  background: rgba(255, 255, 255, 0.55);
+  /* The Chapter outline: left and right on every lane, top on the first, bottom on the last. */
+  border: 0 solid var(--chapter-border);
+  border-left-width: 2px; border-right-width: 2px; border-top: 1px solid #b4b4c4;
 }
+.lane.first { border-top: 2px solid var(--chapter-border); }
+.lane.last { border-bottom: 2px solid var(--chapter-border); }
 .lane.alt { background: rgba(232, 238, 255, 0.6); }
 .lane-label {
   display: inline-block; margin: 6px 8px;
@@ -43,9 +49,13 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky.readmodel { --kind-color: var(--readmodel); }
 .sticky.event { --kind-color: var(--event); }
 .sticky .sticky-header {
+  display: flex; align-items: center; gap: 6px; min-height: 26px; box-sizing: border-box;
   background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
-  padding: 4px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: rgba(0, 0, 0, 0.75);
+  padding: 4px 8px; font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.8);
 }
+.sticky-header .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sticky-header .title.empty { font-weight: 400; font-style: italic; opacity: 0.35; }
+.sticky-header .title-input { flex: 1; min-width: 0; font: inherit; }
 .sticky .sticky-body { flex: 1; background: #fff; border-radius: 0 0 3px 3px; padding: 6px 8px 8px; }
 .sticky .text { font-weight: 600; white-space: pre-wrap; word-break: break-word; }
 .sticky textarea {
@@ -68,7 +78,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
 
 .sticky.wide { width: 240px; }
-.sticky .kind { display: flex; justify-content: space-between; align-items: center; }
 .html-btn {
   padding: 0 4px; font: 10px monospace; cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.4); border-radius: 3px; background: rgba(255, 255, 255, 0.7);
@@ -81,12 +90,21 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 
 .lane-header {
-  pointer-events: auto; position: absolute; top: 0; bottom: 0; left: 0; width: 180px; box-sizing: border-box;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; padding: 8px;
-  background: rgba(255, 255, 255, 0.9); border-right: 2px solid #bbb;
+  pointer-events: auto; position: absolute; top: 0; bottom: 0; left: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0;
+  background: rgba(255, 255, 255, 0.9); border-right: 2px solid var(--chapter-border);
 }
-.lane-header .lane-label { margin: 0; cursor: text; overflow-wrap: anywhere; }
-.lane-header input { min-width: 0; flex: 1; font: inherit; font-size: 12px; font-weight: 700; }
+/* The title reads bottom to top; long titles are cut off with an ellipsis (full name on hover). */
+.lane-header .lane-label {
+  margin: 0; cursor: text; flex: 1; min-height: 0; max-height: 100%;
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* While renaming, the input is a normal horizontal field laid over the lane. */
+.lane-header input {
+  position: absolute; top: 8px; left: 4px; z-index: 10; width: 180px;
+  font: inherit; font-size: 12px; font-weight: 700;
+}
 .lane-remove {
   width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
