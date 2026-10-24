@@ -64,7 +64,7 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1c.1** A Chapter, a lane and a slice can carry **info**: free text in Markdown, empty by default.
 - **R1c.2** Each has an **i** button in its header, in front of its label: for a Chapter in its handle, before the Context dropdown; for a lane in its label zone, between the colour button and the name; for a slice at the left of its header, before the name. The button is filled when the item has info and plain when it has none.
-- **R1c.3** The button opens a modal panel titled with the item's kind and name. The panel has two sides: the Markdown editor on the left and a live preview on the right. **Save** applies the text (one undo step) and closes the panel; **Cancel** and Esc discard the changes. Info that is empty or only whitespace is removed.
+- **R1c.3** The button opens a modal panel titled with the item's kind and name. The panel has two sides: the Markdown editor on the left, with a row of helper buttons above it, and a live preview on the right. The buttons are **B** (bold), *I* (italic), ~~S~~ (strikethrough), a separator, then task list, table, code and link. Each acts on the selected text, or inserts a placeholder when nothing is selected: bold `**`, italic `*`, strikethrough `~~`, inline code in backticks (a fenced block for several lines), a link `[text](url)` with `url` selected, task list inserts `- [ ] Task` and `- [x] Resolved task` when nothing is selected, otherwise toggles `- [ ] ` on the selected lines, table inserts a 2-column table. **Save** applies the text (one undo step) and closes the panel; **Cancel** and Esc discard the changes. Info that is empty or only whitespace is removed.
 - **R1c.4** The preview is rendered with `marked` (version 18.1.1). Its HTML is always sanitised with DOMPurify before it is shown, so scripts, event handlers and `javascript:` links never run. Links open in a new tab without access to the board.
 
 ## 2. Lanes
@@ -113,7 +113,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 ### Screen elements
 
 - **R3.7** A Screen element can hold an HTML mockup, edited through a `</>` button on the element.
-- **R3.8** The HTML is optional. With HTML, the element widens and shows it in an iframe preview; without, the Screen shows nothing in place of the mockup.
+- **R3.8** The HTML is optional. With HTML, the Screen shows it in an iframe preview in its body, at the normal element width; without, the Screen shows nothing in place of the mockup.
 - **R3.9** The preview is sandboxed with no permissions: no scripts or form submissions.
 - **R3.10** The preview does not capture the mouse, so the element can still be dragged, selected and connected.
 
@@ -164,12 +164,12 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   So an element is never left outside a slice.
 - **R5.15** Elements move with their slice: when a slice is resized, following slices shift with their elements, keeping each element's position relative to its slice. Elements of the resized slice stay put.
 - **R5.16** A slice cannot be narrower than its elements plus a 40px margin to the slice borders on the left and right.
-- **R5.17** An element wider than its slice (e.g. a Screen widened by a mockup) is moved inside, and the slice grows to fit it plus the 40px margin if needed.
+- **R5.17** An element wider than its slice is moved inside, and the slice grows to fit it plus the 40px margin if needed.
 - **R5.18** Deleting a slice always deletes its elements and their connections, and closes the gap. If it holds elements, the user confirms first.
 - **R5.19** A Chapter always has at least one slice, as elements only exist in slices. Its last slice cannot be deleted: its header has no **×** button. Other selected items are deleted as usual.
 - **R5.20** **Compact.** The **↔** button in the Chapter handle compacts its slices and makes it active (R1a.4). A slice with elements gets the width from the left edge of its left-most element to the right edge of its right-most, plus the 40px margin (R5.16) on both sides, rounded up to the 20px grid, minimum 120px. If no Cell of the slice holds more than one element, each element is first centred horizontally in the slice, and the width is that of the widest element plus the margins. Otherwise the elements keep their relative positions and lanes and move together so the group is centred horizontally. Either way left and right padding are at least 40px. A slice without elements gets 220px. Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes. One undo step (R8.1).
 
-**Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice and only grows right), not the one holding its centre: a Screen widened by a mockup has its centre outside its slice until the slice grows, and would otherwise be handed to the next slice.
+**Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
 ## 5a. Cells
 
@@ -239,7 +239,7 @@ The export file is the single, complete description of a board, written and read
   - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
   - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
-  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus displayed width plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
+  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus the element width (160px) plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
