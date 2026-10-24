@@ -1,4 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import {
   Background,
   Controls,
@@ -377,7 +380,73 @@ function useChapterDrag(nodeId, skip) {
   };
 }
 
+// Links in the info preview open in a new tab, without access to the board.
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A' && node.hasAttribute('href')) {
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+  }
+});
+
+// Modal to edit the Markdown info of a Chapter, lane or slice: editor on the left, preview on
+// the right. The changes only apply on Save.
+function InfoDialog({ title, initial, onSave, onCancel }) {
+  const [text, setText] = useState(initial);
+  // marked does not sanitise, so its HTML always goes through DOMPurify.
+  const html = useMemo(() => DOMPurify.sanitize(marked.parse(text, { async: false })), [text]);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onCancel();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  return createPortal(
+    <div className="info-backdrop">
+      <div className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="info-title">{title}</div>
+        <div className="info-panes">
+          <textarea
+            className="info-editor"
+            autoFocus
+            spellCheck={false}
+            placeholder="Markdown"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+        <div className="info-actions">
+          <button onClick={() => onSave(text)}>Save</button>
+          <button onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// The "i" button of a Chapter, lane or slice; filled when the item has info.
+function InfoButton({ id, info }) {
+  const { openInfo } = useContext(BoardActions);
+  return (
+    <button
+      className={`info-btn nodrag${info ? ' has-info' : ''}`}
+      title={info ? 'Edit info' : 'Add info'}
+      aria-label="Info"
+      onDoubleClick={(e) => e.stopPropagation()}
+      onClick={() => openInfo(id)}
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <path d="M5 4.2V9" />
+        <circle cx="5" cy="1.6" r="0.3" />
+      </svg>
+    </button>
+  );
+}
+
 const BoardActions = createContext({
+  openInfo: () => {},
   contexts: [],
   setChapterContext: () => {},
   addContext: () => {},
@@ -500,6 +569,7 @@ function LaneNode({ id, data }) {
             </div>
           )}
         </div>
+        <InfoButton id={id} info={data.info} />
         {/* Edited in place: the same rotated element becomes editable text. */}
         <span
           ref={ref}
@@ -709,23 +779,26 @@ function SliceNode({ id, data }) {
         onClick={selectTopCell}
         onDoubleClick={() => setEditing(true)}
       >
-        {editing ? (
-          <input
-            ref={ref}
-            className="nodrag"
-            defaultValue={data.name}
-            onBlur={(e) => {
-              setEditing(false);
-              const name = e.target.value.trim();
-              if (name) update({ name }); // an empty name keeps the old one
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
-            }}
-          />
-        ) : (
-          <span className="slice-name">{data.name}</span>
-        )}
+        <div className="slice-title">
+          <InfoButton id={id} info={data.info} />
+          {editing ? (
+            <input
+              ref={ref}
+              className="nodrag"
+              defaultValue={data.name}
+              onBlur={(e) => {
+                setEditing(false);
+                const name = e.target.value.trim();
+                if (name) update({ name }); // an empty name keeps the old one
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+              }}
+            />
+          ) : (
+            <span className="slice-name">{data.name}</span>
+          )}
+        </div>
         <div className="slice-actions">
           <button
             className="slice-add nodrag"
@@ -828,6 +901,7 @@ function ChapterNode({ id, data }) {
         title="Drag to move the Chapter"
       >
         <span>⠿</span>
+        <InfoButton id={id} info={data.info} />
         <select
           className="chapter-context nodrag"
           title="Context of this Chapter"
@@ -902,19 +976,19 @@ const chapterDefaults = {
   style: { pointerEvents: 'none' },
 };
 
-const makeChapter = (id, x, y, name, context) => ({
+const makeChapter = (id, x, y, name, context, info) => ({
   id,
   type: 'chapter',
   position: { x, y },
-  data: { name, context },
+  data: { name, context, ...(info ? { info } : {}) },
   ...chapterDefaults,
 });
 
-const makeSlice = (id, x, width, name, chapterId) => ({
+const makeSlice = (id, x, width, name, chapterId, info) => ({
   id,
   type: 'slice',
   position: { x, y: SLICE_Y },
-  data: { name, width },
+  data: { name, width, ...(info ? { info } : {}) },
   parentId: chapterId,
   draggable: false,
   selectable: false,
@@ -923,12 +997,12 @@ const makeSlice = (id, x, width, name, chapterId) => ({
   style: { pointerEvents: 'none' },
 });
 
-const makeLane = (id, chapterId, label, y, color, width) => ({
+const makeLane = (id, chapterId, label, y, color, width, info) => ({
   id,
   type: 'lane',
   position: { x: 0, y },
   parentId: chapterId,
-  data: { label, height: LANE_HEIGHT, width, color },
+  data: { label, height: LANE_HEIGHT, width, color, ...(info ? { info } : {}) },
   draggable: false,
   selectable: false,
   connectable: false,
@@ -1017,14 +1091,21 @@ function serialize(nodes, edges, contexts) {
       return {
         id: ch.id,
         name: ch.data.name,
+        ...(ch.data.info ? { info: ch.data.info } : {}),
         context: contexts.some((c) => c.id === ch.data.context) ? ch.data.context : contexts[0].id,
         x: ch.position.x,
         y: ch.position.y,
         connectsTo,
-        lanes: lanes.map((l) => ({ id: l.id, name: l.data.label, color: l.data.color })),
+        lanes: lanes.map((l) => ({
+          id: l.id,
+          name: l.data.label,
+          ...(l.data.info ? { info: l.data.info } : {}),
+          color: l.data.color,
+        })),
         slices: chapterSlices.map((sl) => ({
           id: sl.id,
           name: sl.data.name,
+          ...(sl.data.info ? { info: sl.data.info } : {}),
           width: sl.data.width,
           elements: bySlice
             .get(sl.id)
@@ -1125,6 +1206,11 @@ function parseBoard(text) {
     kindOf.set(id, kind);
   };
   const links = []; // connectsTo lists to check once every id is known
+  const optionalInfo = (item, path) => {
+    if (!hasKey(item, 'info')) return;
+    string(item.info, at(path, 'info'));
+    if (item.info === '') fail(at(path, 'info'), 'must be left out when empty');
+  };
   const nodes = [];
   const contexts = [];
 
@@ -1138,9 +1224,10 @@ function parseBoard(text) {
 
   data.chapters.forEach((c, ci) => {
     const cp = `chapters[${ci}]`;
-    object(c, ['id', 'name', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'], cp);
+    object(c, ['id', 'name', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'], cp, ['info']);
     claim(c.id, 'chapter', at(cp, 'id'));
     name(c.name, at(cp, 'name'));
+    optionalInfo(c, cp);
     string(c.context, at(cp, 'context'));
     if (!contexts.some((x) => x.id === c.context)) {
       fail(at(cp, 'context'), `no context with id "${c.context}"`);
@@ -1151,32 +1238,34 @@ function parseBoard(text) {
     links.push({ owner: c.id, kind: 'chapter', path: at(cp, 'connectsTo'), ids: c.connectsTo });
     list(c.lanes, at(cp, 'lanes'), true);
     list(c.slices, at(cp, 'slices'), true);
-    nodes.push(makeChapter(c.id, c.x, c.y, c.name, c.context));
+    nodes.push(makeChapter(c.id, c.x, c.y, c.name, c.context, c.info));
 
     const laneY = new Map();
     c.lanes.forEach((l, li) => {
       const lp = `${cp}.lanes[${li}]`;
-      object(l, ['id', 'name', 'color'], lp);
+      object(l, ['id', 'name', 'color'], lp, ['info']);
       claim(l.id, 'lane', at(lp, 'id'));
       name(l.name, at(lp, 'name'));
+      optionalInfo(l, lp);
       if (!LANE_COLORS.includes(l.color)) {
         fail(at(lp, 'color'), `must be one of ${LANE_COLORS.join(', ')}`);
       }
       laneY.set(l.id, li * LANE_HEIGHT);
-      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH));
+      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH, l.info));
     });
 
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
       const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'width', 'elements'], sp);
+      object(sl, ['id', 'name', 'width', 'elements'], sp, ['info']);
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
+      optionalInfo(sl, sp);
       number(sl.width, at(sp, 'width'));
       if (sl.width < SLICE_MIN_WIDTH) fail(at(sp, 'width'), `must be at least ${SLICE_MIN_WIDTH}`);
       list(sl.elements, at(sp, 'elements'));
       const width = sl.width;
-      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id));
+      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info));
 
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
@@ -1342,6 +1431,20 @@ function Board() {
   // The selected Cell, if any: { chapterId, laneId, sliceId }. Selection only: it is not
   // saved, exported or recorded for undo.
   const [selectedCell, setSelectedCell] = useState(null);
+  // The Chapter, lane or slice whose info is being edited.
+  const [infoId, setInfoId] = useState(null);
+  const infoNode = nodes.find((n) => n.id === infoId);
+  const saveInfo = (text) => {
+    const info = text.trim() ? text : '';
+    setNodes((ns) =>
+      ns.map((n) => {
+        if (n.id !== infoId) return n;
+        const { info: _old, ...rest } = n.data;
+        return { ...n, data: info ? { ...rest, info } : rest };
+      })
+    );
+    setInfoId(null);
+  };
   const focusChapter = (node) =>
     setActiveId(node.type === 'chapter' ? node.id : node.parentId ?? null);
 
@@ -1715,6 +1818,7 @@ function Board() {
       renameContext,
       removeContext,
       activate: setActiveId,
+      openInfo: setInfoId,
       clearCell: () => setSelectedCell(null),
       addSliceAfter,
       removeSlice,
@@ -2006,6 +2110,15 @@ function Board() {
         </BoardActions.Provider>
         </HistoryContext.Provider>
       </div>
+      {infoNode && (
+        <InfoDialog
+          key={infoNode.id}
+          title={`${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`}
+          initial={infoNode.data.info ?? ''}
+          onSave={saveInfo}
+          onCancel={() => setInfoId(null)}
+        />
+      )}
     </div>
   );
 }
