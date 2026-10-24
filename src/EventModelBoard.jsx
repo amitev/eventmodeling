@@ -702,9 +702,9 @@ function SliceNode({ id, data, selected }) {
   );
 }
 
-// A Chapter node is a transparent box over its lanes, with a handle above the slices
-// (drag it to move the Chapter, double-click to rename) and two connection ports:
-// incoming on the left side, outgoing on the right side.
+// A Chapter node is a transparent box over its lanes, with a large title centred above the
+// slices (double-click to rename), a small handle above it (drag it to move the Chapter) and
+// two connection ports: incoming on the left side, outgoing on the right side.
 function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeChapter, compactChapter, activeId, chapterCount } = useContext(BoardActions);
@@ -742,10 +742,7 @@ function ChapterNode({ id, data }) {
     <div style={{ width, height }}>
       <Handle type="target" position={Position.Left} className="chapter-port" />
       <Handle type="source" position={Position.Right} className="chapter-port" />
-      <div
-        className={`chapter-handle nopan ${activeId === id ? 'active' : ''}`}
-        title="Drag to move the Chapter"
-      >
+      <div className="chapter-title">
         {editing ? (
           <input
             ref={ref}
@@ -757,8 +754,16 @@ function ChapterNode({ id, data }) {
             }}
           />
         ) : (
-          <span onDoubleClick={() => setEditing(true)}>⠿ {data.name}</span>
+          <span className="nodrag" title="Double-click to rename" onDoubleClick={() => setEditing(true)}>
+            {data.name}
+          </span>
         )}
+      </div>
+      <div
+        className={`chapter-handle nopan ${activeId === id ? 'active' : ''}`}
+        title="Drag to move the Chapter"
+      >
+        <span>⠿</span>
         <button
           className="chapter-compact nodrag"
           title="Compact the slices"

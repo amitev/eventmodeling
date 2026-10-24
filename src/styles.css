@@ -172,7 +172,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-handle.right { right: -4px; }
 
 .chapter-handle {
-  position: absolute; left: 0; top: -84px; width: max-content; padding: 4px 12px;
+  position: absolute; left: 0; top: -74px; width: max-content; padding: 4px 12px;
   font-size: 12px; font-weight: 700; color: #fff; background: #5b5b6b; border-radius: 4px;
   cursor: grab; user-select: none; box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.25);
 }
@@ -184,6 +184,17 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   pointer-events: auto; display: flex; align-items: center; gap: 8px;
 }
 .chapter-handle.active { background: #1a73e8; }
+/* Large name centred above the handle; only the text takes the mouse. */
+.chapter-title {
+  position: absolute; left: 0; right: 0; top: -126px; height: 44px; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 700; line-height: 44px; color: #2b2b3b; white-space: nowrap;
+}
+.chapter-title span, .chapter-title input { pointer-events: auto; }
+.chapter-title input {
+  width: 12em; height: 44px; box-sizing: border-box; font: inherit; line-height: 44px;
+  text-align: center; color: inherit;
+}
 .chapter-handle input { width: 150px; font: inherit; font-size: 12px; font-weight: 700; }
 .chapter-remove,
 .chapter-compact {
