@@ -148,8 +148,8 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 A slice is a vertical band across all lanes that groups the elements of one piece of behaviour.
 
 - **R5.1** Each slice has an id (R1.14), a name and a width, and sits in the Chapter above the lanes.
-- **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4).
-- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
+- **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4). The top Cell of the new slice is selected (R5a.5).
+- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4) and the top Cell of the new slice is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
 - **R5.3** Double-clicking a slice header renames it. The name can never be empty: an empty rename is ignored (previous kept), as for lanes (R2.4a).
 - **R5.4** A slice itself cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, also not on its buttons or while renaming) selects the **top Cell** of that slice (R5a.5). A slice is deleted with the **×** button in its header (R5.11, R5.18, R5.19); Backspace and Delete never delete a slice.
 - **R5.5** A slice's height always covers all lanes, also after lanes are added or removed.

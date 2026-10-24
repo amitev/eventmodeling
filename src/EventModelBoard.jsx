@@ -1759,6 +1759,12 @@ function Board() {
     setActiveId(slice.parentId);
   };
 
+  // Selects the top Cell of a slice that was just created.
+  const selectTopCellOf = (chapterId, sliceId) => {
+    const top = lanesOf(getNodes(), chapterId)[0];
+    if (top) setSelectedCell({ chapterId, laneId: top.id, sliceId });
+  };
+
   const addSlice = () => {
     if (!activeChapterId) return;
     const [id] = newIds();
@@ -1772,6 +1778,7 @@ function Board() {
         layered([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId)])
       );
     });
+    selectTopCellOf(activeChapterId, id);
   };
 
   // Inserts a slice immediately after `sliceId`. The later slices (and their elements)
@@ -1792,6 +1799,8 @@ function Board() {
       return layoutSlices(layered([...ns, added]), ns);
     });
     setActiveId(nodes.find((n) => n.id === sliceId)?.parentId ?? null);
+    const chapterId = nodes.find((n) => n.id === sliceId)?.parentId;
+    if (chapterId) selectTopCellOf(chapterId, id);
   };
 
   const addLane = () => {
