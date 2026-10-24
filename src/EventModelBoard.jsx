@@ -46,6 +46,7 @@ const KINDS = {
 };
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
 
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
@@ -288,10 +289,11 @@ const MAX_HISTORY = 100;
 
 // What counts as the board's content: selection, measured sizes and drag flags
 // are deliberately left out, so they never create history entries.
-const keyOf = (nodes, edges) =>
+const keyOf = (nodes, edges, contexts) =>
   JSON.stringify([
     nodes.map((n) => [n.id, n.type, n.parentNode, n.position.x, n.position.y, n.data]),
     edges.map((e) => [e.id, e.source, e.target]),
+    contexts,
   ]);
 
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
@@ -371,6 +373,11 @@ function useChapterDrag(nodeId, skip, select = false) {
 }
 
 const BoardActions = createContext({
+  contexts: [],
+  setChapterContext: () => {},
+  addContext: () => {},
+  renameContext: () => {},
+  removeContext: () => {},
   activate: () => {},
   clearCell: () => {},
   addSliceAfter: () => {},
@@ -754,6 +761,10 @@ function SliceNode({ id, data }) {
 function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeChapter, compactChapter, activeId, chapterCount } = useContext(BoardActions);
+  const { contexts, setChapterContext, addContext, renameContext, removeContext } =
+    useContext(BoardActions);
+  // A Chapter whose Context is missing shows the Default (first) one.
+  const contextId = contexts.some((c) => c.id === data.context) ? data.context : contexts[0]?.id;
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
   const width = useStore((s) => {
@@ -810,6 +821,43 @@ function ChapterNode({ id, data }) {
         title="Drag to move the Chapter"
       >
         <span>⠿</span>
+        <select
+          className="chapter-context nodrag"
+          title="Context of this Chapter"
+          value={contextId}
+          onChange={(e) =>
+            e.target.value === NEW_CONTEXT ? addContext(id) : setChapterContext(id, e.target.value)
+          }
+        >
+          {contexts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+          <option value={NEW_CONTEXT}>+ New context...</option>
+        </select>
+        <button
+          className="chapter-compact nodrag"
+          title="Rename this context (for every Chapter that uses it)"
+          aria-label="Rename this context"
+          onClick={() => renameContext(contextId)}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <path d="M1 9L1.6 6.6L7 1.2L8.8 3L3.4 8.4Z" />
+          </svg>
+        </button>
+        {contextId !== contexts[0]?.id && (
+          <button
+            className="chapter-compact nodrag"
+            title="Delete this context"
+            aria-label="Delete this context"
+            onClick={() => removeContext(contextId)}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M1.5 2.5H8.5M4 2.5V1H6V2.5M2.5 2.5L3 9H7L7.5 2.5" />
+            </svg>
+          </button>
+        )}
         <button
           className="chapter-compact nodrag"
           title="Compact the slices"
@@ -847,11 +895,11 @@ const chapterDefaults = {
   style: { pointerEvents: 'none' },
 };
 
-const makeChapter = (id, x, y, name) => ({
+const makeChapter = (id, x, y, name, context) => ({
   id,
   type: 'chapter',
   position: { x, y },
-  data: { name },
+  data: { name, context },
   ...chapterDefaults,
 });
 
@@ -906,6 +954,7 @@ function makeSample() {
   const used = new Set();
   const id = () => uniqueId(used);
   const chapterId = id();
+  const contexts = [{ id: id(), name: 'Default' }];
   const colX = [SLICE_PADDING, 240, 440 + SLICE_PADDING]; // relative to the slice area
   const sticky = (kind, col, title) => ({
     id: id(),
@@ -922,7 +971,7 @@ function makeSample() {
     sticky('screen', 2, 'Cart view'),
   ];
   const nodes = normalize([
-    makeChapter(chapterId, 0, 0, 'Chapter 1'),
+    makeChapter(chapterId, 0, 0, 'Chapter 1', contexts[0].id),
     ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
     makeSlice(id(), LABEL_ZONE, 440, 'Add Item', chapterId),
     makeSlice(id(), LABEL_ZONE + 440, 240, 'View Cart', chapterId),
@@ -938,7 +987,7 @@ function makeSample() {
     [n3, n4],
     [n4, n5],
   ].map(([a, b]) => makeEdge(a.id, b.id, false));
-  return { nodes, edges };
+  return { nodes, edges, contexts };
 }
 
 const STORAGE_KEY = 'event-model-board';
@@ -948,7 +997,7 @@ const compareIds = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 // The export file (section 6): the one complete description of the board. Values that follow
 // from the layout rules are left out. Field order is fixed so the same board always gives
 // the same text.
-function serialize(nodes, edges) {
+function serialize(nodes, edges, contexts) {
   const kindOf = new Map(nodes.map((n) => [n.id, n.type]));
   const targetsOf = new Map();
   for (const e of edges) {
@@ -988,6 +1037,7 @@ function serialize(nodes, edges) {
       return {
         id: ch.id,
         name: ch.data.name,
+        context: contexts.some((c) => c.id === ch.data.context) ? ch.data.context : contexts[0].id,
         x: ch.position.x,
         y: ch.position.y,
         connectsTo,
@@ -1026,10 +1076,16 @@ function serialize(nodes, edges) {
     const targets = [...(targetsOf.get(id) ?? [])].filter((t) => order.has(t));
     list.push(...targets.sort((a, b) => order.get(a) - order.get(b)));
   }
-  return { format: 'event-model', version: 1, chapters };
+  return {
+    format: 'event-model',
+    version: 1,
+    contexts: contexts.map((c) => ({ id: c.id, name: c.name })),
+    chapters,
+  };
 }
 
-const boardText = (nodes, edges) => JSON.stringify(serialize(nodes, edges), null, 2);
+const boardText = (nodes, edges, contexts) =>
+  JSON.stringify(serialize(nodes, edges, contexts), null, 2);
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{8,}$/;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -1074,12 +1130,13 @@ function parseBoard(text) {
   if (isObject(data) && !hasKey(data, 'format')) {
     fail('format', 'is missing (files in an earlier format are not supported)');
   }
-  object(data, ['format', 'version', 'chapters'], '');
+  object(data, ['format', 'version', 'contexts', 'chapters'], '');
   if (data.format !== 'event-model') fail('format', 'must be "event-model"');
   if (data.version !== 1) fail('version', 'must be 1');
+  list(data.contexts, 'contexts', true);
   list(data.chapters, 'chapters', true);
 
-  const kindOf = new Map(); // id -> chapter | lane | slice | element
+  const kindOf = new Map(); // id -> context | chapter | lane | slice | element
   const claim = (id, kind, path) => {
     if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
       fail(path, 'must be a text of at least 8 letters, digits, "-" or "_"');
@@ -1089,19 +1146,32 @@ function parseBoard(text) {
   };
   const links = []; // connectsTo lists to check once every id is known
   const nodes = [];
+  const contexts = [];
+
+  data.contexts.forEach((x, xi) => {
+    const xp = `contexts[${xi}]`;
+    object(x, ['id', 'name'], xp);
+    claim(x.id, 'context', at(xp, 'id'));
+    name(x.name, at(xp, 'name'));
+    contexts.push({ id: x.id, name: x.name });
+  });
 
   data.chapters.forEach((c, ci) => {
     const cp = `chapters[${ci}]`;
-    object(c, ['id', 'name', 'x', 'y', 'connectsTo', 'lanes', 'slices'], cp);
+    object(c, ['id', 'name', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'], cp);
     claim(c.id, 'chapter', at(cp, 'id'));
     name(c.name, at(cp, 'name'));
+    string(c.context, at(cp, 'context'));
+    if (!contexts.some((x) => x.id === c.context)) {
+      fail(at(cp, 'context'), `no context with id "${c.context}"`);
+    }
     number(c.x, at(cp, 'x'));
     number(c.y, at(cp, 'y'));
     list(c.connectsTo, at(cp, 'connectsTo'));
     links.push({ owner: c.id, kind: 'chapter', path: at(cp, 'connectsTo'), ids: c.connectsTo });
     list(c.lanes, at(cp, 'lanes'), true);
     list(c.slices, at(cp, 'slices'), true);
-    nodes.push(makeChapter(c.id, c.x, c.y, c.name));
+    nodes.push(makeChapter(c.id, c.x, c.y, c.name, c.context));
 
     const laneY = new Map();
     c.lanes.forEach((l, li) => {
@@ -1188,7 +1258,7 @@ function parseBoard(text) {
       edges.push(makeEdge(owner, t, kind === 'chapter'));
     });
   }
-  return { nodes: normalize(nodes), edges };
+  return { nodes: normalize(nodes), edges, contexts };
 }
 
 function load() {
@@ -1252,12 +1322,14 @@ function Board() {
   const saved = useMemo(() => load() ?? makeSample(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
+  // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
+  const [contexts, setContexts] = useState(saved.contexts);
   const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
   const canvasRef = useRef(null);
 
   // `count` ids that are unused on the board and different from each other.
   const newIds = (count = 1) => {
-    const used = new Set(getNodes().map((n) => n.id));
+    const used = new Set([...getNodes().map((n) => n.id), ...contexts.map((c) => c.id)]);
     return Array.from({ length: count }, () => uniqueId(used));
   };
 
@@ -1276,11 +1348,11 @@ function Board() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, boardText(nodes, edges));
+      localStorage.setItem(STORAGE_KEY, boardText(nodes, edges, contexts));
     } catch {
       // ignore unavailable storage
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, contexts]);
 
   // ---- Undo / redo (in memory only) ----
   const past = useRef([]);
@@ -1294,9 +1366,9 @@ function Board() {
 
   useEffect(() => {
     if (gesture.current > 0) return;
-    const key = keyOf(nodes, edges);
+    const key = keyOf(nodes, edges, contexts);
     if (!present.current) {
-      present.current = { nodes, edges, key };
+      present.current = { nodes, edges, contexts, key };
       return;
     }
     if (key === present.current.key) return;
@@ -1310,8 +1382,8 @@ function Board() {
       future.current = [];
       syncHist();
     }
-    present.current = { nodes, edges, key };
-  }, [nodes, edges, tick]);
+    present.current = { nodes, edges, contexts, key };
+  }, [nodes, edges, contexts, tick]);
 
   const historyApi = useMemo(
     () => ({
@@ -1330,6 +1402,7 @@ function Board() {
     (snap) => {
       setNodes(snap.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)));
       setEdges(snap.edges.map((e) => (e.selected ? { ...e, selected: false } : e)));
+      setContexts(snap.contexts);
       setSelectedCell(null);
     },
     [setNodes, setEdges]
@@ -1519,7 +1592,7 @@ function Board() {
     setNodes((ns) =>
       layered([
         ...ns,
-        makeChapter(id, x, y, `Chapter ${chapters.length + 1}`),
+        makeChapter(id, x, y, `Chapter ${chapters.length + 1}`, contexts[0].id),
         ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, 'none', width)),
         makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
       ])
@@ -1598,8 +1671,51 @@ function Board() {
     [setNodes]
   );
 
+  const setChapterContext = (chapterId, contextId) =>
+    setNodes((ns) =>
+      ns.map((n) => (n.id === chapterId ? { ...n, data: { ...n.data, context: contextId } } : n))
+    );
+
+  // Creates a Context and assigns it to the Chapter.
+  const addContext = (chapterId) => {
+    const name = window.prompt('Name of the new context')?.trim();
+    if (!name) return;
+    const [id] = newIds();
+    setContexts((cs) => [...cs, { id, name }]);
+    setChapterContext(chapterId, id);
+  };
+
+  // Renames the Context for every Chapter that shares it.
+  const renameContext = (contextId) => {
+    const current = contexts.find((c) => c.id === contextId);
+    const name = window.prompt('Rename the context', current?.name)?.trim();
+    if (!name) return;
+    setContexts((cs) => cs.map((c) => (c.id === contextId ? { ...c, name } : c)));
+  };
+
+  // The Default (first) Context cannot be deleted; its Chapters' Contexts move to it.
+  const removeContext = (contextId) => {
+    const fallback = contexts[0];
+    if (contextId === fallback.id) return;
+    const used = chapters.filter((c) => c.data.context === contextId).length;
+    if (!window.confirm(`Delete this context? ${used} chapter(s) move to "${fallback.name}".`)) return;
+    setContexts((cs) => cs.filter((c) => c.id !== contextId));
+    setNodes((ns) =>
+      ns.map((n) =>
+        n.type === 'chapter' && n.data.context === contextId
+          ? { ...n, data: { ...n.data, context: fallback.id } }
+          : n
+      )
+    );
+  };
+
   const boardActions = useMemo(
     () => ({
+      contexts,
+      setChapterContext,
+      addContext,
+      renameContext,
+      removeContext,
       activate: setActiveId,
       clearCell: () => setSelectedCell(null),
       addSliceAfter,
@@ -1615,12 +1731,23 @@ function Board() {
       activeId: activeChapterId,
       chapterCount: chapters.length,
     }),
-    [removeLane, removeChapter, compactChapter, addSliceAfter, removeSlice, addLaneAfter, activeChapterId, chapters.length]
+    [
+      removeLane,
+      removeChapter,
+      compactChapter,
+      addSliceAfter,
+      removeSlice,
+      addLaneAfter,
+      activeChapterId,
+      chapters.length,
+      contexts,
+      nodes,
+    ]
   );
 
   const exportJson = () => {
     const url = URL.createObjectURL(
-      new Blob([boardText(nodes, edges)], { type: 'application/json' })
+      new Blob([boardText(nodes, edges, contexts)], { type: 'application/json' })
     );
     const a = document.createElement('a');
     a.href = url;
@@ -1642,6 +1769,7 @@ function Board() {
       setActiveId(null);
       setNodes(board.nodes);
       setEdges(board.edges);
+      setContexts(board.contexts);
     } catch (err) {
       window.alert(`Could not import "${file.name}": ${err.message}`);
     }
@@ -1766,6 +1894,7 @@ function Board() {
     setActiveId(null);
     setNodes(sample.nodes);
     setEdges(sample.edges);
+    setContexts(sample.contexts);
   };
 
   return (

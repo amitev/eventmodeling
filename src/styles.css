@@ -195,6 +195,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   text-align: center; color: inherit;
 }
 .chapter-handle input { width: 150px; font: inherit; font-size: 12px; font-weight: 700; }
+.chapter-context {
+  height: 18px; max-width: 150px; padding: 0 2px; font: inherit; font-size: 12px; font-weight: 700;
+  color: #fff; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 3px; cursor: pointer;
+}
+.chapter-context option { color: #222; background: #fff; }
 .chapter-remove,
 .chapter-compact {
   display: grid; place-items: center; flex: none;

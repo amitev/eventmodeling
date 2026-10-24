@@ -9,7 +9,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
-- **R1.3a** The small buttons on lane labels (**×**, **+**, colour), slice headers (**+**, **×**) and the Chapter handle (**↔**, **×**) look alike: 18px squares with a 3px radius, and drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
+- **R1.3a** The small buttons on lane labels (**×**, **+**, colour), slice headers (**+**, **×**) and the Chapter handle (**↔**, **×**, context rename and delete) look alike: 18px squares with a 3px radius, and drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart"). Its elements carry their names as titles.
 - **R1.5** A **Reset** button restores the sample flow.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), with the same ids, so a reload loses or renumbers nothing. If the saved board is missing or unreadable, the sample board (R1.4) is shown.
@@ -30,8 +30,8 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Identifiers
 
-- **R1.14** Every Chapter, lane, slice and element has an **id**: 8 random characters from `a-z0-9`, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
-- **R1.15** Everything that creates items uses such ids: the sample board (R1.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
+- **R1.14** Every Context, Chapter, lane, slice and element has an **id**: 8 random characters from `a-z0-9`, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
+- **R1.15** Everything that creates items uses such ids: the sample board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by name and title. Items refer to each other by id, never by name, so renaming cannot break a reference (lanes: R2.9).
 
@@ -39,7 +39,7 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1a.1** The board can hold any number of Chapters, each with its own lanes, slices and elements, laid out independently: resizing a slice or adding a lane in one never changes another. Sections 2 to 5 apply per Chapter.
 - **R1a.2** **+ Chapter** adds a Chapter with the three default lanes and one default slice ("New Slice", 220px wide, as if **+ Slice** had been used once) and no elements; its width is the label zone plus that slice. Its lane area is centred (snapped to the grid) on the centre of the visible canvas, so it is seen straight away; the view does not pan or zoom. If it lands on another Chapter, the user drags it away by its handle.
-- **R1a.3** Each Chapter has a name, shown as a large text (36px, bold) centred above the Chapter, above the Chapter's handle ("Chapter 1", "Chapter 2", ... by default; the sample's is "Chapter 1"). It is only a title: dragging it does not move the Chapter. The user renames it by double-clicking it. The name can never be empty: an empty rename is ignored and the previous name kept, as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the **↔** and **×** buttons and no name.
+- **R1a.3** Each Chapter has a name, shown as a large text (36px, bold) centred above the Chapter, above the Chapter's handle ("Chapter 1", "Chapter 2", ... by default; the sample's is "Chapter 1"). It is only a title: dragging it does not move the Chapter. The user renames it by double-clicking it. The name can never be empty: an empty rename is ignored and the previous name kept, as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), the **↔** and **×** buttons and no name.
 - **R1a.4** **Active Chapter:** the one the user last clicked or dragged something in; initially the first. The header shows its name next to "Add to:". **+ Slice** and **+ Lane** act on it. Element buttons do not: they act on the selected Cell (R3.3). An element dragged from the header joins the Chapter of the Cell it is released over (R3.3); released over no Cell, nothing is added.
 - **R1a.5** An element moves to another Chapter when dropped with its centre over a Cell of that Chapter (R5.14): it joins that Cell's lane and slice and follows its layout rules (R3.6a, R5.13 to R5.17). Released anywhere else, including over another Chapter's label zone, it stays in its Chapter and returns to where the drag started (R5.14). Its connections are kept.
 - **R1a.6** A Chapter is removed with the **×** button in its handle, hidden when only one Chapter is left (the board always has one). Its lanes, slices, elements and every connection attached to them or to it are removed too. If it holds slices or elements, the user confirms first.
@@ -51,6 +51,15 @@ This document records the business requirements agreed so far. It describes beha
 - **R1a.9** Chapter connections differ from element connections: darker, thicker arrows, larger arrowhead, larger connection points. The points are mostly transparent, and fully visible on mouse-over or while connecting.
 - **R1a.10** Chapters connect only to Chapters, elements only to elements. A Chapter–element connection is refused, as is a Chapter to itself.
 - **R1a.11** Selected Chapter connections are deleted with Backspace or Delete, like element connections (R4.4). Moving a Chapter keeps its connections attached.
+
+## 1b. Contexts
+
+- **R1b.1** A **Context** has an id (R1.14) and a name, nothing else for now. The board has a list of Contexts, independent from the Chapters: a Context can exist without any Chapter using it.
+- **R1b.2** Every Chapter has exactly one Context. Several Chapters can share the same one. A Chapter refers to its Context by id, never by name (as for lanes, R2.9).
+- **R1b.3** The first Context of the list is the **Default**. It is named "Default" at first, can be renamed (R1b.5) but never deleted, so the board always has at least one Context. A new Chapter, the sample Chapter and a Chapter whose Context was deleted use it.
+- **R1b.4** The Chapter handle has a dropdown listing all Contexts and showing the Chapter's own. Choosing one assigns it to the Chapter. The last entry, **+ New context...**, asks for a name, appends a new Context to the list and assigns it to the Chapter. An empty name or cancelling does nothing.
+- **R1b.5** A rename button next to the dropdown renames the Chapter's Context, for every Chapter that shares it. An empty name is ignored (previous kept).
+- **R1b.6** A delete button next to it deletes the Chapter's Context after confirmation; the Chapters that used it move to the Default. The button is hidden for the Default.
 
 ## 2. Lanes
 
@@ -170,11 +179,13 @@ The export file is the single, complete description of a board, written and read
 - **R6.2** The file is one JSON object with exactly these fields, in this order:
   - `format`: the text `"event-model"`;
   - `version`: the number `1`;
+  - `contexts`: the list of Contexts, each with `id` and `name`;
   - `chapters`: the list of Chapters.
 
   There is no timestamp and nothing else.
 - **R6.3** Each Chapter has exactly these fields, in this order:
   - `id`, `name`;
+  - `context`: the **id** of the Chapter's Context (R1b.2), which must be in `contexts`;
   - `x`, `y`: the Chapter's position on the canvas;
   - `connectsTo`: the ids of the Chapters this Chapter has an arrow to (R6.7);
   - `lanes`: the lanes from top to bottom, each with `id`, `name` and `color`;
@@ -192,6 +203,7 @@ The export file is the single, complete description of a board, written and read
 - **R6.7** A connection is stored on the item it leaves: the source's `connectsTo` lists its target ids; direction is owner to each listed id. Element connections go element to element; Chapter connections Chapter to Chapter, from the owner's right side to the target's left (R1a.7). Each is written once, on its source. There is no connection list and no connection id (R1.16).
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
+  - Contexts in list order (the first is the Default, R1b.3);
   - lanes top to bottom, slices left to right;
   - elements within a slice by `x`, then by lane (top lane first), then by `id`;
   - each `connectsTo` in the order in which its targets appear in the file.
@@ -199,7 +211,7 @@ The export file is the single, complete description of a board, written and read
   The JSON is indented with 2 spaces. No person is expected to read the file, but the indentation makes a failed import or a diff between exports easy to inspect; its size cost is irrelevant (correctness before size).
 - **R6.9** The same board always produces the same file, byte for byte.
 - **R6.10** What the file stores, and what it does not.
-  - **Stored:** all ids, names, titles and mockups; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
+  - **Stored:** all ids, names, titles and mockups; the list of Contexts and each Chapter's Context; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
   - **Not stored, worked out on load:** a slice's own position (slices form one run, R5.7); the widths of the lanes and of the Chapter (R1.8); the lane height; an element's vertical position (centred in its lane, R3.6a). Also not stored: the selected Cell, the active Chapter, the undo history and the pan and zoom of the view.
 
 ## 7. Import
@@ -208,17 +220,17 @@ The export file is the single, complete description of a board, written and read
 - **R7.2** The user must confirm before the current board is replaced.
 - **R7.3** Export then import reproduces the same board exactly, and exporting again gives an identical file (R6.9).
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
-  - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19).
+  - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19). `contexts` is not empty (R1b.3).
   - **Ids.** Every id is a text of at least 8 letters, digits, `-` or `_`. Ids are unique across the whole file, whatever the item kind (R1.14).
-  - **References.** An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
-  - **Values.** `name` of a Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
+  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
+  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus displayed width plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; adding, renaming, moving and removing Chapters; import; and Reset.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; import; and Reset.
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies.
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends.
