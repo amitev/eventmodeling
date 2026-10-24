@@ -45,6 +45,15 @@ const KINDS = {
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
 };
 
+// Element types an element of each type can point to (R4.7).
+const FLOWS_TO = {
+  screen: ['command'],
+  processor: ['command'],
+  command: ['event'],
+  event: ['readmodel'],
+  readmodel: ['screen', 'processor'],
+};
+
 const snap = (v) => Math.round(v / GRID) * GRID;
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
@@ -1743,25 +1752,34 @@ function Board() {
     }
   };
 
-  // Elements connect to elements and Chapters to Chapters, never across the two, never to
-  // themselves, and at most once in each direction.
+  // Chapters connect to Chapters (as dragged); elements only along FLOWS_TO, and a connection
+  // dragged the wrong way is turned around. Never to itself, at most once. Null when refused.
+  const orient = (c) => {
+    const ns = getNodes();
+    const a = ns.find((n) => n.id === c.source);
+    const b = ns.find((n) => n.id === c.target);
+    if (!a || !b || a.id === b.id) return null;
+    if (a.type === 'chapter' && b.type === 'chapter') return [a.id, b.id];
+    if (a.type !== 'sticky' || b.type !== 'sticky') return null;
+    if (FLOWS_TO[a.data.kind]?.includes(b.data.kind)) return [a.id, b.id];
+    if (FLOWS_TO[b.data.kind]?.includes(a.data.kind)) return [b.id, a.id];
+    return null;
+  };
+
   const isValidConnection = useCallback(
     (c) => {
-      if (c.source === c.target) return false;
-      const ns = getNodes();
-      const a = ns.find((n) => n.id === c.source)?.type;
-      const b = ns.find((n) => n.id === c.target)?.type;
-      if (a !== b || (a !== 'sticky' && a !== 'chapter')) return false;
-      return !getEdges().some((e) => e.source === c.source && e.target === c.target);
+      const o = orient(c);
+      return !!o && !getEdges().some((e) => e.source === o[0] && e.target === o[1]);
     },
     [getNodes, getEdges]
   );
 
   const onConnect = useCallback(
     (c) => {
-      if (!isValidConnection(c)) return;
-      const fromChapter = getNodes().find((n) => n.id === c.source)?.type === 'chapter';
-      setEdges((es) => [...es, makeEdge(c.source, c.target, fromChapter)]);
+      const o = orient(c);
+      if (!o || !isValidConnection(c)) return;
+      const fromChapter = getNodes().find((n) => n.id === o[0])?.type === 'chapter';
+      setEdges((es) => [...es, makeEdge(o[0], o[1], fromChapter)]);
     },
     [setEdges, getNodes, isValidConnection]
   );

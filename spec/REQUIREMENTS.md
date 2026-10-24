@@ -116,8 +116,17 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 - **R4.2** Connection points are at the **top** (incoming) and **bottom** (outgoing) of each element, not left and right.
 - **R4.3** The user creates a connection by dragging from one element's bottom point to another's top point.
 - **R4.4** Selected connections can be deleted with Backspace or Delete.
-- **R4.5** Two elements are connected at most once per direction: A to B cannot be made twice, but A to B and B to A are different connections. A connection is identified by source and target and has no id (R1.16).
+- **R4.5** Two elements are connected at most once: A to B cannot be made twice. A connection is identified by source and target and has no id (R1.16).
 - **R4.6** An element cannot be connected to itself. Elements can be connected across slices and across Chapters.
+- **R4.7** Element connections follow the flow of the model. The arrow always points:
+  - Screen → Command
+  - Processor → Command
+  - Command → Event
+  - Event → Read Model
+  - Read Model → Screen
+  - Read Model → Processor
+
+  If the user drags between two elements of such a pair the wrong way (e.g. from a Command to a Screen), the connection is created in the right direction (Screen → Command). Any other pair, including two elements of the same type, is refused. These rules apply to new connections only; existing ones, imported or saved, are not checked.
 
 ## 5. Slices
 
