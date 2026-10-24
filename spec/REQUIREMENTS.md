@@ -67,6 +67,10 @@ This document records the business requirements agreed so far. It describes beha
 - **R1c.3** The button opens a modal panel titled with the item's kind and name. The panel has two sides: the Markdown editor on the left, with a row of helper buttons above it, and a live preview on the right. The buttons are **B** (bold), *I* (italic), ~~S~~ (strikethrough), a separator, then task list, table, code and link. Each acts on the selected text, or inserts a placeholder when nothing is selected: bold `**`, italic `*`, strikethrough `~~`, inline code in backticks (a fenced block for several lines), a link `[text](url)` with `url` selected, task list inserts `- [ ] Task` and `- [x] Resolved task` when nothing is selected, otherwise toggles `- [ ] ` on the selected lines, table inserts a 2-column table. **Save** applies the text (one undo step) and closes the panel; **Cancel** and Esc discard the changes. Info that is empty or only whitespace is removed.
 - **R1c.4** The preview is rendered with `marked` (version 18.1.1). Its HTML is always sanitised with DOMPurify before it is shown, so scripts, event handlers and `javascript:` links never run. Links open in a new tab without access to the board.
 
+## 1d. Hotkey help
+
+- **R1d.1** The board header has a button with the keyboard emoji (⌨️), at the right end. It opens a modal popup listing the available hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Editing a name or title, and Info panel. The popup closes with its **Close** button, Esc or a click outside it. It must list every hotkey of the app, so it is updated whenever one is added or changed.
+
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
@@ -149,9 +153,9 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.1** Each slice has an id (R1.14), a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4). The top Cell of the new slice is selected (R5a.5).
-- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4) and the top Cell of the new slice is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
+- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4) and the top Cell of the new slice is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Its tooltip names the hotkey **+** (R5a.11). Next to it is the **×** delete button (R5.4).
 - **R5.3** Double-clicking a slice header renames it. The name can never be empty: an empty rename is ignored (previous kept), as for lanes (R2.4a).
-- **R5.4** A slice itself cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, also not on its buttons or while renaming) selects the **top Cell** of that slice (R5a.5). A slice is deleted with the **×** button in its header (R5.11, R5.18, R5.19); Backspace and Delete never delete a slice.
+- **R5.4** A slice itself cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, also not on its buttons or while renaming) selects the **top Cell** of that slice (R5a.5). A slice is deleted with the **×** button in its header (R5.11, R5.18, R5.19), or with Backspace/Delete in an empty Cell after confirmation (R5a.11).
 - **R5.5** A slice's height always covers all lanes, also after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices form one contiguous run, laid out automatically: the first starts right after the label zone (R2.4), each next one where the previous ends. No gaps, no overlaps. A slice has only a dashed right border, which separates it from the next slice; it has no left, top or bottom border. The border does not cover the header.
@@ -189,9 +193,17 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.6** Clicking an element, lane header, Chapter handle or connection selects that item and clears any Cell selection, as do starting to drag an element and undo or redo. A click on a slice header selects the slice's top Cell instead (R5.4).
 - **R5a.7** A click outside every Cell (empty canvas, label zone, area above the slices) clears the Cell selection.
 - **R5a.8** The selection border follows the Cell: through panning, zooming, moving the Chapter, and slice resizing or shifting. If the Cell's lane or slice is removed, the selection disappears.
-- **R5a.9** Selecting a Cell is not an operation: not recorded for undo (R8.6), and Backspace and Delete do nothing to it.
+- **R5a.9** Selecting a Cell is not an operation: it is not recorded for undo (R8.6). Backspace and Delete delete the Cell's elements (R5a.11), not the Cell.
 - **R5a.10** With a Cell selected, clicking an element button adds the element **in that Cell**, whatever its type (R3.2): in the Cell's lane and slice, vertically centred (R3.6a), centred horizontally in the slice if the Cell is empty (the slice first grows to the element plus the 40px margins if it is narrower), otherwise at the first free spot from the left inside the slice margins (R5.14), not overlapping elements already there. If there is no room, it goes after the last element and the slice grows to fit; later slices move right with their elements (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto a Cell that holds elements puts the element where released (R3.3); onto an empty Cell it is centred like a click. With no Cell selected, or its lane or slice gone, a click does nothing (R3.3).
-- **R5a.11** With a Cell selected, the arrow keys move the selection to the neighbouring Cell of the same Chapter: up and down to the lane above or below in the same slice, left and right to the previous or next slice in the same lane. At an edge nothing happens. The keys are ignored while typing in a text field or while the info panel is open, and with Ctrl, Cmd, Alt or Shift. Like any Cell selection, this is not recorded for undo (R5a.9).
+- **R5a.11** **Cell hotkeys.** With a Cell selected:
+  - **Arrow keys** move the selection to the neighbouring Cell of the same Chapter: up and down to the lane above or below in the same slice, left and right to the previous or next slice in the same lane. At an edge nothing happens.
+  - **S, C, R, E, P** add a Screen, Command, Read Model, Event or Processor in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
+  - **+** adds a slice right after the Cell's slice, as the slice's **+** button does (R5.2a).
+  - **Enter** edits the title of the left-most element in the Cell (R3.4a), if there is one.
+  - **Delete** or **Backspace** deletes the Cell's elements with their arrows, after confirmation; one undo step (R8.1). In an empty Cell it asks to delete the Cell's slice instead (R5.4); the last slice of a Chapter cannot be deleted.
+  - **Esc** clears the Cell selection.
+
+  The keys are ignored while typing in a text field, while the info panel or the hotkey help is open, and with Ctrl, Cmd or Alt held, or Shift held (except for **+**). Moving the selection and clearing it are not recorded for undo (R5a.9).
 
 **Learning (implementation).** Lane nodes cover the Chapter's whole Cell area. If they take the mouse they sit above the arrows and block selecting them, so lanes ignore the mouse; a click on an empty part of a Cell then reaches the canvas, which finds the Cell from the click position (R5a.5, R5a.7).
 

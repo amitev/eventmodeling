@@ -253,6 +253,21 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .info-preview img { max-width: 100%; }
 .info-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid #ddd; }
 .info-actions button { padding: 4px 14px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
+.hotkeys-dialog {
+  display: flex; flex-direction: column; width: min(560px, 90vw); max-height: 80vh;
+  background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
+}
+.hotkeys-body { padding: 4px 16px 12px; overflow: auto; }
+.hotkeys-body h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; color: #667; }
+.hotkeys-body dl { margin: 0; }
+.hotkeys-body dl > div { display: flex; align-items: baseline; gap: 12px; padding: 3px 0; }
+.hotkeys-body dt { flex: none; width: 190px; }
+.hotkeys-body dd { margin: 0; font-size: 13px; }
+.hotkeys-body kbd {
+  display: inline-block; padding: 1px 6px; font: 12px ui-monospace, Consolas, monospace;
+  background: #f3f3f6; border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 4px;
+}
+.toolbar .hotkeys-btn { padding: 2px 8px; font-size: 16px; }
 .chapter-remove,
 .chapter-compact {
   display: grid; place-items: center; flex: none;

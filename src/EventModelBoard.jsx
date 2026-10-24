@@ -57,6 +57,90 @@ const FLOWS_TO = {
 };
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+
+// Keys that add an element of that type to the selected Cell (R5a.11).
+const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'readmodel', e: 'event', p: 'processor' };
+
+// The hotkey help, grouped by context (R1d.1).
+const HOTKEYS = [
+  {
+    group: 'Board',
+    keys: [
+      ['Ctrl+Z', 'Undo'],
+      ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'],
+      ['Backspace / Delete', 'Delete the selected elements or arrows'],
+    ],
+  },
+  {
+    group: 'Selected Cell',
+    keys: [
+      ['← ↑ → ↓', 'Select the neighbouring Cell'],
+      ['S', 'Add a Screen in the Cell'],
+      ['C', 'Add a Command in the Cell'],
+      ['R', 'Add a Read Model in the Cell'],
+      ['E', 'Add an Event in the Cell'],
+      ['P', 'Add a Processor in the Cell'],
+      ['+', 'Add a slice right after the Cell’s slice'],
+      ['Enter', 'Edit the title of the first element in the Cell'],
+      ['Delete / Backspace', 'Delete the elements in the Cell, or the slice if the Cell is empty (asks first)'],
+      ['Esc', 'Clear the Cell selection'],
+    ],
+  },
+  {
+    group: 'Editing a name or title',
+    keys: [
+      ['Enter / Esc', 'Save'],
+      ['Ctrl+Z', "The field's own undo"],
+    ],
+  },
+  {
+    group: 'Info panel',
+    keys: [['Esc', 'Cancel']],
+  },
+];
+
+function HotkeysDialog({ onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="info-backdrop" onClick={onClose}>
+      <div
+        className="hotkeys-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Hotkeys"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="info-title">Hotkeys</div>
+        <div className="hotkeys-body">
+          {HOTKEYS.map(({ group, keys }) => (
+            <section key={group}>
+              <h3>{group}</h3>
+              <dl>
+                {keys.map(([key, what]) => (
+                  <div key={key + what}>
+                    <dt>
+                      <kbd>{key}</kbd>
+                    </dt>
+                    <dd>{what}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+        <div className="info-actions">
+          <button onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
 
@@ -574,6 +658,8 @@ function InfoButton({ id, info }) {
 
 const BoardActions = createContext({
   openInfo: () => {},
+  titleEditId: null,
+  clearTitleEdit: () => {},
   contexts: [],
   setChapterContext: () => {},
   addContext: () => {},
@@ -742,6 +828,13 @@ function StickyNode({ id, data, selected }) {
 
   const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
+  const { titleEditId, clearTitleEdit } = useContext(BoardActions);
+
+  useEffect(() => {
+    if (titleEditId !== id) return;
+    setEditingTitle(true);
+    clearTitleEdit();
+  }, [titleEditId, id, clearTitleEdit]);
 
   const update = (patch) =>
     setNodes((ns) =>
@@ -929,7 +1022,7 @@ function SliceNode({ id, data }) {
         <div className="slice-actions">
           <button
             className="slice-add nodrag"
-            title="Add a slice right after this one"
+            title="Add a slice right after this one (+)"
             onDoubleClick={(e) => e.stopPropagation()}
             onClick={() => addSliceAfter(id)}
             aria-label="Add a slice right after this one"
@@ -1614,6 +1707,9 @@ function Board() {
   const [selectedCell, setSelectedCell] = useState(null);
   // The Chapter, lane or slice whose info is being edited.
   const [infoId, setInfoId] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // The element whose title is to be edited (asked for by the Enter hotkey).
+  const [titleEditId, setTitleEditId] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   const saveInfo = (text) => {
     const info = text.trim() ? text : '';
@@ -1726,26 +1822,14 @@ function Board() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  // Arrow keys move the Cell selection to the neighbouring Cell of the same Chapter.
+  // Hotkeys of a selected Cell (R5a.11). The handler is assigned further down, where the
+  // actions it needs are defined; this listener stays registered.
+  const cellKeys = useRef(null);
   useEffect(() => {
-    if (!selectedCell || infoId) return;
-    const onKey = (e) => {
-      const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
-      if (!step || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      const t = e.target;
-      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      e.preventDefault();
-      const ns = getNodes();
-      const lanes = lanesOf(ns, selectedCell.chapterId);
-      const cols = slices(ns, selectedCell.chapterId);
-      const row = lanes.findIndex((l) => l.id === selectedCell.laneId) + step[0];
-      const col = cols.findIndex((s) => s.id === selectedCell.sliceId) + step[1];
-      if (!lanes[row] || !cols[col]) return;
-      setSelectedCell({ ...selectedCell, laneId: lanes[row].id, sliceId: cols[col].id });
-    };
+    const onKey = (e) => cellKeys.current?.(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedCell, infoId, getNodes]);
+  }, []);
 
   // Slices are laid out automatically, so they cannot be dragged.
   const handleNodesChange = useCallback(
@@ -1766,12 +1850,13 @@ function Board() {
 
   // Deleting a slice also deletes its elements (after confirmation) and closes the gap. The
   // last slice of a Chapter cannot be deleted.
-  const removeSlice = (sliceId) => {
+  const removeSlice = (sliceId, alwaysAsk = false) => {
     const slice = nodes.find((n) => n.id === sliceId);
     if (!slice || slices(nodes, slice.parentId).length <= 1) return;
     const doomed = membersOf(nodes).get(sliceId) ?? [];
-    if (doomed.length && !window.confirm(`Delete the slice and its ${doomed.length} element(s)?`)) {
-      return;
+    if (doomed.length || alwaysAsk) {
+      const text = doomed.length ? `Delete the slice and its ${doomed.length} element(s)?` : 'Delete this slice?';
+      if (!window.confirm(text)) return;
     }
     const gone = new Set([sliceId, ...doomed.map((n) => n.id)]);
     setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
@@ -2030,6 +2115,8 @@ function Board() {
       removeContext,
       activate: setActiveId,
       openInfo: setInfoId,
+      titleEditId,
+      clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
       addSliceAfter,
       removeSlice,
@@ -2055,6 +2142,7 @@ function Board() {
       chapters.length,
       contexts,
       nodes,
+      titleEditId,
     ]
   );
 
@@ -2170,6 +2258,75 @@ function Board() {
     if (added.length) setEdges((es) => [...es, ...added]);
   };
 
+  // Deletes the elements of a Cell, with their arrows, after confirmation.
+  const removeCellElements = (cell) => {
+    const ns = getNodes();
+    const lane = ns.find((n) => n.id === cell.laneId);
+    const slice = ns.find((n) => n.id === cell.sliceId);
+    if (!lane || !slice) return;
+    const inCell = (membersOf(ns).get(slice.id) ?? []).filter((n) => {
+      const mid = n.position.y + stickyH(n) / 2;
+      return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+    });
+    if (!inCell.length) {
+      removeSlice(slice.id, true);
+      return;
+    }
+    if (!window.confirm(`Delete the ${inCell.length} element(s) in this Cell?`)) return;
+    const gone = new Set(inCell.map((n) => n.id));
+    setNodes(ns.filter((n) => !gone.has(n.id)));
+    setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+  };
+
+  cellKeys.current = (e) => {
+    if (!selectedCell || infoId || helpOpen) return;
+    // '+' needs Shift on most layouts, so Shift is allowed for it.
+    if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== '+')) return;
+    const t = e.target;
+    if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.key === '+') {
+      e.preventDefault();
+      addSliceAfter(selectedCell.sliceId);
+      return;
+    }
+    const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (step) {
+      e.preventDefault();
+      const ns = getNodes();
+      const lanes = lanesOf(ns, selectedCell.chapterId);
+      const cols = slices(ns, selectedCell.chapterId);
+      const row = lanes.findIndex((l) => l.id === selectedCell.laneId) + step[0];
+      const col = cols.findIndex((s) => s.id === selectedCell.sliceId) + step[1];
+      if (lanes[row] && cols[col]) {
+        setSelectedCell({ ...selectedCell, laneId: lanes[row].id, sliceId: cols[col].id });
+      }
+      return;
+    }
+    const kind = CELL_ADD_KEYS[e.key.toLowerCase()];
+    if (kind) {
+      e.preventDefault();
+      addSticky(kind);
+    } else if (e.key === 'Enter' && t.tagName !== 'BUTTON') {
+      const ns = getNodes();
+      const lane = ns.find((n) => n.id === selectedCell.laneId);
+      const first = (membersOf(ns).get(selectedCell.sliceId) ?? [])
+        .filter((n) => {
+          const mid = n.position.y + stickyH(n) / 2;
+          return lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+        })
+        .sort((a, b) => a.position.x - b.position.x)[0];
+      if (first) {
+        e.preventDefault();
+        setTitleEditId(first.id);
+      }
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      removeCellElements(selectedCell);
+    } else if (e.key === 'Escape') {
+      setSelectedCell(null);
+    }
+  };
+
   const onDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -2263,6 +2420,9 @@ function Board() {
         <button onClick={exportJson} title="Download slices and their elements as JSON">
           Export JSON
         </button>
+        <button className="hotkeys-btn" onClick={() => setHelpOpen(true)} title="Hotkeys" aria-label="Hotkeys">
+          ⌨️
+        </button>
       </header>
       <div className="canvas" ref={canvasRef}>
         <HistoryContext.Provider value={historyApi}>
@@ -2326,6 +2486,7 @@ function Board() {
         </BoardActions.Provider>
         </HistoryContext.Provider>
       </div>
+      {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
       {infoNode && (
         <InfoDialog
           key={infoNode.id}
