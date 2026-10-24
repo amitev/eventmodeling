@@ -104,6 +104,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   | Read Model | green |
   | Event | orange |
   | Processor | lavender, shown with a ⚙️ gear emoji |
+  | Scenarios | blue, a card instead of a sticky (R3.11) |
 
 - **R3.2** An element has no default lane; it goes in the lane of the Cell it is added to (R3.3). It can be dragged freely but always ends up inside a Cell (R5.14).
 - **R3.3** Elements are added by clicking a toolbar button or dragging it onto the board. A click puts the element in the selected Cell (R5a.10); with none selected it does nothing. A button released over a Cell adds the element there, at the release position kept inside the slice margins (R5.14), or centred if the Cell is empty (R5a.10); released elsewhere it adds nothing. An element is never created outside a Cell.
@@ -121,6 +122,11 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 - **R3.9** The preview is sandboxed with no permissions: no scripts or form submissions.
 - **R3.10** While its element is not selected, the preview does not capture the mouse, so the element can still be dragged, selected and connected. Once the element is selected, the preview takes the mouse, so its content can be scrolled with the wheel; the element is then dragged by its header.
 
+### Scenarios elements
+
+- **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It is blue-bordered and shows a "SCENARIOS" caption with an eye icon, a numbered list of two sample items ("Adding a table", "table name is unique", the second shown in red), and a footer with **+ Add** and **+ Storyline** buttons and an item count. It is a static mock: the items are fixed, the buttons and icons do nothing, and nothing but its type and position is saved.
+- **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected to anything (R4.7). The slice must be at least 360px wide to hold it (R5.16); when it is added, the slice widens as needed (R5a.10).
+
 ## 4. Connections
 
 - **R4.1** Elements are connected with arrows (directed, with an arrowhead).
@@ -137,7 +143,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   - Read Model → Screen
   - Read Model → Processor
 
-  If the user drags between two elements of such a pair the wrong way (e.g. from a Command to a Screen), the connection is created in the right direction (Screen → Command). Any other pair, including two elements of the same type, is refused. These rules apply to new connections only; existing ones, imported or saved, are not checked.
+  If the user drags between two elements of such a pair the wrong way (e.g. from a Command to a Screen), the connection is created in the right direction (Screen → Command). Any other pair, including two elements of the same type, is refused. A Scenarios element (R3.11) is in no pair: it cannot be connected. These rules apply to new connections only; existing ones, imported or saved, are not checked, except that import refuses an arrow to or from a Scenarios element (R7).
 - **R4.8** **Automatic arrows.** When an element is added (R3.3), it gets these arrows (R4.7) at once, within the same slice. "Above" and "under" mean another lane; the nearest such element is used. A pair already connected is not connected again. Moving an element creates no arrows.
   - A Command under a Screen: Screen → Command.
   - An Event under a Command: Command → Event.
@@ -197,7 +203,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.10** With a Cell selected, clicking an element button adds the element **in that Cell**, whatever its type (R3.2): in the Cell's lane and slice, vertically centred (R3.6a), centred horizontally in the slice if the Cell is empty (the slice first grows to the element plus the 40px margins if it is narrower), otherwise at the first free spot from the left inside the slice margins (R5.14), not overlapping elements already there. If there is no room, it goes after the last element and the slice grows to fit; later slices move right with their elements (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto a Cell that holds elements puts the element where released (R3.3); onto an empty Cell it is centred like a click. With no Cell selected, or its lane or slice gone, a click does nothing (R3.3).
 - **R5a.11** **Cell hotkeys.** With a Cell selected:
   - **Arrow keys** move the selection to the neighbouring Cell of the same Chapter: up and down to the lane above or below in the same slice, left and right to the previous or next slice in the same lane. At an edge nothing happens.
-  - **S, C, R, E, P** add a Screen, Command, Read Model, Event or Processor in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
+  - **S, C, R, E, P, X** add a Screen, Command, Read Model, Event, Processor or Scenarios element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
   - **+** adds a slice right after the Cell's slice, as the slice's **+** button does (R5.2a).
   - **Enter** edits the title of the left-most element in the Cell (R3.4a), if there is one.
   - **Delete** or **Backspace** deletes the Cell's elements with their arrows, after confirmation; one undo step (R8.1). In an empty Cell it asks to delete the Cell's slice instead (R5.4); the last slice of a Chapter cannot be deleted.
@@ -229,7 +235,7 @@ The export file is the single, complete description of a board, written and read
 - **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `info`, `width`, `elements`. `elements` lists the elements in that slice. An element is listed under exactly one slice; there is no other place for elements, so one outside a slice cannot be written (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
   - `id`;
-  - `type`: `screen`, `command`, `readmodel`, `event` or `processor`;
+  - `type`: `screen`, `command`, `readmodel`, `event`, `processor` or `scenarios`;
   - `lane`: the **id** of the element's lane, which must be a lane of the same Chapter (R2.9). Never the lane's name;
   - `title`: free text, empty (`""`) when not set;
   - `html`: the Screen mockup. Optional: it is written only for a `screen` that has HTML, and left out otherwise;
@@ -258,9 +264,9 @@ The export file is the single, complete description of a board, written and read
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` and `info` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19). `contexts` is not empty (R1b.3).
   - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
-  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
-  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
-  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus the element width (160px) plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
+  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry.
+  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
+  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus the element width (160px, 280px for Scenarios) plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 

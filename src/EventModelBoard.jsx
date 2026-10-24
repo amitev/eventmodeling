@@ -45,7 +45,13 @@ const KINDS = {
   readmodel: { label: 'Read Model', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
+  // Not part of the flow: it connects to nothing (R4.7).
+  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200 },
 };
+
+// Size of an element before it is measured.
+const kindW = (kind) => KINDS[kind]?.w ?? STICKY_W;
+const kindH = (kind) => KINDS[kind]?.h ?? STICKY_H;
 
 // Element types an element of each type can point to (R4.7).
 const FLOWS_TO = {
@@ -59,7 +65,7 @@ const FLOWS_TO = {
 const snap = (v) => Math.round(v / GRID) * GRID;
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
-const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'readmodel', e: 'event', p: 'processor' };
+const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'readmodel', e: 'event', p: 'processor', x: 'scenarios' };
 
 // The hotkey help, grouped by context (R1d.1).
 const HOTKEYS = [
@@ -80,6 +86,7 @@ const HOTKEYS = [
       ['R', 'Add a Read Model in the Cell'],
       ['E', 'Add an Event in the Cell'],
       ['P', 'Add a Processor in the Cell'],
+      ['X', 'Add a Scenarios element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],
       ['Enter', 'Edit the title of the first element in the Cell'],
       ['Delete / Backspace', 'Delete the elements in the Cell, or the slice if the Cell is empty (asks first)'],
@@ -170,8 +177,8 @@ function uniqueId(used) {
 
 const SLICE_MIN_X = LABEL_ZONE;
 // Measured size of an element (React Flow keeps it in `measured`); the default until measured.
-const stickyW = (n) => n.measured?.width ?? STICKY_W;
-const stickyH = (n) => n.measured?.height ?? STICKY_H;
+const stickyW = (n) => n.measured?.width ?? kindW(n.data?.kind);
+const stickyH = (n) => n.measured?.height ?? kindH(n.data?.kind);
 const slices = (nodes, chapterId) =>
   nodes
     .filter((n) => n.type === 'slice' && (chapterId === undefined || n.parentId === chapterId))
@@ -817,6 +824,68 @@ function LaneNode({ id, data }) {
   );
 }
 
+// Static mock for now: the buttons do nothing and nothing is saved (R3.11).
+const SCENARIO_ITEMS = [
+  { text: 'Adding a table', failed: false },
+  { text: 'table name is unique', failed: true },
+];
+
+const Icon = ({ children }) => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+    {children}
+  </svg>
+);
+
+function ScenariosCard({ selected }) {
+  return (
+    <div className={`sticky scenarios ${selected ? 'selected' : ''}`}>
+      <div className="scenarios-head">
+        <span>Scenarios</span>
+        <Icon>
+          <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+          <circle cx="8" cy="8" r="2" fill="currentColor" />
+        </Icon>
+      </div>
+      <div className="scenarios-list">
+        {SCENARIO_ITEMS.map((item, i) => (
+          <div key={item.text} className={`scenario-item${item.failed ? ' failed' : ''}`}>
+            <span className="scenario-no">{i + 1}.</span>
+            <span className="scenario-text">{item.text}</span>
+            {i === 0 && (
+              <button className="scenario-icon nodrag" title="Move down" aria-label="Move down">
+                <Icon>
+                  <path d="M8 2V14M3 9l5 5 5-5" />
+                </Icon>
+              </button>
+            )}
+            <button className="scenario-icon nodrag" title="Copy" aria-label="Copy">
+              <Icon>
+                <rect x="5" y="5" width="9" height="9" rx="1.5" />
+                <path d="M11 3V2.5A1.5 1.5 0 0 0 9.5 1H3.5A1.5 1.5 0 0 0 2 2.5v6A1.5 1.5 0 0 0 3.5 10H5" />
+              </Icon>
+            </button>
+            <button className="scenario-icon nodrag" title="Remove" aria-label="Remove">
+              <Icon>
+                <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
+              </Icon>
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="scenarios-foot">
+        <button className="scenario-btn nodrag">+ Add</button>
+        <button className="scenario-btn nodrag">
+          <Icon>
+            <path d="M3 2.5A1.5 1.5 0 0 1 4.5 1H13v11H4.5A1.5 1.5 0 0 0 3 13.5v-11ZM3 13.5A1.5 1.5 0 0 0 4.5 15H13v-3" />
+          </Icon>
+          + Storyline
+        </button>
+        <span className="scenario-count">{SCENARIO_ITEMS.length}</span>
+      </div>
+    </div>
+  );
+}
+
 function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
@@ -845,6 +914,8 @@ function StickyNode({ id, data, selected }) {
     setEditingTitle(false);
     update({ title: title.trim() });
   };
+
+  if (data.kind === 'scenarios') return <ScenariosCard selected={selected} />;
 
   return (
     <div
@@ -1427,6 +1498,7 @@ function parseBoard(text) {
     kindOf.set(id, kind);
   };
   const links = []; // connectsTo lists to check once every id is known
+  const unconnectable = new Set(); // ids of Scenarios elements
   const optionalInfo = (item, path) => {
     if (!hasKey(item, 'info')) return;
     string(item.info, at(path, 'info'));
@@ -1507,7 +1579,7 @@ function parseBoard(text) {
         }
         number(el.x, at(ep, 'x'));
         if (el.x < SLICE_PADDING) fail(at(ep, 'x'), `must be at least ${SLICE_PADDING}`);
-        const w = STICKY_W;
+        const w = kindW(el.type);
         if (el.x + w + SLICE_PADDING > sl.width) {
           fail(
             at(ep, 'x'),
@@ -1515,6 +1587,7 @@ function parseBoard(text) {
           );
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
+        if (el.type === 'scenarios') unconnectable.add(el.id);
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
         nodes.push({
           id: el.id,
@@ -1543,6 +1616,7 @@ function parseBoard(text) {
       if (kindOf.get(t) !== kind) {
         fail(p, `"${t}" must be the id of ${kind === 'chapter' ? 'a chapter' : 'an element'}`);
       }
+      if (unconnectable.has(owner) || unconnectable.has(t)) fail(p, 'a scenarios element cannot be connected');
       if (seen.has(t)) fail(p, `id "${t}" is listed twice`);
       seen.add(t);
       edges.push(makeEdge(owner, t, kind === 'chapter'));
@@ -1565,22 +1639,23 @@ function load() {
 // the left, inside the slice's margins, that does not overlap an element already in the
 // Cell. When the Cell is full it goes after the last element and the slice has to grow:
 // `sliceWidth` is the width the slice needs (the current width when nothing changes).
-function spotInCell(nodes, lane, slice) {
+function spotInCell(nodes, lane, slice, kind) {
+  const w = kindW(kind);
   const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
     const mid = n.position.y + stickyH(n) / 2;
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
   if (!inCell.length) {
     // Empty Cell: centred in the slice, which grows first if it is too narrow.
-    const width = Math.max(slice.data.width, snapUp(STICKY_W + 2 * SLICE_PADDING));
-    const x = slice.position.x + Math.floor((width - STICKY_W) / 2);
+    const width = Math.max(slice.data.width, snapUp(w + 2 * SLICE_PADDING));
+    const x = slice.position.x + Math.floor((width - w) / 2);
     return { x, y: lane.position.y + 40, sliceWidth: width, empty: true };
   }
   const left = slice.position.x + SLICE_PADDING;
-  const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - STICKY_W;
+  const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - w;
   const free = (x) =>
     !inCell.some(
-      (m) => x < m.position.x + stickyW(m) + GRID && m.position.x < x + STICKY_W + GRID
+      (m) => x < m.position.x + stickyW(m) + GRID && m.position.x < x + w + GRID
     );
   let x = left;
   while (x <= lastFit && !free(x)) x += GRID;
@@ -1589,7 +1664,7 @@ function spotInCell(nodes, lane, slice) {
     const after = inCell.reduce((m, n) => Math.max(m, n.position.x + stickyW(n)), left - GRID);
     x = Math.max(left, snapUp(after + GRID));
   }
-  const need = snapUp(x + STICKY_W + SLICE_PADDING - slice.position.x);
+  const need = snapUp(x + w + SLICE_PADDING - slice.position.x);
   return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need), empty: false };
 }
 
@@ -2223,7 +2298,7 @@ function Board() {
 
     let base = ns;
     let pos;
-    const spot = spotInCell(ns, lane, slice);
+    const spot = spotInCell(ns, lane, slice, kind);
     if (x === undefined || spot.empty) {
       pos = { x: spot.x, y: spot.y };
       if (spot.sliceWidth > slice.data.width) {
@@ -2312,7 +2387,7 @@ function Board() {
       const first = (membersOf(ns).get(selectedCell.sliceId) ?? [])
         .filter((n) => {
           const mid = n.position.y + stickyH(n) / 2;
-          return lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+          return n.data.kind !== 'scenarios' && lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
         })
         .sort((a, b) => a.position.x - b.position.x)[0];
       if (first) {
@@ -2342,7 +2417,7 @@ function Board() {
     const cell = cellAt(ns, p);
     if (!cell) return;
     const chapter = ns.find((n) => n.id === cell.chapterId);
-    addSticky(kind, { cell, x: p.x - STICKY_W / 2 - chapter.position.x });
+    addSticky(kind, { cell, x: p.x - kindW(kind) / 2 - chapter.position.x });
   };
 
   // Selects the Cell under the click, or clears the selection when it is outside every Cell.
