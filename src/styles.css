@@ -103,6 +103,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid rgba(255, 255, 255, 0.75); border-radius: 4px;
 }
 .slice-add:hover { background: rgba(255, 255, 255, 0.4); }
+.slice-remove { display: grid; place-items: center; }
 .slice-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
 
@@ -197,7 +198,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .chapter-handle input { width: 150px; font: inherit; font-size: 12px; font-weight: 700; }
 .chapter-remove,
 .chapter-compact {
-  width: 18px; height: 18px; padding: 0; line-height: 1; cursor: pointer;
+  display: grid; place-items: center; flex: none;
+  width: 18px; height: 18px; padding: 0; cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; background: transparent; color: #fff;
 }
 .react-flow__handle.chapter-port {

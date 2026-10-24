@@ -725,10 +725,13 @@ function SliceNode({ id, data }) {
             <button
               className="slice-add slice-remove nodrag"
               title="Delete this slice"
+              aria-label="Delete this slice"
               onDoubleClick={(e) => e.stopPropagation()}
               onClick={() => removeSlice(id)}
             >
-              ×
+              <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.6">
+                <path d="M1 1L9 9M9 1L1 9" />
+              </svg>
             </button>
           )}
         </div>
@@ -807,17 +810,23 @@ function ChapterNode({ id, data }) {
         <button
           className="chapter-compact nodrag"
           title="Compact the slices"
+          aria-label="Compact the slices"
           onClick={() => compactChapter(id)}
         >
-          ↔
+          <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <path d="M0.5 5H9.5M2.5 3L0.5 5L2.5 7M7.5 3L9.5 5L7.5 7" />
+          </svg>
         </button>
         {chapterCount > 1 && (
           <button
             className="chapter-remove nodrag"
             title="Remove this Chapter"
+            aria-label="Remove this Chapter"
             onClick={() => removeChapter(id)}
           >
-            ×
+            <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.6">
+              <path d="M1 1L9 9M9 1L1 9" />
+            </svg>
           </button>
         )}
       </div>
