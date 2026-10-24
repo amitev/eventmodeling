@@ -9,6 +9,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
+- **R1.3a** The small buttons on lane labels (**×**, **+**, colour), slice headers (**+**, **×**) and the Chapter handle (**↔**, **×**) look alike: 18px squares with a 3px radius, and drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart"). Its elements carry their names as titles.
 - **R1.5** A **Reset** button restores the sample flow.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), with the same ids, so a reload loses or renumbers nothing. If the saved board is missing or unreadable, the sample board (R1.4) is shown.
