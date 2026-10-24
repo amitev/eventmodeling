@@ -560,7 +560,8 @@ function StickyNode({ id, data, selected }) {
     <div
       className={`sticky ${data.kind} ${isScreen && data.html ? 'wide' : ''} ${selected ? 'selected' : ''}`}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle id="top-in" type="target" position={Position.Top} />
+      <Handle id="top-out" type="source" position={Position.Top} />
       <div
         className="sticky-header"
         title="Double-click to edit the title"
@@ -615,7 +616,8 @@ function StickyNode({ id, data, selected }) {
         />
       )}
       </div>
-      <Handle type="source" position={Position.Bottom} />
+      <Handle id="bottom-out" type="source" position={Position.Bottom} />
+      <Handle id="bottom-in" type="target" position={Position.Bottom} />
     </div>
   );
 }
@@ -1315,6 +1317,25 @@ function Board() {
   // the one last clicked or dragged, or the first one.
   const [activeId, setActiveId] = useState(null);
   const chapters = nodes.filter((n) => n.type === 'chapter');
+
+  // An element arrow leaves the lower point of its source and enters the upper point of its
+  // target when the target is below (same height counts as below), and the other way round
+  // when the target is above. Chosen on every render, so it follows moving elements.
+  const displayEdges = useMemo(() => {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
+    return edges.map((e) => {
+      const s = byId.get(e.source);
+      const t = byId.get(e.target);
+      if (s?.type !== 'sticky' || t?.type !== 'sticky') return e;
+      const down = centreY(t) >= centreY(s);
+      return {
+        ...e,
+        sourceHandle: down ? 'bottom-out' : 'top-out',
+        targetHandle: down ? 'top-in' : 'bottom-in',
+      };
+    });
+  }, [nodes, edges]);
   const active = chapters.find((c) => c.id === activeId) ?? chapters[0];
   const activeChapterId = active?.id;
 
@@ -1928,7 +1949,7 @@ function Board() {
         <BoardActions.Provider value={boardActions}>
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
           onNodeClick={(e, node) => {

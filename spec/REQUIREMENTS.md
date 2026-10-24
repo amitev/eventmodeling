@@ -113,8 +113,8 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 ## 4. Connections
 
 - **R4.1** Elements are connected with arrows (directed, with an arrowhead).
-- **R4.2** Connection points are at the **top** (incoming) and **bottom** (outgoing) of each element, not left and right.
-- **R4.3** The user creates a connection by dragging from one element's bottom point to another's top point.
+- **R4.2** Each element has two connection points, at the **top** and the **bottom**, not left and right. Either can start or end a connection. An arrow leaves the **lower** point of its source and enters the **upper** point of its target when the target is below the source (also in another slice or Chapter); when the target is above, it leaves the source's top point and enters the target's bottom point. Equal height counts as below. The points follow the elements when they move.
+- **R4.3** The user creates a connection by dragging from a connection point of one element to a connection point of another; which points the arrow uses is decided by R4.2, not by where the drag started.
 - **R4.4** Selected connections can be deleted with Backspace or Delete.
 - **R4.5** Two elements are connected at most once: A to B cannot be made twice. A connection is identified by source and target and has no id (R1.16).
 - **R4.6** An element cannot be connected to itself. Elements can be connected across slices and across Chapters.
