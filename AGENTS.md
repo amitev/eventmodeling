@@ -2,12 +2,14 @@
 
 A project for implementing an Event Modeling board.
 
-# Technologies
+## Technologies
+
 Main technologies that are used:
+
 - React
 - React Flow
 
-# Agent rules
+## Agent rules
 
 The Agent and LLM should NOT assume anything, bur rather ask for clarification and confirmation.
 
@@ -16,5 +18,6 @@ When writing the specification use the minimal wording needed that still retains
 
 We're still in alpha version. Forget about backwards compatibility when making changes.
 
-# Testing
+## Testing
+
 Do NOT test by yourself. Always ask me whether I want you to test the changes for me.

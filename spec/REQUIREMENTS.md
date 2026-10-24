@@ -29,7 +29,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Identifiers
 
-- **R1.14** Every Context, Chapter, lane, slice and element has an **id** matching `^[A-Za-z0-9]{6}$`, random, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
+- **R1.14** Every Context, Chapter, lane, slice, element and scenario has an **id** matching `^[A-Za-z0-9]{6}$`, random, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
 - **R1.15** Everything that creates items uses such ids: the starting board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by name and title. Items refer to each other by id, never by name, so renaming cannot break a reference (lanes: R2.9).
@@ -69,7 +69,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ## 1d. Hotkey help
 
-- **R1d.1** The board header has a button with the keyboard emoji (⌨️), at the right end. It opens a modal popup listing the available hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Editing a name or title, and Info panel. The popup closes with its **Close** button, Esc or a click outside it. It must list every hotkey of the app, so it is updated whenever one is added or changed.
+- **R1d.1** The board header has a button with the keyboard emoji (⌨️), at the right end. It opens a modal popup listing the available hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Editing a name or title, Scenario editor (R3.15), and Info panel. The popup closes with its **Close** button, Esc or a click outside it. It must list every hotkey of the app, so it is updated whenever one is added or changed.
 
 ## 2. Lanes
 
@@ -124,8 +124,22 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 
 ### Scenarios elements
 
-- **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It is blue-bordered and shows a "SCENARIOS" caption with an eye icon, a numbered list of two sample items ("Adding a table", "table name is unique", the second shown in red), and a footer with **+ Add** and **+ Storyline** buttons and an item count. It is a static mock: the items are fixed, the buttons and icons do nothing, and nothing but its type and position is saved.
+- **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It is blue-bordered and shows a "SCENARIOS" caption with an eye icon (inert), the list of its scenarios, and a footer with **+ Add**, an inert **+ Storyline** button and the number of scenarios. A new element has no scenarios (the list says "No scenarios yet"). The list scrolls when it is longer than the card.
 - **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected to anything (R4.7). The slice must be at least 320px wide to hold it, as its margin to the slice borders is 20px instead of 40px (R5.16); when it is added, the slice widens as needed (R5a.10).
+- **R3.13** A **scenario** is a Given/When/Then (GWT) example with an id (R1.14), a title, a description, and:
+  - **Given:** any number of Events that have happened;
+  - **When:** at most one Command that is executed;
+  - **Then:** either any number of resulting Events, or one expected **error** text (not both).
+
+  An Event or Command is chosen from the board; it is referred to by its id, so renaming it shows everywhere. Only elements of the Chapter that holds the Scenarios element can be chosen. Each chosen element carries its own **example data** (R3.16). There is no Context in a scenario. Scenarios are not numbered.
+- **R3.14** Each scenario is one item in the card's list: its title (a faint "Untitled" when empty), a **copy** and a **×** (delete) icon. Items with an expected error (Then Error) are shown in red. Dragging an item and dropping it on another reorders the list. **+ Add** opens the popup (R3.15) for a new scenario, which is only created on Save. Copy inserts an identical scenario (new id) right after the original. × deletes the scenario after confirmation. Double-clicking an item opens the popup for it. Dragging an item does not move the element.
+- **R3.15** **Scenario popup.** A modal with a form on the left and the example data editor on the right, opened as in R3.14. The form has the **Title** and **Description** fields; the chips **Given (G)**, **When (W)**, **Then (T)** and **Then Error (E)**; the chosen elements as cards (a header in the element's colour with its title and a × to remove it, and a body with its example data as `name: value` lines, empty values left out); and **Save**.
+  - A chip, its hotkey (when not typing in a field), or the **▾** next to it (shown once the section has elements) opens a list of the Chapter's Events (Given, Then) or Commands (When) in slice order, each with its slice name. Given and Then do not list an element twice; choosing for When replaces the Command. Esc or a click elsewhere closes the list.
+  - **Then** is disabled while an error is set, and **Then Error** while Then has Events. **Then Error** shows a field "In case you expect an error" with a × to remove it.
+  - Clicking a card selects it and shows its example data on the right (R3.16).
+  - **Save** applies the scenario in one undo step (R8.1) and closes the popup. It is refused, with a message, while any example data is invalid (R3.16). **×** (top right) and Esc close the popup without saving.
+- **R3.16** **Example data** of a chosen element is a list of fields, each `{ "name": text, "example": text }`, edited as JSON in the [jsoneditor](https://github.com/josdejong/jsoneditor) code editor (line numbers, highlighting, validation against this shape). A newly chosen element starts with one empty field.
+- **R3.17** When an Event or Command used by a scenario is deleted, or is no longer in the Scenarios element's Chapter (moved to another Chapter), the **whole scenario** is deleted, in the same undo step, and a notification names it. The notification closes by click or after 8 seconds.
 
 ## 4. Connections
 
@@ -209,7 +223,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Delete** or **Backspace** deletes the Cell's elements with their arrows, after confirmation; one undo step (R8.1). In an empty Cell it asks to delete the Cell's slice instead (R5.4); the last slice of a Chapter cannot be deleted.
   - **Esc** clears the Cell selection.
 
-  The keys are ignored while typing in a text field, while the info panel or the hotkey help is open, and with Ctrl, Cmd or Alt held, or Shift held (except for **+**). Moving the selection and clearing it are not recorded for undo (R5a.9).
+  The keys are ignored while typing in a text field, while the info panel, the hotkey help or the scenario popup is open, and with Ctrl, Cmd or Alt held, or Shift held (except for **+**). Moving the selection and clearing it are not recorded for undo (R5a.9).
 
 **Learning (implementation).** Lane nodes cover the Chapter's whole Cell area. If they take the mouse they sit above the arrows and block selecting them, so lanes ignore the mouse; a click on an empty part of a Cell then reaches the canvas, which finds the Cell from the click position (R5a.5, R5a.7).
 
@@ -240,8 +254,9 @@ The export file is the single, complete description of a board, written and read
   - `title`: free text, empty (`""`) when not set;
   - `html`: the Screen mockup. Optional: it is written only for a `screen` that has HTML, and left out otherwise;
   - `x`: the horizontal position of the element **relative to the left edge of its slice**, in pixels. It is stored exactly and restored exactly;
-  - `connectsTo`: the ids of the elements this element has an arrow to (R6.7).
-- **R6.6** Every field above is written for every item, except `html` (R6.5) and `info` (R1c.1), which are written only when not empty. No other field is left out because it is empty or has its default value: an empty title is `""` and an item with no connections has `"connectsTo": []`.
+  - `connectsTo`: the ids of the elements this element has an arrow to (R6.7);
+  - `scenarios`: the scenarios, in list order (R3.14). Written for a `scenarios` element only; each has `id`, `title`, `description`, `given` (list of entries), `when` (an entry or `null`), `then` (list of entries) and `error` (text or `null`). An entry is `{ "element": id of an Event/Command of the same Chapter, "example": [{ "name": text, "example": text }] }` (R3.16). `error` is `null` when `then` is not empty.
+- **R6.6** Every field above is written for every item, except `html` (R6.5), `scenarios` (R6.5) and `info` (R1c.1), which are written only when not empty or applicable. No other field is left out because it is empty or has its default value: an empty title is `""` and an item with no connections has `"connectsTo": []`.
 - **R6.7** A connection is stored on the item it leaves: the source's `connectsTo` lists its target ids; direction is owner to each listed id. Element connections go element to element; Chapter connections Chapter to Chapter, from the owner's right side to the target's left (R1a.7). Each is written once, on its source. There is no connection list and no connection id (R1.16).
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
@@ -253,7 +268,7 @@ The export file is the single, complete description of a board, written and read
   The JSON is indented with 2 spaces. No person is expected to read the file, but the indentation makes a failed import or a diff between exports easy to inspect; its size cost is irrelevant (correctness before size).
 - **R6.9** The same board always produces the same file, byte for byte.
 - **R6.10** What the file stores, and what it does not.
-  - **Stored:** all ids, names, titles and mockups; info texts; the list of Contexts and each Chapter's Context; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
+  - **Stored:** all ids, names, titles and mockups; scenarios with their example data; info texts; the list of Contexts and each Chapter's Context; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
   - **Not stored, worked out on load:** a slice's own position (slices form one run, R5.7); the widths of the lanes and of the Chapter (R1.8); the lane height; an element's vertical position (centred in its lane, R3.6a). Also not stored: the selected Cell, the active Chapter, the undo history and the pan and zoom of the view.
 
 ## 7. Import
@@ -264,17 +279,17 @@ The export file is the single, complete description of a board, written and read
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` and `info` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19). `contexts` is not empty (R1b.3).
   - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
-  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry.
-  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
+  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry. In a scenario, each `element` is the id of an element of the same Chapter as the Scenarios element: an `event` in `given` and `then`, a `command` in `when`.
+  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios). Every element fits its slice with the 40px margins (20px for Scenarios): `x` plus the element width (160px, 280px for Scenarios) plus the margin is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and import.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; adding, editing, copying, reordering and deleting scenarios; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and import.
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
-- **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies.
+- **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies, and while the scenario popup is open (R3.15).
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends.
 - **R8.5** An operation and its automatic adjustments (re-settling elements in slices, centring in lanes, shifting later slices) are one step; undo restores the board exactly as before.
 - **R8.6** Selecting items (including Cells, R5a.9), panning and zooming are not operations and are not recorded.

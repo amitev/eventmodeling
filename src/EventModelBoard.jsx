@@ -16,6 +16,7 @@ import {
   useReactFlow,
   useStore,
 } from '@xyflow/react';
+import { pruneScenarios, ScenarioDialog, ScenariosCard } from './Scenarios.jsx';
 
 // Event modeling: time flows left to right across swimlanes. The board holds one or
 // more Chapters. Each Chapter owns its lanes, slices and elements as child nodes
@@ -99,6 +100,16 @@ const HOTKEYS = [
     keys: [
       ['Enter / Esc', 'Save'],
       ['Ctrl+Z', "The field's own undo"],
+    ],
+  },
+  {
+    group: 'Scenario editor',
+    keys: [
+      ['G', 'Choose a Given event'],
+      ['W', 'Choose the When command'],
+      ['T', 'Choose a Then event'],
+      ['E', 'Add or edit the expected error (Then Error)'],
+      ['Esc', 'Close the list, or close without saving'],
     ],
   },
   {
@@ -667,6 +678,8 @@ function InfoButton({ id, info }) {
 }
 
 const BoardActions = createContext({
+  editScenario: () => {},
+  newScenarioId: () => '',
   openInfo: () => {},
   titleEditId: null,
   clearTitleEdit: () => {},
@@ -827,68 +840,6 @@ function LaneNode({ id, data }) {
   );
 }
 
-// Static mock for now: the buttons do nothing and nothing is saved (R3.11).
-const SCENARIO_ITEMS = [
-  { text: 'Adding a table', failed: false },
-  { text: 'table name is unique', failed: true },
-];
-
-const Icon = ({ children }) => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-    {children}
-  </svg>
-);
-
-function ScenariosCard({ selected }) {
-  return (
-    <div className={`sticky scenarios ${selected ? 'selected' : ''}`}>
-      <div className="scenarios-head">
-        <span>Scenarios</span>
-        <Icon>
-          <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
-          <circle cx="8" cy="8" r="2" fill="currentColor" />
-        </Icon>
-      </div>
-      <div className="scenarios-list">
-        {SCENARIO_ITEMS.map((item, i) => (
-          <div key={item.text} className={`scenario-item${item.failed ? ' failed' : ''}`}>
-            <span className="scenario-no">{i + 1}.</span>
-            <span className="scenario-text">{item.text}</span>
-            {i === 0 && (
-              <button className="scenario-icon nodrag" title="Move down" aria-label="Move down">
-                <Icon>
-                  <path d="M8 2V14M3 9l5 5 5-5" />
-                </Icon>
-              </button>
-            )}
-            <button className="scenario-icon nodrag" title="Copy" aria-label="Copy">
-              <Icon>
-                <rect x="5" y="5" width="9" height="9" rx="1.5" />
-                <path d="M11 3V2.5A1.5 1.5 0 0 0 9.5 1H3.5A1.5 1.5 0 0 0 2 2.5v6A1.5 1.5 0 0 0 3.5 10H5" />
-              </Icon>
-            </button>
-            <button className="scenario-icon nodrag" title="Remove" aria-label="Remove">
-              <Icon>
-                <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />
-              </Icon>
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="scenarios-foot">
-        <button className="scenario-btn nodrag">+ Add</button>
-        <button className="scenario-btn nodrag">
-          <Icon>
-            <path d="M3 2.5A1.5 1.5 0 0 1 4.5 1H13v11H4.5A1.5 1.5 0 0 0 3 13.5v-11ZM3 13.5A1.5 1.5 0 0 0 4.5 15H13v-3" />
-          </Icon>
-          + Storyline
-        </button>
-        <span className="scenario-count">{SCENARIO_ITEMS.length}</span>
-      </div>
-    </div>
-  );
-}
-
 function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
@@ -900,7 +851,7 @@ function StickyNode({ id, data, selected }) {
 
   const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
-  const { titleEditId, clearTitleEdit } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, newScenarioId } = useContext(BoardActions);
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -918,7 +869,9 @@ function StickyNode({ id, data, selected }) {
     update({ title: title.trim() });
   };
 
-  if (data.kind === 'scenarios') return <ScenariosCard selected={selected} />;
+  if (data.kind === 'scenarios') {
+    return <ScenariosCard id={id} data={data} selected={selected} onEdit={editScenario} newId={newScenarioId} />;
+  }
 
   return (
     <div
@@ -1344,6 +1297,22 @@ const STORAGE_KEY = 'event-model-board';
 
 const compareIds = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
+const serializeScenario = (s) => {
+  const entry = (e) => ({
+    element: e.element,
+    example: e.example.map(({ name, example }) => ({ name, example })),
+  });
+  return {
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    given: s.given.map(entry),
+    when: s.when ? entry(s.when) : null,
+    then: s.then.map(entry),
+    error: s.error,
+  };
+};
+
 // The export file (section 6): the one complete description of the board. Values that follow
 // from the layout rules are left out. Field order is fixed so the same board always gives
 // the same text.
@@ -1420,6 +1389,7 @@ function serialize(nodes, edges, contexts) {
                 type: n.data.kind,
                 lane: lane.id,
                 title: n.data.title ?? '',
+                ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
@@ -1502,6 +1472,44 @@ function parseBoard(text) {
   };
   const links = []; // connectsTo lists to check once every id is known
   const unconnectable = new Set(); // ids of Scenarios elements
+  const elements = new Map(); // element id -> { chapter, type }
+  const references = []; // scenario entries' element ids, checked once every element is known
+  const exampleList = (v, path) => {
+    list(v, path);
+    v.forEach((f, i) => {
+      const fp = `${path}[${i}]`;
+      object(f, ['name', 'example'], fp);
+      string(f.name, at(fp, 'name'));
+      string(f.example, at(fp, 'example'));
+    });
+    return v.map(({ name, example }) => ({ name, example }));
+  };
+  const scenarioEntry = (v, path, chapter, type) => {
+    object(v, ['element', 'example'], path);
+    string(v.element, at(path, 'element'));
+    references.push({ path: at(path, 'element'), id: v.element, chapter, type });
+    return { element: v.element, example: exampleList(v.example, at(path, 'example')) };
+  };
+  const scenarioList = (v, path, chapter) => {
+    list(v, path);
+    return v.map((s, si) => {
+      const sp = `${path}[${si}]`;
+      object(s, ['id', 'title', 'description', 'given', 'when', 'then', 'error'], sp);
+      claim(s.id, 'scenario', at(sp, 'id'));
+      string(s.title, at(sp, 'title'));
+      string(s.description, at(sp, 'description'));
+      list(s.given, at(sp, 'given'));
+      const given = s.given.map((e, i) => scenarioEntry(e, `${at(sp, 'given')}[${i}]`, chapter, 'event'));
+      const when = s.when === null ? null : scenarioEntry(s.when, at(sp, 'when'), chapter, 'command');
+      list(s.then, at(sp, 'then'));
+      const then = s.then.map((e, i) => scenarioEntry(e, `${at(sp, 'then')}[${i}]`, chapter, 'event'));
+      if (s.error !== null) {
+        string(s.error, at(sp, 'error'));
+        if (then.length) fail(at(sp, 'error'), 'must be null when "then" is not empty');
+      }
+      return { id: s.id, title: s.title, description: s.description, given, when, then, error: s.error };
+    });
+  };
   const optionalInfo = (item, path) => {
     if (!hasKey(item, 'info')) return;
     string(item.info, at(path, 'info'));
@@ -1565,7 +1573,13 @@ function parseBoard(text) {
 
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
-        object(el, ['id', 'type', 'lane', 'title', 'x', 'connectsTo'], ep, ['html']);
+        const isScenarios = isObject(el) && el.type === 'scenarios';
+        object(
+          el,
+          ['id', 'type', 'lane', 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
+          ep,
+          ['html']
+        );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
           fail(at(ep, 'type'), `must be one of ${Object.keys(KINDS).join(', ')}`);
@@ -1591,7 +1605,9 @@ function parseBoard(text) {
           );
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
-        if (el.type === 'scenarios') unconnectable.add(el.id);
+        if (isScenarios) unconnectable.add(el.id);
+        elements.set(el.id, { chapter: c.id, type: el.type });
+        const scenarios = isScenarios ? scenarioList(el.scenarios, at(ep, 'scenarios'), c.id) : null;
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
         nodes.push({
           id: el.id,
@@ -1602,12 +1618,20 @@ function parseBoard(text) {
             kind: el.type,
             title: el.title,
             ...(el.html ? { html: el.html } : {}),
+            ...(scenarios ? { scenarios } : {}),
           },
         });
       });
       cursor += width;
     });
   });
+
+  for (const { path, id, chapter, type } of references) {
+    const target = elements.get(id);
+    if (!target) fail(path, `no element with id "${id}"`);
+    if (target.chapter !== chapter) fail(path, `"${id}" is not an element of the same chapter`);
+    if (target.type !== type) fail(path, `"${id}" must be ${type === 'event' ? 'an event' : 'a command'}`);
+  }
 
   const edges = [];
   for (const { owner, kind, path, ids } of links) {
@@ -1751,7 +1775,10 @@ function Board() {
 
   // `count` ids that are unused on the board and different from each other.
   const newIds = (count = 1) => {
-    const used = new Set([...getNodes().map((n) => n.id), ...contexts.map((c) => c.id)]);
+    const used = new Set([
+      ...getNodes().flatMap((n) => [n.id, ...(n.data.scenarios ?? []).map((s) => s.id)]),
+      ...contexts.map((c) => c.id),
+    ]);
     return Array.from({ length: count }, () => uniqueId(used));
   };
 
@@ -1789,6 +1816,11 @@ function Board() {
   const [helpOpen, setHelpOpen] = useState(false);
   // The element whose title is to be edited (asked for by the Enter hotkey).
   const [titleEditId, setTitleEditId] = useState(null);
+  // The scenario being edited: { nodeId, scenarioId } (scenarioId null for a new one).
+  const [scenarioEdit, setScenarioEdit] = useState(null);
+  const scenarioOpen = useRef(false);
+  scenarioOpen.current = !!scenarioEdit;
+  const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   const saveInfo = (text) => {
     const info = text.trim() ? text : '';
@@ -1843,6 +1875,26 @@ function Board() {
     present.current = { nodes, edges, contexts, key };
   }, [nodes, edges, contexts, tick]);
 
+  // Scenarios whose Events/Commands were deleted (or left the Chapter) are deleted too. The
+  // change is folded into the user's operation (see silentAt).
+  useEffect(() => {
+    const pruned = pruneScenarios(nodes);
+    if (!pruned) return;
+    silentAt.current = performance.now();
+    setNodes(pruned.nodes);
+    setNotice(
+      `Deleted ${pruned.removed.length === 1 ? 'the scenario' : 'the scenarios'} ${pruned.removed
+        .map((t) => `"${t}"`)
+        .join(', ')}: an element used in ${pruned.removed.length === 1 ? 'it' : 'them'} was deleted or left the Chapter.`
+    );
+  }, [nodes, setNodes]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const historyApi = useMemo(
     () => ({
       begin: () => {
@@ -1888,7 +1940,7 @@ function Board() {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (scenarioOpen.current || !(e.ctrlKey || e.metaKey) || e.altKey) return;
       const t = e.target;
       if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       const k = e.key.toLowerCase();
@@ -2190,6 +2242,8 @@ function Board() {
 
   const boardActions = useMemo(
     () => ({
+      editScenario: (nodeId, scenarioId) => setScenarioEdit({ nodeId, scenarioId }),
+      newScenarioId: () => newIds()[0],
       contexts,
       setChapterContext,
       addContext,
@@ -2227,6 +2281,44 @@ function Board() {
       titleEditId,
     ]
   );
+
+  // The scenario popup: the Events and Commands of the Scenarios element's Chapter are offered.
+  const scenarioNode = scenarioEdit && nodes.find((n) => n.id === scenarioEdit.nodeId);
+  const editedScenario = scenarioNode?.data.scenarios?.find((s) => s.id === scenarioEdit.scenarioId) ?? null;
+  const scenarioCandidates = useMemo(() => {
+    if (!scenarioNode) return [];
+    const ss = slices(nodes, scenarioNode.parentId);
+    return nodes
+      .filter(
+        (n) =>
+          n.type === 'sticky' &&
+          n.parentId === scenarioNode.parentId &&
+          (n.data.kind === 'event' || n.data.kind === 'command')
+      )
+      .map((n) => ({
+        id: n.id,
+        kind: n.data.kind,
+        title: n.data.title,
+        where: sliceOf(ss, n)?.data.name ?? '',
+        order: [sliceOf(ss, n)?.position.x ?? 0, n.position.x, n.position.y],
+      }))
+      .sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.order[2] - b.order[2]);
+  }, [nodes, scenarioNode]);
+
+  const saveScenario = (scenario) => {
+    const { nodeId } = scenarioEdit;
+    setNodes((ns) =>
+      ns.map((n) => {
+        if (n.id !== nodeId) return n;
+        const list = n.data.scenarios;
+        const next = scenario.id
+          ? list.map((s) => (s.id === scenario.id ? scenario : s))
+          : [...list, { ...scenario, id: newIds()[0] }];
+        return { ...n, data: { ...n.data, scenarios: next } };
+      })
+    );
+    setScenarioEdit(null);
+  };
 
   const exportJson = () => {
     const url = URL.createObjectURL(
@@ -2325,7 +2417,7 @@ function Board() {
             type: 'sticky',
             parentId: slice.parentId,
             position: pos,
-            data: { kind, title: '' },
+            data: { kind, title: '', ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
           },
         ],
         only
@@ -2361,7 +2453,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (!selectedCell || infoId || helpOpen) return;
+    if (!selectedCell || infoId || helpOpen || scenarioEdit) return;
     // '+' needs Shift on most layouts, so Shift is allowed for it.
     if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== '+')) return;
     const t = e.target;
@@ -2554,7 +2646,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit ? null : ['Backspace', 'Delete']}
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />
@@ -2577,6 +2669,20 @@ function Board() {
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
         />
+      )}
+      {scenarioNode && (scenarioEdit.scenarioId === null || editedScenario) && (
+        <ScenarioDialog
+          key={`${scenarioEdit.nodeId}:${scenarioEdit.scenarioId}`}
+          scenario={editedScenario}
+          candidates={scenarioCandidates}
+          onSave={saveScenario}
+          onClose={() => setScenarioEdit(null)}
+        />
+      )}
+      {notice && (
+        <div className="toast" role="status" title="Click to dismiss" onClick={() => setNotice(null)}>
+          {notice}
+        </div>
       )}
     </div>
   );
