@@ -949,45 +949,18 @@ const makeEdge = (source, target, chapterLevel) => ({
   ...(chapterLevel ? chapterEdgeDefaults : edgeDefaults),
 });
 
-// The sample flow (R1.4) with fresh ids.
-function makeSample() {
+// The starting board (R1.4): one empty Chapter in the Default Context, with fresh ids.
+function makeEmptyBoard() {
   const used = new Set();
   const id = () => uniqueId(used);
   const chapterId = id();
   const contexts = [{ id: id(), name: 'Default' }];
-  const colX = [SLICE_PADDING, 240, 440 + SLICE_PADDING]; // relative to the slice area
-  const sticky = (kind, col, title) => ({
-    id: id(),
-    type: 'sticky',
-    position: { x: LABEL_ZONE + colX[col], y: LANES[KINDS[kind].lane].y + 40 },
-    parentNode: chapterId,
-    data: { kind, title },
-  });
-  const [n1, n2, n3, n4, n5] = [
-    sticky('screen', 0, 'Add Item form'),
-    sticky('command', 0, 'Add Item'),
-    sticky('event', 1, 'Item Added'),
-    sticky('readmodel', 2, 'Cart Items'),
-    sticky('screen', 2, 'Cart view'),
-  ];
   const nodes = normalize([
     makeChapter(chapterId, 0, 0, 'Chapter 1', contexts[0].id),
     ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
-    makeSlice(id(), LABEL_ZONE, 440, 'Add Item', chapterId),
-    makeSlice(id(), LABEL_ZONE + 440, 240, 'View Cart', chapterId),
-    n1,
-    n2,
-    n3,
-    n4,
-    n5,
+    makeSlice(id(), LABEL_ZONE, DEFAULT_SLICE_WIDTH, 'New Slice', chapterId),
   ]);
-  const edges = [
-    [n1, n2],
-    [n2, n3],
-    [n3, n4],
-    [n4, n5],
-  ].map(([a, b]) => makeEdge(a.id, b.id, false));
-  return { nodes, edges, contexts };
+  return { nodes, edges: [], contexts };
 }
 
 const STORAGE_KEY = 'event-model-board';
@@ -1266,7 +1239,7 @@ function load() {
     const text = localStorage.getItem(STORAGE_KEY);
     if (text) return parseBoard(text);
   } catch {
-    // missing, corrupt or unavailable storage: the sample board is shown
+    // missing, corrupt or unavailable storage: the starting board is shown
   }
   return null;
 }
@@ -1319,7 +1292,7 @@ function CellHighlight({ cell }) {
 }
 
 function Board() {
-  const saved = useMemo(() => load() ?? makeSample(), []);
+  const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
@@ -1888,15 +1861,6 @@ function Board() {
     );
   };
 
-  const reset = () => {
-    const sample = makeSample();
-    setSelectedCell(null);
-    setActiveId(null);
-    setNodes(sample.nodes);
-    setEdges(sample.edges);
-    setContexts(sample.contexts);
-  };
-
   return (
     <div className="app">
       <header className="toolbar">
@@ -1932,9 +1896,6 @@ function Board() {
           + Chapter
         </button>
         <span className="spacer" />
-        <span className="hint">
-          Double-click to edit · Backspace deletes selection · Drag from a handle to connect (Chapters: right side → left side)
-        </span>
         <input
           ref={fileInput}
           type="file"
@@ -1948,7 +1909,6 @@ function Board() {
         <button onClick={exportJson} title="Download slices and their elements as JSON">
           Export JSON
         </button>
-        <button onClick={reset}>Reset</button>
       </header>
       <div className="canvas" ref={canvasRef}>
         <HistoryContext.Provider value={historyApi}>

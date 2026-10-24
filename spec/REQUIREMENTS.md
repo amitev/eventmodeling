@@ -10,9 +10,8 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
 - **R1.3a** The small buttons on lane labels (**×**, **+**, colour), slice headers (**+**, **×**) and the Chapter handle (**↔**, **×**, context rename and delete) look alike: 18px squares with a 3px radius, and drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
-- **R1.4** The board starts with one Chapter holding a sample flow ("Add Item" and "View Cart"). Its elements carry their names as titles.
-- **R1.5** A **Reset** button restores the sample flow.
-- **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), with the same ids, so a reload loses or renumbers nothing. If the saved board is missing or unreadable, the sample board (R1.4) is shown.
+- **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: the three default lanes and one default slice ("New Slice", 220px wide), no elements.
+- **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), with the same ids, so a reload loses or renumbers nothing. If the saved board is missing or unreadable, the starting board (R1.4) is shown.
 
 ### Chapter width
 
@@ -31,7 +30,7 @@ This document records the business requirements agreed so far. It describes beha
 ### Identifiers
 
 - **R1.14** Every Context, Chapter, lane, slice and element has an **id** matching `^[A-Za-z0-9]{6}$`, random, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
-- **R1.15** Everything that creates items uses such ids: the sample board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
+- **R1.15** Everything that creates items uses such ids: the starting board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by name and title. Items refer to each other by id, never by name, so renaming cannot break a reference (lanes: R2.9).
 
@@ -39,7 +38,7 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1a.1** The board can hold any number of Chapters, each with its own lanes, slices and elements, laid out independently: resizing a slice or adding a lane in one never changes another. Sections 2 to 5 apply per Chapter.
 - **R1a.2** **+ Chapter** adds a Chapter with the three default lanes and one default slice ("New Slice", 220px wide, as if **+ Slice** had been used once) and no elements; its width is the label zone plus that slice. Its lane area is centred (snapped to the grid) on the centre of the visible canvas, so it is seen straight away; the view does not pan or zoom. If it lands on another Chapter, the user drags it away by its handle.
-- **R1a.3** Each Chapter has a name, shown as a large text (36px, bold) centred above the Chapter, above the Chapter's handle ("Chapter 1", "Chapter 2", ... by default; the sample's is "Chapter 1"). It is only a title: dragging it does not move the Chapter. The user renames it by double-clicking it. The name can never be empty: an empty rename is ignored and the previous name kept, as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), the **↔** and **×** buttons and no name.
+- **R1a.3** Each Chapter has a name, shown as a large text (36px, bold) centred above the Chapter, above the Chapter's handle ("Chapter 1", "Chapter 2", ... by default; the starting Chapter's is "Chapter 1"). It is only a title: dragging it does not move the Chapter. The user renames it by double-clicking it. The name can never be empty: an empty rename is ignored and the previous name kept, as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), the **↔** and **×** buttons and no name.
 - **R1a.4** **Active Chapter:** the one the user last clicked or dragged something in; initially the first. The header shows its name next to "Add to:". **+ Slice** and **+ Lane** act on it. Element buttons do not: they act on the selected Cell (R3.3). An element dragged from the header joins the Chapter of the Cell it is released over (R3.3); released over no Cell, nothing is added.
 - **R1a.5** An element moves to another Chapter when dropped with its centre over a Cell of that Chapter (R5.14): it joins that Cell's lane and slice and follows its layout rules (R3.6a, R5.13 to R5.17). Released anywhere else, including over another Chapter's label zone, it stays in its Chapter and returns to where the drag started (R5.14). Its connections are kept.
 - **R1a.6** A Chapter is removed with the **×** button in its handle, hidden when only one Chapter is left (the board always has one). Its lanes, slices, elements and every connection attached to them or to it are removed too. If it holds slices or elements, the user confirms first.
@@ -56,7 +55,7 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1b.1** A **Context** has an id (R1.14) and a name, nothing else for now. The board has a list of Contexts, independent from the Chapters: a Context can exist without any Chapter using it.
 - **R1b.2** Every Chapter has exactly one Context. Several Chapters can share the same one. A Chapter refers to its Context by id, never by name (as for lanes, R2.9).
-- **R1b.3** The first Context of the list is the **Default**. It is named "Default" at first, can be renamed (R1b.5) but never deleted, so the board always has at least one Context. A new Chapter, the sample Chapter and a Chapter whose Context was deleted use it.
+- **R1b.3** The first Context of the list is the **Default**. It is named "Default" at first, can be renamed (R1b.5) but never deleted, so the board always has at least one Context. A new Chapter, the starting Chapter and a Chapter whose Context was deleted use it.
 - **R1b.4** The Chapter handle has a dropdown listing all Contexts and showing the Chapter's own. Choosing one assigns it to the Chapter. The last entry, **+ New context...**, asks for a name, appends a new Context to the list and assigns it to the Chapter. An empty name or cancelling does nothing.
 - **R1b.5** A rename button next to the dropdown renames the Chapter's Context, for every Chapter that shares it. An empty name is ignored (previous kept).
 - **R1b.6** A delete button next to it deletes the Chapter's Context after confirmation; the Chapters that used it move to the Default. The button is hidden for the Default.
@@ -230,7 +229,7 @@ The export file is the single, complete description of a board, written and read
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; import; and Reset.
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (title and HTML), moving (including to another Chapter) and deleting elements; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and import.
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. They are ignored while typing in a text field, so the field's own undo applies.
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends.

@@ -19,7 +19,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .chip.readmodel { background: var(--readmodel) !important; }
 .chip.event { background: var(--event) !important; }
 .spacer { flex: 1; }
-.hint { color: #666; font-size: 12px; }
 .canvas { flex: 1; min-height: 0; }
 
 .lane {
