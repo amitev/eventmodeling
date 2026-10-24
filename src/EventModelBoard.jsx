@@ -1726,6 +1726,27 @@ function Board() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
+  // Arrow keys move the Cell selection to the neighbouring Cell of the same Chapter.
+  useEffect(() => {
+    if (!selectedCell || infoId) return;
+    const onKey = (e) => {
+      const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+      if (!step || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      const ns = getNodes();
+      const lanes = lanesOf(ns, selectedCell.chapterId);
+      const cols = slices(ns, selectedCell.chapterId);
+      const row = lanes.findIndex((l) => l.id === selectedCell.laneId) + step[0];
+      const col = cols.findIndex((s) => s.id === selectedCell.sliceId) + step[1];
+      if (!lanes[row] || !cols[col]) return;
+      setSelectedCell({ ...selectedCell, laneId: lanes[row].id, sliceId: cols[col].id });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedCell, infoId, getNodes]);
+
   // Slices are laid out automatically, so they cannot be dragged.
   const handleNodesChange = useCallback(
     (changes) => {
