@@ -110,11 +110,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid rgba(0, 0, 0, 0.4); border-radius: 3px; background: rgba(255, 255, 255, 0.7);
 }
 .html-editor { height: 90px; font: 11px monospace !important; margin-bottom: 4px; }
-/* pointer-events off so the note can still be dragged and selected over the preview */
+/* Off, so the element can be dragged and selected over the preview; on once it is selected, to scroll it. */
 .screen-frame {
   display: block; width: 100%; height: 110px; margin-bottom: 4px; pointer-events: none;
   border: 1px solid #aaa; background: #fff;
 }
+.sticky.selected .screen-frame { pointer-events: auto; }
 
 .lane-header {
   pointer-events: auto; position: absolute; top: 0; bottom: 0; left: 0; box-sizing: border-box;

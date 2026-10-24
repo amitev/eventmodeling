@@ -1136,6 +1136,8 @@ const makeLane = (id, chapterId, label, y, color, width, info) => ({
   deletable: false,
   focusable: false,
   zIndex: -1,
+  // Clicks pass through to the canvas (selects the Cell) and to the arrows above the lane.
+  style: { pointerEvents: 'none' },
 });
 
 const edgeDefaults = {

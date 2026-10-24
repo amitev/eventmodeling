@@ -115,7 +115,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 - **R3.7** A Screen element can hold an HTML mockup, edited through a `</>` button on the element.
 - **R3.8** The HTML is optional. With HTML, the Screen shows it in an iframe preview in its body, at the normal element width; without, the Screen shows nothing in place of the mockup.
 - **R3.9** The preview is sandboxed with no permissions: no scripts or form submissions.
-- **R3.10** The preview does not capture the mouse, so the element can still be dragged, selected and connected.
+- **R3.10** While its element is not selected, the preview does not capture the mouse, so the element can still be dragged, selected and connected. Once the element is selected, the preview takes the mouse, so its content can be scrolled with the wheel; the element is then dragged by its header.
 
 ## 4. Connections
 
@@ -184,7 +184,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.9** Selecting a Cell is not an operation: not recorded for undo (R8.6), and Backspace and Delete do nothing to it.
 - **R5a.10** With a Cell selected, clicking an element button adds the element **in that Cell**, whatever its type (R3.2): in the Cell's lane and slice, vertically centred (R3.6a), at the first free spot from the left inside the slice margins (R5.14), not overlapping elements already there. If there is no room, it goes after the last element and the slice grows to fit; later slices move right with their elements (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button is unaffected: the element goes where released (R3.3). With no Cell selected, or its lane or slice gone, a click does nothing (R3.3).
 
-**Learning (implementation).** Lanes cover the Chapter's whole Cell area, so a click on the empty part of a Cell reaches a lane, not the canvas behind. Cell selection must therefore handle clicks on lanes too, finding the Cell from the click position (R5a.5, R5a.7). The first version listened only to canvas clicks and selected nothing.
+**Learning (implementation).** Lane nodes cover the Chapter's whole Cell area. If they take the mouse they sit above the arrows and block selecting them, so lanes ignore the mouse; a click on an empty part of a Cell then reaches the canvas, which finds the Cell from the click position (R5a.5, R5a.7).
 
 ## 6. Export
 
