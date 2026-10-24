@@ -1,18 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import ReactFlow, {
+import {
   Background,
   Controls,
   Handle,
   MarkerType,
   MiniMap,
   Position,
+  ReactFlow,
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
   useReactFlow,
   useStore,
-  useStoreApi,
-} from 'reactflow';
+} from '@xyflow/react';
 
 // Event modeling: time flows left to right across swimlanes. The board holds one or
 // more Chapters. Each Chapter owns its lanes, slices and elements as child nodes
@@ -74,13 +74,16 @@ function uniqueId(used) {
 }
 
 const SLICE_MIN_X = LABEL_ZONE;
+// Measured size of an element (React Flow keeps it in `measured`); the default until measured.
+const stickyW = (n) => n.measured?.width ?? STICKY_W;
+const stickyH = (n) => n.measured?.height ?? STICKY_H;
 const slices = (nodes, chapterId) =>
   nodes
-    .filter((n) => n.type === 'slice' && (chapterId === undefined || n.parentNode === chapterId))
+    .filter((n) => n.type === 'slice' && (chapterId === undefined || n.parentId === chapterId))
     .sort((a, b) => a.position.x - b.position.x);
 const lanesOf = (nodes, chapterId) =>
   nodes
-    .filter((n) => n.type === 'lane' && n.parentNode === chapterId)
+    .filter((n) => n.type === 'lane' && n.parentId === chapterId)
     .sort((a, b) => a.position.y - b.position.y);
 const chaptersOf = (nodes) => nodes.filter((n) => n.type === 'chapter');
 
@@ -91,9 +94,9 @@ const setSliceWidth = (nodes, id, width) =>
 // is kept at least SLICE_PADDING inside its slice, and may grow to the right), else the one
 // it overlaps most, else the nearest. Undefined only when the Chapter has no slice.
 function sliceOf(ss, n) {
-  const mine = ss.filter((s) => s.parentNode === n.parentNode);
+  const mine = ss.filter((s) => s.parentId === n.parentId);
   const l = n.position.x;
-  const r = l + (n.width ?? STICKY_W);
+  const r = l + stickyW(n);
   const holding = mine.find((s) => l >= s.position.x && l < s.position.x + s.data.width);
   if (holding) return holding;
   let best;
@@ -150,9 +153,9 @@ function layoutSlices(nodes, ref = nodes) {
       changed = true;
       return { ...n, position: { ...n.position, x: newX.get(n.id) } };
     }
-    if (n.type === 'lane' && widths.has(n.parentNode) && n.data.width !== widths.get(n.parentNode)) {
+    if (n.type === 'lane' && widths.has(n.parentId) && n.data.width !== widths.get(n.parentId)) {
       changed = true;
-      return { ...n, data: { ...n.data, width: widths.get(n.parentNode) } };
+      return { ...n, data: { ...n.data, width: widths.get(n.parentId) } };
     }
     if (shift.has(n.id)) {
       changed = true;
@@ -172,7 +175,7 @@ function settleStickies(nodes, only) {
   let changed = false;
   const placed = nodes.map((n) => {
     if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
-    const w = n.width ?? STICKY_W;
+    const w = stickyW(n);
     const l = n.position.x;
     const best = sliceOf(ss, n);
     if (!best) return n;
@@ -203,11 +206,11 @@ function centerStickies(nodes, only) {
   let changed = false;
   const next = nodes.map((n) => {
     if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
-    const h = n.height ?? STICKY_H;
+    const h = stickyH(n);
     const mid = n.position.y + h / 2;
     const lane = lanes.find(
       (l) =>
-        l.parentNode === n.parentNode &&
+        l.parentId === n.parentId &&
         mid >= l.position.y &&
         mid < l.position.y + l.data.height
     );
@@ -223,24 +226,24 @@ function centerStickies(nodes, only) {
 // Where a dragged element ends up is decided by the Cell under its centre: it joins that
 // Cell's Chapter and slice (its position is converted to the Chapter's coordinates and
 // kept inside the slice's margins; the lane centring is done by centerStickies). Over no
-// Cell it returns to where the drag started (`origin`: id -> { parentNode, position }).
+// Cell it returns to where the drag started (`origin`: id -> { parentId, position }).
 // `only` limits it to those ids.
 function adoptStickies(nodes, only, origin) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   let changed = false;
   const next = nodes.map((n) => {
     if (n.type !== 'sticky' || !only.has(n.id)) return n;
-    const parent = byId.get(n.parentNode);
+    const parent = byId.get(n.parentId);
     if (!parent) return n;
-    const w = n.width ?? STICKY_W;
+    const w = stickyW(n);
     const ax = parent.position.x + n.position.x;
     const ay = parent.position.y + n.position.y;
-    const cell = cellAt(nodes, { x: ax + w / 2, y: ay + (n.height ?? STICKY_H) / 2 });
+    const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 });
     if (!cell) {
       const from = origin.get(n.id);
       if (!from) return n;
       changed = true;
-      return { ...n, parentNode: from.parentNode, position: { ...from.position } };
+      return { ...n, parentId: from.parentId, position: { ...from.position } };
     }
     const chapter = byId.get(cell.chapterId);
     const slice = byId.get(cell.sliceId);
@@ -249,9 +252,9 @@ function adoptStickies(nodes, only, origin) {
       Math.min(ax - chapter.position.x, slice.position.x + slice.data.width - w - SLICE_PADDING)
     );
     const y = ay - chapter.position.y;
-    if (chapter.id === n.parentNode && x === n.position.x && y === n.position.y) return n;
+    if (chapter.id === n.parentId && x === n.position.x && y === n.position.y) return n;
     changed = true;
-    return { ...n, parentNode: chapter.id, position: { x, y } };
+    return { ...n, parentId: chapter.id, position: { x, y } };
   });
   return changed ? next : nodes;
 }
@@ -291,7 +294,7 @@ const MAX_HISTORY = 100;
 // are deliberately left out, so they never create history entries.
 const keyOf = (nodes, edges, contexts) =>
   JSON.stringify([
-    nodes.map((n) => [n.id, n.type, n.parentNode, n.position.x, n.position.y, n.data]),
+    nodes.map((n) => [n.id, n.type, n.parentId, n.position.x, n.position.y, n.data]),
     edges.map((e) => [e.id, e.source, e.target]),
     contexts,
   ]);
@@ -323,24 +326,17 @@ function useHorizontalDrag() {
 // from them. This returns a pointer-down handler that moves the Chapter that owns the
 // node `nodeId`: snapped to the grid, one undo step, and the Chapter becomes the active
 // one. A press that does not move (a click or double-click) is left alone, so renaming
-// still works. `skip` lets the caller veto a press (e.g. while editing). With `select`,
-// pressing also selects `nodeId`, so the node stays selectable by its header even while it
-// is being renamed or its Chapter is being dragged.
-function useChapterDrag(nodeId, skip, select = false) {
+// still works. `skip` lets the caller veto a press (e.g. while editing).
+function useChapterDrag(nodeId, skip) {
   const { setNodes, getNodes } = useReactFlow();
-  const storeApi = useStoreApi();
   const zoom = useStore((s) => s.transform[2]);
   const history = useContext(HistoryContext);
   const { activate, clearCell } = useContext(BoardActions);
   return (e) => {
     if (e.button !== 0) return;
     clearCell(); // pressing a header selects something else
-    if (select && !e.target.closest('button')) {
-      const { addSelectedNodes, nodeInternals } = storeApi.getState();
-      if (!nodeInternals.get(nodeId)?.selected) addSelectedNodes([nodeId]);
-    }
     if (e.target.closest('button, input') || skip?.()) return;
-    const chapterId = getNodes().find((n) => n.id === nodeId)?.parentNode;
+    const chapterId = getNodes().find((n) => n.id === nodeId)?.parentId;
     const chapter = getNodes().find((n) => n.id === chapterId);
     if (!chapter) return;
     const start = { ...chapter.position };
@@ -396,21 +392,21 @@ function LaneNode({ id, data }) {
   const { removeLane, addLaneAfter } = useContext(BoardActions);
   // The last lane of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
-    const parent = s.nodeInternals.get(id)?.parentNode;
+    const parent = s.nodeLookup.get(id)?.parentId;
     let count = 0;
-    s.nodeInternals.forEach((n) => {
-      if (n.type === 'lane' && n.parentNode === parent) count++;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'lane' && n.parentId === parent) count++;
     });
     return count > 1;
   });
   // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
   const edges = useStore((s) => {
-    const me = s.nodeInternals.get(id);
+    const me = s.nodeLookup.get(id);
     if (!me) return '';
     let first = true;
     let last = true;
-    s.nodeInternals.forEach((n) => {
-      if (n.type !== 'lane' || n.parentNode !== me.parentNode || n.id === id) return;
+    s.nodeLookup.forEach((n) => {
+      if (n.type !== 'lane' || n.parentId !== me.parentId || n.id === id) return;
       if (n.position.y < me.position.y) first = false;
       if (n.position.y > me.position.y) last = false;
     });
@@ -625,18 +621,18 @@ function SliceNode({ id, data }) {
   const press = useRef(null);
   // The last slice of a Chapter cannot be deleted.
   const canRemove = useStore((s) => {
-    const parent = s.nodeInternals.get(id)?.parentNode;
+    const parent = s.nodeLookup.get(id)?.parentId;
     let count = 0;
-    s.nodeInternals.forEach((n) => {
-      if (n.type === 'slice' && n.parentNode === parent) count++;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'slice' && n.parentId === parent) count++;
     });
     return count > 1;
   });
   const lanesHeight = useStore((s) => {
-    const parent = s.nodeInternals.get(id)?.parentNode;
+    const parent = s.nodeLookup.get(id)?.parentId;
     let sum = 0;
-    s.nodeInternals.forEach((n) => {
-      if (n.type === 'lane' && n.parentNode === parent) sum += n.data.height;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'lane' && n.parentId === parent) sum += n.data.height;
     });
     return sum;
   });
@@ -661,7 +657,7 @@ function SliceNode({ id, data }) {
     const p = press.current;
     if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= 4) return;
     const ns = getNodes();
-    const chapterId = ns.find((n) => n.id === id)?.parentNode;
+    const chapterId = ns.find((n) => n.id === id)?.parentId;
     const top = lanesOf(ns, chapterId)[0];
     if (top) selectCell({ chapterId, laneId: top.id, sliceId: id });
   };
@@ -673,7 +669,7 @@ function SliceNode({ id, data }) {
     const me = base.find((n) => n.id === id);
     // Cannot be narrower than the elements it holds.
     const needed = (membersOf(base).get(id) ?? []).reduce(
-      (m, n) => Math.max(m, n.position.x + (n.width ?? STICKY_W) + SLICE_PADDING - me.position.x),
+      (m, n) => Math.max(m, n.position.x + stickyW(n) + SLICE_PADDING - me.position.x),
       0
     );
     const startW = data.width;
@@ -769,15 +765,15 @@ function ChapterNode({ id, data }) {
   const ref = useRef(null);
   const width = useStore((s) => {
     let w = 0;
-    s.nodeInternals.forEach((n) => {
-      if (n.type === 'lane' && n.parentNode === id) w = Math.max(w, n.data.width ?? LANE_WIDTH);
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'lane' && n.parentId === id) w = Math.max(w, n.data.width ?? LANE_WIDTH);
     });
     return w || 1;
   });
   const height = useStore((s) => {
     let h = 0;
-    s.nodeInternals.forEach((n) => {
-      if (n.type === 'lane' && n.parentNode === id) h += n.data.height;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'lane' && n.parentId === id) h += n.data.height;
     });
     return h || 1;
   });
@@ -908,7 +904,7 @@ const makeSlice = (id, x, width, name, chapterId) => ({
   type: 'slice',
   position: { x, y: SLICE_Y },
   data: { name, width },
-  parentNode: chapterId,
+  parentId: chapterId,
   draggable: false,
   selectable: false,
   zIndex: -1,
@@ -920,7 +916,7 @@ const makeLane = (id, chapterId, label, y, color, width) => ({
   id,
   type: 'lane',
   position: { x: 0, y },
-  parentNode: chapterId,
+  parentId: chapterId,
   data: { label, height: LANE_HEIGHT, width, color },
   draggable: false,
   selectable: false,
@@ -993,7 +989,7 @@ function serialize(nodes, edges, contexts) {
       const lanes = lanesOf(nodes, ch.id);
       const laneIndex = new Map(lanes.map((l, i) => [l.id, i]));
       const laneOf = (n) => {
-        const cy = n.position.y + (n.height ?? STICKY_H) / 2;
+        const cy = n.position.y + stickyH(n) / 2;
         let found = lanes[0];
         for (const l of lanes) if (cy >= l.position.y) found = l;
         return found;
@@ -1001,7 +997,7 @@ function serialize(nodes, edges, contexts) {
       const chapterSlices = slices(nodes, ch.id);
       const bySlice = new Map(chapterSlices.map((s) => [s.id, []]));
       for (const n of nodes) {
-        if (n.type !== 'sticky' || n.parentNode !== ch.id) continue;
+        if (n.type !== 'sticky' || n.parentId !== ch.id) continue;
         const sl = sliceOf(ss, n);
         if (sl) bySlice.get(sl.id).push({ n, lane: laneOf(n) });
       }
@@ -1202,7 +1198,7 @@ function parseBoard(text) {
         nodes.push({
           id: el.id,
           type: 'sticky',
-          parentNode: c.id,
+          parentId: c.id,
           position: { x: cursor + el.x, y: laneY.get(el.lane) + 40 },
           data: {
             kind: el.type,
@@ -1250,20 +1246,20 @@ function load() {
 // `sliceWidth` is the width the slice needs (the current width when nothing changes).
 function spotInCell(nodes, lane, slice) {
   const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
-    const mid = n.position.y + (n.height ?? STICKY_H) / 2;
+    const mid = n.position.y + stickyH(n) / 2;
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
   const left = slice.position.x + SLICE_PADDING;
   const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - STICKY_W;
   const free = (x) =>
     !inCell.some(
-      (m) => x < m.position.x + (m.width ?? STICKY_W) + GRID && m.position.x < x + STICKY_W + GRID
+      (m) => x < m.position.x + stickyW(m) + GRID && m.position.x < x + STICKY_W + GRID
     );
   let x = left;
   while (x <= lastFit && !free(x)) x += GRID;
   if (x > lastFit) {
     // Full: continue after the right-most element, widening the slice.
-    const after = inCell.reduce((m, n) => Math.max(m, n.position.x + (n.width ?? STICKY_W)), left - GRID);
+    const after = inCell.reduce((m, n) => Math.max(m, n.position.x + stickyW(n)), left - GRID);
     x = Math.max(left, snapUp(after + GRID));
   }
   const need = snapUp(x + STICKY_W + SLICE_PADDING - slice.position.x);
@@ -1275,13 +1271,13 @@ function spotInCell(nodes, lane, slice) {
 function CellHighlight({ cell }) {
   const box = useStore((s) => {
     if (!cell) return null;
-    const lane = s.nodeInternals.get(cell.laneId);
-    const slice = s.nodeInternals.get(cell.sliceId);
+    const lane = s.nodeLookup.get(cell.laneId);
+    const slice = s.nodeLookup.get(cell.sliceId);
     if (!lane || !slice) return null; // the lane or slice was removed
     const [tx, ty, zoom] = s.transform;
     return [
-      slice.positionAbsolute.x * zoom + tx,
-      lane.positionAbsolute.y * zoom + ty,
+      slice.internals.positionAbsolute.x * zoom + tx,
+      lane.internals.positionAbsolute.y * zoom + ty,
       slice.data.width * zoom,
       lane.data.height * zoom,
     ].join(',');
@@ -1317,7 +1313,7 @@ function Board() {
   // saved, exported or recorded for undo.
   const [selectedCell, setSelectedCell] = useState(null);
   const focusChapter = (node) =>
-    setActiveId(node.type === 'chapter' ? node.id : node.parentNode ?? null);
+    setActiveId(node.type === 'chapter' ? node.id : node.parentId ?? null);
 
   useEffect(() => {
     try {
@@ -1437,7 +1433,7 @@ function Board() {
   // last slice of a Chapter cannot be deleted.
   const removeSlice = (sliceId) => {
     const slice = nodes.find((n) => n.id === sliceId);
-    if (!slice || slices(nodes, slice.parentNode).length <= 1) return;
+    if (!slice || slices(nodes, slice.parentId).length <= 1) return;
     const doomed = membersOf(nodes).get(sliceId) ?? [];
     if (doomed.length && !window.confirm(`Delete the slice and its ${doomed.length} element(s)?`)) {
       return;
@@ -1446,7 +1442,7 @@ function Board() {
     setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
     setSelectedCell((c) => (c?.sliceId === sliceId ? null : c));
-    setActiveId(slice.parentNode);
+    setActiveId(slice.parentId);
   };
 
   const addSlice = () => {
@@ -1458,10 +1454,9 @@ function Board() {
         (max, n) => Math.max(max, n.position.x + n.data.width),
         SLICE_MIN_X
       );
-      return layoutSlices([
-        ...ns,
-        makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId),
-      ]);
+      return layoutSlices(
+        layered([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId)])
+      );
     });
   };
 
@@ -1478,11 +1473,11 @@ function Board() {
         cur.position.x + cur.data.width - 1,
         DEFAULT_SLICE_WIDTH,
         'New Slice',
-        cur.parentNode
+        cur.parentId
       );
-      return layoutSlices([...ns, added], ns);
+      return layoutSlices(layered([...ns, added]), ns);
     });
-    setActiveId(nodes.find((n) => n.id === sliceId)?.parentNode ?? null);
+    setActiveId(nodes.find((n) => n.id === sliceId)?.parentId ?? null);
   };
 
   const addLane = () => {
@@ -1504,7 +1499,7 @@ function Board() {
       if (!lane) return ns;
       const below = lane.position.y + lane.data.height;
       const shifted = ns.map((n) =>
-        n.parentNode === lane.parentNode &&
+        n.parentId === lane.parentId &&
         (n.type === 'lane' || n.type === 'sticky') &&
         n.position.y >= below
           ? { ...n, position: { ...n.position, y: n.position.y + LANE_HEIGHT } }
@@ -1512,21 +1507,21 @@ function Board() {
       );
       return layered([
         ...shifted,
-        makeLane(id, lane.parentNode, 'New Lane', below, 'none', lane.data.width),
+        makeLane(id, lane.parentId, 'New Lane', below, 'none', lane.data.width),
       ]);
     });
-    setActiveId(nodes.find((n) => n.id === laneId)?.parentNode ?? null);
+    setActiveId(nodes.find((n) => n.id === laneId)?.parentId ?? null);
   };
 
   const removeLane = useCallback(
     (laneId) => {
       const lane = nodes.find((n) => n.id === laneId);
       if (!lane) return;
-      const chapterId = lane.parentNode;
+      const chapterId = lane.parentId;
       if (lanesOf(nodes, chapterId).length <= 1) return;
       const top = lane.position.y;
       const bottom = top + lane.data.height;
-      const mine = (n) => n.parentNode === chapterId;
+      const mine = (n) => n.parentId === chapterId;
       const inLane = (n) =>
         n.type === 'sticky' && mine(n) && n.position.y >= top && n.position.y < bottom;
       const doomed = nodes.filter(inLane);
@@ -1576,7 +1571,7 @@ function Board() {
   const removeChapter = useCallback(
     (chapterId) => {
       if (chaptersOf(nodes).length <= 1) return;
-      const kids = nodes.filter((n) => n.parentNode === chapterId);
+      const kids = nodes.filter((n) => n.parentId === chapterId);
       const sliceCount = kids.filter((n) => n.type === 'slice').length;
       const elementCount = kids.filter((n) => n.type === 'sticky').length;
       if (
@@ -1603,7 +1598,7 @@ function Board() {
         const members = membersOf(ns);
         const lanes = lanesOf(ns, chapterId);
         const laneIdOf = (n) => {
-          const mid = n.position.y + (n.height ?? STICKY_H) / 2;
+          const mid = n.position.y + stickyH(n) / 2;
           return lanes.find((l) => mid >= l.position.y && mid < l.position.y + l.data.height)?.id;
         };
         const widths = new Map();
@@ -1614,7 +1609,7 @@ function Board() {
             widths.set(sl.id, DEFAULT_SLICE_WIDTH);
             continue;
           }
-          const w = (n) => n.width ?? STICKY_W;
+          const w = stickyW;
           const perCell = new Map();
           for (const n of els) perCell.set(laneIdOf(n), (perCell.get(laneIdOf(n)) ?? 0) + 1);
           if ([...perCell.values()].every((c) => c === 1)) {
@@ -1804,7 +1799,7 @@ function Board() {
             {
               id,
               type: 'sticky',
-              parentNode: slice.parentNode,
+              parentId: slice.parentId,
               position: pos,
               data: { kind, title: '' },
             },
@@ -1849,8 +1844,8 @@ function Board() {
       dragged
         .filter((n) => n.type === 'sticky')
         .map((n) => {
-          const { parentNode, position } = current.get(n.id) ?? n;
-          return [n.id, { parentNode, position: { ...position } }];
+          const { parentId, position } = current.get(n.id) ?? n;
+          return [n.id, { parentId, position: { ...position } }];
         })
     );
   };

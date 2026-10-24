@@ -1,6 +1,6 @@
 # Event Modeling Board — Requirements
 
-A browser-based board for event modeling, built with React and React Flow (`reactflow`).
+A browser-based board for event modeling, built with React and React Flow (`@xyflow/react`, version 12).
 This document records the business requirements agreed so far. It describes behaviour, not implementation.
 
 ## 1. Board and Chapter

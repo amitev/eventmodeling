@@ -212,8 +212,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .react-flow__handle.chapter-port:hover, .react-flow__handle.chapter-port.connectingfrom,
 .react-flow__handle.chapter-port.connectingto { opacity: 1; }
-.react-flow__handle.chapter-port.react-flow__handle-left { left: -10px; }
-.react-flow__handle.chapter-port.react-flow__handle-right { right: -10px; }
+.react-flow__handle.chapter-port.react-flow__handle-left { left: -2px; }
+.react-flow__handle.chapter-port.react-flow__handle-right { right: -2px; }
 .chip.chapter-btn { background: #d6d6e0 !important; }
 .toolbar .target { font-size: 12px; color: #444; }
 
