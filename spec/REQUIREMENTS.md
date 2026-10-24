@@ -134,6 +134,14 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   - Read Model → Processor
 
   If the user drags between two elements of such a pair the wrong way (e.g. from a Command to a Screen), the connection is created in the right direction (Screen → Command). Any other pair, including two elements of the same type, is refused. These rules apply to new connections only; existing ones, imported or saved, are not checked.
+- **R4.8** **Automatic arrows.** When an element is added (R3.3), it gets these arrows (R4.7) at once, within the same slice. "Above" and "under" mean another lane; the nearest such element is used. A pair already connected is not connected again. Moving an element creates no arrows.
+  - A Command under a Screen: Screen → Command.
+  - An Event under a Command: Command → Event.
+  - A Screen above a Read Model: Read Model → Screen.
+  - A Read Model under a Screen: Read Model → Screen.
+  - A Read Model when the slice just before its own has an Event: Event → Read Model. With several Events, the right-most one is used (the nearest by height on a tie).
+
+  Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1).
 
 ## 5. Slices
 

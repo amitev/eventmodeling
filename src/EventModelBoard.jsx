@@ -1494,6 +1494,53 @@ function spotInCell(nodes, lane, slice) {
   return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need) };
 }
 
+// The arrows a new element gets by the flow rules (R4.8), as [source id, target id] pairs.
+// "Above" and "under" mean another lane of the same slice; the nearest one is taken.
+function autoConnections(nodes, node) {
+  const slice = sliceOf(slices(nodes), node);
+  if (!slice) return [];
+  const members = membersOf(nodes);
+  const others = (members.get(slice.id) ?? []).filter((n) => n.id !== node.id);
+  const centre = (n) => n.position.y + stickyH(n) / 2;
+  const me = centre(node);
+  const gap = (n) => Math.abs(centre(n) - me);
+  const nearest = (list) => list.reduce((best, n) => (!best || gap(n) < gap(best) ? n : best), null);
+  const above = (kind) => nearest(others.filter((n) => n.data.kind === kind && centre(n) < me));
+  const below = (kind) => nearest(others.filter((n) => n.data.kind === kind && centre(n) > me));
+
+  const pairs = [];
+  const kind = node.data.kind;
+  if (kind === 'command') {
+    const screen = above('screen');
+    if (screen) pairs.push([screen.id, node.id]);
+  }
+  if (kind === 'event') {
+    const command = above('command');
+    if (command) pairs.push([command.id, node.id]);
+  }
+  if (kind === 'screen') {
+    const readModel = below('readmodel');
+    if (readModel) pairs.push([readModel.id, node.id]);
+  }
+  if (kind === 'readmodel') {
+    const screen = above('screen');
+    if (screen) pairs.push([node.id, screen.id]);
+    const chapterSlices = slices(nodes, node.parentId);
+    const previous = chapterSlices[chapterSlices.findIndex((s) => s.id === slice.id) - 1];
+    const events = (previous ? members.get(previous.id) ?? [] : []).filter(
+      (n) => n.data.kind === 'event'
+    );
+    // The right-most event; the nearest by height when several end at the same place.
+    const event = events.reduce((best, n) => {
+      const right = n.position.x + stickyW(n);
+      const bestRight = best ? best.position.x + stickyW(best) : -Infinity;
+      return right > bestRight || (right === bestRight && gap(n) < gap(best)) ? n : best;
+    }, null);
+    if (event) pairs.push([event.id, node.id]);
+  }
+  return pairs;
+}
+
 // Draws the border of the selected Cell above everything else. It is positioned from the
 // canvas transform, so it follows panning, zooming and moving the Chapter.
 function CellHighlight({ cell }) {
@@ -2039,47 +2086,52 @@ function Board() {
 
   // An element is only created in a Cell. A `drop` ({ cell, x }) puts it in that Cell at
   // x (relative to its Chapter); else the selected Cell is used (see spotInCell); with
-  // neither, nothing is added.
+  // neither, nothing is added. The arrows of R4.8 are added in the same step.
   const addSticky = (kind, drop) => {
     const [id] = newIds();
-    setNodes((ns) => {
-      const find = (i) => ns.find((n) => n.id === i);
-      const cellRef = drop?.cell ?? selectedCell;
-      const lane = cellRef && find(cellRef.laneId);
-      const slice = cellRef && find(cellRef.sliceId);
-      if (!lane || !slice) return ns;
-      const x = drop?.x;
+    const ns = getNodes();
+    const find = (i) => ns.find((n) => n.id === i);
+    const cellRef = drop?.cell ?? selectedCell;
+    const lane = cellRef && find(cellRef.laneId);
+    const slice = cellRef && find(cellRef.sliceId);
+    if (!lane || !slice) return;
+    const x = drop?.x;
 
-      let base = ns;
-      let pos;
-      if (x === undefined) {
-        const spot = spotInCell(ns, lane, slice);
-        pos = { x: spot.x, y: spot.y };
-        if (spot.sliceWidth > slice.data.width) {
-          // Make room: widen the slice; the slices after it (and their elements) move right.
-          base = layoutSlices(setSliceWidth(ns, slice.id, spot.sliceWidth), ns);
-        }
-      } else {
-        pos = { x: Math.max(slice.position.x + SLICE_PADDING, x), y: lane.position.y + 40 };
+    let base = ns;
+    let pos;
+    if (x === undefined) {
+      const spot = spotInCell(ns, lane, slice);
+      pos = { x: spot.x, y: spot.y };
+      if (spot.sliceWidth > slice.data.width) {
+        // Make room: widen the slice; the slices after it (and their elements) move right.
+        base = layoutSlices(setSliceWidth(ns, slice.id, spot.sliceWidth), ns);
       }
-      const only = new Set([id]);
-      return centerStickies(
-        settleStickies(
-          [
-            ...base,
-            {
-              id,
-              type: 'sticky',
-              parentId: slice.parentId,
-              position: pos,
-              data: { kind, title: '' },
-            },
-          ],
-          only
-        ),
+    } else {
+      pos = { x: Math.max(slice.position.x + SLICE_PADDING, x), y: lane.position.y + 40 };
+    }
+    const only = new Set([id]);
+    const next = centerStickies(
+      settleStickies(
+        [
+          ...base,
+          {
+            id,
+            type: 'sticky',
+            parentId: slice.parentId,
+            position: pos,
+            data: { kind, title: '' },
+          },
+        ],
         only
-      );
-    });
+      ),
+      only
+    );
+    setNodes(next);
+    const have = new Set(getEdges().map((e) => `${e.source}>${e.target}`));
+    const added = autoConnections(next, next.find((n) => n.id === id))
+      .filter(([s, t]) => !have.has(`${s}>${t}`))
+      .map(([s, t]) => makeEdge(s, t, false));
+    if (added.length) setEdges((es) => [...es, ...added]);
   };
 
   const onDragOver = (e) => {
