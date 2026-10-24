@@ -46,12 +46,13 @@ const KINDS = {
   event: { label: 'Event', lane: 2, color: '#ffb366' },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
   // Not part of the flow: it connects to nothing (R4.7).
-  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200 },
+  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200, pad: SLICE_PADDING / 2 },
 };
 
-// Size of an element before it is measured.
+// Size of an element before it is measured, and its minimum gap to the slice borders.
 const kindW = (kind) => KINDS[kind]?.w ?? STICKY_W;
 const kindH = (kind) => KINDS[kind]?.h ?? STICKY_H;
+const padOf = (kind) => KINDS[kind]?.pad ?? SLICE_PADDING;
 
 // Element types an element of each type can point to (R4.7).
 const FLOWS_TO = {
@@ -281,11 +282,12 @@ function settleStickies(nodes, only) {
     const l = n.position.x;
     const best = sliceOf(ss, n);
     if (!best) return n;
-    const room = Math.max(best.data.width, snapUp(w + 2 * SLICE_PADDING));
+    const pad = padOf(n.data.kind);
+    const room = Math.max(best.data.width, snapUp(w + 2 * pad));
     if (room > best.data.width) widen.set(best.id, Math.max(widen.get(best.id) ?? 0, room));
     const x = Math.min(
-      Math.max(l, best.position.x + SLICE_PADDING),
-      best.position.x + room - w - SLICE_PADDING
+      Math.max(l, best.position.x + pad),
+      best.position.x + room - w - pad
     );
     if (x === l) return n;
     changed = true;
@@ -349,9 +351,10 @@ function adoptStickies(nodes, only, origin) {
     }
     const chapter = byId.get(cell.chapterId);
     const slice = byId.get(cell.sliceId);
+    const pad = padOf(n.data.kind);
     const x = Math.max(
-      slice.position.x + SLICE_PADDING,
-      Math.min(ax - chapter.position.x, slice.position.x + slice.data.width - w - SLICE_PADDING)
+      slice.position.x + pad,
+      Math.min(ax - chapter.position.x, slice.position.x + slice.data.width - w - pad)
     );
     const y = ay - chapter.position.y;
     if (chapter.id === n.parentId && x === n.position.x && y === n.position.y) return n;
@@ -1041,7 +1044,7 @@ function SliceNode({ id, data }) {
     const me = base.find((n) => n.id === id);
     // Cannot be narrower than the elements it holds.
     const needed = (membersOf(base).get(id) ?? []).reduce(
-      (m, n) => Math.max(m, n.position.x + stickyW(n) + SLICE_PADDING - me.position.x),
+      (m, n) => Math.max(m, n.position.x + stickyW(n) + padOf(n.data.kind) - me.position.x),
       0
     );
     const startW = data.width;
@@ -1578,12 +1581,13 @@ function parseBoard(text) {
           if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
         }
         number(el.x, at(ep, 'x'));
-        if (el.x < SLICE_PADDING) fail(at(ep, 'x'), `must be at least ${SLICE_PADDING}`);
+        const pad = padOf(el.type);
+        if (el.x < pad) fail(at(ep, 'x'), `must be at least ${pad}`);
         const w = kindW(el.type);
-        if (el.x + w + SLICE_PADDING > sl.width) {
+        if (el.x + w + pad > sl.width) {
           fail(
             at(ep, 'x'),
-            `the element (x ${el.x}, width ${w}) does not fit in the slice with ${SLICE_PADDING}px margins (width ${sl.width})`
+            `the element (x ${el.x}, width ${w}) does not fit in the slice with ${pad}px margins (width ${sl.width})`
           );
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
@@ -1641,18 +1645,18 @@ function load() {
 // `sliceWidth` is the width the slice needs (the current width when nothing changes).
 function spotInCell(nodes, lane, slice, kind) {
   const w = kindW(kind);
-  const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
+  const pad = padOf(kind);  const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
     const mid = n.position.y + stickyH(n) / 2;
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
   if (!inCell.length) {
     // Empty Cell: centred in the slice, which grows first if it is too narrow.
-    const width = Math.max(slice.data.width, snapUp(w + 2 * SLICE_PADDING));
+    const width = Math.max(slice.data.width, snapUp(w + 2 * pad));
     const x = slice.position.x + Math.floor((width - w) / 2);
     return { x, y: lane.position.y + 40, sliceWidth: width, empty: true };
   }
-  const left = slice.position.x + SLICE_PADDING;
-  const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - w;
+  const left = slice.position.x + pad;
+  const lastFit = slice.position.x + slice.data.width - pad - w;
   const free = (x) =>
     !inCell.some(
       (m) => x < m.position.x + stickyW(m) + GRID && m.position.x < x + w + GRID
@@ -1664,7 +1668,7 @@ function spotInCell(nodes, lane, slice, kind) {
     const after = inCell.reduce((m, n) => Math.max(m, n.position.x + stickyW(n)), left - GRID);
     x = Math.max(left, snapUp(after + GRID));
   }
-  const need = snapUp(x + w + SLICE_PADDING - slice.position.x);
+  const need = snapUp(x + w + pad - slice.position.x);
   return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need), empty: false };
 }
 
@@ -2117,16 +2121,19 @@ function Board() {
           const perCell = new Map();
           for (const n of els) perCell.set(laneIdOf(n), (perCell.get(laneIdOf(n)) ?? 0) + 1);
           if ([...perCell.values()].every((c) => c === 1)) {
-            const width = Math.max(SLICE_MIN_WIDTH, snapUp(Math.max(...els.map(w)) + 2 * SLICE_PADDING));
+            const width = Math.max(
+              SLICE_MIN_WIDTH,
+              snapUp(Math.max(...els.map((n) => w(n) + 2 * padOf(n.data.kind))))
+            );
             widths.set(sl.id, width);
             for (const n of els) {
               shifts.set(n.id, Math.floor((width - w(n)) / 2) - (n.position.x - sl.position.x));
             }
             continue;
           }
-          const left = Math.min(...els.map((n) => n.position.x));
-          const right = Math.max(...els.map((n) => n.position.x + w(n)));
-          const width = Math.max(SLICE_MIN_WIDTH, snapUp(right - left + 2 * SLICE_PADDING));
+          const left = Math.min(...els.map((n) => n.position.x - padOf(n.data.kind)));
+          const right = Math.max(...els.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
+          const width = Math.max(SLICE_MIN_WIDTH, snapUp(right - left));
           const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
           widths.set(sl.id, width);
           els.forEach((n) => shifts.set(n.id, dx));
@@ -2306,7 +2313,7 @@ function Board() {
         base = layoutSlices(setSliceWidth(ns, slice.id, spot.sliceWidth), ns);
       }
     } else {
-      pos = { x: Math.max(slice.position.x + SLICE_PADDING, x), y: lane.position.y + 40 };
+      pos = { x: Math.max(slice.position.x + padOf(kind), x), y: lane.position.y + 40 };
     }
     const only = new Set([id]);
     const next = centerStickies(

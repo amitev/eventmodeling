@@ -125,7 +125,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 ### Scenarios elements
 
 - **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It is blue-bordered and shows a "SCENARIOS" caption with an eye icon, a numbered list of two sample items ("Adding a table", "table name is unique", the second shown in red), and a footer with **+ Add** and **+ Storyline** buttons and an item count. It is a static mock: the items are fixed, the buttons and icons do nothing, and nothing but its type and position is saved.
-- **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected to anything (R4.7). The slice must be at least 360px wide to hold it (R5.16); when it is added, the slice widens as needed (R5a.10).
+- **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected to anything (R4.7). The slice must be at least 320px wide to hold it, as its margin to the slice borders is 20px instead of 40px (R5.16); when it is added, the slice widens as needed (R5a.10).
 
 ## 4. Connections
 
@@ -175,17 +175,17 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.13** An element sits entirely inside exactly one slice of its Chapter: never across two, never outside every slice. The slice is part of the element's data: the export lists the element under it (R6.4); nothing is guessed from coordinates. Being fully inside, it is also the slice containing the element's centre.
 - **R5.14** Where an element ends up when added, dropped or dragged is decided by the Cell (lane and slice) under its **centre** on release:
-  - **Over a Cell of the same Chapter:** it moves into that Cell: to its slice, and to its lane, centred in it (R3.6a). Horizontally it stays fully inside the slice, at least 40px from the borders (the slice grows if needed, R5.17).
+  - **Over a Cell of the same Chapter:** it moves into that Cell: to its slice, and to its lane, centred in it (R3.6a). Horizontally it stays fully inside the slice, at least 40px from the borders (20px for Scenarios) (the slice grows if needed, R5.17).
   - **Over a Cell of another Chapter:** R1a.5.
   - **Over no Cell** (outside every Chapter, over a label zone, above the slices, beyond the last slice, below the last lane): it returns to its position at drag start, in its own slice and lane.
 
   So an element is never left outside a slice.
 - **R5.15** Elements move with their slice: when a slice is resized, following slices shift with their elements, keeping each element's position relative to its slice. Elements of the resized slice stay put.
-- **R5.16** A slice cannot be narrower than its elements plus a 40px margin to the slice borders on the left and right.
+- **R5.16** A slice cannot be narrower than its elements plus a 40px margin to the slice borders on the left and right (20px for a Scenarios element, R3.12).
 - **R5.17** An element wider than its slice is moved inside, and the slice grows to fit it plus the 40px margin if needed.
 - **R5.18** Deleting a slice always deletes its elements and their connections, and closes the gap. If it holds elements, the user confirms first.
 - **R5.19** A Chapter always has at least one slice, as elements only exist in slices. Its last slice cannot be deleted: its header has no **×** button. Other selected items are deleted as usual.
-- **R5.20** **Compact.** The **↔** button in the Chapter handle compacts its slices and makes it active (R1a.4). A slice with elements gets the width from the left edge of its left-most element to the right edge of its right-most, plus the 40px margin (R5.16) on both sides, rounded up to the 20px grid, minimum 120px. If no Cell of the slice holds more than one element, each element is first centred horizontally in the slice, and the width is that of the widest element plus the margins. Otherwise the elements keep their relative positions and lanes and move together so the group is centred horizontally. Either way left and right padding are at least 40px. A slice without elements gets 220px. Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes. One undo step (R8.1).
+- **R5.20** **Compact.** The **↔** button in the Chapter handle compacts its slices and makes it active (R1a.4). A slice with elements gets the width from the left edge of its left-most element to the right edge of its right-most, plus the 40px margin (R5.16) on both sides, rounded up to the 20px grid, minimum 120px. If no Cell of the slice holds more than one element, each element is first centred horizontally in the slice, and the width is that of the widest element plus the margins. Otherwise the elements keep their relative positions and lanes and move together so the group is centred horizontally. Either way left and right padding are at least 40px (20px next to a Scenarios element). A slice without elements gets 220px. Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes. One undo step (R8.1).
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
@@ -266,7 +266,7 @@ The export file is the single, complete description of a board, written and read
   - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry.
   - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
-  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus the element width (160px, 280px for Scenarios) plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
+  - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios). Every element fits its slice with the 40px margins (20px for Scenarios): `x` plus the element width (160px, 280px for Scenarios) plus the margin is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
