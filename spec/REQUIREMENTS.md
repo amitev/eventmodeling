@@ -116,12 +116,12 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.1** Each slice has an id (R1.14), a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4).
-- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4). The button neither starts a Chapter drag nor triggers renaming.
+- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The Chapter becomes active (R1a.4). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
 - **R5.3** Double-clicking a slice header renames it. The name can never be empty: an empty rename is ignored (previous kept), as for lanes (R2.4a).
-- **R5.4** A slice is selected by pressing or clicking its header, and shown outlined, in every header state: at the start of a Chapter drag (R1.10) and while being renamed (R5.3). Only one slice is selected at a time; selecting one deselects another. A selected slice is deleted with Backspace or Delete (R5.11, R5.18, R5.19).
+- **R5.4** A slice itself cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, also not on its buttons or while renaming) selects the **top Cell** of that slice (R5a.5). A slice is deleted with the **×** button in its header (R5.11, R5.18, R5.19); Backspace and Delete never delete a slice.
 - **R5.5** A slice's height always covers all lanes, also after lanes are added or removed.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
-- **R5.7** Slices form one contiguous run, laid out automatically: the first starts right after the label zone (R2.4), each next one where the previous ends. No gaps, no overlaps. A slice has only a dashed right border, which separates it from the next slice; it has no left, top or bottom border. A selected slice is outlined all round below its header (R5.4). Neither the border nor the outline covers the header.
+- **R5.7** Slices form one contiguous run, laid out automatically: the first starts right after the label zone (R2.4), each next one where the previous ends. No gaps, no overlaps. A slice has only a dashed right border, which separates it from the next slice; it has no left, top or bottom border. The border does not cover the header.
 - **R5.8** Slice order is fixed: slices cannot be dragged within the Chapter and have no left resize handle. Dragging a header moves the Chapter (R1.10). New slices are added at the end with **+ Slice** or after a given slice with its **+** button (R5.2a).
 - **R5.9** A slice is resized by dragging its right edge, minimum 120px. There are no resize buttons.
 - **R5.10** Resizing moves all following slices along; preceding ones do not move.
@@ -141,7 +141,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.16** A slice cannot be narrower than its elements plus a 40px margin to the slice borders on the left and right.
 - **R5.17** An element wider than its slice (e.g. a Screen widened by a mockup) is moved inside, and the slice grows to fit it plus the 40px margin if needed.
 - **R5.18** Deleting a slice always deletes its elements and their connections, and closes the gap. If it holds elements, the user confirms first.
-- **R5.19** A Chapter always has at least one slice, as elements only exist in slices. Its last slice cannot be deleted: Backspace and Delete do nothing to it. Other selected items are deleted as usual.
+- **R5.19** A Chapter always has at least one slice, as elements only exist in slices. Its last slice cannot be deleted: its header has no **×** button. Other selected items are deleted as usual.
 - **R5.20** **Compact.** The **↔** button in the Chapter handle compacts its slices and makes it active (R1a.4). A slice with elements gets the width from the left edge of its left-most element to the right edge of its right-most, plus the 40px margin (R5.16) on both sides, rounded up to the 20px grid, minimum 120px. If no Cell of the slice holds more than one element, each element is first centred horizontally in the slice, and the width is that of the widest element plus the margins. Otherwise the elements keep their relative positions and lanes and move together so the group is centred horizontally. Either way left and right padding are at least 40px. A slice without elements gets 220px. Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes. One undo step (R8.1).
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice and only grows right), not the one holding its centre: a Screen widened by a mockup has its centre outside its slice until the slice grows, and would otherwise be handed to the next slice.
@@ -153,7 +153,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.3** A Cell has no colour of its own; it shows its lane's colour (R2.6).
 - **R5a.4** A Cell holds any number of elements, freely positioned: an element sits in the Cell of its lane and slice (R5.13), can be dragged freely, ends up in the Cell it is released over (R5.14), and is vertically centred in the lane (R3.6a).
 - **R5a.5** Clicking a Cell selects it: a thin (2px), slightly transparent blue border around the whole Cell, above its elements, visible but not intrusive. One Cell is selected at a time; clicking another moves the selection. Its Chapter becomes active (R1a.4).
-- **R5a.6** Clicking an element, slice header, lane header, Chapter handle or connection selects that item and clears any Cell selection, as do starting to drag an element and undo or redo.
+- **R5a.6** Clicking an element, lane header, Chapter handle or connection selects that item and clears any Cell selection, as do starting to drag an element and undo or redo. A click on a slice header selects the slice's top Cell instead (R5.4).
 - **R5a.7** A click outside every Cell (empty canvas, label zone, area above the slices) clears the Cell selection.
 - **R5a.8** The selection border follows the Cell: through panning, zooming, moving the Chapter, and slice resizing or shifting. If the Cell's lane or slice is removed, the selection disappears.
 - **R5a.9** Selecting a Cell is not an operation: not recorded for undo (R8.6), and Backspace and Delete do nothing to it.

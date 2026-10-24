@@ -374,6 +374,8 @@ const BoardActions = createContext({
   activate: () => {},
   clearCell: () => {},
   addSliceAfter: () => {},
+  removeSlice: () => {},
+  selectCell: () => {},
   removeLane: () => {},
   addLaneAfter: () => {},
   removeChapter: () => {},
@@ -606,12 +608,23 @@ function StickyNode({ id, data, selected }) {
   );
 }
 
-// A slice is a vertical band across all lanes: one end-to-end piece of behavior.
-function SliceNode({ id, data, selected }) {
+// A slice is a vertical band across all lanes: one end-to-end piece of behavior. It is not
+// selectable; clicking its header selects the top Cell of the slice.
+function SliceNode({ id, data }) {
   const { setNodes, getNodes } = useReactFlow();
   const startDrag = useHorizontalDrag();
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
+  const press = useRef(null);
+  // The last slice of a Chapter cannot be deleted.
+  const canRemove = useStore((s) => {
+    const parent = s.nodeInternals.get(id)?.parentNode;
+    let count = 0;
+    s.nodeInternals.forEach((n) => {
+      if (n.type === 'slice' && n.parentNode === parent) count++;
+    });
+    return count > 1;
+  });
   const lanesHeight = useStore((s) => {
     const parent = s.nodeInternals.get(id)?.parentNode;
     let sum = 0;
@@ -632,8 +645,19 @@ function SliceNode({ id, data, selected }) {
 
   // Dragging a slice header moves the whole Chapter (slices themselves never move on
   // their own: their order and position come from the layout).
-  const startChapterDrag = useChapterDrag(id, () => editing, true);
-  const { addSliceAfter } = useContext(BoardActions);
+  const startChapterDrag = useChapterDrag(id, () => editing);
+  const { addSliceAfter, removeSlice, selectCell } = useContext(BoardActions);
+
+  // A plain click (no drag) on the header selects the top Cell of this slice.
+  const selectTopCell = (e) => {
+    if (e.target.closest('button, input')) return;
+    const p = press.current;
+    if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) >= 4) return;
+    const ns = getNodes();
+    const chapterId = ns.find((n) => n.id === id)?.parentNode;
+    const top = lanesOf(ns, chapterId)[0];
+    if (top) selectCell({ chapterId, laneId: top.id, sliceId: id });
+  };
 
   // Each drag is computed from a snapshot taken at pointer-down, so the following
   // slices, their elements and a grown Chapter follow the edge both ways.
@@ -658,13 +682,17 @@ function SliceNode({ id, data, selected }) {
 
   return (
     <div
-      className={`slice ${selected ? 'selected' : ''}`}
+      className="slice"
       style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
     >
       <div
         className="slice-header nodrag nopan"
-        title="Drag to move the Chapter, double-click to rename"
-        onPointerDown={startChapterDrag}
+        title="Click to select its top Cell, drag to move the Chapter, double-click to rename"
+        onPointerDown={(e) => {
+          press.current = { x: e.clientX, y: e.clientY };
+          startChapterDrag(e);
+        }}
+        onClick={selectTopCell}
         onDoubleClick={() => setEditing(true)}
       >
         {editing ? (
@@ -684,14 +712,26 @@ function SliceNode({ id, data, selected }) {
         ) : (
           <span className="slice-name">{data.name}</span>
         )}
-        <button
-          className="slice-add nodrag"
-          title="Add a slice right after this one"
-          onDoubleClick={(e) => e.stopPropagation()}
-          onClick={() => addSliceAfter(id)}
-        >
-          +
-        </button>
+        <div className="slice-actions">
+          <button
+            className="slice-add nodrag"
+            title="Add a slice right after this one"
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={() => addSliceAfter(id)}
+          >
+            +
+          </button>
+          {canRemove && (
+            <button
+              className="slice-add slice-remove nodrag"
+              title="Delete this slice"
+              onDoubleClick={(e) => e.stopPropagation()}
+              onClick={() => removeSlice(id)}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
       <div
         className="resize-handle slice-handle right nodrag nopan"
@@ -810,6 +850,7 @@ const makeSlice = (id, x, width, name, chapterId) => ({
   data: { name, width },
   parentNode: chapterId,
   draggable: false,
+  selectable: false,
   zIndex: -1,
   // Only the header takes pointer events, so notes under the band stay usable.
   style: { pointerEvents: 'none' },
@@ -1317,53 +1358,13 @@ function Board() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  // Slices are laid out automatically, so they cannot be dragged. Deleting a slice also
-  // deletes its elements (after confirmation) and closes the gap it leaves. The last slice of
-  // a Chapter cannot be deleted. Only one slice is selected at a time.
+  // Slices are laid out automatically, so they cannot be dragged.
   const handleNodesChange = useCallback(
     (changes) => {
       const current = getNodes();
       const isSliceId = (id) => current.find((n) => n.id === id)?.type === 'slice';
-      const isSliceRemoval = (c) => c.type === 'remove' && isSliceId(c.id);
-      let kept = changes.filter((c) => !(c.type === 'position' && isSliceId(c.id)));
-      let sliceRemoved = false;
-      const isSliceSelect = (c) => c.type === 'select' && c.selected && isSliceId(c.id);
-      const picked = kept.filter(isSliceSelect).at(-1)?.id;
-      if (picked) {
-        kept = kept.filter((c) => !isSliceSelect(c) || c.id === picked);
-        const others = current.filter((n) => n.type === 'slice' && n.selected && n.id !== picked);
-        kept = [...kept, ...others.map((n) => ({ type: 'select', id: n.id, selected: false }))];
-      }
-      const refused = new Set();
-      for (const ch of chaptersOf(current)) {
-        const all = slices(current, ch.id);
-        if (all.length === 1) refused.add(all[0].id);
-      }
-      kept = kept.filter((c) => !(isSliceRemoval(c) && refused.has(c.id)));
-      const removed = kept.filter(isSliceRemoval);
-      if (removed.length) {
-        const members = membersOf(current);
-        const doomed = removed.flatMap((c) => members.get(c.id) ?? []);
-        if (
-          doomed.length &&
-          !window.confirm(`Delete the slice and its ${doomed.length} element(s)?`)
-        ) {
-          kept = kept.filter((c) => !isSliceRemoval(c));
-        } else {
-          sliceRemoved = true;
-          const already = new Set(kept.filter((c) => c.type === 'remove').map((c) => c.id));
-          kept = [
-            ...kept,
-            ...doomed.filter((n) => !already.has(n.id)).map((n) => ({ type: 'remove', id: n.id })),
-          ];
-          if (doomed.length) {
-            const gone = new Set(doomed.map((n) => n.id));
-            setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
-          }
-        }
-      }
+      const kept = changes.filter((c) => !(c.type === 'position' && isSliceId(c.id)));
       onNodesChange(kept);
-      if (sliceRemoved) setNodes((ns) => layoutSlices(ns));
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
       const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
       if (kept.some((c) => c.type === 'dimensions' && stickyIds.has(c.id))) {
@@ -1371,8 +1372,24 @@ function Board() {
         setNodes((ns) => centerStickies(settleStickies(ns)));
       }
     },
-    [onNodesChange, getNodes, setNodes, setEdges]
+    [onNodesChange, getNodes, setNodes]
   );
+
+  // Deleting a slice also deletes its elements (after confirmation) and closes the gap. The
+  // last slice of a Chapter cannot be deleted.
+  const removeSlice = (sliceId) => {
+    const slice = nodes.find((n) => n.id === sliceId);
+    if (!slice || slices(nodes, slice.parentNode).length <= 1) return;
+    const doomed = membersOf(nodes).get(sliceId) ?? [];
+    if (doomed.length && !window.confirm(`Delete the slice and its ${doomed.length} element(s)?`)) {
+      return;
+    }
+    const gone = new Set([sliceId, ...doomed.map((n) => n.id)]);
+    setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
+    setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+    setSelectedCell((c) => (c?.sliceId === sliceId ? null : c));
+    setActiveId(slice.parentNode);
+  };
 
   const addSlice = () => {
     if (!activeChapterId) return;
@@ -1574,6 +1591,11 @@ function Board() {
       activate: setActiveId,
       clearCell: () => setSelectedCell(null),
       addSliceAfter,
+      removeSlice,
+      selectCell: (cell) => {
+        setSelectedCell(cell);
+        setActiveId(cell.chapterId);
+      },
       addLaneAfter,
       removeLane,
       removeChapter,
@@ -1581,7 +1603,7 @@ function Board() {
       activeId: activeChapterId,
       chapterCount: chapters.length,
     }),
-    [removeLane, removeChapter, compactChapter, addSliceAfter, addLaneAfter, activeChapterId, chapters.length]
+    [removeLane, removeChapter, compactChapter, addSliceAfter, removeSlice, addLaneAfter, activeChapterId, chapters.length]
   );
 
   const exportJson = () => {
@@ -1799,6 +1821,7 @@ function Board() {
             // Lanes cover the whole Cell area, so a click on the empty part of a Cell is
             // delivered to a lane node, not to the canvas: treat it as a click on the canvas.
             if (node.type === 'lane') selectCellAt(e);
+            else if (node.type === 'slice') focusChapter(node); // its header selects a Cell itself
             else {
               setSelectedCell(null);
               focusChapter(node);

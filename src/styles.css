@@ -83,13 +83,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   position: relative; box-sizing: border-box; pointer-events: none;
   background: rgba(138, 127, 201, 0.07);
 }
-/* Border and selection outline cover the area below the 40px header only. */
+/* Border covers the area below the 40px header only. */
 .slice::after {
   content: ''; position: absolute; top: 40px; right: 0; bottom: 0; left: 0; pointer-events: none;
   box-sizing: border-box; border-right: 2px dashed #8a7fc9;
 }
-.slice.selected { background: rgba(26, 115, 232, 0.08); }
-.slice.selected::after { outline: 2px solid #1a73e8; outline-offset: -2px; }
+.slice-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .slice-header {
   pointer-events: auto; height: 40px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
