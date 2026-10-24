@@ -1477,6 +1477,12 @@ function spotInCell(nodes, lane, slice) {
     const mid = n.position.y + stickyH(n) / 2;
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
+  if (!inCell.length) {
+    // Empty Cell: centred in the slice, which grows first if it is too narrow.
+    const width = Math.max(slice.data.width, snapUp(STICKY_W + 2 * SLICE_PADDING));
+    const x = slice.position.x + Math.floor((width - STICKY_W) / 2);
+    return { x, y: lane.position.y + 40, sliceWidth: width, empty: true };
+  }
   const left = slice.position.x + SLICE_PADDING;
   const lastFit = slice.position.x + slice.data.width - SLICE_PADDING - STICKY_W;
   const free = (x) =>
@@ -1491,7 +1497,7 @@ function spotInCell(nodes, lane, slice) {
     x = Math.max(left, snapUp(after + GRID));
   }
   const need = snapUp(x + STICKY_W + SLICE_PADDING - slice.position.x);
-  return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need) };
+  return { x, y: lane.position.y + 40, sliceWidth: Math.max(slice.data.width, need), empty: false };
 }
 
 // The arrows a new element gets by the flow rules (R4.8), as [source id, target id] pairs.
@@ -2099,8 +2105,8 @@ function Board() {
 
     let base = ns;
     let pos;
-    if (x === undefined) {
-      const spot = spotInCell(ns, lane, slice);
+    const spot = spotInCell(ns, lane, slice);
+    if (x === undefined || spot.empty) {
       pos = { x: spot.x, y: spot.y };
       if (spot.sliceWidth > slice.data.width) {
         // Make room: widen the slice; the slices after it (and their elements) move right.
