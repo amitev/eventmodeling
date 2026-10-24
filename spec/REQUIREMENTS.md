@@ -30,7 +30,7 @@ This document records the business requirements agreed so far. It describes beha
 
 ### Identifiers
 
-- **R1.14** Every Context, Chapter, lane, slice and element has an **id**: 8 random characters from `a-z0-9`, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
+- **R1.14** Every Context, Chapter, lane, slice and element has an **id** matching `^[A-Za-z0-9]{6}$`, random, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
 - **R1.15** Everything that creates items uses such ids: the sample board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by name and title. Items refer to each other by id, never by name, so renaming cannot break a reference (lanes: R2.9).
@@ -221,7 +221,7 @@ The export file is the single, complete description of a board, written and read
 - **R7.3** Export then import reproduces the same board exactly, and exporting again gives an identical file (R6.9).
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19). `contexts` is not empty (R1b.3).
-  - **Ids.** Every id is a text of at least 8 letters, digits, `-` or `_`. Ids are unique across the whole file, whatever the item kind (R1.14).
+  - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`.
   - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the five element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40. Every element fits its slice with the 40px margins: `x` plus displayed width plus 40 is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.

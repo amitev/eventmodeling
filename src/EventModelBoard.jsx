@@ -51,15 +51,15 @@ const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple',
 
 const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
-const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const ID_LENGTH = 8;
+const ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const ID_LENGTH = 6;
 
-// 8 characters of a-z0-9 from the secure random source (R1.14).
+// 6 characters of a-zA-Z0-9 from the secure random source (R1.14).
 function randomId() {
   let id = '';
   while (id.length < ID_LENGTH) {
     for (const b of crypto.getRandomValues(new Uint8Array(ID_LENGTH))) {
-      if (b < 252 && id.length < ID_LENGTH) id += ID_CHARS[b % 36]; // 252 = 7 * 36: no modulo bias
+      if (b < 248 && id.length < ID_LENGTH) id += ID_CHARS[b % 62]; // 248 = 4 * 62: no modulo bias
     }
   }
   return id;
@@ -1087,7 +1087,7 @@ function serialize(nodes, edges, contexts) {
 const boardText = (nodes, edges, contexts) =>
   JSON.stringify(serialize(nodes, edges, contexts), null, 2);
 
-const ID_PATTERN = /^[A-Za-z0-9_-]{8,}$/;
+const ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const stickyWidth = (kind, html) => (kind === 'screen' && html ? STICKY_WIDE_W : STICKY_W);
@@ -1139,7 +1139,7 @@ function parseBoard(text) {
   const kindOf = new Map(); // id -> context | chapter | lane | slice | element
   const claim = (id, kind, path) => {
     if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
-      fail(path, 'must be a text of at least 8 letters, digits, "-" or "_"');
+      fail(path, 'must be a text of at least 6 letters, digits, "-" or "_"');
     }
     if (kindOf.has(id)) fail(path, `duplicate id "${id}"`);
     kindOf.set(id, kind);
