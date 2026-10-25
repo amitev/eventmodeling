@@ -62,7 +62,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2); font-size: 13px;
 }
 .sticky.selected { outline: 2px solid #1a73e8; }
-.sticky.copy { border-style: dashed; }
+.sticky.copy { border-style: dashed; opacity: 0.4; }
 .sticky-header .copy-mark { flex: none; margin-right: 4px; opacity: 0.6; }
 .sticky.screen { --kind-color: var(--screen); }
 .sticky.command { --kind-color: var(--command); }
