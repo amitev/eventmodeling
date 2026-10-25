@@ -72,6 +72,7 @@ This document records the business requirements agreed so far. It describes beha
 
 - **R1d.1** The board header has a button with the keyboard emoji (⌨️), at the right end. It opens a modal popup listing the available hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Selected Scenarios element (R3.14), Editing a name or title, Scenario editor (R3.15), and Info panel. The popup closes with its **Close** button, Esc or a click outside it. It must list every hotkey of the app, so it is updated whenever one is added or changed.
 - **R1d.2** Every control that has a hotkey names it in its tooltip, in brackets after the description, e.g. "Undo (Ctrl+Z)", "Add a scenario (A)". The label stays unchanged, except where the hotkey is part of its design (the chips of the scenario popup, R3.15). A new hotkey is not done until its control's tooltip names it.
+- **R1d.3** Tooltips never explain mouse gestures: none says "double-click to ..." or "drag to ..." (or a click, drag and drop hint), now or in future. The tooltip of an element is its **full title** (none when it has no title), so a title cut off by an ellipsis can be read; the tooltip of a slice header is the slice name, and of a scenario item its title (R3.14).
 
 ## 2. Lanes
 

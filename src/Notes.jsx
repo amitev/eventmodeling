@@ -8,7 +8,6 @@ export function NotesCard({ id, data, selected, onEdit, onRead }) {
   return (
     <div
       className={`sticky notes ${selected ? 'selected' : ''}`}
-      title="Double-click or Enter to edit the notes"
       onDoubleClick={() => onEdit(id)}
     >
       <div className="notes-head">

@@ -412,7 +412,7 @@ function LaneNode({ id, data }) {
         <span
           ref={ref}
           className={`lane-label${editing ? ' editing' : ''}`}
-          title={editing ? undefined : `${data.label === LANE_TYPES[data.type].label ? '' : `${data.label}, `}${LANE_TYPES[data.type].label} lane (double-click to rename, drag to move the Chapter)`}
+          title={editing ? undefined : `${data.label === LANE_TYPES[data.type].label ? '' : `${data.label}, `}${LANE_TYPES[data.type].label} lane`}
           contentEditable={editing ? 'plaintext-only' : undefined}
           suppressContentEditableWarning
           spellCheck={false}
@@ -495,7 +495,7 @@ function StickyNode({ id, data, selected }) {
       <Handle id="top-out" type="source" position={Position.Top} />
       <div
         className="sticky-header"
-        title="Double-click to edit the title"
+        title={data.title || undefined}
         onDoubleClick={() => setEditingTitle(true)}
       >
         {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
@@ -637,7 +637,7 @@ function SliceNode({ id, data }) {
     >
       <div
         className="slice-header nodrag nopan"
-        title="Click to select its top Cell, drag to move the Chapter, double-click to rename"
+        title={data.name}
         onPointerDown={(e) => {
           press.current = { x: e.clientX, y: e.clientY };
           startChapterDrag(e);
@@ -694,7 +694,7 @@ function SliceNode({ id, data }) {
       </div>
       <div
         className="resize-handle slice-handle right nodrag nopan"
-        title="Drag to resize (Shift+← / Shift+→ with a Cell of this slice selected)"
+        title="Resize (Shift+← / Shift+→ with a Cell of this slice selected)"
         onPointerDown={resizeRight}
       />
     </div>
@@ -757,14 +757,13 @@ function ChapterNode({ id, data }) {
             }}
           />
         ) : (
-          <span className="nodrag" title="Double-click to rename" onDoubleClick={() => setEditing(true)}>
+          <span className="nodrag" onDoubleClick={() => setEditing(true)}>
             {data.name}
           </span>
         )}
       </div>
       <div
         className={`chapter-handle nopan ${activeId === id ? 'active' : ''}`}
-        title="Drag to move the Chapter"
       >
         <span>⠿</span>
         <InfoButton id={id} info={data.info} />
@@ -1815,7 +1814,7 @@ function Board() {
             draggable
             onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
             onClick={() => addSticky(kind)}
-            title={`Select a Cell and click to add (${hotkeyOf(kind)}), or drag onto a Cell. Only ${acceptingLanes(kind)} lanes take it.`}
+            title={`Add to the selected Cell (${hotkeyOf(kind)}). Only ${acceptingLanes(kind)} lanes take it.`}
           >
             + {k.icon && `${k.icon} `}{k.label}
           </button>
