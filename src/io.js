@@ -136,7 +136,6 @@ export function serialize(nodes, edges, contexts) {
 export const boardText = (nodes, edges, contexts) =>
   JSON.stringify(serialize(nodes, edges, contexts));
 
-export const ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
 export const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -186,9 +185,7 @@ export function parseBoard(text) {
 
   const kindOf = new Map(); // id -> context | chapter | lane | slice | element
   const claim = (id, kind, path) => {
-    if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
-      fail(path, 'must be a text of at least 6 letters, digits, "-" or "_"');
-    }
+    if (typeof id !== 'string' || !id) fail(path, 'must be a non-empty text');
     if (kindOf.has(id)) fail(path, `duplicate id "${id}"`);
     kindOf.set(id, kind);
   };
