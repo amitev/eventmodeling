@@ -63,7 +63,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .sticky.selected { outline: 2px solid #1a73e8; }
 .sticky.copy { border-style: dashed; opacity: 0.4; }
-.sticky-header .copy-mark { flex: none; margin-right: 4px; opacity: 0.6; }
+.sticky-header .copy-mark {
+  display: flex; flex: none; align-items: center; justify-content: center;
+  width: 12px; height: 16px; margin: 0 4px 0 0; padding: 0;
+  border: 0; background: none; color: inherit; opacity: 0.6; cursor: pointer;
+}
+.sticky-header .copy-mark:disabled { cursor: default; }
 .sticky.screen { --kind-color: var(--screen); }
 .sticky.command { --kind-color: var(--command); }
 .sticky.query { --kind-color: var(--query); }

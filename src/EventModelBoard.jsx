@@ -474,7 +474,7 @@ function LaneNode({ id, data }) {
 }
 
 function StickyNode({ id, data, selected }) {
-  const { setNodes } = useReactFlow();
+  const { setNodes, setCenter, getNode } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
   const titleRef = useRef(null);
 
@@ -495,6 +495,15 @@ function StickyNode({ id, data, selected }) {
   const isCopy = !!data.copyOf;
   const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
   const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf } : data;
+  const goToOriginal = () => {
+    if (!original) return;
+    const parent = original.parentId ? getNode(original.parentId) : null;
+    setCenter(
+      (parent?.position.x ?? 0) + original.position.x + stickyW(original) / 2,
+      (parent?.position.y ?? 0) + original.position.y + stickyH(original) / 2,
+      { duration: 400 }
+    );
+  };
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -555,10 +564,21 @@ function StickyNode({ id, data, selected }) {
       >
         {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
         {isCopy && (
-          <svg className="copy-mark" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-label="Linked copy">
-            <title>Linked copy</title>
-            <path d="M6 8L8 6M5.6 5.2L4.4 6.4A2.2 2.2 0 0 0 7.6 9.6L8.4 8.8M8.4 8.8L9.6 7.6A2.2 2.2 0 0 0 6.4 4.4L5.6 5.2" />
-          </svg>
+          <button
+            type="button"
+            className="copy-mark nodrag nopan"
+            title="Go to original element"
+            aria-label="Go to original element"
+            disabled={!original}
+            onClick={(e) => {
+              e.stopPropagation();
+              goToOriginal();
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <path d="M6 8L8 6M5.6 5.2L4.4 6.4A2.2 2.2 0 0 0 7.6 9.6L8.4 8.8M8.4 8.8L9.6 7.6A2.2 2.2 0 0 0 6.4 4.4L5.6 5.2" />
+            </svg>
+          </button>
         )}
         {editingTitle && !isCopy ? (
           <input
