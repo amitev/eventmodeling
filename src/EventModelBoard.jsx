@@ -76,6 +76,7 @@ const HOTKEYS = [
     keys: [
       ['← ↑ → ↓', 'Select the neighbouring Cell'],
       ['Shift+← / Shift+→', 'Make the slice narrower / wider'],
+      ['Ctrl+← / Ctrl+→', 'Move the slice left / right'],
       ['Shift+C', 'Compact the slice'],
       ['Shift+I', 'Open the slice info'],
       ['S', 'Add a Screen in the Cell'],
@@ -1560,6 +1561,25 @@ function Board() {
     setNodes(centerStickies(settleStickies(layoutSlices(setSliceWidth(base, sliceId, width), base))));
   };
 
+  // Moves a slice one place left (-1) or right (1), with its elements, by swapping it with its
+  // neighbour (one undo step).
+  const moveSlice = (sliceId, dir) => {
+    const base = getNodes();
+    const slice = base.find((n) => n.id === sliceId);
+    if (!slice) return;
+    const ss = slices(base, slice.parentId);
+    const other = ss[ss.findIndex((s) => s.id === sliceId) + dir];
+    if (!other) return;
+    // The layout orders slices by position: put this one just inside the neighbour's far edge.
+    const x = dir > 0 ? other.position.x + other.data.width - 1 : other.position.x - 1;
+    setNodes(
+      layoutSlices(
+        base.map((n) => (n.id === sliceId ? { ...n, position: { ...n.position, x } } : n)),
+        base
+      )
+    );
+  };
+
   cellKeys.current = (e) => {
     if (infoId || helpOpen || scenarioEdit) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
@@ -1572,7 +1592,10 @@ function Board() {
       e.key === 'Backspace' ||
       e.key.toLowerCase() === 'i' ||
       e.key.toLowerCase() === 'c';
-    if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift)) return;
+    // Ctrl+←/→ moves the slice.
+    const moveKey =
+      e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+    if (!moveKey && (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift))) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.key.toLowerCase() === 'a') {
@@ -1602,6 +1625,10 @@ function Board() {
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step) {
       e.preventDefault();
+      if (moveKey) {
+        moveSlice(selectedCell.sliceId, step[1]);
+        return;
+      }
       if (e.shiftKey) {
         resizeSlice(selectedCell.sliceId, step[1] * GRID);
         return;
