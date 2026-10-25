@@ -222,9 +222,10 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **+** adds a slice right after the Cell's slice, as the slice's **+** button does (R5.2a).
   - **Enter** edits the title of the left-most element in the Cell (R3.4a), if there is one.
   - **Delete** or **Backspace** deletes the Cell's elements with their arrows, after confirmation; one undo step (R8.1). In an empty Cell it asks to delete the Cell's slice instead (R5.4); the last slice of a Chapter cannot be deleted.
-  - **Esc** clears the Cell selection.
+  - **Esc** clears the Cell selection and any element selected with it (R5a.12).
 
   The keys are ignored while typing in a text field, while the info panel, the hotkey help or the scenario popup is open, and with Ctrl, Cmd or Alt held, or Shift held (except for **+**). Moving the selection and clearing it are not recorded for undo (R5a.9).
+- **R5a.12** **Cell and element selection.** Selecting a Cell (by click, arrow keys, a slice header click, or creating a slice) also selects its element when it holds exactly one; with none or several, no element is selected. Any other selected element is deselected. An element added in the selected Cell (R5a.10, R5a.11) is selected, whatever else the Cell holds; one added in another Cell by dragging is not. An element selected this way can be used like any selected element (e.g. **A** for a Scenarios element, R3.14), but while a Cell is selected Backspace and Delete follow R5a.11 (with confirmation), not R3.5. Clicking an element selects only it and clears the Cell selection (R5a.6).
 
 **Learning (implementation).** Lane nodes cover the Chapter's whole Cell area. If they take the mouse they sit above the arrows and block selecting them, so lanes ignore the mouse; a click on an empty part of a Cell then reaches the canvas, which finds the Cell from the click position (R5a.5, R5a.7).
 

@@ -865,6 +865,22 @@ function autoConnections(nodes, node) {
 
 // Draws the border of the selected Cell above everything else. It is positioned from the
 // canvas transform, so it follows panning, zooming and moving the Chapter.
+// The elements whose centre is in the Cell.
+const cellElements = (nodes, cell) => {
+  const lane = nodes.find((n) => n.id === cell.laneId);
+  if (!lane) return [];
+  return (membersOf(nodes).get(cell.sliceId) ?? []).filter((n) => {
+    const mid = n.position.y + stickyH(n) / 2;
+    return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+  });
+};
+
+// Only the node `id` is selected (none for null). Returns the same array when nothing changes.
+const selectOnly = (nodes, id) => {
+  if (nodes.every((n) => !!n.selected === (n.id === id))) return nodes;
+  return nodes.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id }));
+};
+
 function CellHighlight({ cell }) {
   const box = useStore((s) => {
     if (!cell) return null;
@@ -955,6 +971,18 @@ function Board() {
   };
   const focusChapter = (node) =>
     setActiveId(node.type === 'chapter' ? node.id : node.parentId ?? null);
+
+  // Selects a Cell and, when it holds exactly one element, that element too (R5a.12). The
+  // element is selected after the event: the canvas clears the selection when a click on it ends.
+  const chooseCell = (cell) => {
+    setSelectedCell(cell);
+    setTimeout(() => {
+      setNodes((ns) => {
+        const inCell = cellElements(ns, cell);
+        return selectOnly(ns, inCell.length === 1 ? inCell[0].id : null);
+      });
+    }, 0);
+  };
 
   useEffect(() => {
     try {
@@ -1048,7 +1076,7 @@ function Board() {
   // Selects the top Cell of a slice that was just created.
   const selectTopCellOf = (chapterId, sliceId) => {
     const top = lanesOf(getNodes(), chapterId)[0];
-    if (top) setSelectedCell({ chapterId, laneId: top.id, sliceId });
+    if (top) chooseCell({ chapterId, laneId: top.id, sliceId });
   };
 
   const addSlice = () => {
@@ -1306,7 +1334,7 @@ function Board() {
       addSliceAfter,
       removeSlice,
       selectCell: (cell) => {
-        setSelectedCell(cell);
+        chooseCell(cell);
         setActiveId(cell.chapterId);
       },
       addLaneAfter,
@@ -1473,7 +1501,9 @@ function Board() {
       ),
       only
     );
-    setNodes(next);
+    const inSelectedCell =
+      selectedCell && selectedCell.laneId === lane.id && selectedCell.sliceId === slice.id;
+    setNodes(inSelectedCell ? selectOnly(next, id) : next);
     const have = new Set(getEdges().map((e) => `${e.source}>${e.target}`));
     const added = autoConnections(next, next.find((n) => n.id === id))
       .filter(([s, t]) => !have.has(`${s}>${t}`))
@@ -1530,7 +1560,7 @@ function Board() {
       const row = lanes.findIndex((l) => l.id === selectedCell.laneId) + step[0];
       const col = cols.findIndex((s) => s.id === selectedCell.sliceId) + step[1];
       if (lanes[row] && cols[col]) {
-        setSelectedCell({ ...selectedCell, laneId: lanes[row].id, sliceId: cols[col].id });
+        chooseCell({ ...selectedCell, laneId: lanes[row].id, sliceId: cols[col].id });
       }
       return;
     }
@@ -1556,6 +1586,7 @@ function Board() {
       removeCellElements(selectedCell);
     } else if (e.key === 'Escape') {
       setSelectedCell(null);
+      setNodes((ns) => selectOnly(ns, null));
     }
   };
 
@@ -1580,8 +1611,12 @@ function Board() {
   // Selects the Cell under the click, or clears the selection when it is outside every Cell.
   const selectCellAt = (e) => {
     const cell = cellAt(getNodes(), screenToFlowPosition({ x: e.clientX, y: e.clientY }));
-    setSelectedCell(cell);
-    if (cell) setActiveId(cell.chapterId);
+    if (cell) {
+      chooseCell(cell);
+      setActiveId(cell.chapterId);
+    } else {
+      setSelectedCell(null);
+    }
   };
 
   // Where the dragged elements were when the drag began, so a drop over no Cell can undo the move.
@@ -1704,7 +1739,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || selectedCell ? null : ['Backspace', 'Delete']}
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />
