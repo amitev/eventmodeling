@@ -147,6 +147,11 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
 }
 .lane-add { color: #2e7d32; }
+/* The lane type, centred at the top of the lane's first Cell. */
+.lane-type {
+  position: absolute; top: 6px; text-align: center; pointer-events: none; user-select: none;
+  font: 700 11px system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #8a8aa0;
+}
 /* The letter button adds a lane of the next type. */
 .lane-letter {
   flex: none; width: 18px; height: 18px; padding: 0; cursor: pointer;

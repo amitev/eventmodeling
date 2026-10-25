@@ -299,6 +299,15 @@ function LaneNode({ id, data }) {
     });
     return !REQUIRED_LANE_TYPES.includes(data.type) || count > 1;
   });
+  // Width of the Chapter's first slice, which the lane type is centred in.
+  const firstSliceWidth = useStore((s) => {
+    const parent = s.nodeLookup.get(id)?.parentId;
+    let first;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'slice' && n.parentId === parent && (!first || n.position.x < first.position.x)) first = n;
+    });
+    return first?.data.width ?? 0;
+  });
   // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
   const edges = useStore((s) => {
     const me = s.nodeLookup.get(id);
@@ -359,6 +368,9 @@ function LaneNode({ id, data }) {
       className={`lane color-${data.color}${edges}`}
       style={{ width: data.width ?? LANE_WIDTH, height: data.height }}
     >
+      <div className="lane-type" style={{ left: LABEL_ZONE, width: firstSliceWidth }}>
+        {LANE_TYPES[data.type].label}
+      </div>
       <div
         className="lane-header nodrag nopan"
         style={{ width: LABEL_ZONE }}

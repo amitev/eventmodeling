@@ -99,7 +99,7 @@ This document records the business requirements agreed so far. It describes beha
   | Integration | N | Event, Query (external integrations) |
   | Spec | S | Scenarios |
 
-  Several lanes of one type are allowed. Each lane offers the letter button of the next type in the list (an Actor lane offers I, an Interaction lane E, an Event lane N and S, since Integration is optional, an Integration lane S); a Spec lane has none. A Chapter always has at least one Actor, one Interaction and one Event lane (R2.5, R7.4); its starting lanes are Actor, Interaction and Event (R1a.2); a Spec lane is added with the **S** button of an Event or Integration lane.
+  Several lanes of one type are allowed. The type is shown as a small faint uppercase text in the upper part of the lane's first Cell (the one in the first slice), centred horizontally; elements are drawn above it. Each lane offers the letter button of the next type in the list (an Actor lane offers I, an Interaction lane E, an Event lane N and S, since Integration is optional, an Integration lane S); a Spec lane has none. A Chapter always has at least one Actor, one Interaction and one Event lane (R2.5, R7.4); its starting lanes are Actor, Interaction and Event (R1a.2); a Spec lane is added with the **S** button of an Event or Integration lane.
 
 **Learning (implementation).** Lanes and slices are translucent and overlap. A lane added later was drawn above the slices and looked lighter than the older lanes, until a reload reordered the items. Items are drawn in list order (a child's z-index cannot go below its parent's), so lanes are always kept before slices and elements in the list.
 
