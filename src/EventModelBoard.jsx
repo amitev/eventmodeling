@@ -58,8 +58,12 @@ import { InfoDialog } from './InfoDialog.jsx';
 import { HistoryContext, useHistory } from './history.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
-const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'readmodel', e: 'event', p: 'processor', x: 'scenarios' };
-const hotkeyOf = (kind) => Object.keys(CELL_ADD_KEYS).find((k) => CELL_ADD_KEYS[k] === kind).toUpperCase();
+const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', x: 'scenarios' };
+const hotkeyOf = (kind) =>
+  Object.keys(CELL_ADD_KEYS)
+    .filter((k) => CELL_ADD_KEYS[k] === kind)
+    .map((k) => k.toUpperCase())
+    .join(' / ');
 
 // The hotkey help, grouped by context (R1d.1).
 const HOTKEYS = [
@@ -81,7 +85,7 @@ const HOTKEYS = [
       ['Shift+I', 'Open the slice info'],
       ['S', 'Add a Screen in the Cell'],
       ['C', 'Add a Command in the Cell'],
-      ['R', 'Add a Read Model in the Cell'],
+      ['R / Q', 'Add a Query in the Cell'],
       ['E', 'Add an Event in the Cell'],
       ['P', 'Add a Processor in the Cell'],
       ['X', 'Add a Scenarios element in the Cell'],
@@ -843,10 +847,10 @@ function autoConnections(nodes, node) {
     if (command) pairs.push([command.id, node.id]);
   }
   if (kind === 'screen') {
-    const readModel = below('readmodel');
-    if (readModel) pairs.push([readModel.id, node.id]);
+    const query = below('query');
+    if (query) pairs.push([query.id, node.id]);
   }
-  if (kind === 'readmodel') {
+  if (kind === 'query') {
     const screen = above('screen');
     if (screen) pairs.push([node.id, screen.id]);
     const chapterSlices = slices(nodes, node.parentId);

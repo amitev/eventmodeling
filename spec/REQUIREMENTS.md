@@ -75,7 +75,7 @@ This document records the business requirements agreed so far. It describes beha
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
-- **R2.2** The default lanes are: **UI / Actors**, **Commands / Read Models** and **Events**.
+- **R2.2** The default lanes are: **UI / Actors**, **Commands / Queries** and **Events**.
 - **R2.3** **+ Lane** appends a lane named "New Lane" at the bottom of the active Chapter (R1a.4), with the current Chapter width.
 - **R2.3a** Every lane has a **+** button at the bottom of its label zone. It adds a lane named "New Lane", colour `none`, right below that lane; lanes below it, with their elements, move down. The Chapter becomes active (R1a.4).
 - **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name, the **×** button (at the top) and the colour button (R2.6) under it, and the **+** button (R2.3a) at the bottom. The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
@@ -102,7 +102,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   | ------ | -------- |
   | Screen | light grey |
   | Command | blue |
-  | Read Model | green |
+  | Query | green |
   | Event | orange |
   | Processor | lavender, shown with a ⚙️ gear emoji |
   | Scenarios | blue, a card instead of a sticky (R3.11) |
@@ -154,17 +154,17 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   - Screen → Command
   - Processor → Command
   - Command → Event
-  - Event → Read Model
-  - Read Model → Screen
-  - Read Model → Processor
+  - Event → Query
+  - Query → Screen
+  - Query → Processor
 
   If the user drags between two elements of such a pair the wrong way (e.g. from a Command to a Screen), the connection is created in the right direction (Screen → Command). Any other pair, including two elements of the same type, is refused. A Scenarios element (R3.11) is in no pair: it cannot be connected. These rules apply to new connections only; existing ones, imported or saved, are not checked, except that import refuses an arrow to or from a Scenarios element (R7).
 - **R4.8** **Automatic arrows.** When an element is added (R3.3), it gets these arrows (R4.7) at once, within the same slice. "Above" and "under" mean another lane; the nearest such element is used. A pair already connected is not connected again. Moving an element creates no arrows.
   - A Command under a Screen: Screen → Command.
   - An Event under a Command: Command → Event.
-  - A Screen above a Read Model: Read Model → Screen.
-  - A Read Model under a Screen: Read Model → Screen.
-  - A Read Model when the slice just before its own has an Event: Event → Read Model. With several Events, the right-most one is used (the nearest by height on a tie).
+  - A Screen above a Query: Query → Screen.
+  - A Query under a Screen: Query → Screen.
+  - A Query when the slice just before its own has an Event: Event → Query. With several Events, the right-most one is used (the nearest by height on a tie).
 
   Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1).
 
@@ -222,7 +222,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Ctrl+←** / **Ctrl+→** move the Cell's slice one place left or right, swapping it with its neighbour; its elements move with it (R5.8). At the first or last place nothing happens; one undo step per press.
   - **Shift+C** compacts the Cell's slice (R5.20).
   - **Shift+I** opens the info of the Cell's slice (R1c.3).
-  - **S, C, R, E, P, X** add a Screen, Command, Read Model, Event, Processor or Scenarios element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
+  - **S, C, R or Q, E, P, X** add a Screen, Command, Query, Event, Processor or Scenarios element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
   - **+** adds a slice right after the Cell's slice, as the slice's **+** button does (R5.2a).
   - **Enter** edits the title of the left-most element in the Cell (R3.4a), if there is one.
   - **Delete** or **Backspace** deletes the selected elements with their arrows (R3.5), without confirmation. With no element selected and elements in the Cell, it deletes the Cell's elements with their arrows, after confirmation; one undo step (R8.1). In an empty Cell it does nothing. **Shift+Delete** or **Shift+Backspace** deletes the Cell's **slice** with its elements and arrows, after confirmation, whatever is selected (R5.18); the last slice of a Chapter cannot be deleted. One press does one thing, and a held key does not repeat.
@@ -255,7 +255,7 @@ The export file is the single, complete description of a board, written and read
 - **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `info`, `width`, `elements`. `elements` lists the elements in that slice. An element is listed under exactly one slice; there is no other place for elements, so one outside a slice cannot be written (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
   - `id`;
-  - `type`: `screen`, `command`, `readmodel`, `event`, `processor` or `scenarios`;
+  - `type`: `screen`, `command`, `query`, `event`, `processor` or `scenarios`;
   - `lane`: the **id** of the element's lane, which must be a lane of the same Chapter (R2.9). Never the lane's name;
   - `title`: free text, empty (`""`) when not set;
   - `html`: the Screen mockup. Optional: it is written only for a `screen` that has HTML, and left out otherwise;

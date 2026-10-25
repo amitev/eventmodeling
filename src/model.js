@@ -9,7 +9,7 @@ export const LANE_WIDTH = 3200;
 export const LABEL_ZONE = 48; // reserved strip at the left of each lane; slices stay out of it
 export const LANES = [
   { label: 'UI / Actors', y: 0 },
-  { label: 'Commands / Read Models', y: 220 },
+  { label: 'Commands / Queries', y: 220 },
   { label: 'Events', y: 440 },
 ];
 
@@ -26,7 +26,7 @@ export const SLICE_MIN_WIDTH = 120;
 export const KINDS = {
   screen: { label: 'Screen', lane: 0, color: '#e2e2e2' },
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
-  readmodel: { label: 'Read Model', lane: 1, color: '#8fd694' },
+  query: { label: 'Query', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
   // Not part of the flow: it connects to nothing (R4.7).
@@ -43,8 +43,8 @@ export const FLOWS_TO = {
   screen: ['command'],
   processor: ['command'],
   command: ['event'],
-  event: ['readmodel'],
-  readmodel: ['screen', 'processor'],
+  event: ['query'],
+  query: ['screen', 'processor'],
 };
 
 export const snap = (v) => Math.round(v / GRID) * GRID;
