@@ -243,7 +243,7 @@ export function cellIsFull(nodes, lane, slice, ignore) {
   });
 }
 
-// Elements in a Spec lane are left aligned (R3.20)
+// Elements in a Spec lane are left aligned (R3.21)
 export const leftAligned = (lane) => lane?.data.type === 'spec';
 
 // An element never straddles a slice boundary: it is moved fully inside its slice (keeping
@@ -262,7 +262,7 @@ export function settleStickies(nodes, only) {
     const pad = padOf(n.data.kind);
     const room = Math.max(best.data.width, snapUp(w + 2 * pad));
     if (room > best.data.width) widen.set(best.id, Math.max(widen.get(best.id) ?? 0, room));
-    // Elements of a Spec lane are left aligned (R3.20); the others stay where they are, inside the slice.
+    // Elements of a Spec lane are left aligned (R3.21); the others stay where they are, inside the slice.
     const lane = lanesOf(nodes, n.parentId).find((l) => {
       const mid = n.position.y + stickyH(n) / 2;
       return mid >= l.position.y && mid < l.position.y + l.data.height;
