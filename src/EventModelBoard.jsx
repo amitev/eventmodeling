@@ -875,6 +875,17 @@ const cellElements = (nodes, cell) => {
   });
 };
 
+// The Cell an element sits in (null for anything that is not an element).
+const cellOfElement = (nodes, n) => {
+  if (n.type !== 'sticky') return null;
+  const slice = sliceOf(slices(nodes), n);
+  const mid = n.position.y + stickyH(n) / 2;
+  const lane = lanesOf(nodes, n.parentId).find(
+    (l) => mid >= l.position.y && mid < l.position.y + l.data.height
+  );
+  return slice && lane ? { chapterId: n.parentId, laneId: lane.id, sliceId: slice.id } : null;
+};
+
 // Only the node `id` is selected (none for null). Returns the same array when nothing changes.
 const selectOnly = (nodes, id) => {
   if (nodes.every((n) => !!n.selected === (n.id === id))) return nodes;
@@ -971,6 +982,13 @@ function Board() {
   };
   const focusChapter = (node) =>
     setActiveId(node.type === 'chapter' ? node.id : node.parentId ?? null);
+
+  // Selects the Cell of an element, leaving the selected elements as they are (R5a.12).
+  const selectCellOf = (id) => {
+    const ns = getNodes();
+    const n = ns.find((m) => m.id === id);
+    setSelectedCell((n && cellOfElement(ns, n)) ?? null);
+  };
 
   // Selects a Cell and, when it holds exactly one element, that element too (R5a.12). The
   // element is selected after the event: the canvas clears the selection when a click on it ends.
@@ -1582,6 +1600,7 @@ function Board() {
         setTitleEditId(first.id);
       }
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (getNodes().some((n) => n.selected)) return; // the canvas deletes the selected elements
       e.preventDefault();
       removeCellElements(selectedCell);
     } else if (e.key === 'Escape') {
@@ -1705,7 +1724,8 @@ function Board() {
             if (node.type === 'lane') selectCellAt(e);
             else if (node.type === 'slice') focusChapter(node); // its header selects a Cell itself
             else {
-              setSelectedCell(null);
+              if (node.type === 'sticky') selectCellOf(node.id);
+              else setSelectedCell(null);
               focusChapter(node);
             }
           }}
@@ -1725,9 +1745,11 @@ function Board() {
             dropDragged(dragged);
             historyApi.end();
           }}
-          onNodeDragStop={(_, __, dragged) => {
+          onNodeDragStop={(_, node, dragged) => {
             dropDragged(dragged);
             historyApi.end();
+            // After the drop has settled, the element's new Cell is selected.
+            setTimeout(() => selectCellOf(node.id), 0);
           }}
           onEdgesChange={onEdgesChange}
           isValidConnection={isValidConnection}
@@ -1739,7 +1761,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit ? null : ['Backspace', 'Delete']}
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />
