@@ -5,6 +5,7 @@
   --event: #ffb366;
   --processor: #d9c2f0;
   --scenarios: #2f6fdb;
+  --notes: #f5d76e;
   --chapter-border: #5b5b6b;
 }
 html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
@@ -183,6 +184,32 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 
 .chip.processor { background: var(--processor) !important; }
 .sticky.processor { --kind-color: var(--processor); }
+
+/* Notes: a fixed 280x200 card showing rendered Markdown; vertical scrolling only. */
+.chip.notes { background: var(--notes) !important; }
+.sticky.notes {
+  width: 280px; height: 200px; min-height: 0; padding: 3px 10px 6px; gap: 4px; overflow: hidden;
+  background: #fff; border-radius: 4px; /* border and shadow come from .sticky */
+}
+.notes-head {
+  display: flex; align-items: center; gap: 6px;
+  color: #667; line-height: 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.notes-eye { display: grid; place-items: center; padding: 0; border: 0; background: none; color: #667; cursor: pointer; }
+.notes-eye:hover { color: #1a73e8; }
+.notes-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; font-size: 12px; line-height: 1.45; }
+.notes-body.notes-empty { color: #99a; font-style: italic; }
+.notes-body h1, .notes-body h2, .notes-body h3 { margin: 0.6em 0 0.3em; font-size: 1.15em; }
+.notes-body > :first-child { margin-top: 0; }
+.notes-body p, .notes-body ul, .notes-body ol, .notes-body pre, .notes-body blockquote { margin: 0 0 0.6em; }
+.notes-body ul, .notes-body ol { padding-left: 1.4em; }
+.notes-body code { background: rgba(0, 0, 0, 0.07); padding: 0 3px; border-radius: 3px; }
+.notes-body pre { background: rgba(0, 0, 0, 0.07); padding: 6px 8px; border-radius: 4px; overflow-x: auto; }
+.notes-body pre code { background: none; padding: 0; }
+.notes-body blockquote { margin-left: 0; padding-left: 10px; border-left: 3px solid #ccc; color: #555; }
+.notes-body table { border-collapse: collapse; }
+.notes-body th, .notes-body td { border: 1px solid #ccc; padding: 2px 6px; }
+.notes-body img { max-width: 100%; }
 
 /* Scenarios: a fixed 280x200 card, not a sticky; it has no header bar or handles. */
 .chip.scenarios { background: var(--scenarios) !important; color: #fff; }
@@ -365,7 +392,15 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   display: flex; flex-direction: column; width: min(1100px, 90vw); height: min(700px, 80vh);
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
 }
-.info-title { padding: 10px 14px; font-weight: 700; border-bottom: 1px solid #ddd; }
+.info-title {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; font-weight: 700; border-bottom: 1px solid #ddd;
+}
+.info-title .info-mode {
+  display: grid; place-items: center; width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 1px solid #aab; border-radius: 4px; background: #fff; color: #556;
+}
+.info-panes.reading { grid-template-columns: 1fr; }
 .info-panes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 .info-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid #ddd; }
 .info-toolbar {

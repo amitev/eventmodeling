@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
+import { useBackdropClose } from './popup.js';
 
 const Icon = ({ children }) => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -228,6 +229,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const [focusError, setFocusError] = useState(false);
   const errorInput = useRef(null);
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
+  const backdrop = useBackdropClose(onClose);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const entries = [...draft.given, ...(draft.when ? [draft.when] : []), ...draft.then];
   const current = entries.find((e) => e.key === selected);
@@ -412,7 +414,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   };
 
   return createPortal(
-    <div className="info-backdrop">
+    <div className="info-backdrop" {...backdrop}>
       <div className="scenario-dialog" role="dialog" aria-modal="true" aria-label="Scenario">
         <button className="scenario-close" title="Close without saving (Esc)" aria-label="Close" onClick={onClose}>
           ×

@@ -98,6 +98,7 @@ export function serialize(nodes, edges, contexts) {
                 lane: lane.id,
                 title: n.data.title ?? '',
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
+                ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
@@ -179,7 +180,7 @@ export function parseBoard(text) {
     kindOf.set(id, kind);
   };
   const links = []; // connectsTo lists to check once every id is known
-  const unconnectable = new Set(); // ids of Scenarios elements
+  const unconnectable = new Set(); // ids of Scenarios and Notes elements
   const elements = new Map(); // element id -> { chapter, type }
   const references = []; // scenario entries' element ids, checked once every element is known
   const exampleList = (v, path) => {
@@ -299,7 +300,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          ['html']
+          ['html', 'markdown']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -318,6 +319,11 @@ export function parseBoard(text) {
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
           if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
         }
+        if (hasKey(el, 'markdown')) {
+          string(el.markdown, at(ep, 'markdown'));
+          if (el.markdown === '') fail(at(ep, 'markdown'), 'must be left out when empty');
+          if (el.type !== 'notes') fail(at(ep, 'markdown'), 'only a notes element can have markdown');
+        }
         number(el.x, at(ep, 'x'));
         const pad = padOf(el.type);
         if (el.x < pad) fail(at(ep, 'x'), `must be at least ${pad}`);
@@ -329,7 +335,7 @@ export function parseBoard(text) {
           );
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
-        if (isScenarios) unconnectable.add(el.id);
+        if (isScenarios || el.type === 'notes') unconnectable.add(el.id);
         elements.set(el.id, { chapter: c.id, type: el.type });
         const scenarios = isScenarios ? scenarioList(el.scenarios, at(ep, 'scenarios'), c.id) : null;
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
@@ -342,6 +348,7 @@ export function parseBoard(text) {
             kind: el.type,
             title: el.title,
             ...(el.html ? { html: el.html } : {}),
+            ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(scenarios ? { scenarios } : {}),
           },
         });
@@ -368,7 +375,7 @@ export function parseBoard(text) {
       if (kindOf.get(t) !== kind) {
         fail(p, `"${t}" must be the id of ${kind === 'chapter' ? 'a chapter' : 'an element'}`);
       }
-      if (unconnectable.has(owner) || unconnectable.has(t)) fail(p, 'a scenarios element cannot be connected');
+      if (unconnectable.has(owner) || unconnectable.has(t)) fail(p, 'a scenarios or notes element cannot be connected');
       if (seen.has(t)) fail(p, `id "${t}" is listed twice`);
       seen.add(t);
       edges.push(makeEdge(owner, t, kind === 'chapter'));

@@ -14,8 +14,8 @@ export const LANE_TYPES = {
   actor: { label: 'Actor', letter: 'A', kinds: ['screen', 'processor'] },
   interaction: { label: 'Interaction', letter: 'I', kinds: ['command', 'query'] },
   event: { label: 'Event', letter: 'E', kinds: ['event'] },
-  integration: { label: 'Integration', letter: 'N', kinds: ['event', 'query'] }, // external integrations
-  spec: { label: 'Spec', letter: 'S', kinds: ['scenarios'] },
+  integration: { label: 'Integration', letter: '🔗', kinds: ['event', 'query'] }, // external integrations
+  spec: { label: 'Spec', letter: 'S', kinds: ['scenarios', 'notes'] },
 };
 export const LANE_TYPE_ORDER = Object.keys(LANE_TYPES);
 // Every Chapter keeps at least one lane of each of these.
@@ -50,6 +50,8 @@ export const KINDS = {
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
   // Not part of the flow: it connects to nothing (R4.7).
   scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200, pad: SLICE_PADDING / 2 },
+  // Free Markdown text shown in the element; same size as Scenarios. Connects to nothing.
+  notes: { label: 'Notes', color: '#f5d76e', w: 280, h: 200, pad: SLICE_PADDING / 2 },
 };
 
 // Size of an element before it is measured, and its minimum gap to the slice borders.

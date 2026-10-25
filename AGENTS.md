@@ -27,6 +27,7 @@ All in `src/`:
 - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
 - `history.js`: undo/redo (`useHistory`) and the gesture context.
 - `InfoDialog.jsx`: the Markdown info editor.
+- `popup.js`: `useBackdropClose`, which every popup must use so a click outside closes it (R1.17).
 - `Scenarios.jsx`: the Scenarios card, its popup, the example data editor and scenario pruning.
 
 ## Testing

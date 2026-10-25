@@ -14,6 +14,7 @@ import {
   useStore,
 } from '@xyflow/react';
 import { pruneScenarios, ScenarioDialog, ScenariosCard } from './Scenarios.jsx';
+import { NotesCard } from './Notes.jsx';
 import {
   LANE_WIDTH,
   LABEL_ZONE,
@@ -60,9 +61,10 @@ import {
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { HistoryContext, useHistory } from './history.js';
+import { useBackdropClose } from './popup.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
-const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', x: 'scenarios' };
+const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', x: 'scenarios', n: 'notes' };
 const hotkeyOf = (kind) =>
   Object.keys(CELL_ADD_KEYS)
     .filter((k) => CELL_ADD_KEYS[k] === kind)
@@ -99,8 +101,9 @@ const HOTKEYS = [
       ['E', 'Add an Event in the Cell'],
       ['P', 'Add a Processor in the Cell'],
       ['X', 'Add a Scenarios element in the Cell'],
+      ['N', 'Add a Notes element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],
-      ['Enter', 'Edit the title of the first element in the Cell'],
+      ['Enter', 'Edit the title of the first element in the Cell, or open the editor of a selected Notes element'],
       ['Delete / Backspace', 'Delete the selected elements, or the elements in the Cell (asks first)'],
       ['Shift+Delete / Shift+Backspace', 'Delete the slice (asks first)'],
       ['Esc', 'Clear the Cell selection'],
@@ -134,6 +137,7 @@ const HOTKEYS = [
 ];
 
 function HotkeysDialog({ onClose }) {
+  const backdrop = useBackdropClose(onClose);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -141,13 +145,12 @@ function HotkeysDialog({ onClose }) {
   }, [onClose]);
 
   return createPortal(
-    <div className="info-backdrop" onClick={onClose}>
+    <div className="info-backdrop" {...backdrop}>
       <div
         className="hotkeys-dialog"
         role="dialog"
         aria-modal="true"
         aria-label="Hotkeys"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="info-title">Hotkeys</div>
         <div className="hotkeys-body">
@@ -268,6 +271,7 @@ const BoardActions = createContext({
   editScenario: () => {},
   newScenarioId: () => '',
   openInfo: () => {},
+  readInfo: () => {},
   titleEditId: null,
   clearTitleEdit: () => {},
   contexts: [],
@@ -408,7 +412,7 @@ function LaneNode({ id, data }) {
         <span
           ref={ref}
           className={`lane-label${editing ? ' editing' : ''}`}
-          title={editing ? undefined : `${data.label}, ${LANE_TYPES[data.type].label} lane (double-click to rename, drag to move the Chapter)`}
+          title={editing ? undefined : `${data.label === LANE_TYPES[data.type].label ? '' : `${data.label}, `}${LANE_TYPES[data.type].label} lane (double-click to rename, drag to move the Chapter)`}
           contentEditable={editing ? 'plaintext-only' : undefined}
           suppressContentEditableWarning
           spellCheck={false}
@@ -460,7 +464,7 @@ function StickyNode({ id, data, selected }) {
 
   const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
-  const { titleEditId, clearTitleEdit, editScenario, newScenarioId } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -481,6 +485,7 @@ function StickyNode({ id, data, selected }) {
   if (data.kind === 'scenarios') {
     return <ScenariosCard id={id} data={data} selected={selected} onEdit={editScenario} newId={newScenarioId} />;
   }
+  if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} onEdit={openInfo} onRead={readInfo} />;
 
   return (
     <div
@@ -996,6 +1001,7 @@ function Board() {
   const [selectedCell, setSelectedCell] = useState(null);
   // The Chapter, lane or slice whose info is being edited.
   const [infoId, setInfoId] = useState(null);
+  const [infoReading, setInfoReading] = useState(false); // the info panel opens in read mode
   const [helpOpen, setHelpOpen] = useState(false);
   // The element whose title is to be edited (asked for by the Enter hotkey).
   const [titleEditId, setTitleEditId] = useState(null);
@@ -1005,13 +1011,15 @@ function Board() {
   scenarioOpen.current = !!scenarioEdit;
   const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
+  // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
+  const infoField = infoNode?.data.kind === 'notes' ? 'markdown' : 'info';
   const saveInfo = (text) => {
-    const info = text.trim() ? text : '';
+    const value = text.trim() ? text : '';
     setNodes((ns) =>
       ns.map((n) => {
         if (n.id !== infoId) return n;
-        const { info: _old, ...rest } = n.data;
-        return { ...n, data: info ? { ...rest, info } : rest };
+        const { [infoField]: _old, ...rest } = n.data;
+        return { ...n, data: value ? { ...rest, [infoField]: value } : rest };
       })
     );
     setInfoId(null);
@@ -1380,7 +1388,14 @@ function Board() {
       renameContext,
       removeContext,
       activate: setActiveId,
-      openInfo: setInfoId,
+      openInfo: (id) => {
+        setInfoReading(false);
+        setInfoId(id);
+      },
+      readInfo: (id) => {
+        setInfoReading(true);
+        setInfoId(id);
+      },
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
@@ -1649,6 +1664,7 @@ function Board() {
     }
     if (e.shiftKey && e.key.toLowerCase() === 'i') {
       e.preventDefault();
+      setInfoReading(false);
       setInfoId(selectedCell.sliceId);
       return;
     }
@@ -1679,11 +1695,18 @@ function Board() {
       addSticky(kind);
     } else if (e.key === 'Enter' && t.tagName !== 'BUTTON') {
       const ns = getNodes();
+      const selectedNodes = ns.filter((n) => n.selected);
+      if (selectedNodes.length === 1 && selectedNodes[0].data.kind === 'notes') {
+        e.preventDefault();
+        setInfoReading(false);
+        setInfoId(selectedNodes[0].id);
+        return;
+      }
       const lane = ns.find((n) => n.id === selectedCell.laneId);
       const first = (membersOf(ns).get(selectedCell.sliceId) ?? [])
         .filter((n) => {
           const mid = n.position.y + stickyH(n) / 2;
-          return n.data.kind !== 'scenarios' && lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+          return !['scenarios', 'notes'].includes(n.data.kind) && lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
         })
         .sort((a, b) => a.position.x - b.position.x)[0];
       if (first) {
@@ -1881,8 +1904,9 @@ function Board() {
       {infoNode && (
         <InfoDialog
           key={infoNode.id}
-          title={`${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`}
-          initial={infoNode.data.info ?? ''}
+          initialReading={infoReading}
+          title={infoNode.data.kind === 'notes' ? 'Notes' : `${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`}
+          initial={infoNode.data[infoField] ?? ''}
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
         />

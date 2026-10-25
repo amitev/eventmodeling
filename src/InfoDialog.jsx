@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { useBackdropClose } from './popup.js';
 
 // Links in the info preview open in a new tab, without access to the board.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
@@ -10,6 +11,9 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     node.setAttribute('rel', 'noopener noreferrer');
   }
 });
+
+// Markdown to safe HTML (marked does not sanitise, so its HTML always goes through DOMPurify).
+export const renderMarkdown = (text) => DOMPurify.sanitize(marked.parse(text, { async: false }));
 
 // Edits behind the helper buttons: ({ value, start, end }) -> the new text and selection.
 const wrapSelection = (before, after, placeholder) => ({ value, start, end }) => {
@@ -104,12 +108,14 @@ const MARKDOWN_TOOLS = [
 
 // Modal to edit the Markdown info of a Chapter, lane or slice: editor on the left, preview on
 // the right. The changes only apply on Save.
-export function InfoDialog({ title, initial, onSave, onCancel }) {
+export function InfoDialog({ title, initial, initialReading = false, onSave, onCancel }) {
   const [text, setText] = useState(initial);
+  const [reading, setReading] = useState(initialReading); // read mode: only the preview is shown
+  const backdrop = useBackdropClose(onCancel);
   const area = useRef(null);
   const pending = useRef(null); // selection to restore after a helper button changed the text
   // marked does not sanitise, so its HTML always goes through DOMPurify.
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(text, { async: false })), [text]);
+  const html = useMemo(() => renderMarkdown(text), [text]);
 
   const apply = (edit) => {
     const el = area.current;
@@ -133,10 +139,30 @@ export function InfoDialog({ title, initial, onSave, onCancel }) {
   }, [onCancel]);
 
   return createPortal(
-    <div className="info-backdrop">
+    <div className="info-backdrop" {...backdrop}>
       <div className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="info-title">{title}</div>
-        <div className="info-panes">
+        <div className="info-title">
+          <span>{title}</span>
+          <button
+            className="info-mode"
+            title={reading ? 'Write mode: show the editor' : 'Read mode: show only the preview'}
+            aria-label={reading ? 'Write mode' : 'Read mode'}
+            onClick={() => setReading((v) => !v)}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {reading ? (
+                <path d="M2 14l.8-3.2L11 2.6l2.4 2.4-8.2 8.2L2 14zM9.6 4l2.4 2.4" />
+              ) : (
+                <>
+                  <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+                  <circle cx="8" cy="8" r="2" fill="currentColor" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
+        <div className={`info-panes${reading ? ' reading' : ''}`}>
+          {!reading && (
           <div className="info-left">
             <div className="info-toolbar">
               {MARKDOWN_TOOLS.map((tool, i) =>
@@ -165,6 +191,7 @@ export function InfoDialog({ title, initial, onSave, onCancel }) {
               onChange={(e) => setText(e.target.value)}
             />
           </div>
+          )}
           <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
         <div className="info-actions">
