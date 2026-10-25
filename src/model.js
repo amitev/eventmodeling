@@ -341,11 +341,11 @@ export const makeChapter = (id, x, y, name, context, info) => ({
   ...chapterDefaults,
 });
 
-export const makeSlice = (id, x, width, name, chapterId, info) => ({
+export const makeSlice = (id, x, width, name, chapterId, info, flowEnd) => ({
   id,
   type: 'slice',
   position: { x, y: SLICE_Y },
-  data: { name, width, ...(info ? { info } : {}) },
+  data: { name, width, ...(info ? { info } : {}), ...(flowEnd ? { flowEnd: true } : {}) },
   parentId: chapterId,
   draggable: false,
   selectable: false,

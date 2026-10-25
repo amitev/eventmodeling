@@ -597,6 +597,16 @@ function SliceNode({ id, data }) {
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
     );
 
+  // A Flow end slice carries `flowEnd: true`; the field is removed when the mark is removed.
+  const toggleFlowEnd = () =>
+    setNodes((ns) =>
+      ns.map((n) => {
+        if (n.id !== id) return n;
+        const { flowEnd, ...rest } = n.data;
+        return { ...n, data: flowEnd ? rest : { ...rest, flowEnd: true } };
+      })
+    );
+
   // Dragging a slice header moves the whole Chapter (slices themselves never move on
   // their own: their order and position come from the layout).
   const startChapterDrag = useChapterDrag(id, () => editing);
@@ -632,7 +642,7 @@ function SliceNode({ id, data }) {
 
   return (
     <div
-      className={`slice${isLast ? ' last' : ''}`}
+      className={`slice${isLast ? ' last' : ''}${data.flowEnd ? ' flow-end' : ''}`}
       style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
     >
       <div
@@ -666,6 +676,18 @@ function SliceNode({ id, data }) {
           )}
         </div>
         <div className="slice-actions">
+          <button
+            className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}
+            title={data.flowEnd ? 'Flow end: remove the mark' : 'Flow end: mark this slice as the end of a flow'}
+            aria-label="Flow end"
+            aria-pressed={!!data.flowEnd}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={() => toggleFlowEnd()}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="2.4">
+              <path d="M5 1.2V8.8" />
+            </svg>
+          </button>
           <button
             className="slice-add nodrag"
             title="Add a slice right after this one (+)"

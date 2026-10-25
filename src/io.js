@@ -79,6 +79,7 @@ export function serialize(nodes, edges, contexts) {
           id: sl.id,
           name: sl.data.name,
           ...(sl.data.info ? { info: sl.data.info } : {}),
+          ...(sl.data.flowEnd ? { flowEnd: true } : {}),
           width: sl.data.width,
           elements: bySlice
             .get(sl.id)
@@ -283,15 +284,18 @@ export function parseBoard(text) {
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
       const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'width', 'elements'], sp, ['info']);
+      object(sl, ['id', 'name', 'width', 'elements'], sp, ['info', 'flowEnd']);
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
       optionalInfo(sl, sp);
+      if (hasKey(sl, 'flowEnd') && sl.flowEnd !== true) {
+        fail(at(sp, 'flowEnd'), 'must be true, or left out when the slice is not a flow end');
+      }
       number(sl.width, at(sp, 'width'));
       if (sl.width < SLICE_MIN_WIDTH) fail(at(sp, 'width'), `must be at least ${SLICE_MIN_WIDTH}`);
       list(sl.elements, at(sp, 'elements'));
       const width = sl.width;
-      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info));
+      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info, sl.flowEnd));
 
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
