@@ -70,6 +70,14 @@ export const FLOWS_TO = {
 
 export const snap = (v) => Math.round(v / GRID) * GRID;
 
+// Linked copies (`data.copyOf` = id of the original) whose original is gone are removed with
+// it (R3.22). Null when there is none; else the remaining nodes and the removed ids.
+export function pruneCopies(nodes) {
+  const ids = new Set(nodes.map((n) => n.id));
+  const gone = new Set(nodes.filter((n) => n.data?.copyOf && !ids.has(n.data.copyOf)).map((n) => n.id));
+  return gone.size ? { nodes: nodes.filter((n) => !gone.has(n.id)), gone } : null;
+}
+
 
 export const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
 

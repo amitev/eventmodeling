@@ -31,6 +31,7 @@ import {
   padOf,
   FLOWS_TO,
   snap,
+  pruneCopies,
   LANE_COLORS,
   LANE_TYPES,
   LANE_TYPE_ORDER,
@@ -106,6 +107,7 @@ const HOTKEYS = [
       ['P', 'Add a Processor in the Cell'],
       ['X', 'Add a Scenarios element in the Cell'],
       ['N', 'Add a Notes element in the Cell'],
+      ['Ctrl+V', 'Paste a linked copy of the remembered element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],
       ['Enter', 'Edit the title of the first element in the Cell, or open the editor of a selected Notes element'],
       ['Delete / Backspace', 'Delete the selected elements, or the elements in the Cell (asks first)'],
@@ -115,7 +117,10 @@ const HOTKEYS = [
   },
   {
     group: 'Selected element',
-    keys: [['I', 'Open the info of the element (not for Notes)']],
+    keys: [
+      ['I', 'Open the info of the element (not for Notes or a linked copy)'],
+      ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
+    ],
   },
   {
     group: 'Selected Scenarios element',
@@ -486,6 +491,11 @@ function StickyNode({ id, data, selected }) {
   });
   const { titleEditId, clearTitleEdit, editScenario, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
 
+  // A linked copy shows its original's content, live, and cannot be edited (R3.22).
+  const isCopy = !!data.copyOf;
+  const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
+  const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf } : data;
+
   useEffect(() => {
     if (titleEditId !== id) return;
     setEditingTitle(true);
@@ -505,7 +515,7 @@ function StickyNode({ id, data, selected }) {
   // The toolbar above a selected element (not Notes): the Info button, and for a Screen the
   // HTML mockup button too.
   const toolbar =
-    data.kind === 'notes' ? null : (
+    data.kind === 'notes' || isCopy ? null : (
       <NodeToolbar position={Position.Top} offset={8} className="element-toolbar nodrag nopan">
         <InfoButton id={id} info={data.info} hotkey="I" />
         {isScreen && (
@@ -533,18 +543,24 @@ function StickyNode({ id, data, selected }) {
 
   return (
     <div
-      className={`sticky ${data.kind} ${selected ? 'selected' : ''}`}
+      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}`}
     >
       {toolbar}
       <Handle id="top-in" type="target" position={Position.Top} />
       <Handle id="top-out" type="source" position={Position.Top} />
       <div
         className="sticky-header"
-        title={data.title || undefined}
-        onDoubleClick={() => setEditingTitle(true)}
+        title={shown.title || undefined}
+        onDoubleClick={isCopy ? undefined : () => setEditingTitle(true)}
       >
         {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
-        {editingTitle ? (
+        {isCopy && (
+          <svg className="copy-mark" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-label="Linked copy">
+            <title>Linked copy</title>
+            <path d="M6 8L8 6M5.6 5.2L4.4 6.4A2.2 2.2 0 0 0 7.6 9.6L8.4 8.8M8.4 8.8L9.6 7.6A2.2 2.2 0 0 0 6.4 4.4L5.6 5.2" />
+          </svg>
+        )}
+        {editingTitle && !isCopy ? (
           <input
             ref={titleRef}
             className="nodrag title-input"
@@ -555,7 +571,7 @@ function StickyNode({ id, data, selected }) {
             }}
           />
         ) : (
-          <span className={`title ${data.title ? '' : 'empty'}`}>{data.title || 'Title'}</span>
+          <span className={`title ${shown.title ? '' : 'empty'}`}>{shown.title || 'Title'}</span>
         )}
       </div>
       <div className="sticky-body">
@@ -573,12 +589,12 @@ function StickyNode({ id, data, selected }) {
           onKeyDown={(e) => e.key === 'Escape' && e.target.blur()}
         />
       )}
-      {isScreen && data.html && !editingHtml && (
+      {isScreen && shown.html && !editingHtml && (
         <iframe
           className="screen-frame"
-          title={data.title || 'Screen mockup'}
+          title={shown.title || 'Screen mockup'}
           sandbox=""
-          srcDoc={data.html}
+          srcDoc={shown.html}
         />
       )}
       </div>
@@ -999,6 +1015,12 @@ const selectOnly = (nodes, id) => {
   return nodes.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id }));
 };
 
+// Asks before deleting elements `gone` whose linked copies elsewhere go with them (R3.22).
+const confirmCopies = (nodes, gone) => {
+  const count = nodes.filter((n) => n.data?.copyOf && !gone.has(n.id) && gone.has(n.data.copyOf)).length;
+  return !count || window.confirm(`Also delete the ${count} linked copy(ies) of the deleted element(s)?`);
+};
+
 function CellHighlight({ cell }) {
   const box = useStore((s) => {
     if (!cell) return null;
@@ -1158,6 +1180,17 @@ function Board() {
     return () => clearTimeout(timer);
   }, [notice]);
 
+  // Linked copies are deleted with their original, in the same undo step (R3.22).
+  useEffect(() => {
+    const pruned = pruneCopies(nodes);
+    if (!pruned) return;
+    markSilent();
+    setNodes(pruned.nodes);
+    setEdges((es) => es.filter((e) => !pruned.gone.has(e.source) && !pruned.gone.has(e.target)));
+  }, [nodes, setNodes, setEdges, markSilent]);
+
+  // The original of the linked copies made with Ctrl+C / Ctrl+V; memory only.
+  const clipboard = useRef(null);
   // Hotkeys of a selected Cell (R5a.11). The handler is assigned further down, where the
   // actions it needs are defined; this listener stays registered.
   const cellKeys = useRef(null);
@@ -1195,6 +1228,7 @@ function Board() {
       if (!window.confirm(text)) return;
     }
     const gone = new Set([sliceId, ...doomed.map((n) => n.id)]);
+    if (!confirmCopies(nodes, gone)) return;
     setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
     setSelectedCell((c) => (c?.sliceId === sliceId ? null : c));
@@ -1294,6 +1328,7 @@ function Board() {
       )
         return;
       const gone = new Set([laneId, ...doomed.map((n) => n.id)]);
+      if (!confirmCopies(nodes, gone)) return;
       setNodes(
         nodes
           .filter((n) => !gone.has(n.id))
@@ -1344,6 +1379,7 @@ function Board() {
       )
         return;
       const gone = new Set([chapterId, ...kids.map((n) => n.id)]);
+      if (!confirmCopies(nodes, gone)) return;
       setNodes(nodes.filter((n) => !gone.has(n.id)));
       setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
     },
@@ -1505,6 +1541,7 @@ function Board() {
         (n) =>
           n.type === 'sticky' &&
           n.parentId === scenarioNode.parentId &&
+          !n.data.copyOf &&
           (n.data.kind === 'event' || n.data.kind === 'command')
       )
       .map((n) => ({
@@ -1596,11 +1633,13 @@ function Board() {
 
   // An element is only created in a Cell. A `drop` ({ cell, x }) puts it in that Cell at
   // x (relative to its Chapter); else the selected Cell is used (see spotInCell); with
-  // neither, nothing is added. The arrows of R4.8 are added in the same step.
-  const addSticky = (kind, drop) => {
+  // neither, nothing is added. The arrows of R4.8 are added in the same step. With `copyOf`
+  // (the id of an original) the element is a linked copy of it (R3.22).
+  const addSticky = (kind, drop, copyOf) => {
     const [id] = newIds();
     const ns = getNodes();
     const find = (i) => ns.find((n) => n.id === i);
+    if (copyOf && !find(copyOf)) return;
     const cellRef = drop?.cell ?? selectedCell;
     const lane = cellRef && find(cellRef.laneId);
     const slice = cellRef && find(cellRef.sliceId);
@@ -1629,7 +1668,7 @@ function Board() {
             type: 'sticky',
             parentId: slice.parentId,
             position: pos,
-            data: { kind, title: '', ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
+            data: { kind, title: '', ...(copyOf ? { copyOf } : {}), ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
           },
         ],
         only
@@ -1659,6 +1698,7 @@ function Board() {
     if (!inCell.length) return;
     if (!window.confirm(`Delete the ${inCell.length} element(s) in this Cell?`)) return;
     const gone = new Set(inCell.map((n) => n.id));
+    if (!confirmCopies(ns, gone)) return;
     setNodes(ns.filter((n) => !gone.has(n.id)));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
   };
@@ -1708,12 +1748,29 @@ function Board() {
     // Ctrl+←/→ moves the slice.
     const moveKey =
       e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+    // Ctrl+C remembers the selected element; Ctrl+V pastes a linked copy of it into the selected Cell.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'v')) {
+      const el = e.target;
+      if (el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.key.toLowerCase() === 'c') {
+        const selected = getNodes().filter((n) => n.selected);
+        const only = selected.length === 1 && selected[0].type === 'sticky' ? selected[0] : null;
+        if (only && !['scenarios', 'notes'].includes(only.data.kind)) clipboard.current = only.data.copyOf ?? only.id;
+      } else {
+        const original = clipboard.current && getNodes().find((n) => n.id === clipboard.current);
+        if (original) {
+          e.preventDefault();
+          addSticky(original.data.kind, undefined, original.id);
+        } else clipboard.current = null;
+      }
+      return;
+    }
     if (!moveKey && (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift))) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.key.toLowerCase() === 'i' && !e.shiftKey) {
       const selected = getNodes().filter((n) => n.selected);
-      if (selected.length === 1 && selected[0].type === 'sticky' && selected[0].data.kind !== 'notes') {
+      if (selected.length === 1 && selected[0].type === 'sticky' && selected[0].data.kind !== 'notes' && !selected[0].data.copyOf) {
         e.preventDefault();
         setInfoReading(false);
         setInfoId(selected[0].id);
@@ -1783,7 +1840,7 @@ function Board() {
       const first = (membersOf(ns).get(selectedCell.sliceId) ?? [])
         .filter((n) => {
           const mid = n.position.y + stickyH(n) / 2;
-          return !['scenarios', 'notes'].includes(n.data.kind) && lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+          return !n.data.copyOf && !['scenarios', 'notes'].includes(n.data.kind) && lane && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
         })
         .sort((a, b) => a.position.x - b.position.x)[0];
       if (first) {
@@ -1800,6 +1857,7 @@ function Board() {
       }
       const gone = new Set(getNodes().filter((n) => n.selected && n.type === 'sticky').map((n) => n.id));
       if (gone.size) {
+        if (!confirmCopies(getNodes(), gone)) return;
         setNodes((ns) => ns.filter((n) => !gone.has(n.id)));
         setEdges((es) => es.filter((x) => !gone.has(x.source) && !gone.has(x.target)));
         return;
@@ -1970,6 +2028,7 @@ function Board() {
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
           deleteKeyCode={scenarioEdit || selectedCell ? null : ['Backspace', 'Delete']}
+          onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />

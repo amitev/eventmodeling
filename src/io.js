@@ -93,6 +93,17 @@ export function serialize(nodes, edges, contexts) {
               order.set(n.id, order.size);
               const links = [];
               items.push([n.id, links]);
+              // A linked copy has no content of its own: it names its original (R3.22).
+              if (n.data.copyOf) {
+                return {
+                  id: n.id,
+                  type: n.data.kind,
+                  lane: lane.id,
+                  copyOf: n.data.copyOf,
+                  x: n.position.x - sl.position.x,
+                  connectsTo: links,
+                };
+              }
               return {
                 id: n.id,
                 type: n.data.kind,
@@ -183,7 +194,8 @@ export function parseBoard(text) {
   };
   const links = []; // connectsTo lists to check once every id is known
   const unconnectable = new Set(); // ids of Scenarios and Notes elements
-  const elements = new Map(); // element id -> { chapter, type }
+  const elements = new Map(); // element id -> { chapter, type, copy }
+  const copies = []; // linked copies' copyOf ids, checked once every element is known
   const references = []; // scenario entries' element ids, checked once every element is known
   const exampleList = (v, path) => {
     list(v, path);
@@ -302,11 +314,12 @@ export function parseBoard(text) {
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
         const isScenarios = isObject(el) && el.type === 'scenarios';
+        const isCopy = isObject(el) && hasKey(el, 'copyOf');
         object(
           el,
-          ['id', 'type', 'lane', 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
+          ['id', 'type', 'lane', isCopy ? 'copyOf' : 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          ['html', 'markdown', 'info']
+          isCopy ? [] : ['html', 'markdown', 'info']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -323,7 +336,13 @@ export function parseBoard(text) {
           if (specCells.has(el.lane)) fail(at(ep, 'lane'), 'a spec lane holds one element per slice');
           specCells.add(el.lane);
         }
-        string(el.title, at(ep, 'title'));
+        if (isCopy) {
+          string(el.copyOf, at(ep, 'copyOf'));
+          if (el.type === 'scenarios' || el.type === 'notes') fail(at(ep, 'copyOf'), `a ${el.type} element cannot be a copy`);
+          copies.push({ path: at(ep, 'copyOf'), id: el.copyOf, type: el.type });
+        } else {
+          string(el.title, at(ep, 'title'));
+        }
         optionalInfo(el, ep);
         if (hasKey(el, 'info') && el.type === 'notes') fail(at(ep, 'info'), 'a notes element has no info');
         if (hasKey(el, 'html')) {
@@ -348,7 +367,7 @@ export function parseBoard(text) {
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
         if (isScenarios || el.type === 'notes') unconnectable.add(el.id);
-        elements.set(el.id, { chapter: c.id, type: el.type });
+        elements.set(el.id, { chapter: c.id, type: el.type, copy: isCopy });
         const scenarios = isScenarios ? scenarioList(el.scenarios, at(ep, 'scenarios'), c.id) : null;
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
         nodes.push({
@@ -358,7 +377,8 @@ export function parseBoard(text) {
           position: { x: cursor + el.x, y: laneY.get(el.lane) + 40 },
           data: {
             kind: el.type,
-            title: el.title,
+            title: isCopy ? '' : el.title,
+            ...(isCopy ? { copyOf: el.copyOf } : {}),
             ...(el.html ? { html: el.html } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(el.info ? { info: el.info } : {}),
@@ -374,7 +394,15 @@ export function parseBoard(text) {
     const target = elements.get(id);
     if (!target) fail(path, `no element with id "${id}"`);
     if (target.chapter !== chapter) fail(path, `"${id}" is not an element of the same chapter`);
+    if (target.copy) fail(path, `"${id}" is a linked copy`);
     if (target.type !== type) fail(path, `"${id}" must be ${type === 'event' ? 'an event' : 'a command'}`);
+  }
+
+  for (const { path, id, type } of copies) {
+    const original = elements.get(id);
+    if (!original) fail(path, `no element with id "${id}"`);
+    if (original.copy) fail(path, `"${id}" is itself a copy`);
+    if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
   }
 
   const edges = [];
