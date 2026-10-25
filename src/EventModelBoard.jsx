@@ -540,10 +540,16 @@ function StickyNode({ id, data, selected }) {
   };
 
   // The toolbar above a selected element (not Notes): the Info button, and for a Screen the
-  // HTML mockup button too.
+  // HTML mockup button too. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a).
+  const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
   const toolbar =
     data.kind === 'notes' || isCopy ? null : (
-      <NodeToolbar position={Position.Top} offset={8} className="element-toolbar nodrag nopan">
+      <NodeToolbar
+        position={Position.Top}
+        offset={8 * toolbarScale}
+        className="element-toolbar nodrag nopan"
+        style={{ '--tb-scale': toolbarScale }}
+      >
         {data.kind !== 'scenarios' && <CopyButton id={id} />}
         <InfoButton id={id} info={data.info} hotkey="I" />
         {isScreen && (

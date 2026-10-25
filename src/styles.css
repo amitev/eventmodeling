@@ -390,12 +390,17 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: rgba(255, 255, 255, 0.9); color: #333;
 }
 .slice-title { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-/* The toolbar above a selected element. */
-.element-toolbar .html-tool { width: auto; min-width: 18px; padding: 0 4px; font: 10px monospace; }
-.element-toolbar .copy-btn { font-size: 13px; line-height: 1; }
+/* The toolbar above a selected element; every size is multiplied by --tb-scale (from zoom, 1 to 28/24). */
 .element-toolbar {
-  display: flex; align-items: center; gap: 4px; padding: 3px; background: #fff;
-  border: 1px solid #c9cfdc; border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  --s: var(--tb-scale, 1);
+  display: flex; align-items: center; gap: calc(4px * var(--s)); padding: calc(3px * var(--s)); background: #fff;
+  border: 1px solid #c9cfdc; border-radius: calc(6px * var(--s)); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.element-toolbar .info-btn { width: calc(24px * var(--s)); height: calc(24px * var(--s)); border-radius: calc(4px * var(--s)); }
+.element-toolbar .info-btn svg { width: calc(13px * var(--s)); height: calc(13px * var(--s)); }
+.element-toolbar .copy-btn { font-size: calc(17px * var(--s)); line-height: 1; }
+.element-toolbar .html-tool {
+  width: auto; min-width: calc(24px * var(--s)); padding: 0 calc(5px * var(--s)); font: calc(13px * var(--s)) monospace;
 }
 
 .info-backdrop {
