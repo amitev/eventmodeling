@@ -31,6 +31,11 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .lane.first { border-top: 2px solid var(--chapter-border); }
 .lane.last { border-bottom: 2px solid var(--chapter-border); }
+/* Rounded outer corners, as on the slice headers (4px); the label column follows the inner radius. */
+.lane.first { border-top-left-radius: 4px; border-top-right-radius: 4px; }
+.lane.last { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.lane.first .lane-header { border-top-left-radius: 2px; }
+.lane.last .lane-header { border-bottom-left-radius: 2px; }
 /* Lane colours: a light, transparent tint over the base; `none` leaves it as is. */
 .lane.color-orange, .swatch.color-orange { --lane-rgb: 255, 159, 64; }
 .lane.color-red, .swatch.color-red { --lane-rgb: 239, 83, 80; }
@@ -142,6 +147,14 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid #aab; border-radius: 3px; background: #fff; color: #a33;
 }
 .lane-add { color: #2e7d32; }
+/* The letter button adds a lane of the next type. */
+.lane-letter {
+  flex: none; width: 18px; height: 18px; padding: 0; cursor: pointer;
+  border: 1px solid #aab; border-radius: 3px; background: #fff; color: #2e7d32;
+  font: 700 10px system-ui, sans-serif;
+}
+/* A toolbar element button whose type the selected Cell's lane does not take. */
+.toolbar .chip[aria-disabled='true'] { opacity: 0.4; }
 /* Icons are drawn (two bars), not text, so they are exactly centred. */
 .lane-remove::before, .lane-remove::after, .lane-add::before, .lane-add::after {
   content: ''; position: absolute; left: 50%; top: 50%; width: 10px; height: 1.6px;

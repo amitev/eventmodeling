@@ -1,4 +1,4 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, KINDS, kindW, padOf, LANE_COLORS, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
 
 export const STORAGE_KEY = 'event-model-board';
 
@@ -71,6 +71,7 @@ export function serialize(nodes, edges, contexts) {
         lanes: lanes.map((l) => ({
           id: l.id,
           name: l.data.label,
+          type: l.data.type,
           ...(l.data.info ? { info: l.data.info } : {}),
           color: l.data.color,
         })),
@@ -167,7 +168,7 @@ export function parseBoard(text) {
   if (data.format !== 'event-model') fail('format', 'must be "event-model"');
   if (data.version !== 1) fail('version', 'must be 1');
   list(data.contexts, 'contexts', true);
-  list(data.chapters, 'chapters', true);
+  list(data.chapters, 'chapters');
 
   const kindOf = new Map(); // id -> context | chapter | lane | slice | element
   const claim = (id, kind, path) => {
@@ -252,18 +253,31 @@ export function parseBoard(text) {
     nodes.push(makeChapter(c.id, c.x, c.y, c.name, c.context, c.info));
 
     const laneY = new Map();
+    const laneType = new Map();
     c.lanes.forEach((l, li) => {
       const lp = `${cp}.lanes[${li}]`;
-      object(l, ['id', 'name', 'color'], lp, ['info']);
+      object(l, ['id', 'name', 'type', 'color'], lp, ['info']);
       claim(l.id, 'lane', at(lp, 'id'));
       name(l.name, at(lp, 'name'));
+      if (typeof l.type !== 'string' || !hasKey(LANE_TYPES, l.type)) {
+        fail(at(lp, 'type'), `must be one of ${LANE_TYPE_ORDER.join(', ')}`);
+      }
+      if (li > 0 && LANE_TYPE_ORDER.indexOf(l.type) < LANE_TYPE_ORDER.indexOf(c.lanes[li - 1].type)) {
+        fail(at(lp, 'type'), `lanes must be in the order ${LANE_TYPE_ORDER.join(', ')}`);
+      }
       optionalInfo(l, lp);
       if (!LANE_COLORS.includes(l.color)) {
         fail(at(lp, 'color'), `must be one of ${LANE_COLORS.join(', ')}`);
       }
       laneY.set(l.id, li * LANE_HEIGHT);
-      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH, l.info));
+      laneType.set(l.id, l.type);
+      nodes.push(makeLane(l.id, c.id, l.type, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH, l.info));
     });
+    for (const t of REQUIRED_LANE_TYPES) {
+      if (!c.lanes.some((l) => l.type === t)) {
+        fail(at(cp, 'lanes'), `needs at least one lane of type ${t}`);
+      }
+    }
 
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
@@ -294,6 +308,9 @@ export function parseBoard(text) {
         string(el.lane, at(ep, 'lane'));
         if (!laneY.has(el.lane)) {
           fail(at(ep, 'lane'), `no lane with id "${el.lane}" in this chapter`);
+        }
+        if (!LANE_TYPES[laneType.get(el.lane)].kinds.includes(el.type)) {
+          fail(at(ep, 'lane'), `a ${laneType.get(el.lane)} lane does not take ${el.type} elements`);
         }
         string(el.title, at(ep, 'title'));
         if (hasKey(el, 'html')) {

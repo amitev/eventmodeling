@@ -7,11 +7,30 @@ import { MarkerType } from '@xyflow/react';
 // This file holds the board's constants, layout rules and node factories (no UI).
 export const LANE_WIDTH = 3200;
 export const LABEL_ZONE = 48; // reserved strip at the left of each lane; slices stay out of it
-export const LANES = [
-  { label: 'UI / Actors', y: 0 },
-  { label: 'Commands / Queries', y: 220 },
-  { label: 'Events', y: 440 },
-];
+
+// Lane types, in the fixed top-to-bottom order lanes keep, with the element types each accepts
+// and the letter on the header button that adds a lane of that type.
+export const LANE_TYPES = {
+  actor: { label: 'Actor', letter: 'A', kinds: ['screen', 'processor'] },
+  interaction: { label: 'Interaction', letter: 'I', kinds: ['command', 'query'] },
+  event: { label: 'Event', letter: 'E', kinds: ['event'] },
+  integration: { label: 'Integration', letter: 'N', kinds: ['event', 'query'] }, // external integrations
+  spec: { label: 'Spec', letter: 'S', kinds: ['scenarios'] },
+};
+export const LANE_TYPE_ORDER = Object.keys(LANE_TYPES);
+// Every Chapter keeps at least one lane of each of these.
+export const REQUIRED_LANE_TYPES = ['actor', 'interaction', 'event'];
+// The lane types of a new Chapter, top to bottom.
+export const LANES = ['actor', 'interaction', 'event'].map((type, i) => ({
+  type,
+  label: LANE_TYPES[type].label,
+  y: i * 220,
+}));
+// The lane types a lane of `type` offers to add below it. Integration is optional, so an
+// Event lane also offers Spec.
+export const nextLaneTypes = (type) =>
+  type === 'event' ? ['integration', 'spec'] : LANE_TYPE_ORDER.slice(LANE_TYPE_ORDER.indexOf(type) + 1, LANE_TYPE_ORDER.indexOf(type) + 2);
+export const laneAllows = (lane, kind) => !!lane && (LANE_TYPES[lane.data.type]?.kinds.includes(kind) ?? false);
 
 export const SLICE_Y = -40;
 export const SLICE_HEADER = 40;
@@ -255,7 +274,8 @@ export function adoptStickies(nodes, only, origin) {
     const ax = parent.position.x + n.position.x;
     const ay = parent.position.y + n.position.y;
     const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 });
-    if (!cell) {
+    // A Cell whose lane does not take this element type counts as no Cell.
+    if (!cell || !laneAllows(byId.get(cell.laneId), n.data.kind)) {
       const from = origin.get(n.id);
       if (!from) return n;
       changed = true;
@@ -332,12 +352,12 @@ export const makeSlice = (id, x, width, name, chapterId, info) => ({
   style: { pointerEvents: 'none' },
 });
 
-export const makeLane = (id, chapterId, label, y, color, width, info) => ({
+export const makeLane = (id, chapterId, type, label, y, color, width, info) => ({
   id,
   type: 'lane',
   position: { x: 0, y },
   parentId: chapterId,
-  data: { label, height: LANE_HEIGHT, width, color, ...(info ? { info } : {}) },
+  data: { type, label, height: LANE_HEIGHT, width, color, ...(info ? { info } : {}) },
   draggable: false,
   selectable: false,
   connectable: false,
@@ -375,7 +395,7 @@ export function makeEmptyBoard() {
   const contexts = [{ id: id(), name: 'Default' }];
   const nodes = normalize([
     makeChapter(chapterId, 0, 0, 'Chapter 1', contexts[0].id),
-    ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
+    ...LANES.map((l) => makeLane(id(), chapterId, l.type, l.label, l.y, 'none', LANE_WIDTH)),
     makeSlice(id(), LABEL_ZONE, DEFAULT_SLICE_WIDTH, 'New Slice', chapterId),
   ]);
   return { nodes, edges: [], contexts };

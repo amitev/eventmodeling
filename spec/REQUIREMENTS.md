@@ -10,7 +10,7 @@ This document records the business requirements agreed so far. It describes beha
 - **R1.2** The canvas supports pan and zoom, a minimap, zoom controls and a dotted background grid.
 - **R1.3** Items snap to a 20px grid.
 - **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **+**, **×**) and the Chapter handle (**i**, **↔**, **×**, context rename and delete) look alike: 18px squares with a 3px radius, and drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
-- **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: the three default lanes and one default slice ("New Slice", 220px wide), no elements.
+- **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: the three starting lanes (Actor, Interaction, Event, R2.10) and one default slice ("New Slice", 220px wide), no elements.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), with the same ids, so a reload loses or renumbers nothing. If the saved board is missing or unreadable, the starting board (R1.4) is shown.
 
 ### Chapter width
@@ -30,18 +30,18 @@ This document records the business requirements agreed so far. It describes beha
 ### Identifiers
 
 - **R1.14** Every Context, Chapter, lane, slice, element and scenario has an **id** matching `^[A-Za-z0-9]{6}$`, random, generated from the browser's secure random source (not a counter or the time) when the item is created. An id is unique among all items of the board, whatever their kind, and never changes: renaming, moving, resizing or reordering keeps it.
-- **R1.15** Everything that creates items uses such ids: the starting board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, **+ Lane** and the element buttons. A generated id already in use is regenerated.
+- **R1.15** Everything that creates items uses such ids: the starting board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, **+ Slice**, the slice **+** button, the lane buttons and the element buttons. A generated id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by the two items it joins and its direction (R4.5).
 - **R1.17** Ids are never shown to the user, who refers to items by name and title. Items refer to each other by id, never by name, so renaming cannot break a reference (lanes: R2.9).
 
 ## 1a. Multiple Chapters
 
 - **R1a.1** The board can hold any number of Chapters, each with its own lanes, slices and elements, laid out independently: resizing a slice or adding a lane in one never changes another. Sections 2 to 5 apply per Chapter.
-- **R1a.2** **+ Chapter** adds a Chapter with the three default lanes and one default slice ("New Slice", 220px wide, as if **+ Slice** had been used once) and no elements; its width is the label zone plus that slice. Its lane area is centred (snapped to the grid) on the centre of the visible canvas, so it is seen straight away; the view does not pan or zoom. If it lands on another Chapter, the user drags it away by its handle.
+- **R1a.2** **+ Chapter** adds a Chapter with the three starting lanes (R2.10) and one default slice ("New Slice", 220px wide, as if **+ Slice** had been used once) and no elements; its width is the label zone plus that slice. Its lane area is centred (snapped to the grid) on the centre of the visible canvas, so it is seen straight away; the view does not pan or zoom. If it lands on another Chapter, the user drags it away by its handle.
 - **R1a.3** Each Chapter has a name, shown as a large text (36px, bold) centred above the Chapter, above the Chapter's handle ("Chapter 1", "Chapter 2", ... by default; the starting Chapter's is "Chapter 1"). It is only a title: dragging it does not move the Chapter. The user renames it by double-clicking it. The name can never be empty: an empty rename is ignored and the previous name kept, as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), the **↔** and **×** buttons and no name.
-- **R1a.4** **Active Chapter:** the one the user last clicked or dragged something in; initially the first. The header shows its name next to "Add to:". **+ Slice** and **+ Lane** act on it. Element buttons do not: they act on the selected Cell (R3.3). An element dragged from the header joins the Chapter of the Cell it is released over (R3.3); released over no Cell, nothing is added.
+- **R1a.4** **Active Chapter:** the one the user last clicked or dragged something in; initially the first. The header shows its name next to "Add to:". **+ Slice** acts on it. Element buttons do not: they act on the selected Cell (R3.3). An element dragged from the header joins the Chapter of the Cell it is released over (R3.3); released over no Cell, nothing is added.
 - **R1a.5** An element moves to another Chapter when dropped with its centre over a Cell of that Chapter (R5.14): it joins that Cell's lane and slice and follows its layout rules (R3.6a, R5.13 to R5.17). Released anywhere else, including over another Chapter's label zone, it stays in its Chapter and returns to where the drag started (R5.14). Its connections are kept.
-- **R1a.6** A Chapter is removed with the **×** button in its handle, hidden when only one Chapter is left (the board always has one). Its lanes, slices, elements and every connection attached to them or to it are removed too. If it holds slices or elements, the user confirms first.
+- **R1a.6** A Chapter is removed with the **×** button in its handle, also when it is the only one: the board may then be empty, and **+ Chapter** adds a new one. Its lanes, slices, elements and every connection attached to them or to it are removed too. If it holds slices or elements, the user confirms first.
 
 ### Connecting Chapters
 
@@ -75,20 +75,31 @@ This document records the business requirements agreed so far. It describes beha
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.
-- **R2.2** The default lanes are: **UI / Actors**, **Commands / Queries** and **Events**.
-- **R2.3** **+ Lane** appends a lane named "New Lane" at the bottom of the active Chapter (R1a.4), with the current Chapter width.
-- **R2.3a** Every lane has a **+** button at the bottom of its label zone. It adds a lane named "New Lane", colour `none`, right below that lane; lanes below it, with their elements, move down. The Chapter becomes active (R1a.4).
+- **R2.2** The default lanes are one of each of the types **Actor**, **Interaction** and **Event** (R2.10), named after their type.
+- **R2.3** There is no toolbar button to add lanes. Lanes are added with the buttons in a lane's label zone (R2.3a, R2.10).
+- **R2.3a** Every lane has a **+** button and, below it, letter buttons (R2.10) at the bottom of its label zone. **+** adds a lane of the **same type**, named after the type, colour `none`, right below that lane. A letter button adds a lane of the type that letter stands for: of another type it goes below the last lane that comes before that type in the order, so the order is kept. Lanes below, with their elements, move down. The Chapter becomes active (R1a.4). The tooltips read "Add lane below: <type>".
 - **R2.4** Each lane has a reserved 48px label zone at its left edge holding the lane name, the **×** button (at the top) and the colour button (R2.6) under it, and the **+** button (R2.3a) at the bottom. The name is written vertically, bottom to top; if too long it is cut off with an ellipsis and shown in full on hover. Slices never enter this zone (R5.7).
 - **R2.4a** Double-clicking a lane name renames it **in place**: the vertical title becomes editable text, keeping its orientation, with a caret and highlighted outline, all selected. Enter, Esc and clicking away save. The name is one line; an empty name is ignored (previous kept).
 - **R2.5** The **×** button removes a lane.
   - Lanes below move up to close the gap.
   - Notes in it are deleted with their connections; if there are any, the user confirms first.
-  - A Chapter's last lane cannot be removed.
+  - A Chapter's last lane of each required type (Actor, Interaction, Event) cannot be removed: these lanes have no **×** button.
 - **R2.6** A lane has a colour: `none` (default, no tint), `orange`, `red`, `green`, `blue`, `pink`, `purple`, `yellow`, `brown` or `gray`. Each is a light, transparent tint, not intrusive. There is no alternating shading. A colour button under the **×** button in the label zone opens a small palette of the ten colours; picking one applies it and closes the palette, as does clicking elsewhere. The button shows the current colour. The last lane's button works the same.
-- **R2.6a** Every Chapter has a clear, dark 2px outline around its whole area, including the label column: left and right edges on every lane, top on the first, bottom on the last. Lanes are separated by a thin light line, the label column by a line of the dark colour. Adding or removing lanes keeps it correct.
+- **R2.6a** Every Chapter has a clear, dark 2px outline around its whole area, including the label column: left and right edges on every lane, top on the first, bottom on the last. The four outer corners are rounded with a 4px radius, like the slice headers. Lanes are separated by a thin light line, the label column by a line of the dark colour. Adding or removing lanes keeps it correct.
 - **R2.7** Lanes cannot be dragged, selected or deleted with the keyboard.
 - **R2.8** An element sits in exactly one lane of its Chapter: the one it is vertically centred in (R3.6a). Moving between lanes: R5.14.
 - **R2.9** A lane is referred to by **id**, never by name, so renaming (R2.4a) changes only the displayed name. The export file likewise names an element's lane by id (R6.5).
+- **R2.10** **Lane types.** Every lane has a type, chosen when it is created and never changed. The type decides which elements the lane takes (R3.2). The types, in the fixed top-to-bottom order lanes always keep, with their letter button:
+
+  | Type | Letter | Takes |
+  |------|--------|-------|
+  | Actor | A | Screen, Processor |
+  | Interaction | I | Command, Query |
+  | Event | E | Event |
+  | Integration | N | Event, Query (external integrations) |
+  | Spec | S | Scenarios |
+
+  Several lanes of one type are allowed. Each lane offers the letter button of the next type in the list (an Actor lane offers I, an Interaction lane E, an Event lane N and S, since Integration is optional, an Integration lane S); a Spec lane has none. A Chapter always has at least one Actor, one Interaction and one Event lane (R2.5, R7.4); its starting lanes are Actor, Interaction and Event (R1a.2); a Spec lane is added with the **S** button of an Event or Integration lane.
 
 **Learning (implementation).** Lanes and slices are translucent and overlap. A lane added later was drawn above the slices and looked lighter than the older lanes, until a reload reordered the items. Items are drawn in list order (a child's z-index cannot go below its parent's), so lanes are always kept before slices and elements in the list.
 
@@ -107,7 +118,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
   | Processor | lavender, shown with a ⚙️ gear emoji |
   | Scenarios | blue, a card instead of a sticky (R3.11) |
 
-- **R3.2** An element has no default lane; it goes in the lane of the Cell it is added to (R3.3). It can be dragged freely but always ends up inside a Cell (R5.14).
+- **R3.2** An element has no default lane; it goes in the lane of the Cell it is added to (R3.3), and only if that lane's type takes it (R2.10): otherwise nothing is added. Dragging a button or an element onto a lane that does not take it adds nothing or returns the element to its position at drag start (R5.14). The toolbar buttons of types the selected Cell's lane does not take look dimmed, and their tooltips name the lane types that take them. The element can be dragged freely but always ends up inside a Cell (R5.14).
 - **R3.3** Elements are added by clicking a toolbar button or dragging it onto the board. A click puts the element in the selected Cell (R5a.10); with none selected it does nothing. A button released over a Cell adds the element there, at the release position kept inside the slice margins (R5.14), or centred if the Cell is empty (R5a.10); released elsewhere it adds nothing. An element is never created outside a Cell.
 - **R3.4** For now the body holds no text and cannot be edited; it only shows the Screen mockup (R3.7 to R3.10), and double-clicking it does nothing. An element has no `text` field, and a new one has an empty title (R3.6b).
 - **R3.4a** Double-clicking the header edits the title (R3.6b); Enter, Esc and clicking away save. The title is one line. The editor looks like the title itself (same place and font, thin outline only), so the element does not resize or move while editing.
@@ -192,7 +203,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5.14** Where an element ends up when added, dropped or dragged is decided by the Cell (lane and slice) under its **centre** on release:
   - **Over a Cell of the same Chapter:** it moves into that Cell: to its slice, and to its lane, centred in it (R3.6a). Horizontally it stays fully inside the slice, at least 40px from the borders (20px for Scenarios) (the slice grows if needed, R5.17).
   - **Over a Cell of another Chapter:** R1a.5.
-  - **Over no Cell** (outside every Chapter, over a label zone, above the slices, beyond the last slice, below the last lane): it returns to its position at drag start, in its own slice and lane.
+  - **Over no Cell** (outside every Chapter, over a label zone, above the slices, beyond the last slice, below the last lane) **or over a Cell whose lane type does not take it** (R2.10): it returns to its position at drag start, in its own slice and lane.
 
   So an element is never left outside a slice.
 - **R5.15** Elements move with their slice: when a slice is resized, following slices shift with their elements, keeping each element's position relative to its slice. Elements of the resized slice stay put.
@@ -206,7 +217,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 ## 5a. Cells
 
-- **R5a.1** A **Cell** is the intersection of one lane and one slice of a Chapter: a box of its grid (lanes are rows, slices columns). 3 lanes and 2 slices make 6 Cells. The label zone is not part of any Cell.
+- **R5a.1** A **Cell** is the intersection of one lane and one slice of a Chapter: a box of its grid (lanes are rows, slices columns). A Chapter with 3 lanes and 2 slices has 6 Cells. The label zone is not part of any Cell.
 - **R5a.2** A Cell is not a stored object; it follows from lanes and slices: adding, removing, renaming or resizing them changes the Cells, and moving the Chapter moves them. It has no data of its own, so it is not saved, exported or imported. (An element's Cell comes from the slice it is listed under and its lane id, R6.4, R6.5.)
 - **R5a.3** A Cell has no colour of its own; it shows its lane's colour (R2.6).
 - **R5a.4** A Cell holds any number of elements, freely positioned: an element sits in the Cell of its lane and slice (R5.13), can be dragged freely, ends up in the Cell it is released over (R5.14), and is vertically centred in the lane (R3.6a).
@@ -215,7 +226,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.7** A click outside every Cell (empty canvas, label zone, area above the slices) clears the Cell selection.
 - **R5a.8** The selection border follows the Cell: through panning, zooming, moving the Chapter, and slice resizing or shifting. If the Cell's lane or slice is removed, the selection disappears.
 - **R5a.9** Selecting a Cell is not an operation: it is not recorded for undo (R8.6). Backspace and Delete never delete the Cell itself (R5a.11).
-- **R5a.10** With a Cell selected, clicking an element button adds the element **in that Cell**, whatever its type (R3.2): in the Cell's lane and slice, vertically centred (R3.6a), centred horizontally in the slice if the Cell is empty (the slice first grows to the element plus the 40px margins if it is narrower), otherwise at the first free spot from the left inside the slice margins (R5.14), not overlapping elements already there. If there is no room, it goes after the last element and the slice grows to fit; later slices move right with their elements (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto a Cell that holds elements puts the element where released (R3.3); onto an empty Cell it is centred like a click. With no Cell selected, or its lane or slice gone, a click does nothing (R3.3).
+- **R5a.10** With a Cell selected, clicking an element button adds the element **in that Cell**, whatever its type (R3.2), if the Cell's lane type takes it (R2.10), otherwise nothing is added: in the Cell's lane and slice, vertically centred (R3.6a), centred horizontally in the slice if the Cell is empty (the slice first grows to the element plus the 40px margins if it is narrower), otherwise at the first free spot from the left inside the slice margins (R5.14), not overlapping elements already there. If there is no room, it goes after the last element and the slice grows to fit; later slices move right with their elements (R5.15). The Cell stays selected, so several elements can be added in a row. Dragging a button onto a Cell that holds elements puts the element where released (R3.3); onto an empty Cell it is centred like a click. With no Cell selected, or its lane or slice gone, a click does nothing (R3.3).
 - **R5a.11** **Cell hotkeys.** With a Cell selected:
   - **Arrow keys** move the selection to the neighbouring Cell of the same Chapter: up and down to the lane above or below in the same slice, left and right to the previous or next slice in the same lane. At an edge nothing happens.
   - **Shift+→** / **Shift+←** make the Cell's slice 20px (one grid step) wider or narrower, down to its minimum (R5.9, R5.16); one undo step per press, with R5.10 and R5.15 applying.
@@ -250,7 +261,7 @@ The export file is the single, complete description of a board, written and read
   - `context`: the **id** of the Chapter's Context (R1b.2), which must be in `contexts`;
   - `x`, `y`: the Chapter's position on the canvas;
   - `connectsTo`: the ids of the Chapters this Chapter has an arrow to (R6.7);
-  - `lanes`: the lanes from top to bottom, each with `id`, `name`, optional `info` and `color`;
+  - `lanes`: the lanes from top to bottom, each with `id`, `name`, `type` (`actor`, `interaction`, `event`, `integration` or `spec`), optional `info` and `color`;
   - `slices`: the slices from left to right.
 - **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `info`, `width`, `elements`. `elements` lists the elements in that slice. An element is listed under exactly one slice; there is no other place for elements, so one outside a slice cannot be written (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
@@ -283,10 +294,10 @@ The export file is the single, complete description of a board, written and read
 - **R7.2** The user must confirm before the current board is replaced.
 - **R7.3** Export then import reproduces the same board exactly, and exporting again gives an identical file (R6.9).
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
-  - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` and `info` may be missing), and no other fields. `chapters` is not empty, and every Chapter has at least one lane and one slice (R2.5, R5.19). `contexts` is not empty (R1b.3).
+  - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (`html` and `info` may be missing), and no other fields. `chapters` may be empty, and every Chapter has at least one lane and one slice (R2.5, R5.19), the lanes in the type order and with at least one lane of each required type (R2.10). `contexts` is not empty (R1b.3).
   - **Ids.** Every id matches `^[A-Za-z0-9_-]{6,}$`. Ids are unique across the whole file, whatever the item kind (R1.14).
-  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter. Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry. In a scenario, each `element` is the id of an element of the same Chapter as the Scenarios element: an `event` in `given` and `then`, a `command` in `when`.
-  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `color` is one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
+  - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter whose type takes the element's type (R2.10). Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter). An item does not connect to itself, and no id is listed twice in one `connectsTo`. A `scenarios` element is neither the owner nor the target of a `connectsTo` entry. In a scenario, each `element` is the id of an element of the same Chapter as the Scenarios element: an `event` in `given` and `then`, a `command` in `when`.
+  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. `type` is one of the six element types. A lane's `type` is one of the five lane types (R2.10) and its `color` one of the ten colours (R2.6). `html`, when present, is a non-empty text and belongs to a `screen`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `info`, when present, is a non-empty text. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios). Every element fits its slice with the 40px margins (20px for Scenarios): `x` plus the element width (160px, 280px for Scenarios) plus the margin is at most the slice `width` (R5.16, R5.17). Nothing is corrected; a file breaking one of these is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12): slices packed in file order, elements centred in their lanes (R3.6a). A file written by the app already satisfies the R7.4 checks. After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.

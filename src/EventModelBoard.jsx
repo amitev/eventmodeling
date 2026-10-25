@@ -29,6 +29,11 @@ import {
   FLOWS_TO,
   snap,
   LANE_COLORS,
+  LANE_TYPES,
+  LANE_TYPE_ORDER,
+  REQUIRED_LANE_TYPES,
+  nextLaneTypes,
+  laneAllows,
   snapUp,
   uniqueId,
   SLICE_MIN_X,
@@ -36,7 +41,6 @@ import {
   stickyH,
   slices,
   lanesOf,
-  chaptersOf,
   setSliceWidth,
   minSliceWidth,
   sliceOf,
@@ -63,6 +67,12 @@ const hotkeyOf = (kind) =>
   Object.keys(CELL_ADD_KEYS)
     .filter((k) => CELL_ADD_KEYS[k] === kind)
     .map((k) => k.toUpperCase())
+    .join(' / ');
+// The lane types that take an element type, e.g. "Interaction / Integration".
+const acceptingLanes = (kind) =>
+  Object.values(LANE_TYPES)
+    .filter((t) => t.kinds.includes(kind))
+    .map((t) => t.label)
     .join(' / ');
 
 // The hotkey help, grouped by context (R1d.1).
@@ -275,20 +285,19 @@ const BoardActions = createContext({
   removeChapter: () => {},
   compactChapter: () => {},
   activeId: null,
-  chapterCount: 1,
 });
 
 function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeLane, addLaneAfter } = useContext(BoardActions);
-  // The last lane of a Chapter cannot be removed.
+  // The last lane of a required type (Actor, Interaction, Event) of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
     const parent = s.nodeLookup.get(id)?.parentId;
     let count = 0;
     s.nodeLookup.forEach((n) => {
-      if (n.type === 'lane' && n.parentId === parent) count++;
+      if (n.type === 'lane' && n.parentId === parent && n.data.type === data.type) count++;
     });
-    return count > 1;
+    return !REQUIRED_LANE_TYPES.includes(data.type) || count > 1;
   });
   // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
   const edges = useStore((s) => {
@@ -387,7 +396,7 @@ function LaneNode({ id, data }) {
         <span
           ref={ref}
           className={`lane-label${editing ? ' editing' : ''}`}
-          title={editing ? undefined : `${data.label} (double-click to rename, drag to move the Chapter)`}
+          title={editing ? undefined : `${data.label}, ${LANE_TYPES[data.type].label} lane (double-click to rename, drag to move the Chapter)`}
           contentEditable={editing ? 'plaintext-only' : undefined}
           suppressContentEditableWarning
           spellCheck={false}
@@ -408,10 +417,21 @@ function LaneNode({ id, data }) {
         </span>
         <button
           className="lane-add"
-          title="Add a lane below"
-          aria-label="Add a lane below"
-          onClick={() => addLaneAfter(id)}
+          title={`Add lane below: ${LANE_TYPES[data.type].label}`}
+          aria-label={`Add lane below: ${LANE_TYPES[data.type].label}`}
+          onClick={() => addLaneAfter(id, data.type)}
         />
+        {nextLaneTypes(data.type).map((t) => (
+          <button
+            key={t}
+            className="lane-letter"
+            title={`Add lane below: ${LANE_TYPES[t].label}`}
+            aria-label={`Add lane below: ${LANE_TYPES[t].label}`}
+            onClick={() => addLaneAfter(id, t)}
+          >
+            {LANE_TYPES[t].letter}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -660,7 +680,7 @@ function SliceNode({ id, data }) {
 // two connection ports: incoming on the left side, outgoing on the right side.
 function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeChapter, compactChapter, activeId, chapterCount } = useContext(BoardActions);
+  const { removeChapter, compactChapter, activeId } = useContext(BoardActions);
   const { contexts, setChapterContext, addContext, renameContext, removeContext } =
     useContext(BoardActions);
   // A Chapter whose Context is missing shows the Default (first) one.
@@ -769,18 +789,16 @@ function ChapterNode({ id, data }) {
             <path d="M0.5 5H9.5M2.5 3L0.5 5L2.5 7M7.5 3L9.5 5L7.5 7" />
           </svg>
         </button>
-        {chapterCount > 1 && (
-          <button
-            className="chapter-remove nodrag"
-            title="Remove this Chapter"
-            aria-label="Remove this Chapter"
-            onClick={() => removeChapter(id)}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.6">
-              <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" />
-            </svg>
-          </button>
-        )}
+        <button
+          className="chapter-remove nodrag"
+          title="Remove this Chapter"
+          aria-label="Remove this Chapter"
+          onClick={() => removeChapter(id)}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.6">
+            <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -1141,24 +1159,21 @@ function Board() {
     if (chapterId) selectTopCellOf(chapterId, id);
   };
 
-  const addLane = () => {
-    if (!activeChapterId) return;
-    const [id] = newIds();
-    setNodes((ns) => {
-      const ls = lanesOf(ns, activeChapterId);
-      const y = ls.reduce((sum, l) => sum + l.data.height, 0);
-      const width = ls[0]?.data.width ?? LANE_WIDTH;
-      return layered([...ns, makeLane(id, activeChapterId, 'New Lane', y, 'none', width)]);
-    });
-  };
-
-  // Inserts a lane right below `laneId`; the lanes below it and their elements move down.
-  const addLaneAfter = (laneId) => {
+  // Inserts a lane of `type` (the lane's own type or one of its next types, R2.10). Of the same
+  // type it goes right below `laneId`; of another type, below the last lane that comes before
+  // that type, so the lane order is kept. The lanes below and their elements move down.
+  const addLaneAfter = (laneId, type) => {
     const [id] = newIds();
     setNodes((ns) => {
       const lane = ns.find((n) => n.id === laneId);
       if (!lane) return ns;
-      const below = lane.position.y + lane.data.height;
+      const rank = (l) => LANE_TYPE_ORDER.indexOf(l.data.type);
+      const anchor =
+        type === lane.data.type
+          ? lane
+          : lanesOf(ns, lane.parentId).filter((l) => rank(l) < LANE_TYPE_ORDER.indexOf(type)).pop();
+      if (!anchor) return ns;
+      const below = anchor.position.y + anchor.data.height;
       const shifted = ns.map((n) =>
         n.parentId === lane.parentId &&
         (n.type === 'lane' || n.type === 'sticky') &&
@@ -1168,7 +1183,7 @@ function Board() {
       );
       return layered([
         ...shifted,
-        makeLane(id, lane.parentId, 'New Lane', below, 'none', lane.data.width),
+        makeLane(id, lane.parentId, type, LANE_TYPES[type].label, below, 'none', lane.data.width),
       ]);
     });
     setActiveId(nodes.find((n) => n.id === laneId)?.parentId ?? null);
@@ -1179,7 +1194,8 @@ function Board() {
       const lane = nodes.find((n) => n.id === laneId);
       if (!lane) return;
       const chapterId = lane.parentId;
-      if (lanesOf(nodes, chapterId).length <= 1) return;
+      const sameType = lanesOf(nodes, chapterId).filter((l) => l.data.type === lane.data.type);
+      if (REQUIRED_LANE_TYPES.includes(lane.data.type) && sameType.length <= 1) return;
       const top = lane.position.y;
       const bottom = top + lane.data.height;
       const mine = (n) => n.parentId === chapterId;
@@ -1222,7 +1238,7 @@ function Board() {
       layered([
         ...ns,
         makeChapter(id, x, y, `Chapter ${chapters.length + 1}`, contexts[0].id),
-        ...LANES.map((l, i) => makeLane(laneIds[i], id, l.label, l.y, 'none', width)),
+        ...LANES.map((l, i) => makeLane(laneIds[i], id, l.type, l.label, l.y, 'none', width)),
         makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
       ])
     );
@@ -1231,7 +1247,6 @@ function Board() {
 
   const removeChapter = useCallback(
     (chapterId) => {
-      if (chaptersOf(nodes).length <= 1) return;
       const kids = nodes.filter((n) => n.parentId === chapterId);
       const sliceCount = kids.filter((n) => n.type === 'slice').length;
       const elementCount = kids.filter((n) => n.type === 'sticky').length;
@@ -1368,7 +1383,6 @@ function Board() {
       removeChapter,
       compactChapter,
       activeId: activeChapterId,
-      chapterCount: chapters.length,
     }),
     [
       removeLane,
@@ -1495,7 +1509,7 @@ function Board() {
     const cellRef = drop?.cell ?? selectedCell;
     const lane = cellRef && find(cellRef.laneId);
     const slice = cellRef && find(cellRef.sliceId);
-    if (!lane || !slice) return;
+    if (!lane || !slice || !laneAllows(lane, kind)) return;
     const x = drop?.x;
 
     let base = ns;
@@ -1734,6 +1748,8 @@ function Board() {
     );
   };
 
+  const selectedLane = selectedCell && nodes.find((n) => n.id === selectedCell.laneId);
+
   return (
     <div className="app">
       <header className="toolbar">
@@ -1744,26 +1760,24 @@ function Board() {
         <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
           ↷ Redo
         </button>
-        <span className="target" title="New slices and lanes are added to this Chapter">
+        <span className="target" title="New slices are added to this Chapter">
           Add to: <strong>{active?.data.name}</strong>
         </span>
         {Object.entries(KINDS).map(([kind, k]) => (
           <button
             key={kind}
             className={`chip ${kind}`}
+            aria-disabled={selectedLane && !laneAllows(selectedLane, kind) ? true : undefined}
             draggable
             onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
             onClick={() => addSticky(kind)}
-            title={`Select a Cell and click to add (${hotkeyOf(kind)}), or drag onto a Cell`}
+            title={`Select a Cell and click to add (${hotkeyOf(kind)}), or drag onto a Cell. Only ${acceptingLanes(kind)} lanes take it.`}
           >
             + {k.icon && `${k.icon} `}{k.label}
           </button>
         ))}
         <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the Chapter">
           + Slice
-        </button>
-        <button className="chip" onClick={addLane} title="Add a lane at the bottom">
-          + Lane
         </button>
         <button className="chip chapter-btn" onClick={addChapter} title="Add a new Chapter">
           + Chapter
