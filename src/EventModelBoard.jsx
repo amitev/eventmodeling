@@ -140,7 +140,12 @@ const HOTKEYS = [
   },
   {
     group: 'Info panel',
-    keys: [['Esc', 'Cancel']],
+    keys: [
+      ['Ctrl+S', 'Save and close'],
+      ['Ctrl+B', 'Bold (Markdown editor)'],
+      ['Ctrl+I', 'Italic (Markdown editor)'],
+      ['Esc', 'Cancel'],
+    ],
   },
 ];
 

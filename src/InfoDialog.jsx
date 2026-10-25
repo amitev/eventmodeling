@@ -70,8 +70,8 @@ const toLink = ({ value, start, end }) => {
 const svgProps = { width: 14, height: 14, viewBox: '0 0 14 14', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 };
 
 const MARKDOWN_TOOLS = [
-  { title: 'Bold', label: <b>B</b>, edit: wrapSelection('**', '**', 'bold') },
-  { title: 'Italic', label: <i className="info-italic">I</i>, edit: wrapSelection('*', '*', 'italic') },
+  { title: 'Bold', key: 'b', label: <b>B</b>, edit: wrapSelection('**', '**', 'bold') },
+  { title: 'Italic', key: 'i', label: <i className="info-italic">I</i>, edit: wrapSelection('*', '*', 'italic') },
   { title: 'Strikethrough', label: <s>S</s>, edit: wrapSelection('~~', '~~', 'text') },
   null,
   {
@@ -110,6 +110,8 @@ const MARKDOWN_TOOLS = [
 // the right. The changes only apply on Save.
 export function InfoDialog({ title, initial, initialReading = false, onSave, onCancel }) {
   const [text, setText] = useState(initial);
+  const textRef = useRef(initial); // the latest text, for the Ctrl+S listener
+  textRef.current = text;
   const [reading, setReading] = useState(initialReading); // read mode: only the preview is shown
   const backdrop = useBackdropClose(onCancel);
   const area = useRef(null);
@@ -123,6 +125,8 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
     pending.current = next;
     setText(next.value);
   };
+  const applyRef = useRef(apply); // the latest apply, for the hotkey listener
+  applyRef.current = apply;
 
   useLayoutEffect(() => {
     const p = pending.current;
@@ -133,10 +137,22 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
   }, [text]);
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onCancel();
+    const onKey = (e) => {
+      if (e.key === 'Escape') onCancel();
+      else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault(); // not the browser's Save page
+        onSave(textRef.current);
+      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && area.current) {
+        const tool = MARKDOWN_TOOLS.find((t) => t?.key === e.key.toLowerCase());
+        if (tool) {
+          e.preventDefault();
+          applyRef.current(tool.edit);
+        }
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, [onCancel, onSave]);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
@@ -169,7 +185,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
                 tool ? (
                   <button
                     key={tool.title}
-                    title={tool.title}
+                    title={tool.key ? `${tool.title} (Ctrl+${tool.key.toUpperCase()})` : tool.title}
                     aria-label={tool.title}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => apply(tool.edit)}
@@ -195,7 +211,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
           <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
         <div className="info-actions">
-          <button onClick={() => onSave(text)}>Save</button>
+          <button onClick={() => onSave(text)} title="Save (Ctrl+S)">Save</button>
           <button onClick={onCancel} title="Cancel (Esc)">Cancel</button>
         </div>
       </div>
