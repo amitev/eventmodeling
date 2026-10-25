@@ -125,7 +125,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 
 ### Scenarios elements
 
-- **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It is blue-bordered and shows a "SCENARIOS" caption with an eye icon (inert), the list of its scenarios, and a footer with **+ Add**, an inert **+ Storyline** button and the number of scenarios. A new element has no scenarios (the list says "No scenarios yet"). The list scrolls when it is longer than the card.
+- **R3.11** A **Scenarios** element is a fixed 280x200px card (not resizable) with no header bar, title or connection points; R3.6b does not apply. It shows a "SCENARIOS" caption, the list of its scenarios, and a footer with **+ Add**, an inert **+ Storyline** button and the number of scenarios. A new element has no scenarios (the list says "No scenarios yet"). The list scrolls when it is longer than the card.
 - **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected to anything (R4.7). The slice must be at least 320px wide to hold it, as its margin to the slice borders is 20px instead of 40px (R5.16); when it is added, the slice widens as needed (R5a.10).
 - **R3.13** A **scenario** is a Given/When/Then (GWT) example with an id (R1.14), a title, a description, and:
   - **Given:** any number of Events that have happened;

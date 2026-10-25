@@ -91,10 +91,6 @@ export function ScenariosCard({ id, data, selected, onEdit, newId }) {
     <div className={`sticky scenarios ${selected ? 'selected' : ''}`}>
       <div className="scenarios-head">
         <span>Scenarios</span>
-        <Icon>
-          <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
-          <circle cx="8" cy="8" r="2" fill="currentColor" />
-        </Icon>
       </div>
       <div className="scenarios-list nowheel">
         {!scenarios.length && <div className="scenarios-empty">No scenarios yet</div>}
