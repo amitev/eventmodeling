@@ -121,7 +121,7 @@ export function serialize(nodes, edges, contexts) {
 }
 
 export const boardText = (nodes, edges, contexts) =>
-  JSON.stringify(serialize(nodes, edges, contexts), null, 2);
+  JSON.stringify(serialize(nodes, edges, contexts));
 
 export const ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
 export const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);

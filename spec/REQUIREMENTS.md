@@ -290,7 +290,7 @@ The export file is the single, complete description of a board, written and read
   - elements within a slice by `x`, then by lane (top lane first), then by `id`;
   - each `connectsTo` in the order in which its targets appear in the file.
 
-  The JSON is indented with 2 spaces. No person is expected to read the file, but the indentation makes a failed import or a diff between exports easy to inspect; its size cost is irrelevant (correctness before size).
+  The JSON is compact on a single line, without indentation or a trailing newline. Line breaks within text values are escaped, preserving their content.
 - **R6.9** The same board always produces the same file, byte for byte.
 - **R6.10** What the file stores, and what it does not.
   - **Stored:** all ids, names, titles and mockups; scenarios with their example data; info texts; the list of Contexts and each Chapter's Context; each lane's colour; each element's type, lane, slice (by where it is listed) and `x`; each slice's `width`; each Chapter's `x` and `y`; the order of lanes and slices; all connections.
