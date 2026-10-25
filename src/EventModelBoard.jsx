@@ -5,6 +5,7 @@ import {
   Controls,
   Handle,
   MiniMap,
+  NodeToolbar,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -108,6 +109,10 @@ const HOTKEYS = [
       ['Shift+Delete / Shift+Backspace', 'Delete the slice (asks first)'],
       ['Esc', 'Clear the Cell selection'],
     ],
+  },
+  {
+    group: 'Selected element',
+    keys: [['I', 'Open the info of the element (not for Notes)']],
   },
   {
     group: 'Selected Scenarios element',
@@ -482,8 +487,32 @@ function StickyNode({ id, data, selected }) {
     update({ title: title.trim() });
   };
 
+  // The toolbar above a selected element (not Notes): the Info button, and for a Screen the
+  // HTML mockup button too.
+  const toolbar =
+    data.kind === 'notes' ? null : (
+      <NodeToolbar position={Position.Top} offset={8} className="element-toolbar nodrag nopan">
+        <InfoButton id={id} info={data.info} hotkey="I" />
+        {isScreen && (
+          <button
+            className="info-btn html-tool"
+            title="Edit HTML mockup"
+            aria-label="Edit HTML mockup"
+            onClick={() => setEditingHtml((v) => !v)}
+          >
+            {'</>'}
+          </button>
+        )}
+      </NodeToolbar>
+    );
+
   if (data.kind === 'scenarios') {
-    return <ScenariosCard id={id} data={data} selected={selected} onEdit={editScenario} newId={newScenarioId} />;
+    return (
+      <>
+        {toolbar}
+        <ScenariosCard id={id} data={data} selected={selected} onEdit={editScenario} newId={newScenarioId} />
+      </>
+    );
   }
   if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} onEdit={openInfo} onRead={readInfo} />;
 
@@ -491,6 +520,7 @@ function StickyNode({ id, data, selected }) {
     <div
       className={`sticky ${data.kind} ${selected ? 'selected' : ''}`}
     >
+      {toolbar}
       <Handle id="top-in" type="target" position={Position.Top} />
       <Handle id="top-out" type="source" position={Position.Top} />
       <div
@@ -511,16 +541,6 @@ function StickyNode({ id, data, selected }) {
           />
         ) : (
           <span className={`title ${data.title ? '' : 'empty'}`}>{data.title || 'Title'}</span>
-        )}
-        {isScreen && (
-          <button
-            className="html-btn nodrag"
-            title="Edit HTML mockup"
-            onDoubleClick={(e) => e.stopPropagation()}
-            onClick={() => setEditingHtml((v) => !v)}
-          >
-            {'</>'}
-          </button>
         )}
       </div>
       <div className="sticky-body">
@@ -1684,6 +1704,15 @@ function Board() {
     if (!moveKey && (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift))) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.key.toLowerCase() === 'i' && !e.shiftKey) {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].type === 'sticky' && selected[0].data.kind !== 'notes') {
+        e.preventDefault();
+        setInfoReading(false);
+        setInfoId(selected[0].id);
+      }
+      return;
+    }
     if (e.key.toLowerCase() === 'a') {
       const selected = getNodes().filter((n) => n.selected);
       if (selected.length === 1 && selected[0].data.kind === 'scenarios') {
@@ -1946,7 +1975,11 @@ function Board() {
         <InfoDialog
           key={infoNode.id}
           initialReading={infoReading}
-          title={infoNode.data.kind === 'notes' ? 'Notes' : `${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`}
+          title={
+            infoNode.type === 'sticky' && infoNode.data.kind !== 'notes'
+              ? `${KINDS[infoNode.data.kind].label}${infoNode.data.title ? ` — ${infoNode.data.title}` : ''}`
+              : infoNode.data.kind === 'notes' ? 'Notes' : `${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`
+          }
           initial={infoNode.data[infoField] ?? ''}
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
