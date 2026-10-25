@@ -1243,8 +1243,8 @@ function Board() {
   );
 
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
-  // the default width. If no Cell of a slice holds more than one element, every element is
-  // centred horizontally first; otherwise the group keeps its layout and is centred as a unit.
+  // the default width. An element alone in its Cell is centred horizontally; the elements of
+  // Cells with several keep their layout and are centred together as a group.
   // Later slices move left. With `onlySliceId` only that slice is compacted.
   const compactChapter = useCallback(
     (chapterId, onlySliceId) => {
@@ -1265,25 +1265,26 @@ function Board() {
             continue;
           }
           const w = stickyW;
-          const perCell = new Map();
-          for (const n of els) perCell.set(laneIdOf(n), (perCell.get(laneIdOf(n)) ?? 0) + 1);
-          if ([...perCell.values()].every((c) => c === 1)) {
-            const width = Math.max(
-              SLICE_MIN_WIDTH,
-              snapUp(Math.max(...els.map((n) => w(n) + 2 * padOf(n.data.kind))))
-            );
-            widths.set(sl.id, width);
-            for (const n of els) {
-              shifts.set(n.id, Math.floor((width - w(n)) / 2) - (n.position.x - sl.position.x));
-            }
-            continue;
-          }
-          const left = Math.min(...els.map((n) => n.position.x - padOf(n.data.kind)));
-          const right = Math.max(...els.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
-          const width = Math.max(SLICE_MIN_WIDTH, snapUp(right - left));
-          const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
+          const cells = new Map();
+          for (const n of els) cells.set(laneIdOf(n), [...(cells.get(laneIdOf(n)) ?? []), n]);
+          // An element alone in its Cell is centred; the elements of crowded Cells keep their
+          // layout and are centred together as a group.
+          const single = [...cells.values()].filter((c) => c.length === 1).flat();
+          const group = [...cells.values()].filter((c) => c.length > 1).flat();
+          const left = Math.min(...group.map((n) => n.position.x - padOf(n.data.kind)));
+          const right = Math.max(...group.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
+          const width = Math.max(
+            SLICE_MIN_WIDTH,
+            snapUp(Math.max(0, right - left, ...single.map((n) => w(n) + 2 * padOf(n.data.kind))))
+          );
           widths.set(sl.id, width);
-          els.forEach((n) => shifts.set(n.id, dx));
+          for (const n of single) {
+            shifts.set(n.id, Math.floor((width - w(n)) / 2) - (n.position.x - sl.position.x));
+          }
+          if (group.length) {
+            const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
+            group.forEach((n) => shifts.set(n.id, dx));
+          }
         }
         const moved = ns.map((n) => {
           if (widths.has(n.id)) return { ...n, data: { ...n.data, width: widths.get(n.id) } };
