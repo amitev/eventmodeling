@@ -1315,8 +1315,9 @@ function Board() {
   );
 
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
-  // the default width. An element alone in its Cell is centred horizontally; the elements of
-  // Cells with several keep their layout and are centred together as a group.
+  // the default width. An element alone in its Cell is centred horizontally, unless a Cell above
+  // it in the slice holds several elements; those and the elements below them keep their layout
+  // and are centred together as a group.
   // Later slices move left. With `onlySliceId` only that slice is compacted.
   const compactChapter = useCallback(
     (chapterId, onlySliceId) => {
@@ -1339,10 +1340,20 @@ function Board() {
           const w = stickyW;
           const cells = new Map();
           for (const n of els) cells.set(laneIdOf(n), [...(cells.get(laneIdOf(n)) ?? []), n]);
-          // An element alone in its Cell is centred; the elements of crowded Cells keep their
-          // layout and are centred together as a group.
-          const single = [...cells.values()].filter((c) => c.length === 1).flat();
-          const group = [...cells.values()].filter((c) => c.length > 1).flat();
+          // An element alone in its Cell is centred only if no Cell above it in the slice holds
+          // several elements; those elements, and the ones below them, keep their layout and are
+          // centred together as a group.
+          const single = [];
+          const group = [];
+          let crowded = false;
+          for (const lane of lanes) {
+            const here = cells.get(lane.id) ?? [];
+            if (here.length > 1) {
+              crowded = true;
+              group.push(...here);
+            } else if (crowded) group.push(...here);
+            else single.push(...here);
+          }
           const left = Math.min(...group.map((n) => n.position.x - padOf(n.data.kind)));
           const right = Math.max(...group.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
           const width = Math.max(
