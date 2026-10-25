@@ -97,6 +97,7 @@ const MARKDOWN_TOOLS = [
   { title: 'Code', label: <span className="info-code">&lt;/&gt;</span>, edit: toCode },
   {
     title: 'Link',
+    key: 'l',
     label: (
       <svg {...svgProps}>
         <path d="M6 8L8 6M5.6 5.2L4.4 6.4A2.2 2.2 0 0 0 7.6 9.6L8.4 8.8M8.4 8.8L9.6 7.6A2.2 2.2 0 0 0 6.4 4.4L5.6 5.2" />
@@ -123,10 +124,37 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
     const el = area.current;
     const next = edit({ value: text, start: el.selectionStart, end: el.selectionEnd });
     pending.current = next;
-    setText(next.value);
+    change(next.value, false);
   };
   const applyRef = useRef(apply); // the latest apply, for the hotkey listener
   applyRef.current = apply;
+
+  // The editor's own undo/redo (the browser's cannot follow the toolbar's edits). Snapshots hold
+  // the text and the selection; typing in one burst (pauses under a second) is one step.
+  const history = useRef({ past: [], future: [], typingAt: 0 });
+  const selection = useRef({ start: 0, end: 0 });
+  const snapshot = () => ({ value: text, ...selection.current });
+  const change = (value, typing) => {
+    const h = history.current;
+    const now = Date.now();
+    if (!(typing && h.typingAt && now - h.typingAt < 1000 && h.past.length)) h.past.push(snapshot());
+    h.typingAt = typing ? now : 0;
+    h.future = [];
+    setText(value);
+  };
+  const travel = (from, to) => {
+    const h = history.current;
+    const target = h[from].pop();
+    if (!target) return;
+    h[to].push(snapshot());
+    h.typingAt = 0;
+    pending.current = target;
+    setText(target.value);
+  };
+  const undo = () => travel('past', 'future');
+  const redo = () => travel('future', 'past');
+  const historyRef = useRef({ undo, redo });
+  historyRef.current = { undo, redo };
 
   useLayoutEffect(() => {
     const p = pending.current;
@@ -142,6 +170,13 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
       else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault(); // not the browser's Save page
         onSave(textRef.current);
+      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && area.current && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) historyRef.current.redo();
+        else historyRef.current.undo();
+      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && area.current && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        historyRef.current.redo();
       } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && area.current) {
         const tool = MARKDOWN_TOOLS.find((t) => t?.key === e.key.toLowerCase());
         if (tool) {
@@ -181,6 +216,25 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
           {!reading && (
           <div className="info-left">
             <div className="info-toolbar">
+              <button
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+                disabled={!history.current.past.length}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={undo}
+              >
+                ↶
+              </button>
+              <button
+                title="Redo (Ctrl+Y)"
+                aria-label="Redo"
+                disabled={!history.current.future.length}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={redo}
+              >
+                ↷
+              </button>
+              <span className="info-sep" />
               {MARKDOWN_TOOLS.map((tool, i) =>
                 tool ? (
                   <button
@@ -204,7 +258,10 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
               spellCheck={false}
               placeholder="Markdown"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => change(e.target.value, true)}
+              onSelect={(e) => {
+                selection.current = { start: e.target.selectionStart, end: e.target.selectionEnd };
+              }}
             />
           </div>
           )}

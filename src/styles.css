@@ -417,6 +417,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   color: #222; background: transparent; border: 0; border-radius: 4px; cursor: pointer;
 }
 .info-toolbar button:hover { background: #ececf2; }
+.info-toolbar button:disabled { opacity: 0.35; cursor: default; }
+.info-toolbar button:disabled:hover { background: none; }
 .info-italic { font-family: Georgia, serif; }
 .info-code { font: 600 12px ui-monospace, Consolas, monospace; }
 .info-sep { width: 1px; height: 18px; margin: 0 6px; background: #ccc; }

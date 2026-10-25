@@ -144,6 +144,8 @@ const HOTKEYS = [
       ['Ctrl+S', 'Save and close'],
       ['Ctrl+B', 'Bold (Markdown editor)'],
       ['Ctrl+I', 'Italic (Markdown editor)'],
+      ['Ctrl+L', 'Link (Markdown editor)'],
+      ['Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z)', 'Undo / redo in the Markdown editor'],
       ['Esc', 'Cancel'],
     ],
   },
@@ -1072,7 +1074,7 @@ function Board() {
   // The scenario being edited: { nodeId, scenarioId } (scenarioId null for a new one).
   const [scenarioEdit, setScenarioEdit] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit;
+  scenarioOpen.current = !!scenarioEdit || !!infoId;
   const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
