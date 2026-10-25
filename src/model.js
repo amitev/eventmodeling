@@ -93,6 +93,18 @@ export const chaptersOf = (nodes) => nodes.filter((n) => n.type === 'chapter');
 export const setSliceWidth = (nodes, id, width) =>
   nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, width } } : n));
 
+// A slice cannot be narrower than the elements it holds (plus their margins) or the minimum.
+export const minSliceWidth = (nodes, slice) =>
+  Math.max(
+    SLICE_MIN_WIDTH,
+    snapUp(
+      (membersOf(nodes).get(slice.id) ?? []).reduce(
+        (m, n) => Math.max(m, n.position.x + stickyW(n) + padOf(n.data.kind) - slice.position.x),
+        0
+      )
+    )
+  );
+
 // The slice an element is in: the slice of its Chapter that holds its left edge (an element
 // is kept at least SLICE_PADDING inside its slice, and may grow to the right), else the one
 // it overlaps most, else the nearest. Undefined only when the Chapter has no slice.

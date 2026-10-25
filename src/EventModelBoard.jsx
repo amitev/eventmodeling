@@ -38,6 +38,7 @@ import {
   lanesOf,
   chaptersOf,
   setSliceWidth,
+  minSliceWidth,
   sliceOf,
   membersOf,
   layoutSlices,
@@ -74,6 +75,8 @@ const HOTKEYS = [
     group: 'Selected Cell',
     keys: [
       ['← ↑ → ↓', 'Select the neighbouring Cell'],
+      ['Shift+← / Shift+→', 'Make the slice narrower / wider'],
+      ['Shift+C', 'Compact the slice'],
       ['S', 'Add a Screen in the Cell'],
       ['C', 'Add a Command in the Cell'],
       ['R', 'Add a Read Model in the Cell'],
@@ -562,16 +565,12 @@ function SliceNode({ id, data }) {
   const resizeRight = (e) => {
     const base = getNodes();
     const me = base.find((n) => n.id === id);
-    // Cannot be narrower than the elements it holds.
-    const needed = (membersOf(base).get(id) ?? []).reduce(
-      (m, n) => Math.max(m, n.position.x + stickyW(n) + padOf(n.data.kind) - me.position.x),
-      0
-    );
+    const minWidth = minSliceWidth(base, me);
     const startW = data.width;
     startDrag(
       e,
       (dx) => {
-        const width = Math.max(SLICE_MIN_WIDTH, snapUp(needed), snap(startW + dx));
+        const width = Math.max(minWidth, snap(startW + dx));
         setNodes(layoutSlices(setSliceWidth(base, id, width), base));
       },
       () => setNodes((ns) => centerStickies(settleStickies(ns)))
@@ -642,7 +641,7 @@ function SliceNode({ id, data }) {
       </div>
       <div
         className="resize-handle slice-handle right nodrag nopan"
-        title="Drag to resize"
+        title="Drag to resize (Shift+← / Shift+→ with a Cell of this slice selected)"
         onPointerDown={resizeRight}
       />
     </div>
@@ -1246,9 +1245,9 @@ function Board() {
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
   // the default width. If no Cell of a slice holds more than one element, every element is
   // centred horizontally first; otherwise the group keeps its layout and is centred as a unit.
-  // Later slices move left.
+  // Later slices move left. With `onlySliceId` only that slice is compacted.
   const compactChapter = useCallback(
-    (chapterId) => {
+    (chapterId, onlySliceId) => {
       setNodes((ns) => {
         const members = membersOf(ns);
         const lanes = lanesOf(ns, chapterId);
@@ -1259,6 +1258,7 @@ function Board() {
         const widths = new Map();
         const shifts = new Map();
         for (const sl of slices(ns, chapterId)) {
+          if (onlySliceId && sl.id !== onlySliceId) continue;
           const els = members.get(sl.id) ?? [];
           if (!els.length) {
             widths.set(sl.id, DEFAULT_SLICE_WIDTH);
@@ -1549,10 +1549,23 @@ function Board() {
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
   };
 
+  // Makes a slice wider or narrower by `delta` px, within its limits (one undo step). The
+  // slices after it, their elements and a grown Chapter follow.
+  const resizeSlice = (sliceId, delta) => {
+    const base = getNodes();
+    const slice = base.find((n) => n.id === sliceId);
+    if (!slice) return;
+    const width = Math.max(minSliceWidth(base, slice), snap(slice.data.width + delta));
+    if (width === slice.data.width) return;
+    setNodes(centerStickies(settleStickies(layoutSlices(setSliceWidth(base, sliceId, width), base))));
+  };
+
   cellKeys.current = (e) => {
     if (infoId || helpOpen || scenarioEdit) return;
-    // '+' needs Shift on most layouts, so Shift is allowed for it.
-    if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== '+')) return;
+    // '+' needs Shift on most layouts; Shift+←/→ resizes and Shift+C compacts the slice.
+    const withShift =
+      e.key === '+' || e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key.toLowerCase() === 'c';
+    if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift)) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.key.toLowerCase() === 'a') {
@@ -1569,9 +1582,18 @@ function Board() {
       addSliceAfter(selectedCell.sliceId);
       return;
     }
+    if (e.shiftKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      compactChapter(selectedCell.chapterId, selectedCell.sliceId);
+      return;
+    }
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step) {
       e.preventDefault();
+      if (e.shiftKey) {
+        resizeSlice(selectedCell.sliceId, step[1] * GRID);
+        return;
+      }
       const ns = getNodes();
       const lanes = lanesOf(ns, selectedCell.chapterId);
       const cols = slices(ns, selectedCell.chapterId);
@@ -1600,8 +1622,15 @@ function Board() {
         setTitleEditId(first.id);
       }
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (getNodes().some((n) => n.selected)) return; // the canvas deletes the selected elements
       e.preventDefault();
+      // One press does one thing, so deleting the last element never goes on to ask about the slice.
+      if (e.repeat) return;
+      const gone = new Set(getNodes().filter((n) => n.selected && n.type === 'sticky').map((n) => n.id));
+      if (gone.size) {
+        setNodes((ns) => ns.filter((n) => !gone.has(n.id)));
+        setEdges((es) => es.filter((x) => !gone.has(x.source) && !gone.has(x.target)));
+        return;
+      }
       removeCellElements(selectedCell);
     } else if (e.key === 'Escape') {
       setSelectedCell(null);
@@ -1761,7 +1790,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || selectedCell ? null : ['Backspace', 'Delete']}
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />
