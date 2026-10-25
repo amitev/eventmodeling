@@ -92,7 +92,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-header {
   pointer-events: auto; height: 40px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  padding: 0 8px; background: #8a7fc9; color: #fff; border-radius: 4px 4px 0 0;
+  padding: 0 8px; background: rgba(138, 127, 201, 0.6); color: #fff; border-radius: 4px 4px 0 0;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
   cursor: grab; user-select: none; touch-action: none;
 }
 .slice-header:active { cursor: grabbing; }
