@@ -570,6 +570,15 @@ function SliceNode({ id, data }) {
     });
     return count > 1;
   });
+  // The last slice of a Chapter has no right border: the Chapter outline is there.
+  const isLast = useStore((s) => {
+    const me = s.nodeLookup.get(id);
+    let last = true;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'slice' && n.parentId === me?.parentId && n.position.x > me.position.x) last = false;
+    });
+    return last;
+  });
   const lanesHeight = useStore((s) => {
     const parent = s.nodeLookup.get(id)?.parentId;
     let sum = 0;
@@ -623,7 +632,7 @@ function SliceNode({ id, data }) {
 
   return (
     <div
-      className="slice"
+      className={`slice${isLast ? ' last' : ''}`}
       style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
     >
       <div

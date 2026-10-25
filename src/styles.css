@@ -6,7 +6,7 @@
   --processor: #d9c2f0;
   --scenarios: #2f6fdb;
   --notes: #f5d76e;
-  --chapter-border: #5b5b6b;
+  --chapter-border: #a4a4b8;
 }
 html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
 .app { display: flex; flex-direction: column; height: 100%; }
@@ -28,7 +28,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: rgba(255, 255, 255, 0.55);
   /* The Chapter outline: left and right on every lane, top on the first, bottom on the last. */
   border: 0 solid var(--chapter-border);
-  border-left-width: 2px; border-right-width: 2px; border-top: 1px solid #b4b4c4;
+  border-left-width: 2px; border-right-width: 2px; border-top: 1px solid #d6d6e0;
 }
 .lane.first { border-top: 2px solid var(--chapter-border); }
 .lane.last { border-bottom: 2px solid var(--chapter-border); }
@@ -94,6 +94,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   content: ''; position: absolute; top: 40px; right: 0; bottom: 0; left: 0; pointer-events: none;
   box-sizing: border-box; border-right: 2px dashed #8a7fc9;
 }
+.slice.last::after { border-right: 0; }
 .slice-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .slice-header {
   pointer-events: auto; height: 40px; box-sizing: border-box;
