@@ -77,6 +77,7 @@ const HOTKEYS = [
       ['← ↑ → ↓', 'Select the neighbouring Cell'],
       ['Shift+← / Shift+→', 'Make the slice narrower / wider'],
       ['Shift+C', 'Compact the slice'],
+      ['Shift+I', 'Open the slice info'],
       ['S', 'Add a Screen in the Cell'],
       ['C', 'Add a Command in the Cell'],
       ['R', 'Add a Read Model in the Cell'],
@@ -85,7 +86,8 @@ const HOTKEYS = [
       ['X', 'Add a Scenarios element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],
       ['Enter', 'Edit the title of the first element in the Cell'],
-      ['Delete / Backspace', 'Delete the elements in the Cell, or the slice if the Cell is empty (asks first)'],
+      ['Delete / Backspace', 'Delete the selected elements, or the elements in the Cell (asks first)'],
+      ['Shift+Delete / Shift+Backspace', 'Delete the slice (asks first)'],
       ['Esc', 'Clear the Cell selection'],
     ],
   },
@@ -229,12 +231,12 @@ function useChapterDrag(nodeId, skip) {
 }
 
 // The "i" button of a Chapter, lane or slice; filled when the item has info.
-function InfoButton({ id, info }) {
+function InfoButton({ id, info, hotkey }) {
   const { openInfo } = useContext(BoardActions);
   return (
     <button
       className={`info-btn nodrag${info ? ' has-info' : ''}`}
-      title={info ? 'Edit info' : 'Add info'}
+      title={`${info ? 'Edit info' : 'Add info'}${hotkey ? ` (${hotkey})` : ''}`}
       aria-label="Info"
       onDoubleClick={(e) => e.stopPropagation()}
       onClick={() => openInfo(id)}
@@ -593,7 +595,7 @@ function SliceNode({ id, data }) {
         onDoubleClick={() => setEditing(true)}
       >
         <div className="slice-title">
-          <InfoButton id={id} info={data.info} />
+          <InfoButton id={id} info={data.info} hotkey="Shift+I with a Cell of this slice selected" />
           {editing ? (
             <input
               ref={ref}
@@ -627,7 +629,7 @@ function SliceNode({ id, data }) {
           {canRemove && (
             <button
               className="slice-add slice-remove nodrag"
-              title="Delete this slice (Delete in its empty Cell)"
+              title="Delete this slice (Shift+Delete with a Cell of it selected)"
               aria-label="Delete this slice"
               onDoubleClick={(e) => e.stopPropagation()}
               onClick={() => removeSlice(id)}
@@ -1540,10 +1542,7 @@ function Board() {
       const mid = n.position.y + stickyH(n) / 2;
       return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
     });
-    if (!inCell.length) {
-      removeSlice(slice.id, true);
-      return;
-    }
+    if (!inCell.length) return;
     if (!window.confirm(`Delete the ${inCell.length} element(s) in this Cell?`)) return;
     const gone = new Set(inCell.map((n) => n.id));
     setNodes(ns.filter((n) => !gone.has(n.id)));
@@ -1563,9 +1562,16 @@ function Board() {
 
   cellKeys.current = (e) => {
     if (infoId || helpOpen || scenarioEdit) return;
-    // '+' needs Shift on most layouts; Shift+←/→ resizes and Shift+C compacts the slice.
+    // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
+    // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
-      e.key === '+' || e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key.toLowerCase() === 'c';
+      e.key === '+' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'Delete' ||
+      e.key === 'Backspace' ||
+      e.key.toLowerCase() === 'i' ||
+      e.key.toLowerCase() === 'c';
     if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift)) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
@@ -1586,6 +1592,11 @@ function Board() {
     if (e.shiftKey && e.key.toLowerCase() === 'c') {
       e.preventDefault();
       compactChapter(selectedCell.chapterId, selectedCell.sliceId);
+      return;
+    }
+    if (e.shiftKey && e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      setInfoId(selectedCell.sliceId);
       return;
     }
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
@@ -1626,6 +1637,10 @@ function Board() {
       e.preventDefault();
       // One press does one thing, so deleting the last element never goes on to ask about the slice.
       if (e.repeat) return;
+      if (e.shiftKey) {
+        removeSlice(selectedCell.sliceId, true);
+        return;
+      }
       const gone = new Set(getNodes().filter((n) => n.selected && n.type === 'sticky').map((n) => n.id));
       if (gone.size) {
         setNodes((ns) => ns.filter((n) => !gone.has(n.id)));
