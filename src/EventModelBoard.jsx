@@ -1,12 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import DOMPurify from 'dompurify';
-import { marked } from 'marked';
 import {
   Background,
   Controls,
   Handle,
-  MarkerType,
   MiniMap,
   Position,
   ReactFlow,
@@ -17,57 +14,51 @@ import {
   useStore,
 } from '@xyflow/react';
 import { pruneScenarios, ScenarioDialog, ScenariosCard } from './Scenarios.jsx';
-
-// Event modeling: time flows left to right across swimlanes. The board holds one or
-// more Chapters. Each Chapter owns its lanes, slices and elements as child nodes
-// (positions relative to the Chapter), so moving a Chapter moves all of it. Chapters
-// are linked with arrows from the right side of one to the left side of another.
-const LANE_WIDTH = 3200;
-const LABEL_ZONE = 48; // reserved strip at the left of each lane; slices stay out of it
-const LANES = [
-  { label: 'UI / Actors', y: 0 },
-  { label: 'Commands / Read Models', y: 220 },
-  { label: 'Events', y: 440 },
-];
-
-const SLICE_Y = -40;
-const SLICE_HEADER = 40;
-const LANE_HEIGHT = 220;
-const GRID = 20;
-const SLICE_PADDING = 40; // minimum gap between a slice border and its elements
-const STICKY_W = 160; // width of an element before it is measured
-const STICKY_H = 132; // height of an element before it is measured (26px header + 104px body)
-const DEFAULT_SLICE_WIDTH = 220;
-const SLICE_MIN_WIDTH = 120;
-
-const KINDS = {
-  screen: { label: 'Screen', lane: 0, color: '#e2e2e2' },
-  command: { label: 'Command', lane: 1, color: '#7cc3f2' },
-  readmodel: { label: 'Read Model', lane: 1, color: '#8fd694' },
-  event: { label: 'Event', lane: 2, color: '#ffb366' },
-  processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
-  // Not part of the flow: it connects to nothing (R4.7).
-  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200, pad: SLICE_PADDING / 2 },
-};
-
-// Size of an element before it is measured, and its minimum gap to the slice borders.
-const kindW = (kind) => KINDS[kind]?.w ?? STICKY_W;
-const kindH = (kind) => KINDS[kind]?.h ?? STICKY_H;
-const padOf = (kind) => KINDS[kind]?.pad ?? SLICE_PADDING;
-
-// Element types an element of each type can point to (R4.7).
-const FLOWS_TO = {
-  screen: ['command'],
-  processor: ['command'],
-  command: ['event'],
-  event: ['readmodel'],
-  readmodel: ['screen', 'processor'],
-};
-
-const snap = (v) => Math.round(v / GRID) * GRID;
+import {
+  LANE_WIDTH,
+  LABEL_ZONE,
+  LANES,
+  SLICE_HEADER,
+  LANE_HEIGHT,
+  GRID,
+  DEFAULT_SLICE_WIDTH,
+  SLICE_MIN_WIDTH,
+  KINDS,
+  kindW,
+  padOf,
+  FLOWS_TO,
+  snap,
+  LANE_COLORS,
+  snapUp,
+  uniqueId,
+  SLICE_MIN_X,
+  stickyW,
+  stickyH,
+  slices,
+  lanesOf,
+  chaptersOf,
+  setSliceWidth,
+  sliceOf,
+  membersOf,
+  layoutSlices,
+  settleStickies,
+  centerStickies,
+  adoptStickies,
+  layered,
+  cellAt,
+  makeChapter,
+  makeSlice,
+  makeLane,
+  makeEdge,
+  makeEmptyBoard,
+} from './model.js';
+import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
+import { InfoDialog } from './InfoDialog.jsx';
+import { HistoryContext, useHistory } from './history.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
 const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'readmodel', e: 'event', p: 'processor', x: 'scenarios' };
+const hotkeyOf = (kind) => Object.keys(CELL_ADD_KEYS).find((k) => CELL_ADD_KEYS[k] === kind).toUpperCase();
 
 // The hotkey help, grouped by context (R1d.1).
 const HOTKEYS = [
@@ -94,6 +85,10 @@ const HOTKEYS = [
       ['Delete / Backspace', 'Delete the elements in the Cell, or the slice if the Cell is empty (asks first)'],
       ['Esc', 'Clear the Cell selection'],
     ],
+  },
+  {
+    group: 'Selected Scenarios element',
+    keys: [['A', 'Add a scenario']],
   },
   {
     group: 'Editing a name or title',
@@ -153,7 +148,7 @@ function HotkeysDialog({ onClose }) {
           ))}
         </div>
         <div className="info-actions">
-          <button onClick={onClose}>Close</button>
+          <button onClick={onClose} title="Close (Esc)">Close</button>
         </div>
       </div>
     </div>,
@@ -161,260 +156,6 @@ function HotkeysDialog({ onClose }) {
   );
 }
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
-const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
-
-const snapUp = (v) => Math.ceil(v / GRID) * GRID;
-
-const ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const ID_LENGTH = 6;
-
-// 6 characters of a-zA-Z0-9 from the secure random source (R1.14).
-function randomId() {
-  let id = '';
-  while (id.length < ID_LENGTH) {
-    for (const b of crypto.getRandomValues(new Uint8Array(ID_LENGTH))) {
-      if (b < 248 && id.length < ID_LENGTH) id += ID_CHARS[b % 62]; // 248 = 4 * 62: no modulo bias
-    }
-  }
-  return id;
-}
-
-// A fresh id that is not in `used`; it is added to `used`.
-function uniqueId(used) {
-  let id = randomId();
-  while (used.has(id)) id = randomId();
-  used.add(id);
-  return id;
-}
-
-const SLICE_MIN_X = LABEL_ZONE;
-// Measured size of an element (React Flow keeps it in `measured`); the default until measured.
-const stickyW = (n) => n.measured?.width ?? kindW(n.data?.kind);
-const stickyH = (n) => n.measured?.height ?? kindH(n.data?.kind);
-const slices = (nodes, chapterId) =>
-  nodes
-    .filter((n) => n.type === 'slice' && (chapterId === undefined || n.parentId === chapterId))
-    .sort((a, b) => a.position.x - b.position.x);
-const lanesOf = (nodes, chapterId) =>
-  nodes
-    .filter((n) => n.type === 'lane' && n.parentId === chapterId)
-    .sort((a, b) => a.position.y - b.position.y);
-const chaptersOf = (nodes) => nodes.filter((n) => n.type === 'chapter');
-
-const setSliceWidth = (nodes, id, width) =>
-  nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, width } } : n));
-
-// The slice an element is in: the slice of its Chapter that holds its left edge (an element
-// is kept at least SLICE_PADDING inside its slice, and may grow to the right), else the one
-// it overlaps most, else the nearest. Undefined only when the Chapter has no slice.
-function sliceOf(ss, n) {
-  const mine = ss.filter((s) => s.parentId === n.parentId);
-  const l = n.position.x;
-  const r = l + stickyW(n);
-  const holding = mine.find((s) => l >= s.position.x && l < s.position.x + s.data.width);
-  if (holding) return holding;
-  let best;
-  let bestScore = -Infinity;
-  for (const s of mine) {
-    const score = Math.min(r, s.position.x + s.data.width) - Math.max(l, s.position.x); // negative: the gap
-    if (score > bestScore) {
-      bestScore = score;
-      best = s;
-    }
-  }
-  return best;
-}
-
-// Slice id -> the elements in it.
-function membersOf(nodes) {
-  const ss = slices(nodes);
-  const map = new Map(ss.map((sl) => [sl.id, []]));
-  for (const n of nodes) {
-    if (n.type !== 'sticky') continue;
-    const sl = sliceOf(ss, n);
-    if (sl) map.get(sl.id).push(n);
-  }
-  return map;
-}
-
-// Slices form one contiguous run: the first starts at the beginning of the slice
-// area and each next one starts where the previous ends. Elements move with the
-// slice they belong to. The Chapter is exactly as wide as the slices: it ends
-// where the last slice ends (and has room for one default slice when empty).
-// `ref` is the board before any width change, so membership is not skewed by a
-// slice that is mid-resize. Returns the same array when nothing changes.
-function layoutSlices(nodes, ref = nodes) {
-  const newX = new Map();
-  const widths = new Map(); // chapter id -> width
-  for (const c of chaptersOf(nodes)) {
-    let cursor = SLICE_MIN_X;
-    const ordered = slices(nodes, c.id);
-    for (const n of ordered) {
-      newX.set(n.id, cursor);
-      cursor += n.data.width;
-    }
-    widths.set(c.id, ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH);
-  }
-  const refX = new Map(slices(ref).map((n) => [n.id, n.position.x]));
-  const shift = new Map();
-  for (const [sid, els] of membersOf(ref)) {
-    const d = (newX.get(sid) ?? refX.get(sid)) - refX.get(sid);
-    if (d) els.forEach((el) => shift.set(el.id, d));
-  }
-  let changed = false;
-  const next = nodes.map((n) => {
-    if (n.type === 'slice' && newX.has(n.id) && newX.get(n.id) !== n.position.x) {
-      changed = true;
-      return { ...n, position: { ...n.position, x: newX.get(n.id) } };
-    }
-    if (n.type === 'lane' && widths.has(n.parentId) && n.data.width !== widths.get(n.parentId)) {
-      changed = true;
-      return { ...n, data: { ...n.data, width: widths.get(n.parentId) } };
-    }
-    if (shift.has(n.id)) {
-      changed = true;
-      return { ...n, position: { ...n.position, x: n.position.x + shift.get(n.id) } };
-    }
-    return n;
-  });
-  return changed ? next : nodes;
-}
-
-// An element never straddles a slice boundary: it is moved fully inside its slice (keeping
-// SLICE_PADDING from its borders), and that slice grows if the element does not fit.
-function settleStickies(nodes, only) {
-  const ss = slices(nodes);
-  if (!ss.length) return nodes;
-  const widen = new Map();
-  let changed = false;
-  const placed = nodes.map((n) => {
-    if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
-    const w = stickyW(n);
-    const l = n.position.x;
-    const best = sliceOf(ss, n);
-    if (!best) return n;
-    const pad = padOf(n.data.kind);
-    const room = Math.max(best.data.width, snapUp(w + 2 * pad));
-    if (room > best.data.width) widen.set(best.id, Math.max(widen.get(best.id) ?? 0, room));
-    const x = Math.min(
-      Math.max(l, best.position.x + pad),
-      best.position.x + room - w - pad
-    );
-    if (x === l) return n;
-    changed = true;
-    return { ...n, position: { ...n.position, x } };
-  });
-  if (!widen.size) return changed ? placed : nodes;
-  return layoutSlices(
-    placed.map((n) =>
-      widen.has(n.id) ? { ...n, data: { ...n.data, width: widen.get(n.id) } } : n
-    ),
-    placed
-  );
-}
-
-// Elements are vertically centred in the lane that holds their centre. An element
-// taller than its lane is aligned to the lane top. `only` limits it to those ids.
-function centerStickies(nodes, only) {
-  const lanes = nodes.filter((n) => n.type === 'lane');
-  if (!lanes.length) return nodes;
-  let changed = false;
-  const next = nodes.map((n) => {
-    if (n.type !== 'sticky' || (only && !only.has(n.id))) return n;
-    const h = stickyH(n);
-    const mid = n.position.y + h / 2;
-    const lane = lanes.find(
-      (l) =>
-        l.parentId === n.parentId &&
-        mid >= l.position.y &&
-        mid < l.position.y + l.data.height
-    );
-    if (!lane) return n;
-    const y = lane.position.y + Math.max(0, (lane.data.height - h) / 2);
-    if (y === n.position.y) return n;
-    changed = true;
-    return { ...n, position: { ...n.position, y } };
-  });
-  return changed ? next : nodes;
-}
-
-// Where a dragged element ends up is decided by the Cell under its centre: it joins that
-// Cell's Chapter and slice (its position is converted to the Chapter's coordinates and
-// kept inside the slice's margins; the lane centring is done by centerStickies). Over no
-// Cell it returns to where the drag started (`origin`: id -> { parentId, position }).
-// `only` limits it to those ids.
-function adoptStickies(nodes, only, origin) {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  let changed = false;
-  const next = nodes.map((n) => {
-    if (n.type !== 'sticky' || !only.has(n.id)) return n;
-    const parent = byId.get(n.parentId);
-    if (!parent) return n;
-    const w = stickyW(n);
-    const ax = parent.position.x + n.position.x;
-    const ay = parent.position.y + n.position.y;
-    const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 });
-    if (!cell) {
-      const from = origin.get(n.id);
-      if (!from) return n;
-      changed = true;
-      return { ...n, parentId: from.parentId, position: { ...from.position } };
-    }
-    const chapter = byId.get(cell.chapterId);
-    const slice = byId.get(cell.sliceId);
-    const pad = padOf(n.data.kind);
-    const x = Math.max(
-      slice.position.x + pad,
-      Math.min(ax - chapter.position.x, slice.position.x + slice.data.width - w - pad)
-    );
-    const y = ay - chapter.position.y;
-    if (chapter.id === n.parentId && x === n.position.x && y === n.position.y) return n;
-    changed = true;
-    return { ...n, parentId: chapter.id, position: { x, y } };
-  });
-  return changed ? next : nodes;
-}
-
-const normalize = (nodes) => centerStickies(settleStickies(layoutSlices(nodes)));
-
-// Items are drawn in list order (a child's z-index never goes below its parent's), so lanes
-// must come before slices and elements to stay under their tint.
-const LAYER = { chapter: 0, lane: 1, slice: 2, sticky: 3 };
-const layered = (nodes) => [...nodes].sort((a, b) => LAYER[a.type] - LAYER[b.type]);
-
-// A Cell is the intersection of a lane and a slice of one Chapter: one box of the
-// Chapter's grid (lanes are the rows, slices the columns). It is not stored anywhere;
-// it follows from the lanes and slices. This finds the Cell under a canvas point
-// (flow coordinates), or null when the point is not inside any Cell.
-function cellAt(nodes, p) {
-  for (const c of chaptersOf(nodes)) {
-    const lane = lanesOf(nodes, c.id).find(
-      (l) =>
-        p.y >= c.position.y + l.position.y && p.y < c.position.y + l.position.y + l.data.height
-    );
-    const slice = slices(nodes, c.id).find(
-      (sl) =>
-        p.x >= c.position.x + sl.position.x && p.x < c.position.x + sl.position.x + sl.data.width
-    );
-    if (lane && slice) return { chapterId: c.id, laneId: lane.id, sliceId: slice.id };
-  }
-  return null;
-}
-
-// Undo/redo works on whole-board snapshots. A continuous gesture (dragging a note,
-// resizing a slice) brackets itself with begin/end so it records a single entry.
-const HistoryContext = createContext({ begin: () => {}, end: () => {} });
-const MAX_HISTORY = 100;
-
-// What counts as the board's content: selection, measured sizes and drag flags
-// are deliberately left out, so they never create history entries.
-const keyOf = (nodes, edges, contexts) =>
-  JSON.stringify([
-    nodes.map((n) => [n.id, n.type, n.parentId, n.position.x, n.position.y, n.data]),
-    edges.map((e) => [e.id, e.source, e.target]),
-    contexts,
-  ]);
-
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 function useHorizontalDrag() {
   const zoom = useStore((s) => s.transform[2]);
@@ -482,180 +223,6 @@ function useChapterDrag(nodeId, skip) {
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
   };
-}
-
-// Links in the info preview open in a new tab, without access to the board.
-DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A' && node.hasAttribute('href')) {
-    node.setAttribute('target', '_blank');
-    node.setAttribute('rel', 'noopener noreferrer');
-  }
-});
-
-// Edits behind the helper buttons: ({ value, start, end }) -> the new text and selection.
-const wrapSelection = (before, after, placeholder) => ({ value, start, end }) => {
-  const sel = value.slice(start, end) || placeholder;
-  const from = start + before.length;
-  return {
-    value: value.slice(0, start) + before + sel + after + value.slice(end),
-    start: from,
-    end: from + sel.length,
-  };
-};
-
-const toggleTasks = ({ value, start, end }) => {
-  if (start === end) {
-    const atLineStart = start === 0 || value[start - 1] === '\n';
-    const ins = `${atLineStart ? '' : '\n'}- [ ] Task\n- [x] Resolved task\n`;
-    const at = start + ins.length;
-    return { value: value.slice(0, start) + ins + value.slice(end), start: at, end: at };
-  }
-  const from = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1;
-  const nl = value.indexOf('\n', end);
-  const to = nl === -1 ? value.length : nl;
-  const lines = value.slice(from, to).split('\n');
-  const on = lines.every((l) => l.startsWith('- [ ] '));
-  const next = lines.map((l) => (on ? l.slice(6) : `- [ ] ${l}`)).join('\n');
-  return { value: value.slice(0, from) + next + value.slice(to), start: from, end: from + next.length };
-};
-
-const insertTable = ({ value, start, end }) => {
-  const atLineStart = start === 0 || value[start - 1] === '\n';
-  const ins = `${atLineStart ? '' : '\n'}| Column 1 | Column 2 |\n| --- | --- |\n| Cell | Cell |\n`;
-  const at = start + ins.length;
-  return { value: value.slice(0, start) + ins + value.slice(end), start: at, end: at };
-};
-
-const toCode = (state) => {
-  const { value, start, end } = state;
-  const sel = value.slice(start, end);
-  if (!sel.includes('\n')) return wrapSelection('`', '`', 'code')(state);
-  const ins = `\`\`\`\n${sel}\n\`\`\``;
-  return { value: value.slice(0, start) + ins + value.slice(end), start, end: start + ins.length };
-};
-
-const toLink = ({ value, start, end }) => {
-  const text = value.slice(start, end) || 'text';
-  const from = start + text.length + 3;
-  return {
-    value: `${value.slice(0, start)}[${text}](url)${value.slice(end)}`,
-    start: from,
-    end: from + 3,
-  };
-};
-
-const svgProps = { width: 14, height: 14, viewBox: '0 0 14 14', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 };
-
-const MARKDOWN_TOOLS = [
-  { title: 'Bold', label: <b>B</b>, edit: wrapSelection('**', '**', 'bold') },
-  { title: 'Italic', label: <i className="info-italic">I</i>, edit: wrapSelection('*', '*', 'italic') },
-  { title: 'Strikethrough', label: <s>S</s>, edit: wrapSelection('~~', '~~', 'text') },
-  null,
-  {
-    title: 'Task list',
-    label: (
-      <svg {...svgProps}>
-        <rect x="1.5" y="1.5" width="11" height="11" rx="2" fill="currentColor" />
-        <path d="M4 7.2L6.2 9.4L10 4.8" stroke="#fff" />
-      </svg>
-    ),
-    edit: toggleTasks,
-  },
-  {
-    title: 'Table',
-    label: (
-      <svg {...svgProps}>
-        <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" />
-        <path d="M1.5 5.2H12.5M1.5 8.8H12.5M7 1.5V12.5" />
-      </svg>
-    ),
-    edit: insertTable,
-  },
-  { title: 'Code', label: <span className="info-code">&lt;/&gt;</span>, edit: toCode },
-  {
-    title: 'Link',
-    label: (
-      <svg {...svgProps}>
-        <path d="M6 8L8 6M5.6 5.2L4.4 6.4A2.2 2.2 0 0 0 7.6 9.6L8.4 8.8M8.4 8.8L9.6 7.6A2.2 2.2 0 0 0 6.4 4.4L5.6 5.2" />
-      </svg>
-    ),
-    edit: toLink,
-  },
-];
-
-// Modal to edit the Markdown info of a Chapter, lane or slice: editor on the left, preview on
-// the right. The changes only apply on Save.
-function InfoDialog({ title, initial, onSave, onCancel }) {
-  const [text, setText] = useState(initial);
-  const area = useRef(null);
-  const pending = useRef(null); // selection to restore after a helper button changed the text
-  // marked does not sanitise, so its HTML always goes through DOMPurify.
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(text, { async: false })), [text]);
-
-  const apply = (edit) => {
-    const el = area.current;
-    const next = edit({ value: text, start: el.selectionStart, end: el.selectionEnd });
-    pending.current = next;
-    setText(next.value);
-  };
-
-  useLayoutEffect(() => {
-    const p = pending.current;
-    if (!p || !area.current) return;
-    pending.current = null;
-    area.current.focus();
-    area.current.setSelectionRange(p.start, p.end);
-  }, [text]);
-
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onCancel();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
-
-  return createPortal(
-    <div className="info-backdrop">
-      <div className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="info-title">{title}</div>
-        <div className="info-panes">
-          <div className="info-left">
-            <div className="info-toolbar">
-              {MARKDOWN_TOOLS.map((tool, i) =>
-                tool ? (
-                  <button
-                    key={tool.title}
-                    title={tool.title}
-                    aria-label={tool.title}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => apply(tool.edit)}
-                  >
-                    {tool.label}
-                  </button>
-                ) : (
-                  <span key={i} className="info-sep" />
-                )
-              )}
-            </div>
-            <textarea
-              ref={area}
-              className="info-editor"
-              autoFocus
-              spellCheck={false}
-              placeholder="Markdown"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </div>
-          <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
-        </div>
-        <div className="info-actions">
-          <button onClick={() => onSave(text)}>Save</button>
-          <button onClick={onCancel}>Cancel</button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
 }
 
 // The "i" button of a Chapter, lane or slice; filled when the item has info.
@@ -1061,7 +628,7 @@ function SliceNode({ id, data }) {
           {canRemove && (
             <button
               className="slice-add slice-remove nodrag"
-              title="Delete this slice"
+              title="Delete this slice (Delete in its empty Cell)"
               aria-label="Delete this slice"
               onDoubleClick={(e) => e.stopPropagation()}
               onClick={() => removeSlice(id)}
@@ -1215,461 +782,14 @@ function ChapterNode({ id, data }) {
 
 const nodeTypes = { lane: LaneNode, sticky: StickyNode, slice: SliceNode, chapter: ChapterNode };
 
-const chapterDefaults = {
-  dragHandle: '.chapter-handle',
-  deletable: false, // removed with the × button, never with the keyboard
-  connectable: true,
-  // Only the handle and the ports take the mouse; lanes and elements below stay usable.
-  style: { pointerEvents: 'none' },
-};
-
-const makeChapter = (id, x, y, name, context, info) => ({
-  id,
-  type: 'chapter',
-  position: { x, y },
-  data: { name, context, ...(info ? { info } : {}) },
-  ...chapterDefaults,
-});
-
-const makeSlice = (id, x, width, name, chapterId, info) => ({
-  id,
-  type: 'slice',
-  position: { x, y: SLICE_Y },
-  data: { name, width, ...(info ? { info } : {}) },
-  parentId: chapterId,
-  draggable: false,
-  selectable: false,
-  zIndex: -1,
-  // Only the header takes pointer events, so notes under the band stay usable.
-  style: { pointerEvents: 'none' },
-});
-
-const makeLane = (id, chapterId, label, y, color, width, info) => ({
-  id,
-  type: 'lane',
-  position: { x: 0, y },
-  parentId: chapterId,
-  data: { label, height: LANE_HEIGHT, width, color, ...(info ? { info } : {}) },
-  draggable: false,
-  selectable: false,
-  connectable: false,
-  deletable: false,
-  focusable: false,
-  zIndex: -1,
-  // Clicks pass through to the canvas (selects the Cell) and to the arrows above the lane.
-  style: { pointerEvents: 'none' },
-});
-
-const edgeDefaults = {
-  markerEnd: { type: MarkerType.ArrowClosed },
-  style: { strokeWidth: 2 },
-};
-
-// Arrows between Chapters are heavier and darker than arrows between elements.
-const chapterEdgeDefaults = {
-  markerEnd: { type: MarkerType.ArrowClosed, color: '#5b5b6b' },
-  style: { strokeWidth: 3, stroke: '#5b5b6b' },
-};
-
-// A connection has no id of its own (R1.16); React Flow needs one, so it is derived.
-const makeEdge = (source, target, chapterLevel) => ({
-  id: `${source}>${target}`,
-  source,
-  target,
-  ...(chapterLevel ? chapterEdgeDefaults : edgeDefaults),
-});
-
-// The starting board (R1.4): one empty Chapter in the Default Context, with fresh ids.
-function makeEmptyBoard() {
-  const used = new Set();
-  const id = () => uniqueId(used);
-  const chapterId = id();
-  const contexts = [{ id: id(), name: 'Default' }];
-  const nodes = normalize([
-    makeChapter(chapterId, 0, 0, 'Chapter 1', contexts[0].id),
-    ...LANES.map((l) => makeLane(id(), chapterId, l.label, l.y, 'none', LANE_WIDTH)),
-    makeSlice(id(), LABEL_ZONE, DEFAULT_SLICE_WIDTH, 'New Slice', chapterId),
-  ]);
-  return { nodes, edges: [], contexts };
-}
-
-const STORAGE_KEY = 'event-model-board';
-
-const compareIds = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-
-const serializeScenario = (s) => {
-  const entry = (e) => ({
-    element: e.element,
-    example: e.example.map(({ name, example }) => ({ name, example })),
-  });
-  return {
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    given: s.given.map(entry),
-    when: s.when ? entry(s.when) : null,
-    then: s.then.map(entry),
-    error: s.error,
-  };
-};
-
-// The export file (section 6): the one complete description of the board. Values that follow
-// from the layout rules are left out. Field order is fixed so the same board always gives
-// the same text.
-function serialize(nodes, edges, contexts) {
-  const kindOf = new Map(nodes.map((n) => [n.id, n.type]));
-  const targetsOf = new Map();
-  for (const e of edges) {
-    const kind = kindOf.get(e.source);
-    if (e.source === e.target || kind !== kindOf.get(e.target)) continue;
-    if (kind !== 'chapter' && kind !== 'sticky') continue;
-    if (!targetsOf.has(e.source)) targetsOf.set(e.source, new Set());
-    targetsOf.get(e.source).add(e.target);
-  }
-
-  const ss = slices(nodes);
-  const order = new Map(); // id -> position in the file, which orders every connectsTo
-  const items = []; // [owner id, its connectsTo array] to fill once `order` is complete
-  const chapters = chaptersOf(nodes)
-    .sort(
-      (a, b) => a.position.x - b.position.x || a.position.y - b.position.y || compareIds(a.id, b.id)
-    )
-    .map((ch) => {
-      order.set(ch.id, order.size);
-      const lanes = lanesOf(nodes, ch.id);
-      const laneIndex = new Map(lanes.map((l, i) => [l.id, i]));
-      const laneOf = (n) => {
-        const cy = n.position.y + stickyH(n) / 2;
-        let found = lanes[0];
-        for (const l of lanes) if (cy >= l.position.y) found = l;
-        return found;
-      };
-      const chapterSlices = slices(nodes, ch.id);
-      const bySlice = new Map(chapterSlices.map((s) => [s.id, []]));
-      for (const n of nodes) {
-        if (n.type !== 'sticky' || n.parentId !== ch.id) continue;
-        const sl = sliceOf(ss, n);
-        if (sl) bySlice.get(sl.id).push({ n, lane: laneOf(n) });
-      }
-      const connectsTo = [];
-      items.push([ch.id, connectsTo]);
-      return {
-        id: ch.id,
-        name: ch.data.name,
-        ...(ch.data.info ? { info: ch.data.info } : {}),
-        context: contexts.some((c) => c.id === ch.data.context) ? ch.data.context : contexts[0].id,
-        x: ch.position.x,
-        y: ch.position.y,
-        connectsTo,
-        lanes: lanes.map((l) => ({
-          id: l.id,
-          name: l.data.label,
-          ...(l.data.info ? { info: l.data.info } : {}),
-          color: l.data.color,
-        })),
-        slices: chapterSlices.map((sl) => ({
-          id: sl.id,
-          name: sl.data.name,
-          ...(sl.data.info ? { info: sl.data.info } : {}),
-          width: sl.data.width,
-          elements: bySlice
-            .get(sl.id)
-            .sort(
-              (a, b) =>
-                a.n.position.x - b.n.position.x ||
-                laneIndex.get(a.lane.id) - laneIndex.get(b.lane.id) ||
-                compareIds(a.n.id, b.n.id)
-            )
-            .map(({ n, lane }) => {
-              order.set(n.id, order.size);
-              const links = [];
-              items.push([n.id, links]);
-              return {
-                id: n.id,
-                type: n.data.kind,
-                lane: lane.id,
-                title: n.data.title ?? '',
-                ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
-                ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
-                x: n.position.x - sl.position.x,
-                connectsTo: links,
-              };
-            }),
-        })),
-      };
-    });
-
-  for (const [id, list] of items) {
-    const targets = [...(targetsOf.get(id) ?? [])].filter((t) => order.has(t));
-    list.push(...targets.sort((a, b) => order.get(a) - order.get(b)));
-  }
-  return {
-    format: 'event-model',
-    version: 1,
-    contexts: contexts.map((c) => ({ id: c.id, name: c.name })),
-    chapters,
-  };
-}
-
-const boardText = (nodes, edges, contexts) =>
-  JSON.stringify(serialize(nodes, edges, contexts), null, 2);
-
-const ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
-const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-
-// Reads the export file (section 7). The whole file is checked before anything is built; the
-// first problem throws an Error that names where it is. Returns { nodes, edges }.
-function parseBoard(text) {
-  const fail = (path, message) => {
-    throw new Error(`${path || 'file'}: ${message}`);
-  };
-  const at = (path, key) => (path ? `${path}.${key}` : key);
-  const object = (v, keys, path, optional = []) => {
-    if (!isObject(v)) fail(path, 'must be an object');
-    for (const k of keys) if (!hasKey(v, k)) fail(at(path, k), 'is missing');
-    for (const k of Object.keys(v)) {
-      if (!keys.includes(k) && !optional.includes(k)) fail(at(path, k), 'is not allowed');
-    }
-  };
-  const list = (v, path, nonEmpty) => {
-    if (!Array.isArray(v)) fail(path, 'must be a list');
-    if (nonEmpty && !v.length) fail(path, 'must not be empty');
-  };
-  const string = (v, path) => {
-    if (typeof v !== 'string') fail(path, 'must be a text');
-  };
-  const name = (v, path) => {
-    string(v, path);
-    if (!v.trim()) fail(path, 'must not be empty');
-  };
-  const number = (v, path) => {
-    if (typeof v !== 'number' || !Number.isFinite(v)) fail(path, 'must be a finite number');
-  };
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (err) {
-    throw new Error(`file: not valid JSON (${err.message})`);
-  }
-  if (isObject(data) && !hasKey(data, 'format')) {
-    fail('format', 'is missing (files in an earlier format are not supported)');
-  }
-  object(data, ['format', 'version', 'contexts', 'chapters'], '');
-  if (data.format !== 'event-model') fail('format', 'must be "event-model"');
-  if (data.version !== 1) fail('version', 'must be 1');
-  list(data.contexts, 'contexts', true);
-  list(data.chapters, 'chapters', true);
-
-  const kindOf = new Map(); // id -> context | chapter | lane | slice | element
-  const claim = (id, kind, path) => {
-    if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
-      fail(path, 'must be a text of at least 6 letters, digits, "-" or "_"');
-    }
-    if (kindOf.has(id)) fail(path, `duplicate id "${id}"`);
-    kindOf.set(id, kind);
-  };
-  const links = []; // connectsTo lists to check once every id is known
-  const unconnectable = new Set(); // ids of Scenarios elements
-  const elements = new Map(); // element id -> { chapter, type }
-  const references = []; // scenario entries' element ids, checked once every element is known
-  const exampleList = (v, path) => {
-    list(v, path);
-    v.forEach((f, i) => {
-      const fp = `${path}[${i}]`;
-      object(f, ['name', 'example'], fp);
-      string(f.name, at(fp, 'name'));
-      string(f.example, at(fp, 'example'));
-    });
-    return v.map(({ name, example }) => ({ name, example }));
-  };
-  const scenarioEntry = (v, path, chapter, type) => {
-    object(v, ['element', 'example'], path);
-    string(v.element, at(path, 'element'));
-    references.push({ path: at(path, 'element'), id: v.element, chapter, type });
-    return { element: v.element, example: exampleList(v.example, at(path, 'example')) };
-  };
-  const scenarioList = (v, path, chapter) => {
-    list(v, path);
-    return v.map((s, si) => {
-      const sp = `${path}[${si}]`;
-      object(s, ['id', 'title', 'description', 'given', 'when', 'then', 'error'], sp);
-      claim(s.id, 'scenario', at(sp, 'id'));
-      string(s.title, at(sp, 'title'));
-      string(s.description, at(sp, 'description'));
-      list(s.given, at(sp, 'given'));
-      const given = s.given.map((e, i) => scenarioEntry(e, `${at(sp, 'given')}[${i}]`, chapter, 'event'));
-      const when = s.when === null ? null : scenarioEntry(s.when, at(sp, 'when'), chapter, 'command');
-      list(s.then, at(sp, 'then'));
-      const then = s.then.map((e, i) => scenarioEntry(e, `${at(sp, 'then')}[${i}]`, chapter, 'event'));
-      if (s.error !== null) {
-        string(s.error, at(sp, 'error'));
-        if (then.length) fail(at(sp, 'error'), 'must be null when "then" is not empty');
-      }
-      return { id: s.id, title: s.title, description: s.description, given, when, then, error: s.error };
-    });
-  };
-  const optionalInfo = (item, path) => {
-    if (!hasKey(item, 'info')) return;
-    string(item.info, at(path, 'info'));
-    if (item.info === '') fail(at(path, 'info'), 'must be left out when empty');
-  };
-  const nodes = [];
-  const contexts = [];
-
-  data.contexts.forEach((x, xi) => {
-    const xp = `contexts[${xi}]`;
-    object(x, ['id', 'name'], xp);
-    claim(x.id, 'context', at(xp, 'id'));
-    name(x.name, at(xp, 'name'));
-    contexts.push({ id: x.id, name: x.name });
-  });
-
-  data.chapters.forEach((c, ci) => {
-    const cp = `chapters[${ci}]`;
-    object(c, ['id', 'name', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'], cp, ['info']);
-    claim(c.id, 'chapter', at(cp, 'id'));
-    name(c.name, at(cp, 'name'));
-    optionalInfo(c, cp);
-    string(c.context, at(cp, 'context'));
-    if (!contexts.some((x) => x.id === c.context)) {
-      fail(at(cp, 'context'), `no context with id "${c.context}"`);
-    }
-    number(c.x, at(cp, 'x'));
-    number(c.y, at(cp, 'y'));
-    list(c.connectsTo, at(cp, 'connectsTo'));
-    links.push({ owner: c.id, kind: 'chapter', path: at(cp, 'connectsTo'), ids: c.connectsTo });
-    list(c.lanes, at(cp, 'lanes'), true);
-    list(c.slices, at(cp, 'slices'), true);
-    nodes.push(makeChapter(c.id, c.x, c.y, c.name, c.context, c.info));
-
-    const laneY = new Map();
-    c.lanes.forEach((l, li) => {
-      const lp = `${cp}.lanes[${li}]`;
-      object(l, ['id', 'name', 'color'], lp, ['info']);
-      claim(l.id, 'lane', at(lp, 'id'));
-      name(l.name, at(lp, 'name'));
-      optionalInfo(l, lp);
-      if (!LANE_COLORS.includes(l.color)) {
-        fail(at(lp, 'color'), `must be one of ${LANE_COLORS.join(', ')}`);
-      }
-      laneY.set(l.id, li * LANE_HEIGHT);
-      nodes.push(makeLane(l.id, c.id, l.name, li * LANE_HEIGHT, l.color, LANE_WIDTH, l.info));
-    });
-
-    let cursor = SLICE_MIN_X;
-    c.slices.forEach((sl, si) => {
-      const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'width', 'elements'], sp, ['info']);
-      claim(sl.id, 'slice', at(sp, 'id'));
-      name(sl.name, at(sp, 'name'));
-      optionalInfo(sl, sp);
-      number(sl.width, at(sp, 'width'));
-      if (sl.width < SLICE_MIN_WIDTH) fail(at(sp, 'width'), `must be at least ${SLICE_MIN_WIDTH}`);
-      list(sl.elements, at(sp, 'elements'));
-      const width = sl.width;
-      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info));
-
-      sl.elements.forEach((el, ei) => {
-        const ep = `${sp}.elements[${ei}]`;
-        const isScenarios = isObject(el) && el.type === 'scenarios';
-        object(
-          el,
-          ['id', 'type', 'lane', 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
-          ep,
-          ['html']
-        );
-        claim(el.id, 'element', at(ep, 'id'));
-        if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
-          fail(at(ep, 'type'), `must be one of ${Object.keys(KINDS).join(', ')}`);
-        }
-        string(el.lane, at(ep, 'lane'));
-        if (!laneY.has(el.lane)) {
-          fail(at(ep, 'lane'), `no lane with id "${el.lane}" in this chapter`);
-        }
-        string(el.title, at(ep, 'title'));
-        if (hasKey(el, 'html')) {
-          string(el.html, at(ep, 'html'));
-          if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
-          if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
-        }
-        number(el.x, at(ep, 'x'));
-        const pad = padOf(el.type);
-        if (el.x < pad) fail(at(ep, 'x'), `must be at least ${pad}`);
-        const w = kindW(el.type);
-        if (el.x + w + pad > sl.width) {
-          fail(
-            at(ep, 'x'),
-            `the element (x ${el.x}, width ${w}) does not fit in the slice with ${pad}px margins (width ${sl.width})`
-          );
-        }
-        list(el.connectsTo, at(ep, 'connectsTo'));
-        if (isScenarios) unconnectable.add(el.id);
-        elements.set(el.id, { chapter: c.id, type: el.type });
-        const scenarios = isScenarios ? scenarioList(el.scenarios, at(ep, 'scenarios'), c.id) : null;
-        links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
-        nodes.push({
-          id: el.id,
-          type: 'sticky',
-          parentId: c.id,
-          position: { x: cursor + el.x, y: laneY.get(el.lane) + 40 },
-          data: {
-            kind: el.type,
-            title: el.title,
-            ...(el.html ? { html: el.html } : {}),
-            ...(scenarios ? { scenarios } : {}),
-          },
-        });
-      });
-      cursor += width;
-    });
-  });
-
-  for (const { path, id, chapter, type } of references) {
-    const target = elements.get(id);
-    if (!target) fail(path, `no element with id "${id}"`);
-    if (target.chapter !== chapter) fail(path, `"${id}" is not an element of the same chapter`);
-    if (target.type !== type) fail(path, `"${id}" must be ${type === 'event' ? 'an event' : 'a command'}`);
-  }
-
-  const edges = [];
-  for (const { owner, kind, path, ids } of links) {
-    const seen = new Set();
-    ids.forEach((t, i) => {
-      const p = `${path}[${i}]`;
-      string(t, p);
-      if (t === owner) fail(p, 'an item cannot connect to itself');
-      if (!kindOf.has(t)) fail(p, `no item with id "${t}"`);
-      if (kindOf.get(t) !== kind) {
-        fail(p, `"${t}" must be the id of ${kind === 'chapter' ? 'a chapter' : 'an element'}`);
-      }
-      if (unconnectable.has(owner) || unconnectable.has(t)) fail(p, 'a scenarios element cannot be connected');
-      if (seen.has(t)) fail(p, `id "${t}" is listed twice`);
-      seen.add(t);
-      edges.push(makeEdge(owner, t, kind === 'chapter'));
-    });
-  }
-  return { nodes: normalize(nodes), edges, contexts };
-}
-
-function load() {
-  try {
-    const text = localStorage.getItem(STORAGE_KEY);
-    if (text) return parseBoard(text);
-  } catch {
-    // missing, corrupt or unavailable storage: the starting board is shown
-  }
-  return null;
-}
-
 // Where a new element goes in a Cell (a lane crossed with a slice): the first spot from
 // the left, inside the slice's margins, that does not overlap an element already in the
 // Cell. When the Cell is full it goes after the last element and the slice has to grow:
 // `sliceWidth` is the width the slice needs (the current width when nothing changes).
 function spotInCell(nodes, lane, slice, kind) {
   const w = kindW(kind);
-  const pad = padOf(kind);  const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
+  const pad = padOf(kind);
+  const inCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => {
     const mid = n.position.y + stickyH(n) / 2;
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
@@ -1845,69 +965,6 @@ function Board() {
   }, [nodes, edges, contexts]);
 
   // ---- Undo / redo (in memory only) ----
-  const past = useRef([]);
-  const future = useRef([]);
-  const present = useRef(null);
-  const gesture = useRef(0); // >0 while a drag/resize is in progress
-  const silentAt = useRef(0); // when the board last re-settled itself after a measure
-  const [tick, setTick] = useState(0);
-  const [hist, setHist] = useState({ undo: 0, redo: 0 });
-  const syncHist = () => setHist({ undo: past.current.length, redo: future.current.length });
-
-  useEffect(() => {
-    if (gesture.current > 0) return;
-    const key = keyOf(nodes, edges, contexts);
-    if (!present.current) {
-      present.current = { nodes, edges, contexts, key };
-      return;
-    }
-    if (key === present.current.key) return;
-    // Changes made by the board itself right after an element was measured (such as
-    // re-centring it) are folded into the user's operation instead of being separate steps.
-    const silent = performance.now() - silentAt.current < 300;
-    silentAt.current = 0;
-    if (!silent) {
-      past.current.push(present.current);
-      if (past.current.length > MAX_HISTORY) past.current.shift();
-      future.current = [];
-      syncHist();
-    }
-    present.current = { nodes, edges, contexts, key };
-  }, [nodes, edges, contexts, tick]);
-
-  // Scenarios whose Events/Commands were deleted (or left the Chapter) are deleted too. The
-  // change is folded into the user's operation (see silentAt).
-  useEffect(() => {
-    const pruned = pruneScenarios(nodes);
-    if (!pruned) return;
-    silentAt.current = performance.now();
-    setNodes(pruned.nodes);
-    setNotice(
-      `Deleted ${pruned.removed.length === 1 ? 'the scenario' : 'the scenarios'} ${pruned.removed
-        .map((t) => `"${t}"`)
-        .join(', ')}: an element used in ${pruned.removed.length === 1 ? 'it' : 'them'} was deleted or left the Chapter.`
-    );
-  }, [nodes, setNodes]);
-
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 8000);
-    return () => clearTimeout(timer);
-  }, [notice]);
-
-  const historyApi = useMemo(
-    () => ({
-      begin: () => {
-        gesture.current++;
-      },
-      end: () => {
-        gesture.current = Math.max(0, gesture.current - 1);
-        setTick((t) => t + 1);
-      },
-    }),
-    []
-  );
-
   const restore = useCallback(
     (snap) => {
       setNodes(snap.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)));
@@ -1917,41 +974,33 @@ function Board() {
     },
     [setNodes, setEdges]
   );
+  const { hist, undo, redo, api: historyApi, markSilent } = useHistory({
+    nodes,
+    edges,
+    contexts,
+    restore,
+    blocked: scenarioOpen,
+  });
 
-  const undo = useCallback(() => {
-    if (gesture.current > 0) return;
-    const prev = past.current.pop();
-    if (!prev) return;
-    future.current.push(present.current);
-    present.current = prev;
-    restore(prev);
-    syncHist();
-  }, [restore]);
-
-  const redo = useCallback(() => {
-    if (gesture.current > 0) return;
-    const next = future.current.pop();
-    if (!next) return;
-    past.current.push(present.current);
-    present.current = next;
-    restore(next);
-    syncHist();
-  }, [restore]);
+  // Scenarios whose Events/Commands were deleted (or left the Chapter) are deleted too. The
+  // change is folded into the user's operation (see markSilent).
+  useEffect(() => {
+    const pruned = pruneScenarios(nodes);
+    if (!pruned) return;
+    markSilent();
+    setNodes(pruned.nodes);
+    setNotice(
+      `Deleted ${pruned.removed.length === 1 ? 'the scenario' : 'the scenarios'} ${pruned.removed
+        .map((t) => `"${t}"`)
+        .join(', ')}: an element used in ${pruned.removed.length === 1 ? 'it' : 'them'} was deleted or left the Chapter.`
+    );
+  }, [nodes, setNodes, markSilent]);
 
   useEffect(() => {
-    const onKey = (e) => {
-      if (scenarioOpen.current || !(e.ctrlKey || e.metaKey) || e.altKey) return;
-      const t = e.target;
-      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const k = e.key.toLowerCase();
-      if (k === 'z' && !e.shiftKey) undo();
-      else if (k === 'y' || (k === 'z' && e.shiftKey)) redo();
-      else return;
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   // Hotkeys of a selected Cell (R5a.11). The handler is assigned further down, where the
   // actions it needs are defined; this listener stays registered.
@@ -1972,11 +1021,11 @@ function Board() {
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
       const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
       if (kept.some((c) => c.type === 'dimensions' && stickyIds.has(c.id))) {
-        silentAt.current = performance.now();
+        markSilent();
         setNodes((ns) => centerStickies(settleStickies(ns)));
       }
     },
-    [onNodesChange, getNodes, setNodes]
+    [onNodesChange, getNodes, setNodes, markSilent]
   );
 
   // Deleting a slice also deletes its elements (after confirmation) and closes the gap. The
@@ -2453,11 +1502,20 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (!selectedCell || infoId || helpOpen || scenarioEdit) return;
+    if (infoId || helpOpen || scenarioEdit) return;
     // '+' needs Shift on most layouts, so Shift is allowed for it.
     if (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && e.key !== '+')) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.key.toLowerCase() === 'a') {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].data.kind === 'scenarios') {
+        e.preventDefault();
+        setScenarioEdit({ nodeId: selected[0].id, scenarioId: null });
+      }
+      return;
+    }
+    if (!selectedCell) return;
     if (e.key === '+') {
       e.preventDefault();
       addSliceAfter(selectedCell.sliceId);
@@ -2566,7 +1624,7 @@ function Board() {
             draggable
             onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
             onClick={() => addSticky(kind)}
-            title="Select a Cell and click to add, or drag onto a Cell"
+            title={`Select a Cell and click to add (${hotkeyOf(kind)}), or drag onto a Cell`}
           >
             + {k.icon && `${k.icon} `}{k.label}
           </button>

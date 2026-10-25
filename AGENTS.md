@@ -18,6 +18,17 @@ When writing the specification use the minimal wording needed that still retains
 
 We're still in alpha version. Forget about backwards compatibility when making changes.
 
+## Code layout
+
+All in `src/`:
+
+- `EventModelBoard.jsx`: the board (React Flow nodes, `Board()` with its operations and hotkeys).
+- `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
+- `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
+- `history.js`: undo/redo (`useHistory`) and the gesture context.
+- `InfoDialog.jsx`: the Markdown info editor.
+- `Scenarios.jsx`: the Scenarios card, its popup, the example data editor and scenario pruning.
+
 ## Testing
 
 Do NOT test by yourself. Always ask me whether I want you to test the changes for me.

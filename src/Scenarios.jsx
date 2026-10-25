@@ -146,7 +146,12 @@ export function ScenariosCard({ id, data, selected, onEdit, newId }) {
         ))}
       </div>
       <div className="scenarios-foot">
-        <button className="scenario-btn nodrag" onDoubleClick={stop} onClick={() => onEdit(id, null)}>
+        <button
+          className="scenario-btn nodrag"
+          title="Add a scenario (A)"
+          onDoubleClick={stop}
+          onClick={() => onEdit(id, null)}
+        >
           + Add
         </button>
         <button className="scenario-btn nodrag">
@@ -330,7 +335,12 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     const has = section === 'when' ? !!draft.when : list.length > 0;
     return (
       <span className="gwt-chip-wrap">
-        <button className="gwt-chip" disabled={section === 'then' && draft.error !== null} onClick={() => open(section)}>
+        <button
+          className="gwt-chip"
+          title={`Choose ${label === 'Given' || label === 'Then' ? 'an event' : 'the command'} (${key})`}
+          disabled={section === 'then' && draft.error !== null}
+          onClick={() => open(section)}
+        >
           {label} ({key})
         </button>
         {has && (
@@ -441,7 +451,12 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           <div className="gwt-section">
             <div className="gwt-chips">
               {chip('then')}
-              <button className="gwt-chip gwt-error-chip" disabled={draft.then.length > 0} onClick={openError}>
+              <button
+                className="gwt-chip gwt-error-chip"
+                title="Expect an error instead of events (E)"
+                disabled={draft.then.length > 0}
+                onClick={openError}
+              >
                 Then Error (E)
               </button>
             </div>
