@@ -49,9 +49,9 @@ export const KINDS = {
   event: { label: 'Event', lane: 2, color: '#ffb366' },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
   // Not part of the flow: it connects to nothing (R4.7).
-  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, h: 200, pad: SLICE_PADDING / 2 },
+  scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, maxW: 560, h: 200, pad: SLICE_PADDING / 2, stretch: true },
   // Free Markdown text shown in the element; same size as Scenarios. Connects to nothing.
-  notes: { label: 'Notes', color: '#f5d76e', w: 280, h: 200, pad: SLICE_PADDING / 2 },
+  notes: { label: 'Notes', color: '#f5d76e', w: 280, maxW: 560, h: 200, pad: SLICE_PADDING / 2, stretch: true },
 };
 
 // Size of an element before it is measured, and its minimum gap to the slice borders.
@@ -99,7 +99,9 @@ export function uniqueId(used) {
 
 export const SLICE_MIN_X = LABEL_ZONE;
 // Measured size of an element (React Flow keeps it in `measured`); the default until measured.
-export const stickyW = (n) => n.measured?.width ?? kindW(n.data?.kind);
+// Width used by the layout. An element that can stretch (`stretch` in KINDS) counts with its
+// minimum width: stretching only fills the slice (see stretchWidth).
+export const stickyW = (n) => (KINDS[n.data?.kind]?.stretch ? kindW(n.data.kind) : n.measured?.width ?? kindW(n.data?.kind));
 export const stickyH = (n) => n.measured?.height ?? kindH(n.data?.kind);
 export const slices = (nodes, chapterId) =>
   nodes
@@ -202,6 +204,40 @@ export function layoutSlices(nodes, ref = nodes) {
   return changed ? next : nodes;
 }
 
+// The width an element is shown with. A Scenarios or Notes element fills its slice between the
+// margins, within its minimum and maximum width, when it is alone in its Cell; otherwise it keeps
+// its minimum width.
+export function stretchWidth(nodes, node) {
+  const kind = node.data.kind;
+  const min = kindW(kind);
+  if (!KINDS[kind]?.stretch) return min;
+  const slice = sliceOf(slices(nodes), node);
+  if (!slice) return min;
+  const lanes = lanesOf(nodes, node.parentId);
+  const laneIdOf = (n) => {
+    const mid = n.position.y + stickyH(n) / 2;
+    return lanes.find((l) => mid >= l.position.y && mid < l.position.y + l.data.height)?.id;
+  };
+  const mine = laneIdOf(node);
+  const sameCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => laneIdOf(n) === mine);
+  return sameCell.length === 1
+    ? Math.min(KINDS[kind].maxW ?? Infinity, Math.max(min, slice.data.width - 2 * padOf(kind)))
+    : min;
+}
+
+// A Spec lane's Cell holds one element at most. True when `lane` is a Spec lane and its Cell in
+// `slice` already holds an element other than those in `ignore`.
+export function cellIsFull(nodes, lane, slice, ignore) {
+  if (lane?.data.type !== 'spec') return false;
+  return (membersOf(nodes).get(slice.id) ?? []).some((n) => {
+    const mid = n.position.y + stickyH(n) / 2;
+    return !ignore?.has(n.id) && mid >= lane.position.y && mid < lane.position.y + lane.data.height;
+  });
+}
+
+// Elements in a Spec lane are left aligned (R3.20)
+export const leftAligned = (lane) => lane?.data.type === 'spec';
+
 // An element never straddles a slice boundary: it is moved fully inside its slice (keeping
 // SLICE_PADDING from its borders), and that slice grows if the element does not fit.
 export function settleStickies(nodes, only) {
@@ -218,10 +254,14 @@ export function settleStickies(nodes, only) {
     const pad = padOf(n.data.kind);
     const room = Math.max(best.data.width, snapUp(w + 2 * pad));
     if (room > best.data.width) widen.set(best.id, Math.max(widen.get(best.id) ?? 0, room));
-    const x = Math.min(
-      Math.max(l, best.position.x + pad),
-      best.position.x + room - w - pad
-    );
+    // Elements of a Spec lane are left aligned (R3.20); the others stay where they are, inside the slice.
+    const lane = lanesOf(nodes, n.parentId).find((l) => {
+      const mid = n.position.y + stickyH(n) / 2;
+      return mid >= l.position.y && mid < l.position.y + l.data.height;
+    });
+    const x = leftAligned(lane)
+      ? best.position.x + pad
+      : Math.min(Math.max(l, best.position.x + pad), best.position.x + room - w - pad);
     if (x === l) return n;
     changed = true;
     return { ...n, position: { ...n.position, x } };
@@ -276,8 +316,13 @@ export function adoptStickies(nodes, only, origin) {
     const ax = parent.position.x + n.position.x;
     const ay = parent.position.y + n.position.y;
     const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 });
-    // A Cell whose lane does not take this element type counts as no Cell.
-    if (!cell || !laneAllows(byId.get(cell.laneId), n.data.kind)) {
+    // A Cell whose lane does not take this element type, or a Spec Cell that already holds
+    // another element, counts as no Cell.
+    if (
+      !cell ||
+      !laneAllows(byId.get(cell.laneId), n.data.kind) ||
+      cellIsFull(nodes, byId.get(cell.laneId), byId.get(cell.sliceId), only)
+    ) {
       const from = origin.get(n.id);
       if (!from) return n;
       changed = true;

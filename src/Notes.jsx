@@ -3,11 +3,12 @@ import { renderMarkdown } from './InfoDialog.jsx';
 
 // The card of a Notes element: its Markdown text, rendered. Editing opens the Markdown editor;
 // the eye opens it in read mode.
-export function NotesCard({ id, data, selected, onEdit, onRead }) {
+export function NotesCard({ id, data, selected, width, onEdit, onRead }) {
   const html = useMemo(() => renderMarkdown(data.markdown ?? ''), [data.markdown]);
   return (
     <div
       className={`sticky notes ${selected ? 'selected' : ''}`}
+      style={{ width }}
       onDoubleClick={() => onEdit(id)}
     >
       <div className="notes-head">

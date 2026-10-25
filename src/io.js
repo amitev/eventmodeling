@@ -298,6 +298,7 @@ export function parseBoard(text) {
       const width = sl.width;
       nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info, sl.flowEnd));
 
+      const specCells = new Set(); // Spec lanes already holding an element in this slice
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
         const isScenarios = isObject(el) && el.type === 'scenarios';
@@ -317,6 +318,10 @@ export function parseBoard(text) {
         }
         if (!LANE_TYPES[laneType.get(el.lane)].kinds.includes(el.type)) {
           fail(at(ep, 'lane'), `a ${laneType.get(el.lane)} lane does not take ${el.type} elements`);
+        }
+        if (laneType.get(el.lane) === 'spec') {
+          if (specCells.has(el.lane)) fail(at(ep, 'lane'), 'a spec lane holds one element per slice');
+          specCells.add(el.lane);
         }
         string(el.title, at(ep, 'title'));
         optionalInfo(el, ep);

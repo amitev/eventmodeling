@@ -63,7 +63,7 @@ function parseExample(text) {
 }
 
 // The Scenarios card of a Scenarios element: its list of scenarios.
-export function ScenariosCard({ id, data, selected, onEdit, newId }) {
+export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
   const { setNodes } = useReactFlow();
   const scenarios = data.scenarios;
   const [drag, setDrag] = useState(null); // { from, over }: indexes while a scenario is dragged
@@ -89,7 +89,7 @@ export function ScenariosCard({ id, data, selected, onEdit, newId }) {
   const stop = (e) => e.stopPropagation();
 
   return (
-    <div className={`sticky scenarios ${selected ? 'selected' : ''}`}>
+    <div className={`sticky scenarios ${selected ? 'selected' : ''}`} style={{ width }}>
       <div className="scenarios-head">
         <span>Scenarios</span>
       </div>

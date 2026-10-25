@@ -27,6 +27,7 @@ import {
   SLICE_MIN_WIDTH,
   KINDS,
   kindW,
+  stretchWidth,
   padOf,
   FLOWS_TO,
   snap,
@@ -36,6 +37,8 @@ import {
   REQUIRED_LANE_TYPES,
   nextLaneTypes,
   laneAllows,
+  cellIsFull,
+  leftAligned,
   snapUp,
   uniqueId,
   SLICE_MIN_X,
@@ -469,6 +472,11 @@ function StickyNode({ id, data, selected }) {
 
   const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
+  // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
+  const width = useStore((s) => {
+    const me = s.nodeLookup.get(id);
+    return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
+  });
   const { titleEditId, clearTitleEdit, editScenario, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
 
   useEffect(() => {
@@ -510,11 +518,11 @@ function StickyNode({ id, data, selected }) {
     return (
       <>
         {toolbar}
-        <ScenariosCard id={id} data={data} selected={selected} onEdit={editScenario} newId={newScenarioId} />
+        <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} newId={newScenarioId} />
       </>
     );
   }
-  if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} onEdit={openInfo} onRead={readInfo} />;
+  if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />;
 
   return (
     <div
@@ -885,9 +893,10 @@ function spotInCell(nodes, lane, slice, kind) {
     return mid >= lane.position.y && mid < lane.position.y + lane.data.height;
   });
   if (!inCell.length) {
-    // Empty Cell: centred in the slice, which grows first if it is too narrow.
+    // Empty Cell: centred in the slice (left aligned in a Spec lane), which grows first if it is
+    // too narrow.
     const width = Math.max(slice.data.width, snapUp(w + 2 * pad));
-    const x = slice.position.x + Math.floor((width - w) / 2);
+    const x = leftAligned(lane) ? slice.position.x + pad : slice.position.x + Math.floor((width - w) / 2);
     return { x, y: lane.position.y + 40, sliceWidth: width, empty: true };
   }
   const left = slice.position.x + pad;
@@ -1335,9 +1344,9 @@ function Board() {
   );
 
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
-  // the default width. An element alone in its Cell is centred horizontally, unless a Cell above
-  // it in the slice holds several elements; those and the elements below them keep their layout
-  // and are centred together as a group.
+  // the default width. Elements are left aligned, not centred. If every Cell of the slice holds
+  // at most one element, each starts at the left margin; otherwise all elements keep their layout
+  // and move together so that the left-most starts at the left margin.
   // Later slices move left. With `onlySliceId` only that slice is compacted.
   const compactChapter = useCallback(
     (chapterId, onlySliceId) => {
@@ -1360,33 +1369,24 @@ function Board() {
           const w = stickyW;
           const cells = new Map();
           for (const n of els) cells.set(laneIdOf(n), [...(cells.get(laneIdOf(n)) ?? []), n]);
-          // An element alone in its Cell is centred only if no Cell above it in the slice holds
-          // several elements; those elements, and the ones below them, keep their layout and are
-          // centred together as a group.
-          const single = [];
-          const group = [];
-          let crowded = false;
-          for (const lane of lanes) {
-            const here = cells.get(lane.id) ?? [];
-            if (here.length > 1) {
-              crowded = true;
-              group.push(...here);
-            } else if (crowded) group.push(...here);
-            else single.push(...here);
-          }
-          const left = Math.min(...group.map((n) => n.position.x - padOf(n.data.kind)));
-          const right = Math.max(...group.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
-          const width = Math.max(
-            SLICE_MIN_WIDTH,
-            snapUp(Math.max(0, right - left, ...single.map((n) => w(n) + 2 * padOf(n.data.kind))))
-          );
-          widths.set(sl.id, width);
-          for (const n of single) {
-            shifts.set(n.id, Math.floor((width - w(n)) / 2) - (n.position.x - sl.position.x));
-          }
-          if (group.length) {
-            const dx = Math.floor((width - (right - left)) / 2) - (left - sl.position.x);
-            group.forEach((n) => shifts.set(n.id, dx));
+          const crowded = [...cells.values()].some((c) => c.length > 1);
+          if (!crowded) {
+            // One element per Cell: each starts at the left margin.
+            const width = Math.max(
+              SLICE_MIN_WIDTH,
+              snapUp(Math.max(...els.map((n) => w(n) + 2 * padOf(n.data.kind))))
+            );
+            widths.set(sl.id, width);
+            for (const n of els) {
+              shifts.set(n.id, padOf(n.data.kind) - (n.position.x - sl.position.x));
+            }
+          } else {
+            // Some Cell holds several: all elements keep their layout, moved together so that the
+            // left-most starts at the left margin.
+            const left = Math.min(...els.map((n) => n.position.x - padOf(n.data.kind)));
+            const right = Math.max(...els.map((n) => n.position.x + w(n) + padOf(n.data.kind)));
+            widths.set(sl.id, Math.max(SLICE_MIN_WIDTH, snapUp(right - left)));
+            els.forEach((n) => shifts.set(n.id, sl.position.x - left));
           }
         }
         const moved = ns.map((n) => {
@@ -1597,7 +1597,7 @@ function Board() {
     const cellRef = drop?.cell ?? selectedCell;
     const lane = cellRef && find(cellRef.laneId);
     const slice = cellRef && find(cellRef.sliceId);
-    if (!lane || !slice || !laneAllows(lane, kind)) return;
+    if (!lane || !slice || !laneAllows(lane, kind) || cellIsFull(ns, lane, slice)) return;
     const x = drop?.x;
 
     let base = ns;
@@ -1872,7 +1872,13 @@ function Board() {
           <button
             key={kind}
             className={`chip ${kind}`}
-            aria-disabled={selectedLane && !laneAllows(selectedLane, kind) ? true : undefined}
+            aria-disabled={
+              selectedLane &&
+              (!laneAllows(selectedLane, kind) ||
+                cellIsFull(nodes, selectedLane, nodes.find((n) => n.id === selectedCell.sliceId)))
+                ? true
+                : undefined
+            }
             draggable
             onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
             onClick={() => addSticky(kind)}
