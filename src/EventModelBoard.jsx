@@ -287,9 +287,27 @@ function InfoButton({ id, info, hotkey }) {
   );
 }
 
+function CopyButton({ id }) {
+  const { rememberCopy } = useContext(BoardActions);
+  return (
+    <button
+      className="info-btn copy-btn nodrag"
+      title="Copy (Ctrl+C)"
+      aria-label="Copy"
+      onClick={(e) => {
+        e.stopPropagation();
+        rememberCopy(id);
+      }}
+    >
+      ⧉
+    </button>
+  );
+}
+
 const BoardActions = createContext({
   editScenario: () => {},
   newScenarioId: () => '',
+  rememberCopy: () => {},
   openInfo: () => {},
   readInfo: () => {},
   titleEditId: null,
@@ -526,6 +544,7 @@ function StickyNode({ id, data, selected }) {
   const toolbar =
     data.kind === 'notes' || isCopy ? null : (
       <NodeToolbar position={Position.Top} offset={8} className="element-toolbar nodrag nopan">
+        {data.kind !== 'scenarios' && <CopyButton id={id} />}
         <InfoButton id={id} info={data.info} hotkey="I" />
         {isScreen && (
           <button
@@ -1211,6 +1230,12 @@ function Board() {
 
   // The original of the linked copies made with Ctrl+C / Ctrl+V; memory only.
   const clipboard = useRef(null);
+  const rememberCopy = useCallback((id) => {
+    const element = getNodes().find((n) => n.id === id);
+    if (element?.type === 'sticky' && !['scenarios', 'notes'].includes(element.data.kind)) {
+      clipboard.current = element.data.copyOf ?? element.id;
+    }
+  }, [getNodes]);
   // Hotkeys of a selected Cell (R5a.11). The handler is assigned further down, where the
   // actions it needs are defined; this listener stays registered.
   const cellKeys = useRef(null);
@@ -1506,6 +1531,7 @@ function Board() {
     () => ({
       editScenario: (nodeId, scenarioId) => setScenarioEdit({ nodeId, scenarioId }),
       newScenarioId: () => newIds()[0],
+      rememberCopy,
       contexts,
       setChapterContext,
       addContext,
@@ -1546,6 +1572,7 @@ function Board() {
       chapters.length,
       contexts,
       nodes,
+      rememberCopy,
       titleEditId,
     ]
   );
@@ -1775,7 +1802,7 @@ function Board() {
       if (e.key.toLowerCase() === 'c') {
         const selected = getNodes().filter((n) => n.selected);
         const only = selected.length === 1 && selected[0].type === 'sticky' ? selected[0] : null;
-        if (only && !['scenarios', 'notes'].includes(only.data.kind)) clipboard.current = only.data.copyOf ?? only.id;
+        if (only) rememberCopy(only.id);
       } else {
         const original = clipboard.current && getNodes().find((n) => n.id === clipboard.current);
         if (original) {
