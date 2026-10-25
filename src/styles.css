@@ -187,11 +187,11 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 /* Scenarios: a fixed 280x200 card, not a sticky; it has no header bar or handles. */
 .chip.scenarios { background: var(--scenarios) !important; color: #fff; }
 .sticky.scenarios {
-  width: 280px; height: 200px; min-height: 0; padding: 8px 10px 0; gap: 6px; overflow: hidden;
+  width: 280px; height: 200px; min-height: 0; padding: 3px 10px 0; gap: 4px; overflow: hidden;
   background: #f8f9fb; border-radius: 4px; /* border and shadow come from .sticky */
 }
 .scenarios-head {
-  display: flex; align-items: center; gap: 8px; color: #667;
+  display: flex; align-items: center; gap: 8px; color: #667; line-height: 14px;
   font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
 }
 .scenarios-list {

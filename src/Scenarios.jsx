@@ -100,7 +100,7 @@ export function ScenariosCard({ id, data, selected, onEdit, newId }) {
             className={`scenario-item nodrag${s.error !== null ? ' failed' : ''}${
               drag && drag.over === i && drag.from !== i ? (drag.from < i ? ' over-after' : ' over-before') : ''
             }`}
-            title="Double-click to edit, drag to reorder"
+            title={s.title || undefined}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = 'move';
