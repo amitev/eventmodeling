@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Background,
   Controls,
@@ -64,6 +65,8 @@ import {
 } from './model.js';
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { InfoDialog } from './InfoDialog.jsx';
+import { FieldsDialog } from './FieldsDialog.jsx';
+import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
 import { CELL_ADD_KEYS, hotkeyOf, HotkeysDialog } from './Hotkeys.jsx';
 
@@ -163,6 +166,40 @@ function InfoButton({ id, info, hotkey }) {
   );
 }
 
+// The "Fields" button of the element toolbar; filled when the element has fields (R9.2).
+function FieldsButton({ id, has }) {
+  const { openFields } = useContext(BoardActions);
+  return (
+    <button
+      className={`info-btn nodrag${has ? ' has-info' : ''}`}
+      title="Edit fields (F)"
+      aria-label="Fields"
+      onClick={(e) => {
+        e.stopPropagation();
+        openFields(id);
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <path d="M1 2H9M1 5H9M1 8H6" />
+      </svg>
+    </button>
+  );
+}
+
+// The field names of an element as a compact list (R9.5); objects show their own fields indented.
+function FieldList({ fields }) {
+  return (
+    <ul className="field-list">
+      {fields.map((f) => (
+        <li key={f.name}>
+          {f.name}
+          {f.fields?.length > 0 && <FieldList fields={f.fields} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function CopyButton({ id }) {
   const { rememberCopy } = useContext(BoardActions);
   return (
@@ -188,6 +225,7 @@ const BoardActions = createContext({
   newScenarioId: () => '',
   rememberCopy: () => {},
   openInfo: () => {},
+  openFields: () => {},
   readInfo: () => {},
   titleEditId: null,
   clearTitleEdit: () => {},
@@ -427,10 +465,11 @@ function StickyNode({ id, data, selected }) {
         position={Position.Top}
         offset={8 * toolbarScale}
         className="element-toolbar nodrag nopan"
-        style={{ '--tb-scale': toolbarScale }}
+        style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
       >
         {data.kind !== 'scenarios' && <CopyButton id={id} />}
         <InfoButton id={id} info={data.info} hotkey="I" />
+        {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
         {isScreen && (
           <button
             className="info-btn html-tool"
@@ -499,6 +538,7 @@ function StickyNode({ id, data, selected }) {
         )}
       </div>
       <div className="sticky-body">
+      {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
       {isScreen && editingHtml && (
         <textarea
           className="nodrag nowheel html-editor"
@@ -946,6 +986,7 @@ const confirmCopies = (nodes, gone) => {
 };
 
 function CellHighlight({ cell }) {
+  const host = useStore((s) => s.domNode?.querySelector('.react-flow__renderer'));
   const box = useStore((s) => {
     if (!cell) return null;
     const lane = s.nodeLookup.get(cell.laneId);
@@ -959,9 +1000,10 @@ function CellHighlight({ cell }) {
       lane.data.height * zoom,
     ].join(',');
   });
-  if (!box) return null;
+  if (!box || !host) return null;
   const [left, top, width, height] = box.split(',').map(Number);
-  return <div className="cell-highlight" style={{ left, top, width, height }} />;
+  // Drawn inside the renderer, so the element toolbar (also there) can sit above it.
+  return createPortal(<div className="cell-highlight" style={{ left, top, width, height }} />, host);
 }
 
 function Board() {
@@ -1019,8 +1061,10 @@ function Board() {
   const [titleEditId, setTitleEditId] = useState(null);
   // The scenario being edited: { nodeId, scenarioId } (scenarioId null for a new one).
   const [scenarioEdit, setScenarioEdit] = useState(null);
+  // The element whose fields popup is open.
+  const [fieldsId, setFieldsId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId;
   const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
@@ -1035,6 +1079,22 @@ function Board() {
       })
     );
     setInfoId(null);
+  };
+  // Saves the fields of the open element and copies the new ones it was asked to propagate
+  // down the chain, as one undo step.
+  const fieldsNode = nodes.find((n) => n.id === fieldsId);
+  const saveFields = (fields, propagate) => {
+    const id = fieldsId;
+    const es = getEdges();
+    setNodes((ns) =>
+      propagateFields(
+        ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, fields } } : n)),
+        es,
+        id,
+        propagate
+      )
+    );
+    setFieldsId(null);
   };
   const focusChapter = (node) =>
     setActiveId(node.type === 'chapter' ? node.id : node.parentId ?? null);
@@ -1431,6 +1491,7 @@ function Board() {
         setInfoReading(true);
         setInfoId(id);
       },
+      openFields: setFieldsId,
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
@@ -1558,9 +1619,11 @@ function Board() {
       const o = orient(c);
       if (!o || !isValidConnection(c)) return;
       const fromChapter = getNodes().find((n) => n.id === o[0])?.type === 'chapter';
-      setEdges((es) => [...es, makeEdge(o[0], o[1], fromChapter)]);
+      const edge = makeEdge(o[0], o[1], fromChapter);
+      setEdges((es) => [...es, edge]);
+      if (!fromChapter) setNodes((ns) => inheritOnConnect(ns, [...getEdges(), edge], [o]));
     },
-    [setEdges, getNodes, isValidConnection]
+    [setEdges, setNodes, getNodes, getEdges, isValidConnection]
   );
 
   // An element is only created in a Cell. A `drop` ({ cell, x }) puts it in that Cell at
@@ -1609,11 +1672,15 @@ function Board() {
     );
     const inSelectedCell =
       selectedCell && selectedCell.laneId === lane.id && selectedCell.sliceId === slice.id;
-    setNodes(inSelectedCell ? selectOnly(next, id) : next);
     const have = new Set(getEdges().map((e) => `${e.source}>${e.target}`));
     const added = autoConnections(next, next.find((n) => n.id === id))
       .filter(([s, t]) => !have.has(`${s}>${t}`))
       .map(([s, t]) => makeEdge(s, t, false));
+    // The new arrows bring the fields of their sources along (R9.4).
+    const result = added.length
+      ? inheritOnConnect(next, [...getEdges(), ...added], added.map((e) => [e.source, e.target]))
+      : next;
+    setNodes(inSelectedCell ? selectOnly(result, id) : result);
     if (added.length) setEdges((es) => [...es, ...added]);
   };
 
@@ -1666,7 +1733,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (infoId || helpOpen || scenarioEdit) return;
+    if (infoId || helpOpen || scenarioEdit || fieldsId) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
@@ -1706,6 +1773,14 @@ function Board() {
         e.preventDefault();
         setInfoReading(false);
         setInfoId(selected[0].id);
+      }
+      return;
+    }
+    if (e.key.toLowerCase() === 'f' && !e.shiftKey) {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].type === 'sticky' && hasFields(selected[0].data.kind) && !selected[0].data.copyOf) {
+        e.preventDefault();
+        setFieldsId(selected[0].id);
       }
       return;
     }
@@ -1959,7 +2034,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || fieldsId || selectedCell ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={selectedCell} />
@@ -1987,6 +2062,16 @@ function Board() {
           initial={infoNode.data[infoField] ?? ''}
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
+        />
+      )}
+      {fieldsNode && (
+        <FieldsDialog
+          key={fieldsNode.id}
+          title={`Fields — ${KINDS[fieldsNode.data.kind].label}${fieldsNode.data.title ? ` — ${fieldsNode.data.title}` : ''}`}
+          initial={fieldsNode.data.fields ?? []}
+          parent={parentFields(nodes, edges, fieldsNode.id)}
+          onSave={saveFields}
+          onClose={() => setFieldsId(null)}
         />
       )}
       {scenarioNode && (scenarioEdit.scenarioId === null || editedScenario) && (

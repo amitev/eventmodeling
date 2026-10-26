@@ -64,7 +64,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ## 1c. Info
 
 - **R1c.1** A Chapter, lane, slice and element (except Notes, which is Markdown text itself, R3.18) can carry **info**: Markdown text, empty by default.
-- **R1c.1a** **Element toolbar.** While exactly one element is selected, a toolbar floats above it (white, thin border, shadow; it does not capture the element's drag). Buttons are 24x24px on screen at zoom 100% and below; zoomed in, the toolbar (buttons, icons, spacing, gap to the element) grows with the zoom up to 28x28px buttons. It holds the copy button (two overlapping squares, drawn and exactly centred, R1.3a; R3.22), the button **i** (as on slices, R1c.2; filled when the element has info) and, for a Screen, **`</>`**, which edits its HTML mockup (R3.7). **i** opens the info panel (R1c.3), titled with the element's type and title, as does the key **I** (without Shift) while one such element is selected (Shift+I stays the slice's info, R5a.11). The toolbar is for future element-level actions.
+- **R1c.1a** **Element toolbar.** While exactly one element is selected, a toolbar floats above it (white, thin border, shadow; it does not capture the element's drag). Buttons are 24x24px on screen at zoom 100% and below; zoomed in, the toolbar (buttons, icons, spacing, gap to the element) grows with the zoom up to 28x28px buttons. It holds the copy button (two overlapping squares, drawn and exactly centred, R1.3a; R3.22), the button **i** (as on slices, R1c.2; filled when the element has info) and, for a Screen, **`</>`**, which edits its HTML mockup (R3.7). For a Screen, Command, Event and Query it also holds the **Fields** button (three lines icon; filled when the element has fields, R9.2). The key **F** (without modifiers) opens the fields popup while one such element is selected. **i** opens the info panel (R1c.3), titled with the element's type and title, as does the key **I** (without Shift) while one such element is selected (Shift+I stays the slice's info, R5a.11). The toolbar is for future element-level actions.
 - **R1c.2** Each has an **i** button in its header, before its label: Chapter: in its handle, before the Context dropdown; lane: in its label zone, between the colour button and the name; slice: at the left of its header, before the name. Filled when the item has info, plain otherwise. For a slice, **Shift+I** with one of its Cells selected opens the same panel (R5a.11).
 - **R1c.3** The button opens a modal panel titled with the item's kind and name: the Markdown editor on the left, with helper buttons above it, and a live preview on the right. The panel is 90% of the window width (at most 2400px) and 90% of its height.
   - Buttons: **B** (bold), *I* (italic), ~~S~~ (strikethrough), a separator, task list, table, code, link. Each acts on the selected text, or inserts a placeholder when nothing is selected: `**`, `*`, `~~`; inline code in backticks (a fenced block for several lines); `[text](url)` with `url` selected; task list `- [ ] Task` and `- [x] Resolved task` (with a selection: toggles `- [ ]` on the selected lines); a 2-column table.
@@ -77,7 +77,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 ## 1d. Hotkey help
 
-- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Selected Scenarios element (R3.14), Editing a name or title, Scenario editor (R3.15), Info panel. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
+- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Selected Scenarios element (R3.14), Editing a name or title, Scenario editor (R3.15), Info panel, Fields popup. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
 - **R1d.2** Every control with a hotkey names it in its tooltip, in brackets after the description, e.g. "Undo (Ctrl+Z)", "Add a scenario (A)". The label stays unchanged, except where the hotkey is part of its design (scenario popup chips, R3.15). A new hotkey is not done until its tooltip names it.
 - **R1d.3** Tooltips never explain mouse gestures ("double-click to ...", "drag to ...", click or drop hints). An element's tooltip is its **full title** (none when untitled), so a title cut off by an ellipsis can be read; a slice header's is the slice name, a scenario item's its title (R3.14).
 
@@ -127,12 +127,12 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 
 - **R3.2** An element has no default lane: it goes in the lane of the Cell it is added to (R3.3), only if that lane's type takes it (R2.10); otherwise nothing is added. Toolbar buttons of types the selected Cell's lane does not take look dimmed; their tooltips name the lane types that take them. An element can be dragged freely but always ends up inside a Cell (R5.14).
 - **R3.3** Elements are added by clicking a toolbar button or dragging it onto the board. A click puts the element in the selected Cell (R5a.10); with none selected it does nothing. A button released over a Cell adds the element there, at the release position kept inside the slice margins (R5.14), or centred if the Cell is empty (R5a.10); released elsewhere it adds nothing.
-- **R3.4** The body holds no text, cannot be edited and ignores double-click. It only shows the Screen mockup (R3.7 to R3.10). An element has no `text` field.
+- **R3.4** The body cannot be edited and ignores double-click. It shows the Screen mockup (R3.7 to R3.10) or the element's fields (R9.5). An element has no `text` field.
 - **R3.4a** Double-clicking the header edits the title (R3.6b); Enter, Esc and clicking away save. One line. The editor looks like the title (same place and font, thin outline only), so the element does not resize or move while editing.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
 - **R3.6** Only Processor carries an icon (⚙️), at the start of its header. The type is shown by header colour (R3.1), not a label.
 - **R3.6a** Elements are always vertically centred in their lane: when added, dropped or dragged (snapping to the centre of the lane released in), when their size changes (e.g. showing a Screen mockup), and on load or import. One taller than its lane aligns to the lane's top edge.
-- **R3.6b** Every element has a header bar and a body. The header holds the free-text **title**, filled with the type's colour (R3.1). The title has **no default**: a new element shows a faint "Title" placeholder (not saved or exported). A long title is cut off with an ellipsis. The body is white and empty, except the Screen mockup and its editor. The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content.
+- **R3.6b** Every element has a header bar and a body. The header holds the free-text **title**, filled with the type's colour (R3.1). The title has **no default**: a new element shows a faint "Title" placeholder (not saved or exported). A long title is cut off with an ellipsis. The body is white and empty, except the Screen mockup and its editor and the fields (R9.5). The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content.
 
 ### Screen elements
 
@@ -169,7 +169,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 - **R3.22** **Linked copies.**
   - Copy: the copy button (tooltip "Copy (Ctrl+C)") at the left of an element's toolbar, or **Ctrl+C** with exactly one element selected, remembers it. Scenarios and Notes cannot be copied; the memory is browser-only, lost on reload, kept until the next copy.
   - Paste: **Ctrl+V** pastes a **linked copy** of the remembered element into the selected Cell, in any Chapter, under the adding rules (R5a.10: the lane type must take it) with the automatic arrows (R4.8); repeatable.
-  - The copy shows its original's type and content (title, Screen mockup) **live** and cannot be edited: no title, info or mockup edit (no element toolbar, no **I**, no **Enter**). Its link button (tooltip "Go to original element") moves the viewport to the original.
+  - The copy shows its original's type and content (title, Screen mockup, fields) **live** and cannot be edited: no title, info, mockup or fields edit (no element toolbar, no **I**, no **Enter**). It gets no fields from arrows (R9.4), but its original's fields pass on along its arrows. Its link button (tooltip "Go to original element") moves the viewport to the original.
   - Unlike other elements (R3.6b) it has a dashed outline and is semi-transparent (40% opacity). It can be moved, connected (R4.7) and deleted; scenarios do not offer it (R3.13).
   - Copying a copy remembers its original, so copies never chain.
   - Deleting an original deletes all its copies in the same undo step, asking first when copies exist (also when a slice, lane, Chapter or Cell holding the original is deleted).
@@ -247,7 +247,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5a.2** A Cell is not a stored object; it follows from lanes and slices (changing them changes the Cells; moving the Chapter moves them). It has no data of its own, so it is not saved, exported or imported. (An element's Cell comes from the slice it is listed under and its lane id, R6.4, R6.5.)
 - **R5a.3** A Cell has no colour of its own; it shows its lane's colour (R2.6).
 - **R5a.4** A Cell holds any number of freely positioned elements: an element sits in the Cell of its lane and slice (R5.13), ends up in the Cell it is released over (R5.14) and is vertically centred in the lane (R3.6a).
-- **R5a.5** Clicking a Cell selects it: a thin (2px), slightly transparent blue border around the whole Cell, above its elements. One Cell is selected at a time. Its Chapter becomes active (R1a.4).
+- **R5a.5** Clicking a Cell selects it: a thin (2px), slightly transparent blue border around the whole Cell, above its elements but below the element toolbar (R1c.1a). One Cell is selected at a time. Its Chapter becomes active (R1a.4).
 - **R5a.6** Clicking an element selects it and its Cell (R5a.12). Clicking a lane header, Chapter handle or connection selects that item and clears any Cell selection, as do starting to drag an element and undo or redo. A click on a slice header selects the slice's top Cell (R5.4).
 - **R5a.7** A click outside every Cell (empty canvas, label zone, area above the slices) clears the Cell selection.
 - **R5a.8** The selection border follows the Cell through panning, zooming, moving the Chapter, and slice resizing or shifting. If the Cell's lane or slice is removed, the selection disappears.
@@ -299,12 +299,13 @@ The export file is the single, complete description of a board, written and read
   - `info`: the element's info (R1c.1a). Optional: only when not empty, not for `notes`;
   - `html`: the Screen mockup. Optional: only for a `screen` that has HTML;
   - `markdown`: the text of a Notes element. Optional: only for a `notes` element with text;
+  - `fields`: the fields (R9.6). Optional: only for a `screen`, `command`, `event` or `query` with fields;
   - `x`: the horizontal position **relative to the left edge of its slice**, in pixels, stored and restored exactly;
   - `connectsTo`: the ids of the elements this element has an arrow to (R6.7);
   - `scenarios`: the scenarios, in list order (R3.14). Only for a `scenarios` element; each has `id`, `title`, `description`, `given` (list of entries), `when` (an entry or `null`), `then` (list of entries) and `error` (text or `null`). An entry is `{ "element": id of an Event/Command of the same Chapter, "example": [{ "name": text, "example": text }] }` (R3.16). `error` is `null` when `then` is not empty.
 
   A **linked copy** (R3.22) has only `id`, `type` (its original's), `lane`, `copyOf`, `x` and `connectsTo`, in this order. `copyOf` is the **id** of its original, an element of the file that is not a copy and has the same type.
-- **R6.6** Every field above is written for every item, except the optional ones (`info`, `flowEnd`, `html`, `markdown`, `scenarios`; R6.3 to R6.5) and a linked copy's omitted fields (R6.5). No other field is left out for being empty or default: an empty title is `""`, an item without connections has `"connectsTo": []`.
+- **R6.6** Every field above is written for every item, except the optional ones (`info`, `flowEnd`, `html`, `markdown`, `fields`, `scenarios`; R6.3 to R6.5) and a linked copy's omitted fields (R6.5). No other field is left out for being empty or default: an empty title is `""`, an item without connections has `"connectsTo": []`.
 - **R6.7** A connection is stored once, on the item it leaves: the source's `connectsTo` lists its target ids. Element connections go element to element; Chapter connections Chapter to Chapter, from the owner's right side to the target's left (R1a.7). There is no connection list or id (R1.16).
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
@@ -328,7 +329,7 @@ The export file is the single, complete description of a board, written and read
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (optional fields may be missing), and no others. `chapters` may be empty; every Chapter has at least one lane and one slice (R2.5, R5.19), lanes in type order with at least one of each required type (R2.10). `contexts` is not empty (R1b.3).
   - **Ids.** Every id is a non-empty text (not `null`); the R1.14 pattern is not checked, as it applies only to generated ids. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter whose type takes the element's type (R2.10). Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter), not the owner and not repeated; a `scenarios` or `notes` element is neither owner nor target. A `copyOf` is the id of a non-copy element of the same type (not `scenarios` or `notes`). In a scenario, each `element` is the id of a non-copy element of the Scenarios element's Chapter: an `event` in `given` and `then`, a `command` in `when`.
-  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. An element `type` is one of the seven types; a lane `type` one of the five (R2.10) and its `color` one of the ten colours (R2.6). When present, `html` is a non-empty text on a `screen`, `markdown` a non-empty text on a `notes` element, `info` a non-empty text (not on `notes`), and `flowEnd` is `true`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers.
+  - **Values.** `name` of a Context, Chapter, lane or slice is not empty. An element `type` is one of the seven types; a lane `type` one of the five (R2.10) and its `color` one of the ten colours (R2.6). When present, `html` is a non-empty text on a `screen`, `markdown` a non-empty text on a `notes` element, `info` a non-empty text (not on `notes`), `fields` a non-empty list on a `screen`, `command`, `event` or `query` (never on a linked copy), and `flowEnd` is `true`. A field has exactly the keys of R9.6: `name` non-empty and unique in its list, `type` one of the eight, the booleans true or false, `fields` only (and always) on an `object`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios) and every element fits its slice with the margins (R5.16, R5.17): `x` plus element width (160px; 280px for Scenarios) plus margin (40px; 20px for Scenarios) is at most the slice `width`. A Spec lane holds at most one element per slice (R3.21). Nothing is corrected: a file breaking a check is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12). After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
@@ -343,6 +344,29 @@ The export file is the single, complete description of a board, written and read
 - **R8.6** Selecting items (including Cells, R5a.9), panning and zooming are not operations and are not recorded.
 - **R8.7** A new change after an undo discards the redo history.
 - **R8.8** History keeps the last 100 operations, in memory only: lost on reload (the board is still saved, R1.6).
+
+## 9. Fields
+
+- **R9.1** A Screen, Command, Event and Query element can have **fields**: the data it carries. Processor, Scenarios and Notes have none. Fields are part of the element, saved and exported (R9.6).
+- **R9.2** The element toolbar (R1c.1a) has a **Fields** button (tooltip "Edit fields (F)") that opens the fields popup (R9.3), as does the key **F** while one such element is selected (ignored while typing, with modifiers or while a popup is open); filled when the element has fields. A linked copy has none (R3.22).
+- **R9.3** **Fields popup** (modal, R1.17, Esc closes). One row per field: name, type, **List**, the five attributes (R9.7), a **Propagate** checkbox (R9.4, only for fields created in this popup) and a remove **×**. **+ Field** adds a row. A field of type `object` holds its own fields, in a nested list with its own **+ Field**, to any depth. A list of values is the **List** checkbox, so a field is a primitive, an object, a list of primitives or a list of objects.
+  - **Types:** `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object`.
+  - A name is not empty and unique within its list; Save is refused with a message otherwise.
+  - **Get from parent** copies the fields of the parents (R9.4) into the popup, replacing fields of the same name; the rest stay. Disabled when no parent has fields. Nothing changes until **Save**.
+  - **Save** (first) and **Cancel** (second). **Save** and **Ctrl+S** (Cmd+S) apply everything as one undo step (R8.1) and close; **Cancel**, Esc and a click outside discard.
+- **R9.4** **Inheritance.** Fields are copied along the arrows of R4.7, never linked; no trace of the source is kept. A parent is an element with an arrow to this one. A Processor holds no fields but passes them on: Query → Processor → Command copies the Query's fields to the Command.
+  - When an arrow is added, by hand or automatically (R4.8), all fields of its source are copied to its target, replacing fields of the same name. Only that hop; nothing further is copied.
+  - **Propagate:** a field created in the popup has a checkbox, checked by default. On Save, a checked new top-level field is also copied to **all** elements downstream, following arrows through the whole chain (around loops too), replacing fields of the same name. The setting is not stored. Fields later edited or removed are not propagated.
+  - **Get from parent** (R9.3): several parents are applied in the order of their arrows; a later parent replaces same-named fields of an earlier one.
+  - A linked copy is never a target; as a source it gives its original's fields.
+- **R9.5** The body of a Command, Event and Query lists its field names, compact, nested fields indented. No type or attribute is shown there (they are in the popup). A Screen shows its mockup (R3.8), not its fields.
+- **R9.6** **Export.** `fields` is a list; each field has exactly these keys in order: `name`, `type`, `list`, `id`, `optional`, `generated`, `pii`, `technical` (all booleans written), and for `object` also `fields` (the nested list). Import checks as in R7.4.
+- **R9.7** **Attributes** (each true/false, a checkbox with a tooltip):
+  - **ID**: identifies the object;
+  - **Optional**: may be missing;
+  - **Generated**: generated by the system, e.g. an id or the current date;
+  - **PII**: personally identifiable information;
+  - **Technical**: an implementation detail.
 
 ## Out of scope for now
 

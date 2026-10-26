@@ -1,5 +1,7 @@
 import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
 
+import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from './fields.js';
+
 export const STORAGE_KEY = 'event-model-board';
 
 export const compareIds = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -113,6 +115,7 @@ export function serialize(nodes, edges, contexts) {
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
+                ...(n.data.fields?.length ? { fields: serializeFields(n.data.fields) } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
               };
@@ -230,6 +233,31 @@ export function parseBoard(text) {
       return { id: s.id, title: s.title, description: s.description, given, when, then, error: s.error };
     });
   };
+  // A list of fields (R9.6); `object` fields hold their own list. Names are unique per list.
+  const fieldList = (v, path) => {
+    list(v, path);
+    const names = new Set();
+    return v.map((f, i) => {
+      const fp = `${path}[${i}]`;
+      const isObj = isObject(f) && f.type === OBJECT;
+      object(f, ['name', 'type', 'list', ...FIELD_FLAGS.map((x) => x.key), ...(isObj ? ['fields'] : [])], fp);
+      name(f.name, at(fp, 'name'));
+      if (names.has(f.name)) fail(at(fp, 'name'), `field name "${f.name}" is used twice`);
+      names.add(f.name);
+      if (!FIELD_TYPES.includes(f.type)) fail(at(fp, 'type'), `must be one of ${FIELD_TYPES.join(', ')}`);
+      for (const k of ['list', ...FIELD_FLAGS.map((x) => x.key)]) {
+        if (typeof f[k] !== 'boolean') fail(at(fp, k), 'must be true or false');
+      }
+      const { name: n, type, list: isList } = f;
+      return {
+        name: n,
+        type,
+        list: isList,
+        ...Object.fromEntries(FIELD_FLAGS.map(({ key }) => [key, f[key]])),
+        ...(isObj ? { fields: fieldList(f.fields, at(fp, 'fields')) } : {}),
+      };
+    });
+  };
   const optionalInfo = (item, path) => {
     if (!hasKey(item, 'info')) return;
     string(item.info, at(path, 'info'));
@@ -316,7 +344,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'markdown', 'info']
+          isCopy ? [] : ['html', 'markdown', 'info', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -352,6 +380,12 @@ export function parseBoard(text) {
           if (el.markdown === '') fail(at(ep, 'markdown'), 'must be left out when empty');
           if (el.type !== 'notes') fail(at(ep, 'markdown'), 'only a notes element can have markdown');
         }
+        let fields = null;
+        if (hasKey(el, 'fields')) {
+          if (!hasFields(el.type)) fail(at(ep, 'fields'), `a ${el.type} element has no fields`);
+          fields = fieldList(el.fields, at(ep, 'fields'));
+          if (!fields.length) fail(at(ep, 'fields'), 'must be left out when empty');
+        }
         number(el.x, at(ep, 'x'));
         const pad = padOf(el.type);
         if (el.x < pad) fail(at(ep, 'x'), `must be at least ${pad}`);
@@ -379,6 +413,7 @@ export function parseBoard(text) {
             ...(el.html ? { html: el.html } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(el.info ? { info: el.info } : {}),
+            ...(fields ? { fields } : {}),
             ...(scenarios ? { scenarios } : {}),
           },
         });

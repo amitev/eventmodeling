@@ -47,6 +47,7 @@ const HOTKEYS = [
     group: 'Selected element',
     keys: [
       ['I', 'Open the info of the element (not for Notes or a linked copy)'],
+      ['F', 'Open the fields of a Screen, Command, Event or Query (not a linked copy)'],
       ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
     ],
   },
@@ -80,6 +81,13 @@ const HOTKEYS = [
       ['Ctrl+L', 'Link (Markdown editor)'],
       ['Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z)', 'Undo / redo in the Markdown editor'],
       ['Esc', 'Cancel'],
+    ],
+  },
+  {
+    group: 'Fields popup',
+    keys: [
+      ['Ctrl+S', 'Save and close'],
+      ['Esc', 'Close without saving'],
     ],
   },
 ];
