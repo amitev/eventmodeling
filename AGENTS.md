@@ -9,12 +9,19 @@ Main technologies that are used:
 - React
 - React Flow
 
-## Agent rules
+## Requirements specification
 
 The Agent and LLM should NOT assume anything, bur rather ask for clarification and confirmation.
 
 All (without any exception) the requirements and learnings during the implementation are documented in [Requirements](spec/REQUIREMENTS.md). The specification is updated with every change so that it stays relevant.
-When writing the specification use the minimal wording needed that still retains the intent. Avoid long and оverbloated sentences.
+When writing the specification use the minimal wording needed that still retains the intent. Avoid long and overbloated sentences. Style:
+
+- One fact per rule; state it once and point to other rules by number (e.g. R5.14) instead of restating them.
+- Short words and active voice: "fix", not "implement a solution for". Drop filler (the, a, "so that", "also", "now and in future") when meaning survives.
+- Compact lists and tables over prose. Fragments are fine.
+- Keep exact values, names, keys and numbers verbatim. Never drop negations or limits (not, never, only, at most).
+- Rule numbers are referenced from the source code: never renumber or remove one. A new rule gets a new number.
+- Do not add background or rationale beyond what is needed to keep the intent, except short **Learning (implementation)** notes.
 
 We're still in alpha version. Forget about backwards compatibility when making changes.
 

@@ -2075,7 +2075,7 @@ function Board() {
           onConnect={onConnect}
           onDrop={onDrop}
           onDragOver={onDragOver}
-          defaultViewport={{ x: 20, y: 40, zoom: 0.9 }}
+          defaultViewport={{ x: 20, y: 40, zoom: 0.6 }}
           minZoom={0.2}
           snapToGrid
           autoPanOnNodeDrag={false}

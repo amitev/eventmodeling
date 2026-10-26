@@ -7,7 +7,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 - **R1.1** The board is a single page with an event-modeling canvas; time flows left to right. It holds Chapters (section 1a).
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
-- **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid.
+- **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid. The board opens at 60% zoom (minimum 20%).
 - **R1.3** Items snap to a 20px grid.
 - **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Flow end**, **+**, **×**) and the Chapter handle (**i**, **↔**, **×**, context rename and delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: lanes Actor, Interaction, Event (R2.10), one "New Slice" (220px wide), no elements.
