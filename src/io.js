@@ -109,7 +109,7 @@ export function serialize(nodes, edges, contexts) {
                 type: n.data.kind,
                 lane: lane.id,
                 title: n.data.title ?? '',
-                ...(n.data.info ? { info: n.data.info } : {}),
+                ...(n.data.info && n.data.kind !== 'scenarios' ? { info: n.data.info } : {}),
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
@@ -362,7 +362,7 @@ export function parseBoard(text) {
           string(el.title, at(ep, 'title'));
         }
         optionalInfo(el, ep);
-        if (hasKey(el, 'info') && el.type === 'notes') fail(at(ep, 'info'), 'a notes element has no info');
+        if (hasKey(el, 'info') && (el.type === 'notes' || el.type === 'scenarios')) fail(at(ep, 'info'), `a ${el.type} element has no info`);
         if (hasKey(el, 'html')) {
           string(el.html, at(ep, 'html'));
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');

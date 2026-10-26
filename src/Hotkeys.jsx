@@ -46,7 +46,7 @@ const HOTKEYS = [
   {
     group: 'Selected element',
     keys: [
-      ['I', 'Open the info of the element (not for Notes or a linked copy)'],
+      ['I', 'Open the info of the element (not for Notes, Scenarios or a linked copy)'],
       ['F', 'Open the fields of a Screen, Command, Event or Query (not a linked copy)'],
       ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
     ],

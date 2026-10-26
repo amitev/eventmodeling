@@ -456,18 +456,18 @@ function StickyNode({ id, data, selected }) {
     update({ title: title.trim() });
   };
 
-  // The toolbar above a selected element (not Notes): the Info button, and for a Screen the
+  // The toolbar above a selected element (not Notes or Scenarios): the Info button, and for a Screen the
   // HTML mockup button too. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a).
   const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
   const toolbar =
-    data.kind === 'notes' || isCopy ? null : (
+    data.kind === 'notes' || data.kind === 'scenarios' || isCopy ? null : (
       <NodeToolbar
         position={Position.Top}
         offset={8 * toolbarScale}
         className="element-toolbar nodrag nopan"
         style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
       >
-        {data.kind !== 'scenarios' && <CopyButton id={id} />}
+        <CopyButton id={id} />
         <InfoButton id={id} info={data.info} hotkey="I" />
         {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
         {isScreen && (
@@ -484,12 +484,7 @@ function StickyNode({ id, data, selected }) {
     );
 
   if (data.kind === 'scenarios') {
-    return (
-      <>
-        {toolbar}
-        <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} newId={newScenarioId} />
-      </>
-    );
+    return <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} newId={newScenarioId} />;
   }
   if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />;
 
@@ -1770,7 +1765,7 @@ function Board() {
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     if (e.key.toLowerCase() === 'i' && !e.shiftKey) {
       const selected = getNodes().filter((n) => n.selected);
-      if (selected.length === 1 && selected[0].type === 'sticky' && selected[0].data.kind !== 'notes' && !selected[0].data.copyOf) {
+      if (selected.length === 1 && selected[0].type === 'sticky' && selected[0].data.kind !== 'notes' && selected[0].data.kind !== 'scenarios' && !selected[0].data.copyOf) {
         e.preventDefault();
         setInfoReading(false);
         setInfoId(selected[0].id);
