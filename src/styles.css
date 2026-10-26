@@ -422,6 +422,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
   background: rgba(0, 0, 0, 0.35);
 }
+.info-backdrop [role="dialog"]:focus { outline: none; }
 .info-dialog {
   display: flex; flex-direction: column; width: min(2400px, 90vw); height: 90vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useBackdropClose } from './popup.js';
+import { useBackdropClose, useModalFocus } from './popup.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
 export const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', x: 'scenarios', n: 'notes' };
@@ -105,6 +105,7 @@ const HOTKEYS = [
 
 export function HotkeysDialog({ onClose }) {
   const backdrop = useBackdropClose(onClose);
+  const modal = useModalFocus();
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -114,6 +115,8 @@ export function HotkeysDialog({ onClose }) {
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
       <div
+        ref={modal}
+        tabIndex={-1}
         className="hotkeys-dialog"
         role="dialog"
         aria-modal="true"

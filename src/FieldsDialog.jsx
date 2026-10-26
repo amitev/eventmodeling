@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useBackdropClose } from './popup.js';
+import { useBackdropClose, useModalFocus } from './popup.js';
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, cloneFields, newField } from './fields.js';
 
 // The draft carries editing-only keys: `_k` (React key), `_new` and `_propagate` (a top-level
@@ -126,6 +126,7 @@ export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
   const [fields, setFields] = useState(() => keyed(cloneFields(initial), counter));
   const [error, setError] = useState(null);
   const backdrop = useBackdropClose(onClose);
+  const modal = useModalFocus();
 
   const saveRef = useRef(null);
   useEffect(() => {
@@ -170,7 +171,7 @@ export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
-      <div className="fields-dialog" role="dialog" aria-modal="true" aria-label="Fields">
+      <div ref={modal} tabIndex={-1} className="fields-dialog" role="dialog" aria-modal="true" aria-label="Fields">
         <div className="info-title">
           {title}
           <button

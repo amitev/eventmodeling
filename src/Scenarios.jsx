@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
-import { useBackdropClose } from './popup.js';
+import { useBackdropClose, useModalFocus } from './popup.js';
 import { ExampleTree, FreeEntries } from './ExampleTree.jsx';
 import { exampleLines, fitExample, previewOfRows, rowsOf, valueOfRows } from './examples.js';
 
@@ -170,6 +170,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const errorInput = useRef(null);
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const backdrop = useBackdropClose(onClose);
+  const modal = useModalFocus();
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const entries = [...draft.given, ...(draft.when ? [draft.when] : []), ...draft.then];
   const current = entries.find((e) => e.key === selected);
@@ -358,7 +359,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
-      <div className="scenario-dialog" role="dialog" aria-modal="true" aria-label="Scenario">
+      <div ref={modal} tabIndex={-1} className="scenario-dialog" role="dialog" aria-modal="true" aria-label="Scenario">
         <button className="scenario-close" title="Close without saving (Esc)" aria-label="Close" onClick={onClose}>
           ×
         </button>

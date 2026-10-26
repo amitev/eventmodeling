@@ -35,7 +35,7 @@ All in `src/`:
 - `history.js`: undo/redo (`useHistory`) and the gesture context.
 - `InfoDialog.jsx`: the Markdown info editor.
 - `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
-- `popup.js`: `useBackdropClose`, which every popup must use so a click outside closes it (R1.17).
+- `popup.js`: `useBackdropClose` and `useModalFocus`, which every popup must use (R1.17).
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.
 - `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx` and `examples.js`: the example data tree and its rules.
 

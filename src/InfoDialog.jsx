@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { useBackdropClose } from './popup.js';
+import { useBackdropClose, useModalFocus } from './popup.js';
 
 // Links in the info preview open in a new tab, without access to the board.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
@@ -115,6 +115,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
   textRef.current = text;
   const [reading, setReading] = useState(initialReading); // read mode: only the preview is shown
   const backdrop = useBackdropClose(onCancel);
+  const modal = useModalFocus();
   const area = useRef(null);
   const pending = useRef(null); // selection to restore after a helper button changed the text
   // marked does not sanitise, so its HTML always goes through DOMPurify.
@@ -191,7 +192,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
-      <div className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
+      <div ref={modal} tabIndex={-1} className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="info-title">
           <span>{title}</span>
           <button
