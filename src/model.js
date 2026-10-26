@@ -425,10 +425,10 @@ export const makeLane = (id, chapterId, type, label, y, color, width, info) => (
 
 export const edgeDefaults = {
   markerEnd: { type: MarkerType.ArrowClosed },
-  style: { strokeWidth: 2 },
+  style: { strokeWidth: 3 },
 };
 
-// Arrows between Chapters are heavier and darker than arrows between elements.
+// Arrows between Chapters are darker than arrows between elements.
 export const chapterEdgeDefaults = {
   markerEnd: { type: MarkerType.ArrowClosed, color: '#5b5b6b' },
   style: { strokeWidth: 3, stroke: '#5b5b6b' },

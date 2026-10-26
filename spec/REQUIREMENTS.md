@@ -48,7 +48,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 - **R1a.7** Chapters are connected with arrows showing the flow. Each has an **outgoing** point on its **right** side and an **incoming** one on its **left**, both at the vertical middle and mostly outside the outline, so they are easy to reach.
 - **R1a.8** The user connects Chapters by dragging from one's right point to another's left point.
-- **R1a.9** Chapter connections differ from element connections: darker, thicker arrows, larger arrowhead and connection points. The points are mostly transparent, fully visible on mouse-over or while connecting.
+- **R1a.9** Chapter connections differ from element connections: darker arrows (same 3px thickness) and larger connection points. The points are mostly transparent, fully visible on mouse-over or while connecting.
 - **R1a.10** Chapters connect only to Chapters, elements only to elements. A Chapter–element connection is refused, as is a Chapter to itself.
 - **R1a.11** Selected Chapter connections are deleted with Backspace or Delete, like element connections (R4.4). Moving a Chapter keeps its connections attached.
 
@@ -177,7 +177,7 @@ An element is a sticky note with an id (R1.14), a type, a title and a position. 
 
 ## 4. Connections
 
-- **R4.1** Elements are connected with directed arrows (with arrowhead).
+- **R4.1** Elements are connected with directed arrows (with arrowhead), 3px thick.
 - **R4.2** Each element has two connection points, **top** and **bottom**; either can start or end a connection. When the target is below the source (also in another slice or Chapter; equal height counts as below), the arrow leaves the source's **lower** point and enters the target's **upper** point; when above, it leaves the source's top point and enters the target's bottom point. Points follow the elements.
 - **R4.3** The user connects by dragging from a connection point of one element to one of another; R4.2, not the drag's start, decides which points the arrow uses.
 - **R4.4** Selected connections can be deleted with Backspace or Delete.
