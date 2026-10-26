@@ -1541,6 +1541,7 @@ function Board() {
         id: n.id,
         kind: n.data.kind,
         title: n.data.title,
+        fields: n.data.fields ?? [],
         where: sliceOf(ss, n)?.data.name ?? '',
         order: [sliceOf(ss, n)?.position.x ?? 0, n.position.x, n.position.y],
       }))

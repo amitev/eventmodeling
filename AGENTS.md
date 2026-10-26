@@ -37,7 +37,7 @@ All in `src/`:
 - `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
 - `popup.js`: `useBackdropClose`, which every popup must use so a click outside closes it (R1.17).
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.
-- `Scenarios.jsx`: the Scenarios card, its popup, the example data editor and scenario pruning.
+- `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx` and `examples.js`: the example data tree and its rules.
 
 ## Testing
 

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
 import { useBackdropClose } from './popup.js';
+import { ExampleTree, FreeEntries } from './ExampleTree.jsx';
+import { exampleLines, fitExample, previewOfRows, rowsOf, valueOfRows } from './examples.js';
 
 const Icon = ({ children }) => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -10,7 +12,8 @@ const Icon = ({ children }) => (
 );
 
 // A scenario: { id, title, description, given: [entry], when: entry | null, then: [entry],
-// error: text | null }. An entry is { element: id of an Event/Command, example: [{ name, example }] }.
+// error: text | null }. An entry is { element: id of an Event/Command, example: example data
+// (see examples.js) }.
 export const entriesOf = (s) => [...s.given, ...(s.when ? [s.when] : []), ...s.then];
 
 // Scenarios that use an element which is gone or no longer in the Scenarios element's Chapter
@@ -28,38 +31,6 @@ export function pruneScenarios(nodes) {
     return kept.length === n.data.scenarios.length ? n : { ...n, data: { ...n.data, scenarios: kept } };
   });
   return removed.length ? { nodes: next, removed } : null;
-}
-
-const BLANK_EXAMPLE = [{ name: '', example: '' }];
-const EXAMPLE_SCHEMA = {
-  type: 'array',
-  items: {
-    type: 'object',
-    properties: { name: { type: 'string' }, example: { type: 'string' } },
-    required: ['name', 'example'],
-    additionalProperties: false,
-  },
-};
-
-// Reads the text of the example editor: { value } or { error }.
-function parseExample(text) {
-  let value;
-  try {
-    value = JSON.parse(text);
-  } catch (err) {
-    return { error: err.message };
-  }
-  if (!Array.isArray(value)) return { error: 'must be a list' };
-  const ok = value.every(
-    (f) =>
-      f !== null &&
-      typeof f === 'object' &&
-      !Array.isArray(f) &&
-      Object.keys(f).sort().join() === 'example,name' &&
-      typeof f.name === 'string' &&
-      typeof f.example === 'string'
-  );
-  return ok ? { value } : { error: 'every item needs a text "name" and a text "example"' };
 }
 
 // The Scenarios card of a Scenarios element: its list of scenarios.
@@ -163,44 +134,13 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
   );
 }
 
-// The JSON editor of an entry's example data (josdejong/jsoneditor, code mode). Loaded on
-// first use so the board itself starts without it.
-function ExampleEditor({ text, onChange }) {
-  const box = useRef(null);
-  const latest = useRef(onChange);
-  latest.current = onChange;
-
-  useEffect(() => {
-    let editor;
-    let gone = false;
-    Promise.all([import('jsoneditor'), import('jsoneditor/dist/jsoneditor.css')]).then(([mod]) => {
-      if (gone) return;
-      const JSONEditor = mod.default ?? mod;
-      editor = new JSONEditor(box.current, {
-        mode: 'code',
-        mainMenuBar: false,
-        statusBar: false,
-        schema: EXAMPLE_SCHEMA,
-        onChangeText: (t) => latest.current(t),
-      });
-      editor.setText(text);
-    });
-    return () => {
-      gone = true;
-      editor?.destroy();
-    };
-    // The editor is created once per entry (the parent keys it); `text` only seeds it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return <div className="example-editor" ref={box} />;
-}
-
 let keySeq = 0;
-const newEntry = (element, example = BLANK_EXAMPLE) => ({
+// A chosen element with its example data; `rows` hold the free entries of an element without fields.
+const newEntry = (element, example = {}) => ({
   key: ++keySeq,
   element,
-  text: JSON.stringify(example, null, 2),
+  example,
+  rows: rowsOf(example),
 });
 
 const SECTIONS = {
@@ -249,9 +189,9 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     if (selected === key) setSelected(null);
     set(section === 'when' ? { when: null } : { [section]: draft[section].filter((e) => e.key !== key) });
   };
-  const setText = (key, text) =>
+  const setEntry = (key, patch) =>
     setDraft((d) => {
-      const edit = (e) => (e.key === key ? { ...e, text } : e);
+      const edit = (e) => (e.key === key ? { ...e, ...patch } : e);
       return { ...d, given: d.given.map(edit), when: d.when && edit(d.when), then: d.then.map(edit) };
     });
   const openError = () => {
@@ -274,6 +214,11 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
       e.preventDefault();
       if (picker) setPicker(null);
       else onClose();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      save();
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e.target)) return;
@@ -303,17 +248,22 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   }, [picker]);
 
   const nameOf = (e) => byId.get(e.element)?.title || 'Untitled';
+  const fieldsOf = (e) => byId.get(e.element)?.fields ?? [];
+  // The example data of an entry: shaped like the element's fields, or its free entries.
+  const valueOf = (e) => (fieldsOf(e).length ? fitExample(fieldsOf(e), e.example) : previewOfRows(e.rows));
 
   const save = () => {
+    const values = new Map();
     for (const e of entries) {
-      const r = parseExample(e.text);
+      const r = fieldsOf(e).length ? { value: valueOf(e) } : valueOfRows(e.rows);
       if (r.error) {
         setSelected(e.key);
         setProblem(`The example data of "${nameOf(e)}" is not valid: ${r.error}`);
         return;
       }
+      values.set(e.key, r.value);
     }
-    const out = (e) => ({ element: e.element, example: parseExample(e.text).value });
+    const out = (e) => ({ element: e.element, example: values.get(e.key) });
     onSave({
       id: scenario?.id ?? null,
       title: draft.title.trim(),
@@ -373,7 +323,6 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const card = (section, e) => {
     const c = byId.get(e.element);
     if (!c) return null;
-    const r = parseExample(e.text);
     return (
       <div
         key={e.key}
@@ -397,17 +346,11 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           </button>
         </div>
         <div className="gwt-card-body">
-          {r.error ? (
-            <em>Invalid example data</em>
-          ) : (
-            r.value
-              .filter((f) => f.example !== '')
-              .map((f, i) => (
-                <div key={i}>
-                  {f.name}: {f.example}
-                </div>
-              ))
-          )}
+          {exampleLines(valueOf(e)).map((l, i) => (
+            <div key={i} style={{ paddingLeft: l.depth * 8 }}>
+              {l.text}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -477,8 +420,11 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           </div>
           <div className="scenario-actions">
             {problem && <span className="scenario-problem">{problem}</span>}
-            <button className="scenario-save" onClick={save}>
+            <button className="scenario-save" title="Save (Ctrl+S)" onClick={save}>
               Save
+            </button>
+            <button className="scenario-cancel" title="Cancel (Esc)" onClick={onClose}>
+              Cancel
             </button>
           </div>
         </div>
@@ -489,7 +435,16 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
                 <div className="scenario-example-title">{nameOf(current)}</div>
                 <div className="scenario-example-sub">Example data</div>
               </div>
-              <ExampleEditor key={current.key} text={current.text} onChange={(t) => setText(current.key, t)} />
+              {fieldsOf(current).length ? (
+                <ExampleTree
+                  key={current.key}
+                  fields={fieldsOf(current)}
+                  value={valueOf(current)}
+                  onChange={(example) => setEntry(current.key, { example })}
+                />
+              ) : (
+                <FreeEntries key={current.key} rows={current.rows} onChange={(rows) => setEntry(current.key, { rows })} />
+              )}
             </>
           ) : (
             <div className="scenario-example-none">Select an Event or Command to edit its example data.</div>

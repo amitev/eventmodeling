@@ -202,7 +202,7 @@ export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
         </div>
         {error && <div className="fields-error">{error}</div>}
         <div className="info-actions">
-          <button type="button" className="primary" onClick={save}>
+          <button type="button" className="primary" title="Save (Ctrl+S)" onClick={save}>
             Save
           </button>
           <button type="button" onClick={onClose}>

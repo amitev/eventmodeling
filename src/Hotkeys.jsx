@@ -69,6 +69,7 @@ const HOTKEYS = [
       ['W', 'Choose the When command'],
       ['T', 'Choose a Then event'],
       ['E', 'Add or edit the expected error (Then Error)'],
+      ['Ctrl+S', 'Save and close'],
       ['Esc', 'Close the list, or close without saving'],
     ],
   },

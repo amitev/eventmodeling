@@ -1,16 +1,14 @@
 import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from './fields.js';
+import { isExampleValue } from './examples.js';
 
 export const STORAGE_KEY = 'event-model-board';
 
 export const compareIds = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 export const serializeScenario = (s) => {
-  const entry = (e) => ({
-    element: e.element,
-    example: e.example.map(({ name, example }) => ({ name, example })),
-  });
+  const entry = (e) => ({ element: e.element, example: structuredClone(e.example) });
   return {
     id: s.id,
     title: s.title,
@@ -197,21 +195,16 @@ export function parseBoard(text) {
   const elements = new Map(); // element id -> { chapter, type, copy }
   const copies = []; // linked copies' copyOf ids, checked once every element is known
   const references = []; // scenario entries' element ids, checked once every element is known
-  const exampleList = (v, path) => {
-    list(v, path);
-    v.forEach((f, i) => {
-      const fp = `${path}[${i}]`;
-      object(f, ['name', 'example'], fp);
-      string(f.name, at(fp, 'name'));
-      string(f.example, at(fp, 'example'));
-    });
-    return v.map(({ name, example }) => ({ name, example }));
+  const exampleData = (v, path) => {
+    if (!isObject(v)) fail(path, 'must be an object');
+    if (!isExampleValue(v)) fail(path, 'values must be text, true/false, lists or objects of these');
+    return structuredClone(v);
   };
   const scenarioEntry = (v, path, chapter, type) => {
     object(v, ['element', 'example'], path);
     string(v.element, at(path, 'element'));
     references.push({ path: at(path, 'element'), id: v.element, chapter, type });
-    return { element: v.element, example: exampleList(v.example, at(path, 'example')) };
+    return { element: v.element, example: exampleData(v.example, at(path, 'example')) };
   };
   const scenarioList = (v, path, chapter) => {
     list(v, path);
