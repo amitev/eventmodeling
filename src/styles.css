@@ -256,8 +256,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .scenario-count {
   margin-left: auto; min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 4px;
-  display: flex; align-items: center; justify-content: center; border-radius: 10px;
-  background: var(--scenarios); color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; color: #556; font-size: 12px; font-weight: 700;
 }
 
 /* Scenario popup: form on the left, example data editor on the right. */

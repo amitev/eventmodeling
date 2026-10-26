@@ -53,7 +53,17 @@ const HOTKEYS = [
   },
   {
     group: 'Selected Scenarios element',
-    keys: [['A', 'Add a scenario']],
+    keys: [
+      ['A', 'Add a scenario'],
+      ['Ctrl+1 ... Ctrl+9', 'Open the first ... ninth scenario'],
+    ],
+  },
+  {
+    group: 'Selected Notes element',
+    keys: [
+      ['E', 'Edit the notes'],
+      ['V / R', 'View the notes (read mode)'],
+    ],
   },
   {
     group: 'Editing a name or title',

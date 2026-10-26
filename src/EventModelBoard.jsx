@@ -1743,6 +1743,18 @@ function Board() {
     // Ctrl+←/→ moves the slice.
     const moveKey =
       e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+    // Ctrl+1 ... Ctrl+9 open the scenario of that place in the selected Scenarios element.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+      const el = e.target;
+      if (el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const selected = getNodes().filter((n) => n.selected);
+      const scenario = selected.length === 1 && selected[0].data.kind === 'scenarios' ? selected[0].data.scenarios[Number(e.key) - 1] : null;
+      if (scenario) {
+        e.preventDefault();
+        setScenarioEdit({ nodeId: selected[0].id, scenarioId: scenario.id });
+      }
+      return;
+    }
     // Ctrl+C remembers the selected element; Ctrl+V pastes a linked copy of it into the selected Cell.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'v')) {
       const el = e.target;
@@ -1779,6 +1791,17 @@ function Board() {
         setFieldsId(selected[0].id);
       }
       return;
+    }
+    const hk = e.key.toLowerCase();
+    if (hk === 'v' || hk === 'r' || hk === 'e') {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].data.kind === 'notes') {
+        e.preventDefault();
+        setInfoReading(hk !== 'e');
+        setInfoId(selected[0].id);
+        return;
+      }
+      if (hk === 'v') return;
     }
     if (e.key.toLowerCase() === 'a') {
       const selected = getNodes().filter((n) => n.selected);

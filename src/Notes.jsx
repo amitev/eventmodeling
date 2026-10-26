@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { renderMarkdown } from './InfoDialog.jsx';
 
 // The card of a Notes element: its Markdown text, rendered. Editing opens the Markdown editor;
-// the eye opens it in read mode.
+// the View button (eye, hotkey V) opens it in read mode.
 export function NotesCard({ id, data, selected, width, onEdit, onRead }) {
   const html = useMemo(() => renderMarkdown(data.markdown ?? ''), [data.markdown]);
   return (
@@ -15,8 +15,8 @@ export function NotesCard({ id, data, selected, width, onEdit, onRead }) {
         <span>Notes</span>
         <button
           className="notes-eye nodrag"
-          title="Read the notes"
-          aria-label="Read the notes"
+          title="View (V)"
+          aria-label="View"
           onDoubleClick={(e) => e.stopPropagation()}
           onClick={() => onRead(id)}
         >
