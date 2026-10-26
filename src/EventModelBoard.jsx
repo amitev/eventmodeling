@@ -175,7 +175,10 @@ function CopyButton({ id }) {
         rememberCopy(id);
       }}
     >
-      ⧉
+      <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <rect x="5" y="1" width="8" height="8" rx="1.5" />
+        <rect x="1" y="5" width="8" height="8" rx="1.5" />
+      </svg>
     </button>
   );
 }

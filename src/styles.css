@@ -398,7 +398,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .element-toolbar .info-btn { width: calc(24px * var(--s)); height: calc(24px * var(--s)); border-radius: calc(4px * var(--s)); }
 .element-toolbar .info-btn svg { width: calc(13px * var(--s)); height: calc(13px * var(--s)); }
-.element-toolbar .copy-btn { font-size: calc(17px * var(--s)); line-height: 1; }
 .element-toolbar .html-tool {
   width: auto; min-width: calc(24px * var(--s)); padding: 0 calc(5px * var(--s)); font: calc(13px * var(--s)) monospace;
 }
