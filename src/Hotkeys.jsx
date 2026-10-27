@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
-export const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', x: 'scenarios', n: 'notes' };
+export const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', n: 'notes' };
+// S adds a Scenarios element instead of a Screen in a Spec lane, which takes no Screen.
+export const kindOfKey = (key, laneType) => (key === 's' && laneType === 'spec' ? 'scenarios' : CELL_ADD_KEYS[key]);
 export const hotkeyOf = (kind) =>
-  Object.keys(CELL_ADD_KEYS)
-    .filter((k) => CELL_ADD_KEYS[k] === kind)
+  (kind === 'scenarios' ? ['s'] : Object.keys(CELL_ADD_KEYS).filter((k) => CELL_ADD_KEYS[k] === kind))
     .map((k) => k.toUpperCase())
     .join(' / ');
 
@@ -37,12 +38,11 @@ const HOTKEYS = [
       ['Ctrl+← / Ctrl+→', 'Move the slice left / right'],
       ['Shift+C', 'Compact the slice'],
       ['Shift+I', 'Open the slice info'],
-      ['S', 'Add a Screen in the Cell'],
+      ['S', 'Add a Screen in the Cell (a Scenarios element in a Spec lane)'],
       ['C', 'Add a Command in the Cell'],
       ['R / Q', 'Add a Query in the Cell'],
       ['E', 'Add an Event in the Cell'],
       ['P', 'Add a Processor in the Cell'],
-      ['X', 'Add a Scenarios element in the Cell'],
       ['N', 'Add a Notes element in the Cell'],
       ['Ctrl+V', 'Paste a linked copy of the remembered element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],

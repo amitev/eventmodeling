@@ -151,7 +151,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 ### Scenarios elements
 
 - **R3.11** A **Scenarios** element is a 280x200px card (280 is the minimum width, R3.20; fixed height; not hand-resizable) with no header bar, name or connection points (R3.6b does not apply). It shows a "SCENARIOS" caption, the list of its scenarios and a footer with **+ Add**, an inert **+ Storyline** button (both white, with the standard button border and text) and the scenario count. A new element has none (the list says "No scenarios yet"). The list scrolls when longer than the card.
-- **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **X** hotkey (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected (R4.7). Its margin to the slice borders is 20px, not 40px (R5.16); adding it widens the slice as needed (R5a.10).
+- **R3.12** Otherwise it is an element like the others: added by toolbar button, drag or the **S** hotkey in a Spec lane (R3.3, R5a.10, R5a.11), kept in a Cell (R3.2), vertically centred (R3.6a), movable and deletable (R3.5), exported (section 6). It cannot be connected (R4.7). Its margin to the slice borders is 20px, not 40px (R5.16); adding it widens the slice as needed (R5a.10).
 - **R3.13** A **scenario** is a Given/When/Then (GWT) example with an id (R1.14), a title, a description, and:
   - **Given:** any number of Events that have happened;
   - **When:** at most one Command that is executed;
@@ -271,7 +271,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Ctrl+←** / **Ctrl+→** move the Cell's slice one place left/right, swapping it with its neighbour, elements with it (R5.8); nothing at the first or last place; one undo step per press.
   - **Shift+C** compacts the Cell's slice (R5.20).
   - **Shift+I** opens the info of the Cell's slice (R1c.3).
-  - **S, C, R or Q, E, P, X, N** add a Screen, Command, Query, Event, Processor, Scenarios or Notes element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8).
+  - **S, C, R or Q, E, P, N** add a Screen, Command, Query, Event, Processor or Notes element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8). In a Spec lane, which takes no Screen, **S** adds a Scenarios element instead.
   - **+** adds a slice right after the Cell's slice, as the slice's **+** does (R5.2a).
   - **Enter** opens the editor of a selected Notes element (R3.19), as does **E** (a Notes element only sits in a Spec lane, which takes no Event, so E adds nothing there); **V** and **R** open it in read mode (R3.18; R adds no Query there either); otherwise Enter edits the name of the Cell's left-most element (R3.4a), if any.
   - **Delete** or **Backspace** deletes the selected elements with their arrows (R3.5), without confirmation. With no element selected and elements in the Cell, it deletes the Cell's elements with their arrows, after confirmation (one undo step, R8.1); in an empty Cell it does nothing. **Shift+Delete** or **Shift+Backspace** deletes the Cell's **slice** with its elements and arrows, after confirmation, whatever is selected (R5.18); a Chapter's last slice cannot be deleted. One press does one thing; a held key does not repeat.

@@ -69,7 +69,7 @@ import { FieldsDialog } from './FieldsDialog.jsx';
 import { SearchBox } from './Search.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
-import { CELL_ADD_KEYS, hotkeyOf, HotkeysDialog } from './Hotkeys.jsx';
+import { kindOfKey, hotkeyOf, HotkeysDialog } from './Hotkeys.jsx';
 
 // The lane types that take an element type, e.g. "Interaction / Integration".
 const acceptingLanes = (kind) =>
@@ -1902,7 +1902,7 @@ function Board() {
       }
       return;
     }
-    const kind = CELL_ADD_KEYS[e.key.toLowerCase()];
+    const kind = kindOfKey(e.key.toLowerCase(), getNodes().find((n) => n.id === selectedCell.laneId)?.data.type);
     if (kind) {
       e.preventDefault();
       addSticky(kind);

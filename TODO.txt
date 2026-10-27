@@ -1,15 +1,15 @@
 Slices
-
+- HTML editor as popup and preview for it
 
 Elements
-- Automatic title from previous element
--
+- Automatic name from previous element - too hard to do correctly.
+- Agentic - suggest automatic slice and element names
 
 Screens
 - Paste HTML+CSS (without JS) and show it into an iframe
 - Blurring/highlighting parts of the screen
 - Movie strip - The Movie-Strip allows you to go over all Screens like a real Prototype. It´s amazing for Management-Demos.
-- Agentic - generate a screen based on the look and feel of another screen (or previous screen)
+- Agentic - generate a screen based on the look and feel of another screen (or previous screen). Using screenshots?
 
 Event log (undo/redo)
 - Show it
@@ -20,14 +20,15 @@ Specs
 - To learn the difference between GWT and story lines and see what to do with them
 
 Common
-- Unify
+- Unify button styling
 
 Export
 - Generate spec document
-
+- Generate diagrams - story telling, BPMN, etc.
 
 Prototypes
 - Just zoom in on the interesting part of the model and ask the agent to build a prototype. No need to tell it for what - it´ll know. The Prototype implements the Business Logic as defined in the Event Model. It takes only a few minutes - and every change is incremental from there.
+
 
 Agentic
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
