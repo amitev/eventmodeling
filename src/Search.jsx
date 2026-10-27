@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KINDS } from './model.js';
 
-// The search box (R1e): a floating box over the board. `items` are { id, kind, title, copy }.
+// The search box (R1e): a floating box over the board. `items` are { id, kind, name, copy }.
 // `focusTick` changes when Ctrl+F is pressed again, to focus the input.
 export function SearchBox({ items, focusTick, onPick, onClose }) {
   const [query, setQuery] = useState('');
@@ -17,7 +17,7 @@ export function SearchBox({ items, focusTick, onPick, onClose }) {
   // Nothing is listed until something is typed; then every match.
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? items.filter((i) => i.title.toLowerCase().includes(q)) : [];
+    return q ? items.filter((i) => i.name.toLowerCase().includes(q)) : [];
   }, [items, query]);
   const current = Math.min(active, results.length - 1);
 
@@ -44,7 +44,7 @@ export function SearchBox({ items, focusTick, onPick, onClose }) {
         <input
           ref={input}
           value={query}
-          placeholder="Search elements by title"
+          placeholder="Search elements by name"
           spellCheck={false}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -71,7 +71,7 @@ export function SearchBox({ items, focusTick, onPick, onClose }) {
                 onMouseMove={() => setActive(i)}
                 onClick={() => onPick(r.id)}
               >
-                {r.title}
+                {r.name}
               </button>
             ))
           ) : (

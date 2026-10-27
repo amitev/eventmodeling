@@ -1,4 +1,4 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from './fields.js';
 import { isExampleValue } from './examples.js';
@@ -71,7 +71,7 @@ export function serialize(nodes, edges, contexts) {
         lanes: lanes.map((l) => ({
           id: l.id,
           name: l.data.label,
-          type: l.data.type,
+          type: l.data.type.toUpperCase(),
           ...(l.data.info ? { info: l.data.info } : {}),
           color: l.data.color,
         })),
@@ -80,6 +80,7 @@ export function serialize(nodes, edges, contexts) {
           name: sl.data.name,
           ...(sl.data.info ? { info: sl.data.info } : {}),
           ...(sl.data.flowEnd ? { flowEnd: true } : {}),
+          type: sliceType(bySlice.get(sl.id).map(({ n, lane }) => ({ kind: n.data.kind, lane: lane.data.type }))),
           width: sl.data.width,
           elements: bySlice
             .get(sl.id)
@@ -97,7 +98,7 @@ export function serialize(nodes, edges, contexts) {
               if (n.data.copyOf) {
                 return {
                   id: n.id,
-                  type: n.data.kind,
+                  type: n.data.kind.toUpperCase(),
                   lane: lane.id,
                   copyOf: n.data.copyOf,
                   x: n.position.x - sl.position.x,
@@ -106,9 +107,9 @@ export function serialize(nodes, edges, contexts) {
               }
               return {
                 id: n.id,
-                type: n.data.kind,
+                type: n.data.kind.toUpperCase(),
                 lane: lane.id,
-                title: n.data.title ?? '',
+                name: n.data.name ?? '',
                 ...(n.data.info && n.data.kind !== 'scenarios' ? { info: n.data.info } : {}),
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
@@ -251,6 +252,15 @@ export function parseBoard(text) {
       };
     });
   };
+  // Types are written in upper case (R6.4, R6.5). The code works with lower case, so an element
+  // or lane `type` is converted here; a value not in upper case is left as it is and fails the
+  // checks that follow.
+  const upper = (names) => names.map((x) => x.toUpperCase()).join(', ');
+  const exportType = (item, path, allowed) => {
+    if (!isObject(item) || typeof item.type !== 'string') return;
+    if (item.type !== item.type.toUpperCase()) fail(at(path, 'type'), `must be one of ${upper(allowed)}`);
+    item.type = item.type.toLowerCase();
+  };
   const optionalInfo = (item, path) => {
     if (!hasKey(item, 'info')) return;
     string(item.info, at(path, 'info'));
@@ -289,14 +299,15 @@ export function parseBoard(text) {
     const laneType = new Map();
     c.lanes.forEach((l, li) => {
       const lp = `${cp}.lanes[${li}]`;
+      exportType(l, lp, LANE_TYPE_ORDER);
       object(l, ['id', 'name', 'type', 'color'], lp, ['info']);
       claim(l.id, 'lane', at(lp, 'id'));
       name(l.name, at(lp, 'name'));
       if (typeof l.type !== 'string' || !hasKey(LANE_TYPES, l.type)) {
-        fail(at(lp, 'type'), `must be one of ${LANE_TYPE_ORDER.join(', ')}`);
+        fail(at(lp, 'type'), `must be one of ${upper(LANE_TYPE_ORDER)}`);
       }
       if (li > 0 && LANE_TYPE_ORDER.indexOf(l.type) < LANE_TYPE_ORDER.indexOf(c.lanes[li - 1].type)) {
-        fail(at(lp, 'type'), `lanes must be in the order ${LANE_TYPE_ORDER.join(', ')}`);
+        fail(at(lp, 'type'), `lanes must be in the order ${upper(LANE_TYPE_ORDER)}`);
       }
       optionalInfo(l, lp);
       if (!LANE_COLORS.includes(l.color)) {
@@ -315,9 +326,13 @@ export function parseBoard(text) {
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
       const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'width', 'elements'], sp, ['info', 'flowEnd']);
+      object(sl, ['id', 'name', 'type', 'width', 'elements'], sp, ['info', 'flowEnd']);
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
+      // The type is worked out from the elements (R5b): the stored value is only checked to be valid.
+      if (sl.type !== null && !SLICE_TYPES.includes(sl.type)) {
+        fail(at(sp, 'type'), `must be null or one of ${SLICE_TYPES.join(', ')}`);
+      }
       optionalInfo(sl, sp);
       if (hasKey(sl, 'flowEnd') && sl.flowEnd !== true) {
         fail(at(sp, 'flowEnd'), 'must be true, or left out when the slice is not a flow end');
@@ -331,17 +346,18 @@ export function parseBoard(text) {
       const specCells = new Set(); // Spec lanes already holding an element in this slice
       sl.elements.forEach((el, ei) => {
         const ep = `${sp}.elements[${ei}]`;
+        exportType(el, ep, Object.keys(KINDS));
         const isScenarios = isObject(el) && el.type === 'scenarios';
         const isCopy = isObject(el) && hasKey(el, 'copyOf');
         object(
           el,
-          ['id', 'type', 'lane', isCopy ? 'copyOf' : 'title', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
+          ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
           isCopy ? [] : ['html', 'markdown', 'info', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
-          fail(at(ep, 'type'), `must be one of ${Object.keys(KINDS).join(', ')}`);
+          fail(at(ep, 'type'), `must be one of ${upper(Object.keys(KINDS))}`);
         }
         string(el.lane, at(ep, 'lane'));
         if (!laneY.has(el.lane)) {
@@ -359,7 +375,7 @@ export function parseBoard(text) {
           if (el.type === 'scenarios' || el.type === 'notes') fail(at(ep, 'copyOf'), `a ${el.type} element cannot be a copy`);
           copies.push({ path: at(ep, 'copyOf'), id: el.copyOf, type: el.type });
         } else {
-          string(el.title, at(ep, 'title'));
+          string(el.name, at(ep, 'name'));
         }
         optionalInfo(el, ep);
         if (hasKey(el, 'info') && (el.type === 'notes' || el.type === 'scenarios')) fail(at(ep, 'info'), `a ${el.type} element has no info`);
@@ -401,7 +417,7 @@ export function parseBoard(text) {
           position: { x: cursor + el.x, y: laneY.get(el.lane) + 40 },
           data: {
             kind: el.type,
-            title: isCopy ? '' : el.title,
+            name: isCopy ? '' : el.name,
             ...(isCopy ? { copyOf: el.copyOf } : {}),
             ...(el.html ? { html: el.html } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),

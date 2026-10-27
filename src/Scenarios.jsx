@@ -153,7 +153,7 @@ const isTyping = (t) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 // The popup to edit one scenario. Nothing is applied before Save. `candidates` are the Events and
-// Commands of the Chapter: { id, kind, title, where }.
+// Commands of the Chapter: { id, kind, name, fields, where }.
 export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const [draft, setDraft] = useState(() => ({
     title: scenario?.title ?? '',
@@ -248,7 +248,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     return () => window.removeEventListener('pointerdown', close);
   }, [picker]);
 
-  const nameOf = (e) => byId.get(e.element)?.title || 'Untitled';
+  const nameOf = (e) => byId.get(e.element)?.name || 'Untitled';
   const fieldsOf = (e) => byId.get(e.element)?.fields ?? [];
   // The example data of an entry: shaped like the element's fields, or its free entries.
   const valueOf = (e) => (fieldsOf(e).length ? fitExample(fieldsOf(e), e.example) : previewOfRows(e.rows));
@@ -308,7 +308,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
               options.map((c) => (
                 <button key={c.id} role="menuitem" className={`gwt-option ${c.kind}`} onClick={() => pick(section, c)}>
                   <span className="gwt-dot" />
-                  <span className={c.title ? '' : 'empty'}>{c.title || 'Untitled'}</span>
+                  <span className={c.name ? '' : 'empty'}>{c.name || 'Untitled'}</span>
                   <small>{c.where}</small>
                 </button>
               ))

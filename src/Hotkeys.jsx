@@ -18,7 +18,7 @@ const HOTKEYS = [
       ['Ctrl+Z', 'Undo'],
       ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'],
       ['Backspace / Delete', 'Delete the selected elements or arrows'],
-      ['Ctrl+F', 'Search elements by title'],
+      ['Ctrl+F', 'Search elements by name'],
     ],
   },
   {
@@ -46,7 +46,7 @@ const HOTKEYS = [
       ['N', 'Add a Notes element in the Cell'],
       ['Ctrl+V', 'Paste a linked copy of the remembered element in the Cell'],
       ['+', 'Add a slice right after the Cell’s slice'],
-      ['Enter', 'Edit the title of the first element in the Cell, or open the editor of a selected Notes element'],
+      ['Enter', 'Edit the name of the first element in the Cell, or open the editor of a selected Notes element'],
       ['Delete / Backspace', 'Delete the selected elements, or the elements in the Cell (asks first)'],
       ['Shift+Delete / Shift+Backspace', 'Delete the slice (asks first)'],
       ['Esc', 'Clear the Cell selection'],
@@ -75,7 +75,7 @@ const HOTKEYS = [
     ],
   },
   {
-    group: 'Editing a name or title',
+    group: 'Editing a name',
     keys: [
       ['Enter / Esc', 'Save'],
       ['Ctrl+Z', "The field's own undo"],

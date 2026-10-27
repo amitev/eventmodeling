@@ -452,9 +452,9 @@ function StickyNode({ id, data, selected }) {
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
     );
 
-  const commitTitle = (title) => {
+  const commitTitle = (name) => {
     setEditingTitle(false);
-    update({ title: title.trim() });
+    update({ name: name.trim() });
   };
 
   // The toolbar above a selected element (not Notes or Scenarios): the Info button, and for a Screen the
@@ -498,7 +498,7 @@ function StickyNode({ id, data, selected }) {
       <Handle id="top-out" type="source" position={Position.Top} />
       <div
         className="sticky-header"
-        title={shown.title || undefined}
+        title={shown.name || undefined}
         onDoubleClick={isCopy ? undefined : () => setEditingTitle(true)}
       >
         {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
@@ -523,14 +523,14 @@ function StickyNode({ id, data, selected }) {
           <input
             ref={titleRef}
             className="nodrag title-input"
-            defaultValue={data.title ?? ''}
+            defaultValue={data.name ?? ''}
             onBlur={(e) => commitTitle(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
             }}
           />
         ) : (
-          <span className={`title ${shown.title ? '' : 'empty'}`}>{shown.title || 'Title'}</span>
+          <span className={`title ${shown.name ? '' : 'empty'}`}>{shown.name || 'Name'}</span>
         )}
       </div>
       <div className="sticky-body">
@@ -552,7 +552,7 @@ function StickyNode({ id, data, selected }) {
       {isScreen && shown.html && !editingHtml && (
         <iframe
           className="screen-frame"
-          title={shown.title || 'Screen mockup'}
+          title={shown.name || 'Screen mockup'}
           sandbox=""
           srcDoc={shown.html}
         />
@@ -1084,11 +1084,11 @@ function Board() {
       .map((n) => ({
         id: n.id,
         kind: n.data.kind,
-        title: (n.data.copyOf ? byId.get(n.data.copyOf)?.data.title : n.data.title)?.trim() ?? '',
+        name: (n.data.copyOf ? byId.get(n.data.copyOf)?.data.name : n.data.name)?.trim() ?? '',
         copy: !!n.data.copyOf,
         at: abs(n),
       }))
-      .filter((i) => i.title)
+      .filter((i) => i.name)
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
   }, [nodes, search.open]);
   const [notice, setNotice] = useState(null);
@@ -1583,7 +1583,7 @@ function Board() {
       .map((n) => ({
         id: n.id,
         kind: n.data.kind,
-        title: n.data.title,
+        name: n.data.name,
         fields: n.data.fields ?? [],
         where: sliceOf(ss, n)?.data.name ?? '',
         order: [sliceOf(ss, n)?.position.x ?? 0, n.position.x, n.position.y],
@@ -1707,7 +1707,7 @@ function Board() {
             type: 'sticky',
             parentId: slice.parentId,
             position: pos,
-            data: { kind, title: '', ...(copyOf ? { copyOf } : {}), ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
+            data: { kind, name: '', ...(copyOf ? { copyOf } : {}), ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
           },
         ],
         only
@@ -2049,7 +2049,7 @@ function Board() {
         <button
           className="hotkeys-btn search-btn"
           onClick={() => setSearch((s) => ({ open: true, tick: s.tick + 1 }))}
-          title="Search elements by title (Ctrl+F)"
+          title="Search elements by name (Ctrl+F)"
           aria-label="Search"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -2142,7 +2142,7 @@ function Board() {
           initialReading={infoReading}
           title={
             infoNode.type === 'sticky' && infoNode.data.kind !== 'notes'
-              ? `${KINDS[infoNode.data.kind].label}${infoNode.data.title ? ` — ${infoNode.data.title}` : ''}`
+              ? `${KINDS[infoNode.data.kind].label}${infoNode.data.name ? ` — ${infoNode.data.name}` : ''}`
               : infoNode.data.kind === 'notes' ? 'Notes' : `${infoNode.type[0].toUpperCase()}${infoNode.type.slice(1)} — ${infoNode.data.name ?? infoNode.data.label}`
           }
           initial={infoNode.data[infoField] ?? ''}
@@ -2153,7 +2153,7 @@ function Board() {
       {fieldsNode && (
         <FieldsDialog
           key={fieldsNode.id}
-          title={`Fields — ${KINDS[fieldsNode.data.kind].label}${fieldsNode.data.title ? ` — ${fieldsNode.data.title}` : ''}`}
+          title={`Fields — ${KINDS[fieldsNode.data.kind].label}${fieldsNode.data.name ? ` — ${fieldsNode.data.name}` : ''}`}
           initial={fieldsNode.data.fields ?? []}
           parent={parentFields(nodes, edges, fieldsNode.id)}
           onSave={saveFields}

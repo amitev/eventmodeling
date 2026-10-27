@@ -70,6 +70,25 @@ export const FLOWS_TO = {
 
 export const snap = (v) => Math.round(v / GRID) * GRID;
 
+// Slice types (R5b): worked out from the slice's elements, never chosen.
+export const SLICE_TYPES = ['STATE_CHANGE', 'STATE_READ', 'AUTOMATION', 'TRANSLATION'];
+
+// The type of a slice from its elements, or null when it matches no pattern. `elements` are
+// { kind, lane } with the element's type and the type of its lane. Scenarios and Notes do not count.
+export function sliceType(elements) {
+  const flow = elements.filter((e) => e.kind !== 'scenarios' && e.kind !== 'notes');
+  const kinds = new Set(flow.map((e) => e.kind));
+  const only = (allowed) => [...kinds].every((k) => allowed.includes(k));
+  if (kinds.has('processor') && kinds.has('command') && kinds.has('event')) {
+    return flow.some((e) => e.lane === 'integration') ? 'TRANSLATION' : 'AUTOMATION';
+  }
+  if (kinds.size && !kinds.has('processor') && only(['screen', 'command', 'event']) && kinds.has('command') && kinds.has('event')) {
+    return 'STATE_CHANGE';
+  }
+  if (kinds.has('query') && only(['query', 'screen'])) return 'STATE_READ';
+  return null;
+}
+
 // Linked copies (`data.copyOf` = id of the original) whose original is gone are removed with
 // it (R3.22). Null when there is none; else the remaining nodes and the removed ids.
 export function pruneCopies(nodes) {
