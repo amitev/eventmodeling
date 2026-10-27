@@ -66,6 +66,7 @@ import {
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
+import { SearchBox } from './Search.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
 import { CELL_ADD_KEYS, hotkeyOf, HotkeysDialog } from './Hotkeys.jsx';
@@ -1007,7 +1008,7 @@ function Board() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
-  const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom } = useReactFlow();
   const canvasRef = useRef(null);
 
   // `count` ids that are unused on the board and different from each other.
@@ -1060,6 +1061,36 @@ function Board() {
   const [fieldsId, setFieldsId] = useState(null);
   const scenarioOpen = useRef(false);
   scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId;
+  // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
+  const [search, setSearch] = useState({ open: false, tick: 0 });
+  const modalOpen = useRef(false);
+  modalOpen.current = scenarioOpen.current || helpOpen;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return;
+      if (modalOpen.current) return;
+      e.preventDefault(); // not the browser's find
+      setSearch((s) => ({ open: true, tick: s.tick + 1 }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const searchItems = useMemo(() => {
+    if (!search.open) return [];
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const abs = (n) => [(byId.get(n.parentId)?.position.x ?? 0) + n.position.x, (byId.get(n.parentId)?.position.y ?? 0) + n.position.y];
+    return nodes
+      .filter((n) => n.type === 'sticky')
+      .map((n) => ({
+        id: n.id,
+        kind: n.data.kind,
+        title: (n.data.copyOf ? byId.get(n.data.copyOf)?.data.title : n.data.title)?.trim() ?? '',
+        copy: !!n.data.copyOf,
+        at: abs(n),
+      }))
+      .filter((i) => i.title)
+      .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
+  }, [nodes, search.open]);
   const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
@@ -1111,6 +1142,23 @@ function Board() {
         return selectOnly(ns, inCell.length === 1 ? inCell[0].id : null);
       });
     }, 0);
+  };
+
+  // Focuses an element found by the search: selects it and its Cell, makes its Chapter active
+  // and moves the view to it, zoomed in to at least 100% (R1e).
+  const goToElement = (id) => {
+    const ns = getNodes();
+    const n = ns.find((m) => m.id === id);
+    if (!n) return;
+    const parent = ns.find((m) => m.id === n.parentId);
+    setSearch((s) => ({ ...s, open: false }));
+    setNodes((cur) => selectOnly(cur, id));
+    selectCellOf(id);
+    focusChapter(n);
+    setCenter((parent?.position.x ?? 0) + n.position.x + stickyW(n) / 2, (parent?.position.y ?? 0) + n.position.y + stickyH(n) / 2, {
+      zoom: Math.max(getZoom(), 1),
+      duration: 400,
+    });
   };
 
   useEffect(() => {
@@ -1998,6 +2046,17 @@ function Board() {
         <button onClick={exportJson} title="Download slices and their elements as JSON">
           Export JSON
         </button>
+        <button
+          className="hotkeys-btn search-btn"
+          onClick={() => setSearch((s) => ({ open: true, tick: s.tick + 1 }))}
+          title="Search elements by title (Ctrl+F)"
+          aria-label="Search"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="4.5" />
+            <path d="M10 10L14.5 14.5" />
+          </svg>
+        </button>
         <button className="hotkeys-btn" onClick={() => setHelpOpen(true)} title="Hotkeys" aria-label="Hotkeys">
           ⌨️
         </button>
@@ -2069,6 +2128,14 @@ function Board() {
         </HistoryContext.Provider>
       </div>
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
+      {search.open && (
+        <SearchBox
+          items={searchItems}
+          focusTick={search.tick}
+          onPick={goToElement}
+          onClose={() => setSearch((s) => ({ ...s, open: false }))}
+        />
+      )}
       {infoNode && (
         <InfoDialog
           key={infoNode.id}

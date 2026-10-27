@@ -18,6 +18,15 @@ const HOTKEYS = [
       ['Ctrl+Z', 'Undo'],
       ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'],
       ['Backspace / Delete', 'Delete the selected elements or arrows'],
+      ['Ctrl+F', 'Search elements by title'],
+    ],
+  },
+  {
+    group: 'Search box',
+    keys: [
+      ['↑ / ↓', 'Move through the results'],
+      ['Enter', 'Focus the highlighted element'],
+      ['Esc', 'Close the search'],
     ],
   },
   {

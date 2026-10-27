@@ -77,9 +77,16 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 ## 1d. Hotkey help
 
-- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete), Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name or title, Scenario editor (R3.15), Info panel, Fields popup. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
+- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete, search), Search box, Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name or title, Scenario editor (R3.15), Info panel, Fields popup. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
 - **R1d.2** Every control with a hotkey names it in its tooltip, in brackets after the description, e.g. "Undo (Ctrl+Z)", "Add a scenario (A)". The label stays unchanged, except where the hotkey is part of its design (scenario popup chips, R3.15). A new hotkey is not done until its tooltip names it.
 - **R1d.3** Tooltips never explain mouse gestures ("double-click to ...", "drag to ...", click or drop hints). An element's tooltip is its **full title** (none when untitled), so a title cut off by an ellipsis can be read; a slice header's is the slice name, a scenario item's its title (R3.14).
+
+## 1e. Search
+
+- **R1e.1** **Ctrl+F** (Cmd+F) anywhere on the board, also while typing in a board field, or the **magnifier** button (tooltip "Search elements by title (Ctrl+F)") just before the hotkey-help button in the header, opens a **search box** instead of the browser's find; pressed again it focuses the box. Ignored while a popup is open. It is a small box floating at the top centre of the window, above the popups (z-index), not modal: the board stays usable. It is not part of the board's data and not an undo step.
+- **R1e.2** The box has a text input and a **×** (tooltip "Close (Esc)"). The list shows every element of all Chapters whose **title** contains the text, case-insensitive, in order of position on the canvas (left to right, then top to bottom); nothing is listed for an empty text, and "No element found" when none matches. Elements without a title (also Scenarios and Notes) are not searched. A linked copy is searched by its original's title.
+- **R1e.3** Each result is only the title, on the colour of its element type (R3.1); a linked copy is semi-transparent (40%), as on the board (R3.22). The first result is highlighted; **↑** / **↓** move the highlight (wrapping), the mouse also moves it.
+- **R1e.4** **Enter** or a click on a result **focuses** the element and closes the box: the element and its Cell are selected (R5a.12), its Chapter becomes active (R1a.4), and the view moves to centre it, zooming in to at least 100% (never zooming out). **Esc** or **×** closes the box without changing anything.
 
 ## 2. Lanes
 
