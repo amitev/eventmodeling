@@ -58,6 +58,8 @@ const HOTKEYS = [
     keys: [
       ['I', 'Open the info of the element (not for Notes, Scenarios or a linked copy)'],
       ['F', 'Open the fields of a Screen, Command, Event or Query (not a linked copy)'],
+      ['E', 'Edit the HTML mockup of a Screen'],
+      ['V', 'View the HTML mockup of a Screen (see also Scenarios, Notes)'],
       ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
     ],
   },
@@ -103,6 +105,14 @@ const HOTKEYS = [
       ['Ctrl+L', 'Link (Markdown editor)'],
       ['Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z)', 'Undo / redo in the Markdown editor'],
       ['Esc', 'Cancel'],
+    ],
+  },
+  {
+    group: 'Screen mockup popup',
+    keys: [
+      ['Ctrl+S', 'Save and close'],
+      ['Alt+Enter', 'Full screen on / off'],
+      ['Esc', 'Close without saving'],
     ],
   },
   {

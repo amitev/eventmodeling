@@ -33,7 +33,7 @@ All in `src/`:
 - `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
 - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
 - `history.js`: undo/redo (`useHistory`) and the gesture context.
-- `InfoDialog.jsx`: the Markdown info editor.
+- `InfoDialog.jsx`: the Markdown info editor. `HtmlDialog.jsx`: the Screen mockup popup.
 - `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
 - `popup.js`: `useBackdropClose` and `useModalFocus`, which every popup must use (R1.17).
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.

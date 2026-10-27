@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Background,
@@ -66,6 +66,7 @@ import {
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
+import { HtmlDialog } from './HtmlDialog.jsx';
 import { SearchBox } from './Search.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
@@ -221,12 +222,44 @@ function CopyButton({ id }) {
   );
 }
 
+const MOCKUP_W = 1024; // the size a Screen mockup is laid out at (4:3), then scaled down to the body
+const MOCKUP_H = 768;
+
+// The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
+// iframe and scaled down to the body's width, so there is nothing to scroll.
+function ScreenPreview({ html, title }) {
+  const box = useRef(null);
+  const [scale, setScale] = useState(0.14);
+  useLayoutEffect(() => {
+    const el = box.current;
+    const update = () => el.clientWidth && setScale(el.clientWidth / MOCKUP_W);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={box} className="screen-frame-box">
+      <iframe
+        className="screen-frame"
+        title={title}
+        sandbox=""
+        scrolling="no"
+        srcDoc={html}
+        style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
+      />
+    </div>
+  );
+}
+
 const BoardActions = createContext({
   editScenario: () => {},
   newScenarioId: () => '',
   rememberCopy: () => {},
   openInfo: () => {},
   openFields: () => {},
+  openHtml: () => {},
+  viewHtml: () => {},
   viewScenarios: () => {},
   readInfo: () => {},
   titleEditId: null,
@@ -419,14 +452,13 @@ function StickyNode({ id, data, selected }) {
     if (editingTitle) titleRef.current?.select();
   }, [editingTitle]);
 
-  const [editingHtml, setEditingHtml] = useState(false);
   const isScreen = data.kind === 'screen';
   // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
   const width = useStore((s) => {
     const me = s.nodeLookup.get(id);
     return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
   });
-  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo } = useContext(BoardActions);
 
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
@@ -473,14 +505,28 @@ function StickyNode({ id, data, selected }) {
         <InfoButton id={id} info={data.info} hotkey="I" />
         {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
         {isScreen && (
-          <button
-            className="info-btn html-tool"
-            title="Edit HTML mockup"
-            aria-label="Edit HTML mockup"
-            onClick={() => setEditingHtml((v) => !v)}
-          >
-            {'</>'}
-          </button>
+          <>
+            <button
+              className="info-btn html-tool"
+              title="Edit HTML mockup (E)"
+              aria-label="Edit HTML mockup"
+              onClick={() => openHtml(id)}
+            >
+              {'</>'}
+            </button>
+            <button
+              className="info-btn"
+              title="View (V)"
+              aria-label="View"
+              disabled={!data.html}
+              onClick={() => viewHtml(id)}
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+                <circle cx="8" cy="8" r="2" fill="currentColor" />
+              </svg>
+            </button>
+          </>
         )}
       </NodeToolbar>
     );
@@ -534,30 +580,9 @@ function StickyNode({ id, data, selected }) {
           <span className={`title ${shown.name ? '' : 'empty'}`}>{shown.name || 'Name'}</span>
         )}
       </div>
-      <div className="sticky-body">
+      <div className={`sticky-body${isScreen && shown.html ? ' has-mockup' : ''}`}>
       {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
-      {isScreen && editingHtml && (
-        <textarea
-          className="nodrag nowheel html-editor"
-          autoFocus
-          placeholder="<h1>Hello</h1>"
-          defaultValue={data.html ?? ''}
-          onDoubleClick={(e) => e.stopPropagation()}
-          onBlur={(e) => {
-            update({ html: e.target.value });
-            setEditingHtml(false);
-          }}
-          onKeyDown={(e) => e.key === 'Escape' && e.target.blur()}
-        />
-      )}
-      {isScreen && shown.html && !editingHtml && (
-        <iframe
-          className="screen-frame"
-          title={shown.name || 'Screen mockup'}
-          sandbox=""
-          srcDoc={shown.html}
-        />
-      )}
+      {isScreen && shown.html && <ScreenPreview html={shown.html} title={shown.name || 'Screen mockup'} />}
       </div>
       <Handle id="bottom-out" type="source" position={Position.Bottom} />
       <Handle id="bottom-in" type="target" position={Position.Bottom} />
@@ -1131,10 +1156,13 @@ function Board() {
   const [scenarioEdit, setScenarioEdit] = useState(null);
   // The element whose fields popup is open.
   const [fieldsId, setFieldsId] = useState(null);
+  // The Screen whose HTML mockup is being edited.
+  const [htmlId, setHtmlId] = useState(null);
+  const [htmlReading, setHtmlReading] = useState(false); // the popup opens in preview mode
   // The Scenarios element whose scenarios are shown in the read-only view.
   const [scenariosViewId, setScenariosViewId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!scenariosViewId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!htmlId || !!scenariosViewId;
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
@@ -1183,6 +1211,19 @@ function Board() {
   // Saves the fields of the open element and copies the new ones it was asked to propagate
   // down the chain, as one undo step.
   const fieldsNode = nodes.find((n) => n.id === fieldsId);
+  // The Screen's HTML mockup is saved on its own; an empty one is removed.
+  const htmlNode = htmlId && nodes.find((n) => n.id === htmlId && n.data.kind === 'screen' && !n.data.copyOf);
+  const saveHtml = (text) => {
+    const id = htmlId;
+    setNodes((ns) =>
+      ns.map((n) => {
+        if (n.id !== id) return n;
+        const { html: _old, ...rest } = n.data;
+        return { ...n, data: text.trim() ? { ...rest, html: text } : rest };
+      })
+    );
+    setHtmlId(null);
+  };
   const saveFields = (fields, propagate) => {
     const id = fieldsId;
     const es = getEdges();
@@ -1615,6 +1656,14 @@ function Board() {
         setInfoId(id);
       },
       openFields: setFieldsId,
+      openHtml: (id) => {
+        setHtmlReading(false);
+        setHtmlId(id);
+      },
+      viewHtml: (id) => {
+        setHtmlReading(true);
+        setHtmlId(id);
+      },
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
@@ -1858,7 +1907,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (infoId || helpOpen || scenarioEdit || fieldsId || scenariosViewId) return;
+    if (infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
@@ -1928,6 +1977,21 @@ function Board() {
       if (selected.length === 1 && selected[0].data.kind === 'scenarios') {
         e.preventDefault();
         setScenariosViewId(selected[0].id);
+        return;
+      }
+      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf && selected[0].data.html) {
+        e.preventDefault();
+        setHtmlReading(true);
+        setHtmlId(selected[0].id);
+        return;
+      }
+    }
+    if (hk === 'e' && !e.shiftKey) {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf) {
+        e.preventDefault();
+        setHtmlReading(false);
+        setHtmlId(selected[0].id);
         return;
       }
     }
@@ -2212,8 +2276,9 @@ function Board() {
           minZoom={0.2}
           snapToGrid
           autoPanOnNodeDrag={false}
+          disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || fieldsId || scenariosViewId || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || fieldsId || htmlId || scenariosViewId || selectedCell ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={selectedCell} />
@@ -2249,6 +2314,16 @@ function Board() {
           initial={infoNode.data[infoField] ?? ''}
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
+        />
+      )}
+      {htmlNode && (
+        <HtmlDialog
+          key={htmlNode.id}
+          initialReading={htmlReading}
+          title={`Screen mockup${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
+          initial={htmlNode.data.html ?? ''}
+          onSave={saveHtml}
+          onCancel={() => setHtmlId(null)}
         />
       )}
       {fieldsNode && (

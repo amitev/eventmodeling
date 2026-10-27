@@ -134,13 +134,15 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
 
-.html-editor { height: 90px; font: 11px monospace !important; margin-bottom: 4px; }
-/* Off, so the element can be dragged and selected over the preview; on once it is selected, to scroll it. */
-.screen-frame {
-  display: block; width: 100%; height: 110px; margin-bottom: 4px; pointer-events: none;
-  border: 1px solid #aaa; background: #fff;
-}
-.sticky.selected .screen-frame { pointer-events: auto; }
+/* The Screen mockup popup: the preview is a sandboxed iframe, so the mockup's styles stay inside it. */
+.html-preview { width: 100%; height: 100%; min-height: 0; border: 0; background: #fff; }
+.info-panes:has(.html-preview):not(.reading) .info-left { border-right: 1px solid #ddd; }
+/* The Screen mockup in the element body: laid out at a fixed size and scaled down to fill the whole body, never scrolled or clicked. */
+.sticky-body.has-mockup { padding: 0; overflow: hidden; }
+.screen-frame-box { position: relative; width: 100%; height: 118px; overflow: hidden; background: #fff; box-sizing: border-box; }
+/* Every Screen is as tall as one with a mockup: 26px header + 118px body (a 4:3 preview of the 158px body width) + borders. */
+.sticky.screen { min-height: 146px; }
+.screen-frame { position: absolute; top: 0; left: 0; display: block; transform-origin: 0 0; border: 0; pointer-events: none; background: #fff; }
 
 .lane-header {
   pointer-events: auto; position: absolute; top: 0; bottom: 0; left: 0; box-sizing: border-box;
@@ -477,6 +479,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; font-weight: 700; border-bottom: 1px solid #ddd;
 }
+.info-dialog.maximized { width: 100vw; height: 100vh; border-radius: 0; }
+.info-title .info-maximize { margin-left: auto; }
 .info-title .info-mode {
   display: grid; place-items: center; width: 26px; height: 26px; padding: 0; cursor: pointer;
   border: 1px solid #aab; border-radius: 4px; background: #fff; color: #556;

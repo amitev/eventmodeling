@@ -43,7 +43,7 @@ export const DEFAULT_SLICE_WIDTH = 220;
 export const SLICE_MIN_WIDTH = 120;
 
 export const KINDS = {
-  screen: { label: 'Screen', lane: 0, color: '#e2e2e2' },
+  screen: { label: 'Screen', lane: 0, color: '#e2e2e2', h: 146 }, // as tall as one with a mockup (R3.6b)
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
   query: { label: 'Query', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
