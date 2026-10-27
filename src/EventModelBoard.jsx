@@ -619,10 +619,64 @@ function SliceNode({ id, data }) {
       })
     );
 
-  // Dragging a slice header moves the whole Chapter (slices themselves never move on
-  // their own: their order and position come from the layout).
+  // Dragging a slice header moves the whole Chapter (R1.10); a slice is reordered with the grip
+  // at the right end of its header, live (R5.8): the others shift as it passes them, with their
+  // elements; the slice and its elements settle in the new place on release.
   const startChapterDrag = useChapterDrag(id, () => editing);
-  const { addSliceAfter, removeSlice, selectCell } = useContext(BoardActions);
+  const history = useContext(HistoryContext);
+  const zoom = useStore((s) => s.transform[2]);
+  const [lift, setLift] = useState(null); // while dragging: how far the header is from its place, in px
+  const { addSliceAfter, removeSlice, selectCell, activate } = useContext(BoardActions);
+
+  const startReorder = (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const base = getNodes();
+    const me = base.find((n) => n.id === id);
+    if (!me) return;
+    const ss = slices(base, me.parentId);
+    if (ss.length < 2) return;
+    const others = ss.filter((s) => s.id !== id);
+    const centre = (s) => s.position.x + s.data.width / 2;
+    const startX = e.clientX;
+    let started = false;
+    const move = (ev) => {
+      if (!started) {
+        if (Math.abs(ev.clientX - startX) < 4) return;
+        started = true;
+        history.begin();
+        activate(me.parentId);
+      }
+      const dx = (ev.clientX - startX) / zoom;
+      // Where it goes: after the other slices whose (original) centre is left of its centre.
+      const index = others.filter((s) => centre(s) < centre(me) + dx).length;
+      const order = [...others];
+      order.splice(index, 0, me);
+      const rank = new Map(order.map((s, i) => [s.id, i]));
+      const placed = order.slice(0, index).reduce((sum, s) => sum + s.data.width, SLICE_MIN_X);
+      setLift(dx - (placed - me.position.x));
+      // The layout orders slices by position: give them their new ranks, it packs them.
+      setNodes(
+        layoutSlices(
+          base.map((n) => (rank.has(n.id) ? { ...n, position: { ...n.position, x: rank.get(n.id) } } : n)),
+          base
+        )
+      );
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (started) {
+        setLift(null);
+        history.end();
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
 
   // A plain click (no drag) on the header selects the top Cell of this slice.
   const selectTopCell = (e) => {
@@ -654,8 +708,8 @@ function SliceNode({ id, data }) {
 
   return (
     <div
-      className={`slice${isLast ? ' last' : ''}${data.flowEnd ? ' flow-end' : ''}`}
-      style={{ width: data.width, height: SLICE_HEADER + lanesHeight }}
+      className={`slice${isLast ? ' last' : ''}${data.flowEnd ? ' flow-end' : ''}${lift !== null ? ' dragging' : ''}`}
+      style={{ width: data.width, height: SLICE_HEADER + lanesHeight, ...(lift !== null ? { transform: `translateX(${lift}px)` } : {}) }}
     >
       <div
         className="slice-header nodrag nopan"
@@ -690,7 +744,7 @@ function SliceNode({ id, data }) {
         <div className="slice-actions">
           <button
             className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}
-            title={data.flowEnd ? 'Flow end: remove the mark' : 'Flow end: mark this slice as the end of a flow'}
+            title={data.flowEnd ? 'Flow end: remove the mark (Shift+E)' : 'Flow end: mark this slice as the end of a flow (Shift+E)'}
             aria-label="Flow end"
             aria-pressed={!!data.flowEnd}
             onDoubleClick={(e) => e.stopPropagation()}
@@ -724,6 +778,23 @@ function SliceNode({ id, data }) {
               </svg>
             </button>
           )}
+          <button
+            className="slice-add slice-grip nodrag"
+            title="Move the slice"
+            aria-label="Move the slice"
+            onPointerDown={startReorder}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+              <circle cx="3" cy="2" r="1" />
+              <circle cx="7" cy="2" r="1" />
+              <circle cx="3" cy="5" r="1" />
+              <circle cx="7" cy="5" r="1" />
+              <circle cx="3" cy="8" r="1" />
+              <circle cx="7" cy="8" r="1" />
+            </svg>
+          </button>
         </div>
       </div>
       <div
@@ -1797,6 +1868,7 @@ function Board() {
       e.key === 'Delete' ||
       e.key === 'Backspace' ||
       e.key.toLowerCase() === 'i' ||
+      e.key.toLowerCase() === 'e' ||
       e.key.toLowerCase() === 'c';
     // Ctrl+←/→ moves the slice.
     const moveKey =
@@ -1859,7 +1931,7 @@ function Board() {
         return;
       }
     }
-    if (hk === 'v' || hk === 'r' || hk === 'e') {
+    if ((hk === 'v' || hk === 'r' || hk === 'e') && !e.shiftKey) {
       const selected = getNodes().filter((n) => n.selected);
       if (selected.length === 1 && selected[0].data.kind === 'notes') {
         e.preventDefault();
@@ -1881,6 +1953,17 @@ function Board() {
     if (e.key === '+') {
       e.preventDefault();
       addSliceAfter(selectedCell.sliceId);
+      return;
+    }
+    if (e.shiftKey && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      setNodes((ns) =>
+        ns.map((n) => {
+          if (n.id !== selectedCell.sliceId) return n;
+          const { flowEnd, ...rest } = n.data;
+          return { ...n, data: flowEnd ? rest : { ...rest, flowEnd: true } };
+        })
+      );
       return;
     }
     if (e.shiftKey && e.key.toLowerCase() === 'c') {

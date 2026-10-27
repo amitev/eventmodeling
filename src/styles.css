@@ -108,8 +108,14 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice.last::after { border-right: 0; }
 /* A Flow end slice has a red right border, also when it is the last slice. */
 .slice.flow-end::after { border-right: 2px dashed #e53935; }
-.slice-add.active { background: rgba(255, 255, 255, 0.5); border-color: #fff; }
-.slice-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.slice-add.active { background: rgba(255, 255, 255, 0.9); color: #333; }
+.slice-actions { display: none; align-items: center; gap: 4px; flex: none; }
+/* To keep the header compact, its buttons (except the info button) show only while the mouse is over it. */
+.slice-header:hover .slice-actions, .slice-header:focus-within .slice-actions, .slice.dragging .slice-actions { display: flex; }
+.slice-add.slice-grip { cursor: grab; touch-action: none; }
+/* The slice being reordered follows the pointer; its elements settle in the new place on release. */
+.slice.dragging { background: rgba(138, 127, 201, 0.15); box-shadow: 0 0 0 2px rgba(138, 127, 201, 0.6); }
+.slice.dragging .slice-grip { cursor: grabbing; }
 .slice-header {
   pointer-events: auto; height: 40px; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
@@ -121,10 +127,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-header input { cursor: text; user-select: text; }
 .slice-add {
   display: grid; place-items: center; flex: none; width: 18px; height: 18px; padding: 0;
-  cursor: pointer; color: #fff; background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.75); border-radius: 3px;
+  cursor: pointer; color: #fff; background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px;
 }
-.slice-add:hover { background: rgba(255, 255, 255, 0.4); }
+.slice-add:hover { background: rgba(255, 255, 255, 0.25); }
 .slice-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
 

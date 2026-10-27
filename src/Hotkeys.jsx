@@ -38,6 +38,7 @@ const HOTKEYS = [
       ['Ctrl+← / Ctrl+→', 'Move the slice left / right'],
       ['Shift+C', 'Compact the slice'],
       ['Shift+I', 'Open the slice info'],
+      ['Shift+E', 'Mark / unmark the slice as the end of a flow'],
       ['S', 'Add a Screen in the Cell (a Scenarios element in a Spec lane)'],
       ['C', 'Add a Command in the Cell'],
       ['R / Q', 'Add a Query in the Cell'],

@@ -9,7 +9,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
 - **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid. The board opens at 60% zoom (minimum 20%).
 - **R1.3** Items snap to a 20px grid.
-- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Flow end**, **+**, **×**) and the Chapter handle (**i**, **↔**, **×**, context rename and delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
+- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Flow end**, **+**, **×**, **Grip**) and the Chapter handle (**i**, **↔**, **×**, context rename and delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: lanes Actor, Interaction, Event (R2.10), one "New Slice" (220px wide), no elements.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), same ids. A missing or unreadable saved board gives the starting board (R1.4).
 
@@ -21,7 +21,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 ### Moving the Chapter
 
-- **R1.10** The Chapter is moved by dragging its **Chapter** handle, any **lane header** (the vertical label column) or any **slice header**. It moves as one unit (lanes, slices, elements) and snaps to the 20px grid. A header only clicked or double-clicked (rename), the lane **×** button and a name being edited do not move it.
+- **R1.10** The Chapter is moved by dragging its **Chapter** handle, any **lane header** (the vertical label column) or any **slice header**. It moves as one unit (lanes, slices, elements) and snaps to the 20px grid. A header only clicked or double-clicked (rename), the lane **×** button and a name being edited do not move it. A slice is reordered with its grip instead (R5.8).
 - **R1.10a** Moving a Chapter never moves the view, also towards the screen edge. The user pans by dragging empty canvas.
 - **R1.11** Moving a Chapter changes nothing inside it: relative positions and connections stay.
 - **R1.12** A Chapter's position is saved with the board. A Chapter is deleted only with its own button (R1a.6), not the keyboard.
@@ -224,17 +224,17 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.1** Each slice has an id (R1.14), a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4). The new slice's top Cell is selected (R5a.5).
-- **R5.2a** Every slice has a **+** button at the right end of its header. It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The new slice's top Cell is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
+- **R5.2a** Every slice has a **+** button at the right end of its header (shown on mouse-over, R5.22). It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The new slice's top Cell is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
 - **R5.3** Double-clicking a slice header renames it; an empty name is ignored (previous kept), as for lanes (R2.4a).
 - **R5.4** A slice cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, nor on its buttons or while renaming) selects its **top Cell** (R5a.5). A slice is deleted with the **×** in its header (R5.11, R5.18, R5.19), or **Shift+Delete** / **Shift+Backspace** while one of its Cells is selected, after confirmation (R5a.11).
 - **R5.5** A slice's height always covers all lanes, also after lane add/remove.
 - **R5.6** Only the slice header captures the mouse, so elements underneath stay usable.
 - **R5.7** Slices form one contiguous run, laid out automatically: the first starts right after the label zone (R2.4), each next where the previous ends; no gaps or overlaps. A slice has only a dashed right border, separating it from the next (the last slice has none: the Chapter outline is there), and no left, top or bottom border. The border does not cover the header. The header band is semi-transparent (60% opacity), so it is not intrusive.
-- **R5.8** Slices have no left resize handle and cannot be dragged. Their order changes only with **Ctrl+←** / **Ctrl+→** (R5a.11); elements move with their slice (R5.15). Dragging a header moves the Chapter (R1.10). New slices go at the end with **+ Slice** or after a given slice with its **+** (R5.2a).
+- **R5.8** Slices have no left resize handle. Their order changes by dragging the **grip** (six dots, tooltip "Move the slice"), the last button at the very right of the slice header (shown on mouse-over, R5.22), sideways, or with **Ctrl+←** / **Ctrl+→** (R5a.11); elements move with their slice (R5.15). The drag works within the slice's own Chapter and is live: the header follows the pointer horizontally and the other slices, with their elements, shift as it passes their centres; on release the slice and its elements settle in the new place. A press on the grip that does not move does nothing. The whole drag is one undo step (R8.4). Dragging the rest of the header moves the Chapter (R1.10). New slices go at the end with **+ Slice** or after a given slice with its **+** (R5.2a).
 - **R5.9** A slice is resized by dragging its right edge, minimum 120px, or with **Shift+→** / **Shift+←** while one of its Cells is selected (R5a.11). There are no resize buttons.
 - **R5.10** Resizing moves all following slices along; preceding ones stay.
 - **R5.11** Deleting a slice closes the gap: following slices move left; the next becomes first if the first was deleted. The top Cell of the previous slice is then selected (R5a.5, R5a.12); with no previous slice, the top Cell of the slice that became first.
-- **R5.21** **Flow end.** A **Flow end** button in the slice header (the first button before **+**, an 18px square, R1.3a, vertical bar icon) marks the slice as the end of a flow; pressing it again removes the mark. A Flow end slice has a **red** right border (same dashed 2px line as other slices'), also when it is its Chapter's last slice, and its button looks pressed. The mark is part of the slice: saved, exported and imported (R6.4); changing it is an undo step (R8.1). Tooltip: "Flow end: mark this slice as the end of a flow" ("Flow end: remove the mark" when set).
+- **R5.21** **Flow end.** A **Flow end** button in the slice header (the first button before **+**, an 18px square, R1.3a, vertical bar icon) marks the slice as the end of a flow; pressing it again removes the mark. A Flow end slice has a **red** right border (same dashed 2px line as other slices'), also when it is its Chapter's last slice, and its button looks pressed. The mark is part of the slice: saved, exported and imported (R6.4); changing it is an undo step (R8.1). Tooltip: "Flow end: mark this slice as the end of a flow (Shift+E)" ("Flow end: remove the mark (Shift+E)" when set). **Shift+E** with one of the slice's Cells selected toggles the mark too (R5a.11).
 - **R5.12** Saved boards and imported files are laid out the same way on load: slices packed in stored order (the file's `slices` list), elements moving with them. A saved board failing the R7.4 checks is unreadable (R1.6).
 
 ### Elements and slices
@@ -258,6 +258,8 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
+- **R5.22** **Slice header buttons.** To keep the header compact, only the **i** button (R1c.2) is always visible. **Flow end** (R5.21), **+** (R5.2a), **×** (R5.4) and the **grip** (R5.8) show only while the mouse is over the header (or a button in it has the keyboard focus), at its right end; the name takes the room otherwise. They keep their hotkeys and tooltips.
+
 ## 5a. Cells
 
 - **R5a.1** A **Cell** is the intersection of one lane and one slice of a Chapter: a box of its grid (lanes are rows, slices columns). 3 lanes and 2 slices give 6 Cells. The label zone is not part of any Cell.
@@ -276,6 +278,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Ctrl+←** / **Ctrl+→** move the Cell's slice one place left/right, swapping it with its neighbour, elements with it (R5.8); nothing at the first or last place; one undo step per press.
   - **Shift+C** compacts the Cell's slice (R5.20).
   - **Shift+I** opens the info of the Cell's slice (R1c.3).
+  - **Shift+E** marks or unmarks the Cell's slice as a Flow end (R5.21); one undo step.
   - **S, C, R or Q, E, P, N** add a Screen, Command, Query, Event, Processor or Notes element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8). In a Spec lane, which takes no Screen, **S** adds a Scenarios element instead.
   - **+** adds a slice right after the Cell's slice, as the slice's **+** does (R5.2a).
   - **Enter** opens the editor of a selected Notes element (R3.19), as does **E** (a Notes element only sits in a Spec lane, which takes no Event, so E adds nothing there); **V** and **R** open it in read mode (R3.18; R adds no Query there either); otherwise Enter edits the name of the Cell's left-most element (R3.4a), if any.
@@ -283,7 +286,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Esc** clears the Cell selection and any element selected with it (R5a.12).
   - **Ctrl+V** pastes a linked copy of the element remembered with **Ctrl+C** (R3.22).
 
-  Keys are ignored while typing in a text field, while the info panel, hotkey help or scenario popup is open, and with Ctrl, Cmd, Alt or Shift held (except **Ctrl+←** / **Ctrl+→**, **Ctrl+C** / **Ctrl+V**, **Ctrl+1** ... **Ctrl+9**, **+**, Shift+← / Shift+→, Shift+C, Shift+I and Shift+Delete / Shift+Backspace). **Operations on the slice use Shift or, for moving it, Ctrl**; those without a modifier act on the Cell or its elements.
+  Keys are ignored while typing in a text field, while the info panel, hotkey help or scenario popup is open, and with Ctrl, Cmd, Alt or Shift held (except **Ctrl+←** / **Ctrl+→**, **Ctrl+C** / **Ctrl+V**, **Ctrl+1** ... **Ctrl+9**, **+**, Shift+← / Shift+→, Shift+C, Shift+E, Shift+I and Shift+Delete / Shift+Backspace). **Operations on the slice use Shift or, for moving it, Ctrl**; those without a modifier act on the Cell or its elements.
 - **R5a.12** **Cell and element selection.** Selecting a Cell (by click, arrow keys, slice header click or creating a slice) also selects its element when it holds exactly one; with none or several, none is selected. Any other selected element is deselected. An element added in the selected Cell (R5a.10, R5a.11) is selected, whatever else the Cell holds; one added in another Cell by dragging is not. An element selected this way can be used like any selected element (e.g. **A** for a Scenarios element, R3.14). Selecting an element also selects its Cell: by a click, and after a drag when dropped (the Cell it lands in). While a Cell is selected the arrow keys move the Cell selection (R5a.11), so elements cannot be moved with the keyboard.
 
 **Learning (implementation).** Lane nodes cover the Chapter's whole Cell area. If they took the mouse they would sit above the arrows and block selecting them, so lanes ignore the mouse; a click on an empty part of a Cell reaches the canvas, which finds the Cell from the click position (R5a.5, R5a.7).
@@ -368,7 +371,7 @@ The export file is the single, complete description of a board, written and read
 - **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (name and HTML), moving (including to another Chapter) and deleting elements; adding, editing, copying, reordering and deleting scenarios; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and import.
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Ignored while typing in a text field (its own undo applies) and while the scenario popup is open (R3.15).
-- **R8.4** A continuous gesture is one step: dragging an element or a Chapter, or resizing a slice, is recorded once when it ends.
+- **R8.4** A continuous gesture is one step: dragging an element or a Chapter, reordering a slice or resizing a slice, is recorded once when it ends.
 - **R8.5** An operation and its automatic adjustments (re-settling elements in slices, centring in lanes, shifting later slices) are one step; undo restores the board exactly.
 - **R8.6** Selecting items (including Cells, R5a.9), panning and zooming are not operations and are not recorded.
 - **R8.7** A new change after an undo discards the redo history.
