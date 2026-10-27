@@ -1,10 +1,5 @@
 Slices
-- Slice types
 
-I want to introduce slice types. There are the following 3 types:
-- State change - stricly screen, commnand, event
-- State read - strictly read model -> screen
-- Automation - at least Processor -> Command -> Event
 
 Elements
 - Automatic title from previous element
@@ -14,6 +9,7 @@ Screens
 - Paste HTML+CSS (without JS) and show it into an iframe
 - Blurring/highlighting parts of the screen
 - Movie strip - The Movie-Strip allows you to go over all Screens like a real Prototype. It´s amazing for Management-Demos.
+- Agentic - generate a screen based on the look and feel of another screen (or previous screen)
 
 Event log (undo/redo)
 - Show it
@@ -35,7 +31,7 @@ Prototypes
 
 Agentic
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
-- Build slices - skills for building
+- Build slices - skills for building the slice types
 - Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.
 - Agent Cockpit - The Agent Cockpit gives full control and visibility for Agent Activities across all Boards. In this example we are putting two tasks into status 'planned' - which allows an agent to pick them up.
 - Agent Chat - The Agent Chat allows you to interact with an agent directly. The Chat is Context-Aware - means every chat message carries a snapshot of your screen. The Agent knows exactly what you were looking at. And you can render any kind of visualization or report - in this case I needed a Bar-Chart of the number of slices.

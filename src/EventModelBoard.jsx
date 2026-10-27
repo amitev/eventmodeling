@@ -1262,10 +1262,15 @@ function Board() {
     }
     const gone = new Set([sliceId, ...doomed.map((n) => n.id)]);
     if (!confirmCopies(nodes, gone)) return;
+    const ss = slices(nodes, slice.parentId);
+    const i = ss.findIndex((s) => s.id === sliceId);
+    const neighbour = ss[i - 1] ?? ss[i + 1]; // the previous slice, else the one that becomes first
     setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
-    setSelectedCell((c) => (c?.sliceId === sliceId ? null : c));
     setActiveId(slice.parentId);
+    const top = lanesOf(nodes, slice.parentId)[0];
+    if (neighbour && top) chooseCell({ chapterId: slice.parentId, laneId: top.id, sliceId: neighbour.id });
+    else setSelectedCell((c) => (c?.sliceId === sliceId ? null : c));
   };
 
   // Selects the top Cell of a slice that was just created.
