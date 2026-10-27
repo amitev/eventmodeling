@@ -1,0 +1,43 @@
+Slices
+- Slice types
+
+I want to introduce slice types. There are the following 3 types:
+- State change - stricly screen, commnand, event
+- State read - strictly read model -> screen
+- Automation - at least Processor -> Command -> Event
+
+Elements
+- Automatic title from previous element
+-
+
+Screens
+- Paste HTML+CSS (without JS) and show it into an iframe
+- Blurring/highlighting parts of the screen
+- Movie strip - The Movie-Strip allows you to go over all Screens like a real Prototype. It´s amazing for Management-Demos.
+
+Event log (undo/redo)
+- Show it
+- Export it
+- Replay it, so that we see what the user has thought
+
+Specs
+- To learn the difference between GWT and story lines and see what to do with them
+
+Common
+- Unify
+
+Export
+- Generate spec document
+
+
+Prototypes
+- Just zoom in on the interesting part of the model and ask the agent to build a prototype. No need to tell it for what - it´ll know. The Prototype implements the Business Logic as defined in the Event Model. It takes only a few minutes - and every change is incremental from there.
+
+Agentic
+https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
+- Build slices - skills for building
+- Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.
+- Agent Cockpit - The Agent Cockpit gives full control and visibility for Agent Activities across all Boards. In this example we are putting two tasks into status 'planned' - which allows an agent to pick them up.
+- Agent Chat - The Agent Chat allows you to interact with an agent directly. The Chat is Context-Aware - means every chat message carries a snapshot of your screen. The Agent knows exactly what you were looking at. And you can render any kind of visualization or report - in this case I needed a Bar-Chart of the number of slices.
+
+

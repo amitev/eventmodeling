@@ -42,4 +42,7 @@ All in `src/`:
 
 ## Testing
 
+## TODOs
+TODO.txt is ignored.
+
 Do NOT test by yourself. Always ask me whether I want you to test the changes for me.
