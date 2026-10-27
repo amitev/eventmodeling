@@ -25,7 +25,7 @@ export function pruneScenarios(nodes) {
     if (n.type !== 'sticky' || n.data.kind !== 'scenarios') return n;
     const kept = n.data.scenarios.filter((s) => {
       const ok = entriesOf(s).every((e) => byId.get(e.element)?.parentId === n.parentId);
-      if (!ok) removed.push(s.title || 'Untitled');
+      if (!ok) removed.push(s.name || 'Untitled');
       return ok;
     });
     return kept.length === n.data.scenarios.length ? n : { ...n, data: { ...n.data, scenarios: kept } };
@@ -53,7 +53,7 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
     save(list);
   };
   const remove = (i) => {
-    if (window.confirm(`Delete the scenario "${scenarios[i].title || 'Untitled'}"?`)) {
+    if (window.confirm(`Delete the scenario "${scenarios[i].name || 'Untitled'}"?`)) {
       save(scenarios.filter((_, j) => j !== i));
     }
   };
@@ -72,7 +72,7 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
             className={`scenario-item nodrag${s.error !== null ? ' failed' : ''}${
               drag && drag.over === i && drag.from !== i ? (drag.from < i ? ' over-after' : ' over-before') : ''
             }`}
-            title={s.title || undefined}
+            title={s.name || undefined}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = 'move';
@@ -98,7 +98,7 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
               onEdit(id, s.id);
             }}
           >
-            <span className={`scenario-text${s.title ? '' : ' empty'}`}>{s.title || 'Untitled'}</span>
+            <span className={`scenario-text${s.name ? '' : ' empty'}`}>{s.name || 'Untitled'}</span>
             <button className="scenario-icon" title="Copy" aria-label="Copy" onDoubleClick={stop} onClick={() => copy(i)}>
               <Icon>
                 <rect x="5" y="5" width="9" height="9" rx="1.5" />
@@ -156,7 +156,7 @@ const isTyping = (t) =>
 // Commands of the Chapter: { id, kind, name, fields, where }.
 export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const [draft, setDraft] = useState(() => ({
-    title: scenario?.title ?? '',
+    name: scenario?.name ?? '',
     description: scenario?.description ?? '',
     given: (scenario?.given ?? []).map((e) => newEntry(e.element, e.example)),
     when: scenario?.when ? newEntry(scenario.when.element, scenario.when.example) : null,
@@ -168,6 +168,8 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const [problem, setProblem] = useState('');
   const [focusError, setFocusError] = useState(false);
   const errorInput = useRef(null);
+  const titleInput = useRef(null);
+  const [titleMissing, setTitleMissing] = useState(false);
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const backdrop = useBackdropClose(onClose);
   const modal = useModalFocus();
@@ -254,6 +256,11 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const valueOf = (e) => (fieldsOf(e).length ? fitExample(fieldsOf(e), e.example) : previewOfRows(e.rows));
 
   const save = () => {
+    if (!draft.name.trim()) {
+      setTitleMissing(true);
+      titleInput.current?.focus();
+      return;
+    }
     const values = new Map();
     for (const e of entries) {
       const r = fieldsOf(e).length ? { value: valueOf(e) } : valueOfRows(e.rows);
@@ -267,7 +274,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     const out = (e) => ({ element: e.element, example: values.get(e.key) });
     onSave({
       id: scenario?.id ?? null,
-      title: draft.title.trim(),
+      name: draft.name.trim(),
       description: draft.description,
       given: draft.given.map(out),
       when: draft.when ? out(draft.when) : null,
@@ -279,8 +286,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const chip = (section) => {
     const { label, key, kind, plural } = SECTIONS[section];
     const list = section === 'when' ? [] : draft[section];
-    const used = new Set(list.map((e) => e.element));
-    const options = candidates.filter((c) => c.kind === kind && !used.has(c.id));
+    const options = candidates.filter((c) => c.kind === kind);
     const has = section === 'when' ? !!draft.when : list.length > 0;
     return (
       <span className="gwt-chip-wrap">
@@ -313,7 +319,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
                 </button>
               ))
             ) : (
-              <div className="gwt-none">No more {plural} in this Chapter</div>
+              <div className="gwt-none">No {plural} in this Chapter</div>
             )}
           </div>
         )}
@@ -365,12 +371,20 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
         </button>
         <div className="scenario-form">
           <label className="scenario-field">
-            Title
+            Name
             <input
+              ref={titleInput}
               autoFocus
               spellCheck={false}
-              value={draft.title}
-              onChange={(e) => set({ title: e.target.value })}
+              className={titleMissing ? 'invalid' : undefined}
+              aria-required="true"
+              aria-invalid={titleMissing}
+              value={draft.name}
+              onChange={(e) => {
+                set({ name: e.target.value });
+                setProblem('');
+                setTitleMissing(false);
+              }}
             />
           </label>
           <label className="scenario-field">

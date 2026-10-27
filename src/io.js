@@ -11,7 +11,7 @@ export const serializeScenario = (s) => {
   const entry = (e) => ({ element: e.element, example: structuredClone(e.example) });
   return {
     id: s.id,
-    title: s.title,
+    name: s.name,
     description: s.description,
     given: s.given.map(entry),
     when: s.when ? entry(s.when) : null,
@@ -211,9 +211,9 @@ export function parseBoard(text) {
     list(v, path);
     return v.map((s, si) => {
       const sp = `${path}[${si}]`;
-      object(s, ['id', 'title', 'description', 'given', 'when', 'then', 'error'], sp);
+      object(s, ['id', 'name', 'description', 'given', 'when', 'then', 'error'], sp);
       claim(s.id, 'scenario', at(sp, 'id'));
-      string(s.title, at(sp, 'title'));
+      name(s.name, at(sp, 'name'));
       string(s.description, at(sp, 'description'));
       list(s.given, at(sp, 'given'));
       const given = s.given.map((e, i) => scenarioEntry(e, `${at(sp, 'given')}[${i}]`, chapter, 'event'));
@@ -224,7 +224,7 @@ export function parseBoard(text) {
         string(s.error, at(sp, 'error'));
         if (then.length) fail(at(sp, 'error'), 'must be null when "then" is not empty');
       }
-      return { id: s.id, title: s.title, description: s.description, given, when, then, error: s.error };
+      return { id: s.id, name: s.name, description: s.description, given, when, then, error: s.error };
     });
   };
   // A list of fields (R9.6); `object` fields hold their own list. Names are unique per list.
