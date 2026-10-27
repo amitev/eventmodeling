@@ -64,6 +64,7 @@ const HOTKEYS = [
     group: 'Selected Scenarios element',
     keys: [
       ['A', 'Add a scenario'],
+      ['V', 'View the scenarios'],
       ['Ctrl+1 ... Ctrl+9', 'Open the first ... ninth scenario'],
     ],
   },
@@ -102,6 +103,10 @@ const HOTKEYS = [
       ['Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z)', 'Undo / redo in the Markdown editor'],
       ['Esc', 'Cancel'],
     ],
+  },
+  {
+    group: 'Scenarios view',
+    keys: [['Esc', 'Close']],
   },
   {
     group: 'Fields popup',

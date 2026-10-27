@@ -34,7 +34,7 @@ export function pruneScenarios(nodes) {
 }
 
 // The Scenarios card of a Scenarios element: its list of scenarios.
-export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
+export function ScenariosCard({ id, data, selected, width, onEdit, onView, newId }) {
   const { setNodes } = useReactFlow();
   const scenarios = data.scenarios;
   const [drag, setDrag] = useState(null); // { from, over }: indexes while a scenario is dragged
@@ -63,6 +63,18 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
     <div className={`sticky scenarios ${selected ? 'selected' : ''}`} style={{ width }}>
       <div className="scenarios-head">
         <span>Scenarios</span>
+        <button
+          className="notes-eye nodrag"
+          title="View (V)"
+          aria-label="View"
+          onDoubleClick={stop}
+          onClick={() => onView(id)}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+            <circle cx="8" cy="8" r="2" fill="currentColor" />
+          </svg>
+        </button>
       </div>
       <div className="scenarios-list nowheel">
         {!scenarios.length && <div className="scenarios-empty">No scenarios yet</div>}
@@ -131,6 +143,73 @@ export function ScenariosCard({ id, data, selected, width, onEdit, newId }) {
         <span className="scenario-count">{scenarios.length}</span>
       </div>
     </div>
+  );
+}
+
+// The read-only view of all scenarios of a Scenarios element: Given, When and Then side by side.
+// `elements` maps an element id to { name, kind }.
+export function ScenariosView({ scenarios, elements, onClose }) {
+  const backdrop = useBackdropClose(onClose);
+  const modal = useModalFocus();
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const box = (label, entries, color, error) => {
+    const filled = entries.length > 0 || !!error;
+    return (
+      <div className={`sv-box${filled ? ` ${error ? 'error' : color}` : ''}`}>
+        <div className="sv-box-head">{label}</div>
+        <div className="sv-box-body">
+          {filled ? (
+            <>
+              {entries.map((e, i) => (
+                <span key={i} className={`sv-chip ${elements.get(e.element)?.kind ?? ''}`}>
+                  {elements.get(e.element)?.name || 'Untitled'}
+                </span>
+              ))}
+              {error && <span className="sv-error">{error}</span>}
+            </>
+          ) : (
+            <span className="sv-none">—</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return createPortal(
+    <div className="info-backdrop" {...backdrop}>
+      <div ref={modal} tabIndex={-1} className="scenarios-view" role="dialog" aria-modal="true" aria-label="Scenarios">
+        <div className="info-title">Scenarios</div>
+        <div className="sv-body">
+          {scenarios.length ? (
+            scenarios.map((s) => (
+              <section key={s.id} className="sv-scenario">
+                <h3>{s.name}</h3>
+                <div className="sv-row">
+                  {box('Given', s.given, 'event')}
+                  <span className="sv-arrow">→</span>
+                  {box('When', s.when ? [s.when] : [], 'command')}
+                  <span className="sv-arrow">→</span>
+                  {box('Then', s.then, 'event', s.error || null)}
+                </div>
+              </section>
+            ))
+          ) : (
+            <div className="sv-none">No scenarios yet</div>
+          )}
+        </div>
+        <div className="info-actions">
+          <button onClick={onClose} title="Close (Esc)">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -398,7 +477,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           </label>
           <div className="gwt-section">
             {chip('given')}
-            {draft.given.map((e) => card('given', e))}
+            {draft.given.length > 0 && <div className="gwt-cards">{draft.given.map((e) => card('given', e))}</div>}
           </div>
           <div className="gwt-section">
             {chip('when')}
@@ -416,7 +495,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
                 Then Error (E)
               </button>
             </div>
-            {draft.then.map((e) => card('then', e))}
+            {draft.then.length > 0 && <div className="gwt-cards">{draft.then.map((e) => card('then', e))}</div>}
             {draft.error !== null && (
               <div className="gwt-error">
                 <div className="gwt-error-label">

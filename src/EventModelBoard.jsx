@@ -14,7 +14,7 @@ import {
   useReactFlow,
   useStore,
 } from '@xyflow/react';
-import { pruneScenarios, ScenarioDialog, ScenariosCard } from './Scenarios.jsx';
+import { pruneScenarios, ScenarioDialog, ScenariosCard, ScenariosView } from './Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import {
   LANE_WIDTH,
@@ -227,6 +227,7 @@ const BoardActions = createContext({
   rememberCopy: () => {},
   openInfo: () => {},
   openFields: () => {},
+  viewScenarios: () => {},
   readInfo: () => {},
   titleEditId: null,
   clearTitleEdit: () => {},
@@ -425,7 +426,7 @@ function StickyNode({ id, data, selected }) {
     const me = s.nodeLookup.get(id);
     return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
   });
-  const { titleEditId, clearTitleEdit, editScenario, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, readInfo } = useContext(BoardActions);
 
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
@@ -485,7 +486,7 @@ function StickyNode({ id, data, selected }) {
     );
 
   if (data.kind === 'scenarios') {
-    return <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} newId={newScenarioId} />;
+    return <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} onView={viewScenarios} newId={newScenarioId} />;
   }
   if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />;
 
@@ -1059,8 +1060,10 @@ function Board() {
   const [scenarioEdit, setScenarioEdit] = useState(null);
   // The element whose fields popup is open.
   const [fieldsId, setFieldsId] = useState(null);
+  // The Scenarios element whose scenarios are shown in the read-only view.
+  const [scenariosViewId, setScenariosViewId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!scenariosViewId;
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
@@ -1523,6 +1526,7 @@ function Board() {
   const boardActions = useMemo(
     () => ({
       editScenario: (nodeId, scenarioId) => setScenarioEdit({ nodeId, scenarioId }),
+      viewScenarios: setScenariosViewId,
       newScenarioId: () => newIds()[0],
       rememberCopy,
       contexts,
@@ -1571,6 +1575,7 @@ function Board() {
     ]
   );
 
+  const scenariosViewNode = scenariosViewId && nodes.find((n) => n.id === scenariosViewId);
   // The scenario popup: the Events and Commands of the Scenarios element's Chapter are offered.
   const scenarioNode = scenarioEdit && nodes.find((n) => n.id === scenarioEdit.nodeId);
   const editedScenario = scenarioNode?.data.scenarios?.find((s) => s.id === scenarioEdit.scenarioId) ?? null;
@@ -1782,7 +1787,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (infoId || helpOpen || scenarioEdit || fieldsId) return;
+    if (infoId || helpOpen || scenarioEdit || fieldsId || scenariosViewId) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
@@ -1846,6 +1851,14 @@ function Board() {
       return;
     }
     const hk = e.key.toLowerCase();
+    if (hk === 'v' && !e.shiftKey) {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].data.kind === 'scenarios') {
+        e.preventDefault();
+        setScenariosViewId(selected[0].id);
+        return;
+      }
+    }
     if (hk === 'v' || hk === 'r' || hk === 'e') {
       const selected = getNodes().filter((n) => n.selected);
       if (selected.length === 1 && selected[0].data.kind === 'notes') {
@@ -2117,7 +2130,7 @@ function Board() {
           snapToGrid
           autoPanOnNodeDrag={false}
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || fieldsId || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || fieldsId || scenariosViewId || selectedCell ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={selectedCell} />
@@ -2163,6 +2176,13 @@ function Board() {
           parent={parentFields(nodes, edges, fieldsNode.id)}
           onSave={saveFields}
           onClose={() => setFieldsId(null)}
+        />
+      )}
+      {scenariosViewNode && (
+        <ScenariosView
+          scenarios={scenariosViewNode.data.scenarios}
+          elements={new Map(nodes.filter((n) => n.type === 'sticky').map((n) => [n.id, { name: n.data.name, kind: n.data.kind }]))}
+          onClose={() => setScenariosViewId(null)}
         />
       )}
       {scenarioNode && (scenarioEdit.scenarioId === null || editedScenario) && (
