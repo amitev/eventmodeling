@@ -67,6 +67,7 @@ import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
 import { HtmlDialog } from './HtmlDialog.jsx';
+import { HTML_SANDBOX, URL_SANDBOX } from './mockup.js';
 import { SearchBox } from './Search.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
@@ -227,7 +228,7 @@ const MOCKUP_H = 768;
 
 // The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
 // iframe and scaled down to the body's width, so there is nothing to scroll.
-function ScreenPreview({ html, title }) {
+function ScreenPreview({ html, url, title }) {
   const box = useRef(null);
   const [scale, setScale] = useState(0.14);
   useLayoutEffect(() => {
@@ -241,11 +242,12 @@ function ScreenPreview({ html, title }) {
   return (
     <div ref={box} className="screen-frame-box">
       <iframe
+        key={url ?? 'code'}
         className="screen-frame"
         title={title}
-        sandbox=""
+        sandbox={url ? URL_SANDBOX : HTML_SANDBOX}
         scrolling="no"
-        srcDoc={html}
+        {...(url ? { src: url } : { srcDoc: html })}
         style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
       />
     </div>
@@ -518,7 +520,7 @@ function StickyNode({ id, data, selected }) {
               className="info-btn"
               title="View (V)"
               aria-label="View"
-              disabled={!data.html}
+              disabled={!data.html && !data.url}
               onClick={() => viewHtml(id)}
             >
               <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -580,9 +582,9 @@ function StickyNode({ id, data, selected }) {
           <span className={`title ${shown.name ? '' : 'empty'}`}>{shown.name || 'Name'}</span>
         )}
       </div>
-      <div className={`sticky-body${isScreen && shown.html ? ' has-mockup' : ''}`}>
+      <div className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}`}>
       {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
-      {isScreen && shown.html && <ScreenPreview html={shown.html} title={shown.name || 'Screen mockup'} />}
+      {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
       </div>
       <Handle id="bottom-out" type="source" position={Position.Bottom} />
       <Handle id="bottom-in" type="target" position={Position.Bottom} />
@@ -1211,14 +1213,16 @@ function Board() {
   // Saves the fields of the open element and copies the new ones it was asked to propagate
   // down the chain, as one undo step.
   const fieldsNode = nodes.find((n) => n.id === fieldsId);
-  // The Screen's HTML mockup is saved on its own; an empty one is removed.
+  // The Screen's mockup is saved on its own: HTML code, or a URL which replaces it (the code is
+  // cleared); blank ones are removed.
   const htmlNode = htmlId && nodes.find((n) => n.id === htmlId && n.data.kind === 'screen' && !n.data.copyOf);
-  const saveHtml = (text) => {
+  const saveHtml = (text, url) => {
     const id = htmlId;
     setNodes((ns) =>
       ns.map((n) => {
         if (n.id !== id) return n;
-        const { html: _old, ...rest } = n.data;
+        const { html: _html, url: _url, ...rest } = n.data;
+        if (url) return { ...n, data: { ...rest, url } };
         return { ...n, data: text.trim() ? { ...rest, html: text } : rest };
       })
     );
@@ -1979,7 +1983,7 @@ function Board() {
         setScenariosViewId(selected[0].id);
         return;
       }
-      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf && selected[0].data.html) {
+      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf && (selected[0].data.html || selected[0].data.url)) {
         e.preventDefault();
         setHtmlReading(true);
         setHtmlId(selected[0].id);
@@ -2322,6 +2326,7 @@ function Board() {
           initialReading={htmlReading}
           title={`Screen mockup${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
           initial={htmlNode.data.html ?? ''}
+          initialUrl={htmlNode.data.url ?? ''}
           onSave={saveHtml}
           onCancel={() => setHtmlId(null)}
         />

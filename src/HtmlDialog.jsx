@@ -1,23 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
+import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from './mockup.js';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
 export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
-// Modal to edit the HTML mockup of a Screen (R3.7): the code on the left, its rendering on the
-// right in a sandboxed iframe, so the mockup's styles cannot reach the board. The changes only
-// apply on Save.
-export function HtmlDialog({ title, initial, initialReading = false, onSave, onCancel }) {
+// Modal to edit the mockup of a Screen (R3.7): either HTML code, or a web page by URL. The
+// URL wins and disables the code editor. The code is on the left, the rendering on the right in
+// a sandboxed iframe, so the mockup's styles cannot reach the board. The changes only apply on Save.
+export function HtmlDialog({ title, initial, initialUrl = '', initialReading = false, onSave, onCancel }) {
   const [text, setText] = useState(initial);
+  const [url, setUrl] = useState(initialUrl);
+  const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
   const [reading, setReading] = useState(initialReading); // view mode: only the preview is shown
   const [maximized, setMaximized] = useState(false); // the popup fills the whole window
-  const textRef = useRef(initial); // the latest text, for the Ctrl+S listener
-  textRef.current = text;
   const backdrop = useBackdropClose(onCancel);
   const modal = useModalFocus();
+  const urlInput = useRef(null);
+  const usingUrl = url.trim() !== '';
+  const pageUrl = usingUrl && isWebUrl(url.trim()) ? url.trim() : null; // what the preview shows
+
+  // Save refuses a URL that is not an http(s) address (its field turns red).
+  const save = () => {
+    const wanted = url.trim();
+    if (wanted && !isWebUrl(wanted)) {
+      setUrlInvalid(true);
+      urlInput.current?.focus();
+      return;
+    }
+    onSave(text, wanted);
+  };
+  const saveRef = useRef(save); // the latest save, for the Ctrl+S listener
+  saveRef.current = save;
 
   const onPaste = (e) => {
     const pasted = e.clipboardData.getData('text');
@@ -40,12 +57,12 @@ export function HtmlDialog({ title, initial, initialReading = false, onSave, onC
         setMaximized((v) => !v);
       } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault(); // not the browser's Save page
-        onSave(textRef.current);
+        saveRef.current();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel, onSave]);
+  }, [onCancel]);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
@@ -95,21 +112,66 @@ export function HtmlDialog({ title, initial, initialReading = false, onSave, onC
         <div className={`info-panes${reading ? ' reading' : ''}`}>
           {!reading && (
             <div className="info-left">
+              <div className="html-url-row">
+                <input
+                  ref={urlInput}
+                  className={`html-url${urlInvalid ? ' invalid' : ''}`}
+                  type="text"
+                  inputMode="url"
+                  spellCheck={false}
+                  placeholder="URL of a web page (http:// or https://), instead of the code"
+                  aria-label="URL"
+                  aria-invalid={urlInvalid}
+                  value={url}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    setUrlInvalid(false);
+                  }}
+                />
+                {pageUrl && (
+                  <a className="html-open" href={pageUrl} target="_blank" rel="noopener noreferrer" title="Open the page in a new tab">
+                    Open ↗
+                  </a>
+                )}
+              </div>
               <textarea
                 className="info-editor html-code"
-                autoFocus
+                autoFocus={!usingUrl}
                 spellCheck={false}
-                placeholder="<h1>Hello</h1>"
-                value={text}
+                placeholder={usingUrl ? 'The URL is used; the code editor is disabled' : '<h1>Hello</h1>'}
+                disabled={usingUrl}
+                value={usingUrl ? '' : text}
                 onChange={(e) => setText(e.target.value)}
                 onPaste={onPaste}
               />
             </div>
           )}
-          <iframe className="html-preview" title="Preview" sandbox="" srcDoc={text} />
+          <div className="html-preview-box">
+            {usingUrl && (
+              <div className="html-blocked-hint">
+                Blank page or an error? The site may not allow being shown in a frame.{' '}
+                {pageUrl && (
+                  <a href={pageUrl} target="_blank" rel="noopener noreferrer">
+                    Open it in a new tab ↗
+                  </a>
+                )}
+              </div>
+            )}
+            {usingUrl && !pageUrl ? (
+              <div className="html-preview html-invalid">Enter an http:// or https:// address.</div>
+            ) : (
+              <iframe
+                key={pageUrl ?? 'code'}
+                className="html-preview"
+                title="Preview"
+                sandbox={pageUrl ? URL_SANDBOX : HTML_SANDBOX}
+                {...(pageUrl ? { src: pageUrl } : { srcDoc: text })}
+              />
+            )}
+          </div>
         </div>
         <div className="info-actions">
-          <button onClick={() => onSave(textRef.current)} title="Save (Ctrl+S)">
+          <button onClick={save} title="Save (Ctrl+S)">
             Save
           </button>
           <button onClick={onCancel} title="Cancel (Esc)">

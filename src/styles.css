@@ -135,8 +135,16 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
 
 /* The Screen mockup popup: the preview is a sandboxed iframe, so the mockup's styles stay inside it. */
-.html-preview { width: 100%; height: 100%; min-height: 0; border: 0; background: #fff; }
-.info-panes:has(.html-preview):not(.reading) .info-left { border-right: 1px solid #ddd; }
+.html-preview { flex: 1; width: 100%; min-height: 0; border: 0; background: #fff; }
+.html-preview-box { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.html-blocked-hint { padding: 5px 12px; font-size: 12px; color: #667; background: #f6f7fa; border-bottom: 1px solid #ddd; }
+.html-invalid { display: grid; place-items: center; color: #99a; font-size: 13px; }
+.html-url-row { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+.html-url { flex: 1; min-width: 0; padding: 6px 8px; font: 13px system-ui, sans-serif; border: 1px solid #ccd; border-radius: 4px; }
+.html-url.invalid { border-color: #c62828; }
+.html-open { align-self: center; font-size: 12px; white-space: nowrap; }
+.info-editor:disabled { background: #f1f2f6; color: #99a; }
+.info-panes:has(.html-preview-box):not(.reading) .info-left { border-right: 1px solid #ddd; }
 /* The Screen mockup in the element body: laid out at a fixed size and scaled down to fill the whole body, never scrolled or clicked. */
 .sticky-body.has-mockup { padding: 0; overflow: hidden; }
 .screen-frame-box { position: relative; width: 100%; height: 118px; overflow: hidden; background: #fff; box-sizing: border-box; }

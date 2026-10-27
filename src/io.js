@@ -2,6 +2,7 @@ import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from './fields.js';
 import { isExampleValue } from './examples.js';
+import { isWebUrl } from './mockup.js';
 
 export const STORAGE_KEY = 'event-model-board';
 
@@ -114,6 +115,7 @@ export function serialize(nodes, edges, contexts) {
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
+                ...(n.data.kind === 'screen' && n.data.url ? { url: n.data.url } : {}),
                 ...(n.data.fields?.length ? { fields: serializeFields(n.data.fields) } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
@@ -353,7 +355,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'markdown', 'info', 'fields']
+          isCopy ? [] : ['html', 'url', 'markdown', 'info', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -383,6 +385,12 @@ export function parseBoard(text) {
           string(el.html, at(ep, 'html'));
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
           if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
+        }
+        if (hasKey(el, 'url')) {
+          string(el.url, at(ep, 'url'));
+          if (!isWebUrl(el.url)) fail(at(ep, 'url'), 'must be an http:// or https:// address');
+          if (el.type !== 'screen') fail(at(ep, 'url'), 'only a screen can have a url');
+          if (hasKey(el, 'html')) fail(at(ep, 'url'), 'a screen has either html or a url, not both');
         }
         if (hasKey(el, 'markdown')) {
           string(el.markdown, at(ep, 'markdown'));
@@ -420,6 +428,7 @@ export function parseBoard(text) {
             name: isCopy ? '' : el.name,
             ...(isCopy ? { copyOf: el.copyOf } : {}),
             ...(el.html ? { html: el.html } : {}),
+            ...(el.url ? { url: el.url } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(el.info ? { info: el.info } : {}),
             ...(fields ? { fields } : {}),
