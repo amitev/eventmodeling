@@ -32,6 +32,9 @@ Prototypes
 Local event log
 - See what to do with it
 
+Server
+- server pushes only changed chapters/contexts.
+
 
 Agentic
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
