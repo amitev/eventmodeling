@@ -40,7 +40,7 @@ Board code, all in `event-modeling-board/src/`:
 - `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
 - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
 - `history.js`: undo/redo (`useHistory`) and the gesture context.
-- `InfoDialog.jsx`: the Markdown info editor. `HtmlDialog.jsx`: the Screen mockup popup. `mockup.js`: URL check and sandbox settings of a Screen mockup.
+- `InfoDialog.jsx`: the Markdown info editor. `HtmlDialog.jsx`: the Screen mockup popup. `MovieStrip.jsx`: the movie strip popup (R11). `mockup.js`: URL check, sandbox settings and size of a Screen mockup.
 - `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
 - `popup.js`: `useBackdropClose` and `useModalFocus`, which every popup must use (R1.17).
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.

@@ -63,13 +63,14 @@ import {
   makeEdge,
   makeEmptyBoard,
 } from './model.js';
-import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
+import { STORAGE_KEY, boardText, parseBoard, load, compareIds } from './io.js';
 import { pushBoard, pullBoard } from './sync.js';
 import { cleanName, filterNameInput } from './names.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
 import { HtmlDialog } from './HtmlDialog.jsx';
-import { HTML_SANDBOX, URL_SANDBOX } from './mockup.js';
+import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from './mockup.js';
+import { MovieStrip } from './MovieStrip.jsx';
 import { SearchBox } from './Search.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
 import { HistoryContext, useHistory } from './history.js';
@@ -225,9 +226,6 @@ function CopyButton({ id }) {
   );
 }
 
-const MOCKUP_W = 1024; // the size a Screen mockup is laid out at (4:3), then scaled down to the body
-const MOCKUP_H = 768;
-
 // The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
 // iframe and scaled down to the body's width, so there is nothing to scroll.
 function ScreenPreview({ html, url, title }) {
@@ -264,6 +262,7 @@ const BoardActions = createContext({
   openFields: () => {},
   openHtml: () => {},
   viewHtml: () => {},
+  openMovie: () => {},
   viewScenarios: () => {},
   readInfo: () => {},
   titleEditId: null,
@@ -841,9 +840,16 @@ function SliceNode({ id, data }) {
 // two connection ports: incoming on the left side, outgoing on the right side.
 function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeChapter, compactChapter, activeId } = useContext(BoardActions);
+  const { removeChapter, compactChapter, openMovie, activeId } = useContext(BoardActions);
   const { contexts, setChapterContext, addContext, renameContext, removeContext } =
     useContext(BoardActions);
+  const screenCount = useStore((s) => {
+    let count = 0;
+    s.nodeLookup.forEach((n) => {
+      if (n.type === 'sticky' && n.parentId === id && n.data.kind === 'screen') count++;
+    });
+    return count;
+  });
   // A Chapter whose Context is missing shows the Default (first) one.
   const contextId = contexts.some((c) => c.id === data.context) ? data.context : contexts[0]?.id;
   const [editing, setEditing] = useState(false);
@@ -940,6 +946,18 @@ function ChapterNode({ id, data }) {
             </svg>
           </button>
         )}
+        <button
+          className="chapter-compact nodrag"
+          title={screenCount ? 'Movie strip' : 'Movie strip (this Chapter has no Screen)'}
+          aria-label="Movie strip"
+          disabled={!screenCount}
+          onClick={() => openMovie(id)}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <rect x="0.8" y="1.5" width="8.4" height="7" rx="1" />
+            <path d="M3.2 1.5V8.5M6.8 1.5V8.5M0.8 4H3.2M6.8 4H9.2M0.8 6H3.2M6.8 6H9.2" />
+          </svg>
+        </button>
         <button
           className="chapter-compact nodrag"
           title="Compact the slices"
@@ -1167,8 +1185,10 @@ function Board() {
   const [htmlReading, setHtmlReading] = useState(false); // the popup opens in preview mode
   // The Scenarios element whose scenarios are shown in the read-only view.
   const [scenariosViewId, setScenariosViewId] = useState(null);
+  // The Chapter whose movie strip is open.
+  const [movieId, setMovieId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!htmlId || !!scenariosViewId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!htmlId || !!scenariosViewId || !!movieId;
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
@@ -1672,6 +1692,7 @@ function Board() {
         setHtmlReading(true);
         setHtmlId(id);
       },
+      openMovie: setMovieId,
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
@@ -1704,6 +1725,21 @@ function Board() {
   );
 
   const scenariosViewNode = scenariosViewId && nodes.find((n) => n.id === scenariosViewId);
+  // The Screens of the movie strip's Chapter in reading order (R11.2); a linked copy shows its original.
+  const movieScreens = useMemo(() => {
+    if (!movieId) return [];
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const all = slices(nodes);
+    const order = new Map(slices(nodes, movieId).map((s, i) => [s.id, i]));
+    return nodes
+      .filter((n) => n.type === 'sticky' && n.parentId === movieId && n.data.kind === 'screen')
+      .map((n) => ({ n, slice: order.get(sliceOf(all, n)?.id) ?? 0 }))
+      .sort((a, b) => a.slice - b.slice || a.n.position.x - b.n.position.x || a.n.position.y - b.n.position.y || compareIds(a.n.id, b.n.id))
+      .map(({ n }) => {
+        const shown = n.data.copyOf ? byId.get(n.data.copyOf)?.data ?? {} : n.data;
+        return { id: n.id, name: (shown.name ?? '').trim(), html: shown.html, url: shown.url };
+      });
+  }, [nodes, movieId]);
   // The scenario popup: the Events and Commands of the Scenarios element's Chapter are offered.
   const scenarioNode = scenarioEdit && nodes.find((n) => n.id === scenarioEdit.nodeId);
   const editedScenario = scenarioNode?.data.scenarios?.find((s) => s.id === scenarioEdit.scenarioId) ?? null;
@@ -1937,7 +1973,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId) return;
+    if (infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
@@ -2314,7 +2350,7 @@ function Board() {
           autoPanOnNodeDrag={false}
           disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || fieldsId || htmlId || scenariosViewId || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={selectedCell} />
@@ -2388,6 +2424,9 @@ function Board() {
           onSave={saveScenario}
           onClose={() => setScenarioEdit(null)}
         />
+      )}
+      {movieId && movieScreens.length > 0 && (
+        <MovieStrip key={movieId} screens={movieScreens} onClose={() => setMovieId(null)} />
       )}
       {notice && (
         <div className="toast" role="status" title="Click to dismiss" onClick={() => setNotice(null)}>

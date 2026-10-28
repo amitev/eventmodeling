@@ -9,7 +9,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
 - **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid. The board opens at 60% zoom (minimum 20%).
 - **R1.3** Items snap to a 20px grid.
-- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Flow end**, **+**, **×**, **Grip**) and the Chapter handle (**i**, **↔**, **×**, context rename and delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
+- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Flow end**, **+**, **×**, **Grip**) and the Chapter handle (**i**, **↔**, **×**, movie strip, context rename and delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: lanes Actor, Interaction, Event (R2.10), one "New Slice" (220px wide), no elements.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), same ids. A missing or unreadable saved board gives the starting board (R1.4).
 
@@ -44,7 +44,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 - **R1a.1** The board holds any number of Chapters, each with its own lanes, slices and elements, laid out independently: changing one never changes another. Sections 2 to 5 apply per Chapter.
 - **R1a.2** **+ Chapter** adds a Chapter with the three starting lanes (R2.10), one "New Slice" (220px) and no elements. Its lane area is centred (grid-snapped) on the centre of the visible canvas; the view does not pan or zoom. If it lands on another Chapter, the user drags it away by its handle.
-- **R1a.3** Each Chapter has a name ("Chapter 1", "Chapter 2", ... by default), shown as a title (36px, bold, centred) above the Chapter and its handle; dragging it does not move the Chapter. Double-clicking renames it; an empty name is ignored (previous kept), as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), **↔** and **×**, and no name.
+- **R1a.3** Each Chapter has a name ("Chapter 1", "Chapter 2", ... by default), shown as a title (36px, bold, centred) above the Chapter and its handle; dragging it does not move the Chapter. Double-clicking renames it; an empty name is ignored (previous kept), as for lanes (R2.4a). The Chapter's small **handle** (R1.10), just above the slice headers at the left, holds the grip, the Context controls (R1b), the movie strip button (R11.1), **↔** and **×**, and no name.
 - **R1a.4** **Active Chapter:** the one the user last clicked or dragged in; initially the first. The header shows its name next to "Add to:". **+ Slice** acts on it; element buttons act on the selected Cell (R3.3). An element dragged from the header joins the Chapter of the Cell it is released over; over no Cell, nothing is added (R3.3).
 - **R1a.5** An element dropped with its centre over a Cell of another Chapter (R5.14) moves there: it joins that Cell's lane and slice and follows its layout rules (R3.6a, R5.13 to R5.17). Released anywhere else, including over another Chapter's label zone, it returns to the drag start (R5.14). Its connections are kept.
 - **R1a.6** A Chapter is removed with the **×** button in its handle, also when it is the only one (the board may then be empty; **+ Chapter** adds one). Its lanes, slices, elements and every connection attached to them or to it go too. If it holds slices or elements, the user confirms first.
@@ -414,6 +414,18 @@ The board stores its Chapters on the server (SERVER.md section 3), one file per 
 - **R10.2** A **Pull from server** button (next to it) rebuilds the board from the stored Contexts and Chapters. The server returns them as an export file (R6.2), checked as in R7.4; a failed check or error is shown in an alert and the board stays untouched. No confirmation is asked (unlike R7.2). Accepted: as R7.5. It is one undo step (R8.1).
 - **R10.3** All Contexts are stored, in list order, so empty Contexts and the Default (R1b.3) survive a pull.
 - **R10.4** The server stores a Chapter in `chapter.yaml` and each Slice in its own file (SERVER.md S3.2), all exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id.
+
+## 11. Movie strip
+
+The Screens of a Chapter shown one after the other, like a prototype walk-through.
+
+- **R11.1** A **Movie strip** button (film icon, tooltip "Movie strip") in the Chapter handle, before **↔**, opens the movie strip popup (R11.2). Disabled when the Chapter has no Screen.
+- **R11.2** The **movie strip popup** is modal (R1.17: Esc and a click on the backdrop close it). It lists **every Screen** of the Chapter, with or without a mockup, in reading order: slice order, then `x`, then lane (top first), then id. A linked copy shows its original (R3.22).
+- **R11.3** Layout: centred title "Screens", then "Screen *n* of *m*", then four round buttons, then the strip. The strip shows the **current** Screen big in the middle (blue frame), the others smaller (half size) and faded at the sides, cut off by the popup's edges. It opens on the first Screen.
+- **R11.4** A Screen is its mockup (R3.8, R3.9) at 4:3, scaled, with its **name** below (element name only; nothing when unnamed). Without a mockup it shows "No preview yet". Mockups are view-only (no clicks reach them). Only the current Screen and its two neighbours load their mockup.
+- **R11.5** Navigation: **←** / **→** go to the previous / next Screen (stopping at the ends); a click on another Screen makes it current. The strip slides to centre it.
+- **R11.6** Buttons, in this order: **Smaller** and **Larger** (size of the current Screen, six steps from 30% to 100% of what fits the window; starts at 80%), **Fit to the window** (100%), **Full screen** (the popup fills the window and back; **Alt+Enter** does the same). Zoom and full screen are not remembered. A button at its limit is disabled.
+- **R11.7** The popup changes nothing on the board and is not an undo step. It is listed in the hotkey help (R1d.1).
 
 ## Out of scope for now
 

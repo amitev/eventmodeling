@@ -120,6 +120,14 @@ const HOTKEYS = [
     keys: [['Esc', 'Close']],
   },
   {
+    group: 'Movie strip',
+    keys: [
+      ['← / →', 'Previous / next screen'],
+      ['Alt+Enter', 'Full screen on / off'],
+      ['Esc', 'Close'],
+    ],
+  },
+  {
     group: 'Fields popup',
     keys: [
       ['Ctrl+S', 'Save and close'],
