@@ -13,7 +13,11 @@ Main technologies that are used:
 
 The Agent and LLM should NOT assume anything, bur rather ask for clarification and confirmation.
 
-All (without any exception) the requirements and learnings during the implementation are documented in [Requirements](spec/REQUIREMENTS.md). The specification is updated with every change so that it stays relevant.
+All (without any exception) the requirements and learnings during the implementation are documented in `spec/`. The specification is updated with every change so that it stays relevant.
+
+- [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).
+- [Server requirements](spec/SERVER.md): contains only requirements related to the HTTP server and CLI (`server/`).
+
 When writing the specification use the minimal wording needed that still retains the intent. Avoid long and overbloated sentences. Style:
 
 - One fact per rule; state it once and point to other rules by number (e.g. R5.14) instead of restating them.
@@ -27,7 +31,10 @@ We're still in alpha version. Forget about backwards compatibility when making c
 
 ## Code layout
 
-All in `src/`:
+- `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `server/public/`.
+- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx event-modeling-cli`). `app.js`: `createServer()`.
+
+Board code, all in `event-modeling-board/src/`:
 
 - `EventModelBoard.jsx`: the board (React Flow nodes, `Board()` with its operations and hotkeys).
 - `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
