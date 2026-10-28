@@ -3,7 +3,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState } from
 // Undo/redo works on whole-board snapshots. A continuous gesture (dragging a note,
 // resizing a slice) brackets itself with begin/end so it records a single entry.
 export const HistoryContext = createContext({ begin: () => {}, end: () => {} });
-export const MAX_HISTORY = 100;
+export const MAX_HISTORY = 10;
 
 // What counts as the board's content: selection, measured sizes and drag flags
 // are deliberately left out, so they never create history entries.

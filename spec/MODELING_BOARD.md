@@ -34,6 +34,11 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.16** Connections (arrows) have no id; one is identified by its two items and direction (R4.5).
 - **R1.17** **Popups.** Every popup (modal over a blurred backdrop: info and Notes panel, scenario popup, hotkey help, any future one) closes on a click on the backdrop, like Cancel/Close (changes discarded). Only press and release both on the backdrop close it, so selecting text and releasing outside does not. A new popup must use the shared `useBackdropClose` hook and `useModalFocus` (focus moves into the popup, so Esc does not reach the element that was focused on the board and deselect it).
 - **R1.18** Ids are never shown. Users refer to items by name; items refer to each other by id, never name, so renaming cannot break a reference (lanes: R2.9).
+- **R1.19** **File-safe names.** Chapter, slice and Context names become file or folder names on the server (SERVER.md S3.3), so they must be valid on every OS. When one is typed or pasted (Chapter and slice: the inline input; Context: the name prompt):
+  - the characters `\ / : * ? " < > |` and control characters are dropped as typed (nothing is shown); in a prompt they are removed from the result;
+  - a name ending with a dot, or a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension), is ignored (previous kept), as an empty name is (R1a.3, R5.3, R1b.4, R1b.5).
+
+  Import and a saved board are not checked (R7.4); the server refuses such names on push (SERVER.md S3.4).
 
 ## 1a. Multiple Chapters
 
@@ -376,7 +381,7 @@ The export file is the single, complete description of a board, written and read
 - **R8.5** An operation and its automatic adjustments (re-settling elements in slices, centring in lanes, shifting later slices) are one step; undo restores the board exactly.
 - **R8.6** Selecting items (including Cells, R5a.9), panning and zooming are not operations and are not recorded.
 - **R8.7** A new change after an undo discards the redo history.
-- **R8.8** History keeps the last 100 operations, in memory only: lost on reload (the board is still saved, R1.6).
+- **R8.8** History keeps the last 10 operations, in memory only: lost on reload (the board is still saved, R1.6).
 
 ## 9. Fields
 

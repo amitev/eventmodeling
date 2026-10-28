@@ -38,7 +38,7 @@ Server
 
 Agentic
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
-- Build slices - skills for building the slice types
+- Build slices - skills for building the slice types. Agent should also read the lane docs.
 - Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.
 - Agent Cockpit - The Agent Cockpit gives full control and visibility for Agent Activities across all Boards. In this example we are putting two tasks into status 'planned' - which allows an agent to pick them up.
 - Agent Chat - The Agent Chat allows you to interact with an agent directly. The Chat is Context-Aware - means every chat message carries a snapshot of your screen. The Agent knows exactly what you were looking at. And you can render any kind of visualization or report - in this case I needed a Bar-Chart of the number of slices.

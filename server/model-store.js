@@ -13,27 +13,28 @@ export class HttpError extends Error {
   }
 }
 
-const ILLEGAL = /[\\/:*?"<>|\u0000-\u001f]/g;
+const ILLEGAL = /[\\/:*?"<>|\u0000-\u001f]/;
 const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i;
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isText = (v) => typeof v === 'string' && v.trim() !== '';
 const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
 
-// Makes a file or folder name from free text: illegal characters become "_".
-function safeName(text, what) {
-  const name = text
-    .trim()
-    .replace(ILLEGAL, '_')
-    .replace(/\.+$/, (dots) => '_'.repeat(dots.length));
-  if (!name || RESERVED.test(name)) throw new HttpError(400, `${what} "${text}" cannot be used as a file name`);
+// A name that is not valid as a file name on every OS is refused, never changed (S3.4).
+function checkName(text, what) {
+  const name = text.trim();
+  if (!name || ILLEGAL.test(name) || name.endsWith('.') || RESERVED.test(name)) {
+    throw new HttpError(400, `${what} "${text}" cannot be used as a file name`);
+  }
   return name;
 }
 
-export const contextDirName = (name) => safeName(name.toLowerCase().replace(/\s/g, '_'), 'Context name');
-export const chapterDirName = (name) => safeName(name, 'Chapter name');
-export const sliceFileName = (slice) =>
-  `${safeName(`${slice.name.trim()}.${slice.id.trim().replace(ILLEGAL, '_')}`, 'Slice name')}.yaml`;
+export const contextDirName = (name) => checkName(name.trim().replace(/ /g, '_').toLowerCase(), 'Context name');
+export const chapterDirName = (name) => checkName(name, 'Chapter name');
+export function sliceFileName(slice) {
+  if (ILLEGAL.test(slice.id)) throw new HttpError(400, `Slice id "${slice.id}" cannot be used in a file name`);
+  return `${checkName(slice.name, 'Slice name')}.${slice.id.trim()}.yaml`;
+}
 
 const byPosition = (a, b) => {
   const n = (v) => (Number.isFinite(v) ? v : 0);

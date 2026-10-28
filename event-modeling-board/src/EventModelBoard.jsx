@@ -65,6 +65,7 @@ import {
 } from './model.js';
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
 import { pushBoard, pullBoard } from './sync.js';
+import { cleanName, filterNameInput } from './names.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
 import { HtmlDialog } from './HtmlDialog.jsx';
@@ -756,10 +757,11 @@ function SliceNode({ id, data }) {
               ref={ref}
               className="nodrag"
               defaultValue={data.name}
+              onChange={(e) => filterNameInput(e.target)}
               onBlur={(e) => {
                 setEditing(false);
-                const name = e.target.value.trim();
-                if (name) update({ name }); // an empty name keeps the old one
+                const name = cleanName(e.target.value);
+                if (name) update({ name }); // an empty or unusable name keeps the old one
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
@@ -867,8 +869,8 @@ function ChapterNode({ id, data }) {
 
   const rename = (value) => {
     setEditing(false);
-    const name = value.trim();
-    if (!name) return; // an empty name keeps the old one
+    const name = cleanName(value);
+    if (!name) return; // an empty or unusable name keeps the old one
     setNodes((ns) =>
       ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, name } } : n))
     );
@@ -884,6 +886,7 @@ function ChapterNode({ id, data }) {
             ref={ref}
             className="nodrag"
             defaultValue={data.name}
+            onChange={(e) => filterNameInput(e.target)}
             onBlur={(e) => rename(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
@@ -1609,7 +1612,7 @@ function Board() {
 
   // Creates a Context and assigns it to the Chapter.
   const addContext = (chapterId) => {
-    const name = window.prompt('Name of the new context')?.trim();
+    const name = cleanName(window.prompt('Name of the new context') ?? '');
     if (!name) return;
     const [id] = newIds();
     setContexts((cs) => [...cs, { id, name }]);
@@ -1619,7 +1622,7 @@ function Board() {
   // Renames the Context for every Chapter that shares it.
   const renameContext = (contextId) => {
     const current = contexts.find((c) => c.id === contextId);
-    const name = window.prompt('Rename the context', current?.name)?.trim();
+    const name = cleanName(window.prompt('Rename the context', current?.name) ?? '');
     if (!name) return;
     setContexts((cs) => cs.map((c) => (c.id === contextId ? { ...c, name } : c)));
   };

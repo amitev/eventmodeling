@@ -46,6 +46,7 @@ Board code, all in `event-modeling-board/src/`:
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.
 - `Search.jsx`: the Ctrl+F search box (R1e).
 - `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx` and `examples.js`: the example data tree and its rules.
+- `names.js`: file-safe names (R1.19): filter for name inputs and the name check.
 - `sync.js`: push and pull of Chapters to and from the server (R10).
 
 ## Testing
