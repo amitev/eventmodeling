@@ -9,6 +9,8 @@ Screens
 - Blurring/highlighting parts of the screen
 - Movie strip - The Movie-Strip allows you to go over all Screens like a real Prototype. It´s amazing for Management-Demos.
 - Agentic - generate a screen based on the look and feel of another screen (or previous screen). Using screenshots?
+- Tell the agent to make it consume less bytes.
+- Uglify on paste and add button to beautify?
 
 Specs
 - To learn the difference between GWT and story lines and see what to do with them
