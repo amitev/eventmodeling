@@ -64,6 +64,7 @@ import {
   makeEmptyBoard,
 } from './model.js';
 import { STORAGE_KEY, boardText, parseBoard, load } from './io.js';
+import { pushBoard, pullBoard } from './sync.js';
 import { InfoDialog } from './InfoDialog.jsx';
 import { FieldsDialog } from './FieldsDialog.jsx';
 import { HtmlDialog } from './HtmlDialog.jsx';
@@ -1753,6 +1754,28 @@ function Board() {
 
   const fileInput = useRef(null);
 
+  const pushToServer = async () => {
+    try {
+      const count = await pushBoard(nodes, edges, contexts);
+      setNotice(`Pushed ${count} ${count === 1 ? 'Chapter' : 'Chapters'} to the server.`);
+    } catch (err) {
+      window.alert(`Could not push to the server: ${err.message}`);
+    }
+  };
+
+  const pullFromServer = async () => {
+    try {
+      const board = await pullBoard();
+      setSelectedCell(null);
+      setActiveId(null);
+      setNodes(board.nodes);
+      setEdges(board.edges);
+      setContexts(board.contexts);
+    } catch (err) {
+      window.alert(`Could not pull from the server: ${err.message}`);
+    }
+  };
+
   const importJson = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-importing the same file
@@ -2214,6 +2237,12 @@ function Board() {
         </button>
         <button onClick={exportJson} title="Download slices and their elements as JSON">
           Export JSON
+        </button>
+        <button onClick={pushToServer} title="Write every Chapter to the server's .event-modeling folder">
+          Push to server
+        </button>
+        <button onClick={pullFromServer} title="Replace the board with the Chapters stored on the server">
+          Pull from server
         </button>
         <button
           className="hotkeys-btn search-btn"

@@ -32,7 +32,7 @@ We're still in alpha version. Forget about backwards compatibility when making c
 ## Code layout
 
 - `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `server/public/`.
-- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx event-modeling-cli`). `app.js`: `createServer()`.
+- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx event-modeling-cli`). `app.js`: `createServer()`. `api.js`: the `/api` routes. `model-store.js`: `ModelStore`, `contexts.yaml` and the Chapter files in `.event-modeling/`.
 
 Board code, all in `event-modeling-board/src/`:
 
@@ -46,10 +46,12 @@ Board code, all in `event-modeling-board/src/`:
 - `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.
 - `Search.jsx`: the Ctrl+F search box (R1e).
 - `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx` and `examples.js`: the example data tree and its rules.
+- `sync.js`: push and pull of Chapters to and from the server (R10).
 
 ## Testing
 
 ## TODOs
+
 TODO.txt is ignored.
 
 Do NOT test by yourself. Always ask me whether I want you to test the changes for me.

@@ -29,6 +29,9 @@ Export
 Prototypes
 - Just zoom in on the interesting part of the model and ask the agent to build a prototype. No need to tell it for what - it´ll know. The Prototype implements the Business Logic as defined in the Event Model. It takes only a few minutes - and every change is incremental from there.
 
+Local event log
+- See what to do with it
+
 
 Agentic
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/

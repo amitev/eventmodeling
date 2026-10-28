@@ -5,6 +5,8 @@ node_modules/
 dist/
 server/public/
 
+.event-modeling/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

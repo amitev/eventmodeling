@@ -9,21 +9,25 @@
   "files": [
     "server/index.js",
     "server/app.js",
+    "server/api.js",
+    "server/model-store.js",
     "server/public"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite event-modeling-board",
+    "dev": "concurrently -k -n server,board -c blue,green \"node --watch server/index.js --dev\" \"vite event-modeling-board\"",
     "build": "vite build --config event-modeling-board/vite.config.js",
     "start": "node server/index.js",
     "prepack": "npm run build"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "js-yaml": "^5.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.2",
     "@xyflow/react": "^12.12.0",
+    "concurrently": "^10.0.6",
     "dompurify": "3.4.17",
     "marked": "18.1.1",
     "react": "^19.3.1",
