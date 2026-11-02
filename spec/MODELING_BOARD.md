@@ -34,7 +34,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.16** Connections (arrows) have no id; one is identified by its two items and direction (R4.5).
 - **R1.17** **Popups.** Every popup (modal over a blurred backdrop: info and Notes panel, scenario popup, hotkey help, any future one) closes on a click on the backdrop, like Cancel/Close (changes discarded). Only press and release both on the backdrop close it, so selecting text and releasing outside does not. A new popup must use the shared `useBackdropClose` hook and `useModalFocus` (focus moves into the popup, so Esc does not reach the element that was focused on the board and deselect it).
 - **R1.18** Ids are never shown. Users refer to items by name; items refer to each other by id, never name, so renaming cannot break a reference (lanes: R2.9).
-- **R1.19** **File-safe names.** Chapter, slice and Context names become file or folder names on the server (SERVER.md S3.3), so they must be valid on every OS. When one is typed or pasted (Chapter and slice: the inline input; Context: the name prompt):
+- **R1.19** **File-safe names.** Chapter and Context names become file or folder names on the server (SERVER.md S3.3), so they must be valid on every OS. Slice names are filtered the same way, though the server no longer uses them as file names. When one is typed or pasted (Chapter and slice: the inline input; Context: the name prompt):
   - the characters `\ / : * ? " < > |` and control characters are dropped as typed (nothing is shown); in a prompt they are removed from the result;
   - a name ending with a dot, or a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension), is ignored (previous kept), as an empty name is (R1a.3, R5.3, R1b.4, R1b.5).
 
@@ -413,7 +413,7 @@ The board stores its Chapters on the server (SERVER.md section 3), one file per 
 - **R10.1** A **Push to server** button (header, after Export JSON) sends the Contexts, then every Chapter, one request per Chapter, then asks the server to remove stored Chapters no longer on the board (deleted ones). Renamed Chapters and Chapters moved to another Context replace their old file. On success a notice says how many Chapters were pushed; on failure an alert gives the server's message and pushing stops. Nothing changes on the board.
 - **R10.2** A **Pull from server** button (next to it) rebuilds the board from the stored Contexts and Chapters. The server returns them as an export file (R6.2), checked as in R7.4; a failed check or error is shown in an alert and the board stays untouched. No confirmation is asked (unlike R7.2). Accepted: as R7.5. It is one undo step (R8.1).
 - **R10.3** All Contexts are stored, in list order, so empty Contexts and the Default (R1b.3) survive a pull.
-- **R10.4** The server stores a Chapter in `chapter.yaml` and each Slice in its own file (SERVER.md S3.2), all exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id.
+- **R10.4** The server stores a Chapter, slices inline, in one file `<context>/<chapter name> - <chapter id>.yaml` (SERVER.md S3.2), exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id.
 
 ## 11. Movie strip
 

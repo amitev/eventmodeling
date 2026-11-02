@@ -4,7 +4,6 @@ import { dump, load } from 'js-yaml';
 
 export const DATA_DIR = '.event-modeling';
 export const CONTEXTS_FILE = 'contexts.yaml';
-export const CHAPTER_FILE = 'chapter.yaml';
 
 export class HttpError extends Error {
   constructor(status, message) {
@@ -30,10 +29,9 @@ function checkName(text, what) {
 }
 
 export const contextDirName = (name) => checkName(name.trim().replace(/ /g, '_').toLowerCase(), 'Context name');
-export const chapterDirName = (name) => checkName(name, 'Chapter name');
-export function sliceFileName(slice) {
-  if (ILLEGAL.test(slice.id)) throw new HttpError(400, `Slice id "${slice.id}" cannot be used in a file name`);
-  return `${checkName(slice.name, 'Slice name')}.${slice.id.trim()}.yaml`;
+export function chapterFileName(chapter) {
+  if (ILLEGAL.test(chapter.id)) throw new HttpError(400, `Chapter id "${chapter.id}" cannot be used in a file name`);
+  return `${checkName(chapter.name, 'Chapter name')} - ${chapter.id.trim()}.yaml`;
 }
 
 const byPosition = (a, b) => {
@@ -43,10 +41,9 @@ const byPosition = (a, b) => {
 
 // The board kept under <root>/.event-modeling/model/:
 //   contexts.yaml                              the ordered Contexts [{ id, name }]
-//   <context>/<chapter name>/chapter.yaml      the Chapter as exported, `slices` being the slice ids in order
-//   <context>/<chapter name>/<slice name>.<slice id>.yaml   one Slice as exported
-// A Chapter is identified by its id inside chapter.yaml, so a renamed Chapter or one moved to
-// another Context replaces its old folder. All operations run one at a time.
+//   <context>/<chapter name> - <chapter id>.yaml   one Chapter as exported, its slices inline
+// A Chapter is identified by its id inside the file, so a renamed Chapter or one moved to
+// another Context replaces its old file. All operations run one at a time.
 export class ModelStore {
   #root;
   #model;
@@ -76,18 +73,13 @@ export class ModelStore {
     }
   }
 
-  // The yaml files of a Chapter folder other than chapter.yaml, i.e. its Slice files.
-  async #sliceFiles(folder) {
-    const files = await fs.readdir(folder, { withFileTypes: true });
-    return files.filter((f) => f.isFile() && f.name.endsWith('.yaml') && !sameName(f.name, CHAPTER_FILE)).map((f) => f.name);
-  }
-
-  // Chapter folders: [{ ctx, dir, path }]
+  // Chapter files: [{ ctx, file, path }]
   async #scan() {
     const result = [];
     for (const ctx of await this.#folders(this.#model)) {
-      for (const dir of await this.#folders(path.join(this.#model, ctx))) {
-        result.push({ ctx, dir, path: path.join(this.#model, ctx, dir) });
+      const folder = path.join(this.#model, ctx);
+      for (const f of await fs.readdir(folder, { withFileTypes: true })) {
+        if (f.isFile() && f.name.endsWith('.yaml')) result.push({ ctx, file: f.name, path: path.join(folder, f.name) });
       }
     }
     return result;
@@ -105,16 +97,13 @@ export class ModelStore {
     }
   }
 
-  // The chapter.yaml of a folder, or null when it is missing (or, if not strict, unreadable).
-  async #readChapter(folder, strict) {
-    const file = path.join(folder, CHAPTER_FILE);
-    try {
-      await fs.access(file);
-    } catch {
-      return null;
-    }
+  // A Chapter file, or null when it cannot be read (not strict).
+  #readChapter(file, strict) {
     return this.#read(file, strict, (doc) => {
       if (!isObject(doc) || !isText(doc.id) || !isText(doc.context)) throw new Error('needs chapter id and context');
+      if (!Array.isArray(doc.slices) || !doc.slices.every((s) => isObject(s) && isText(s.id))) {
+        throw new Error('slices must be a list of slices with an id');
+      }
     });
   }
 
@@ -134,14 +123,6 @@ export class ModelStore {
     });
   }
 
-  // Removes the yaml files of a Chapter folder, then the folder if nothing else is in it.
-  async #removeChapter(folder) {
-    for (const name of [...(await this.#sliceFiles(folder)), CHAPTER_FILE]) {
-      await fs.rm(path.join(folder, name), { force: true });
-    }
-    await this.#rmdir(folder);
-  }
-
   async #rmdir(folder) {
     try {
       await fs.rmdir(folder);
@@ -150,13 +131,9 @@ export class ModelStore {
     }
   }
 
-  // Empty Chapter and Context folders are removed.
+  // Empty Context folders are removed.
   async #cleanup() {
-    for (const ctx of await this.#folders(this.#model)) {
-      const folder = path.join(this.#model, ctx);
-      for (const dir of await this.#folders(folder)) await this.#rmdir(path.join(folder, dir));
-      await this.#rmdir(folder);
-    }
+    for (const ctx of await this.#folders(this.#model)) await this.#rmdir(path.join(this.#model, ctx));
   }
 
   async #write(file, data) {
@@ -181,7 +158,7 @@ export class ModelStore {
   }
 
   // Stores a Chapter in the folder of its Context, which must have been pushed (pushContexts).
-  // Its slices go to their own files.
+  // The whole Chapter, slices inline, goes to one file.
   async push(id, chapter) {
     if (!isObject(chapter) || !isText(chapter.id) || !isText(chapter.name) || !isText(chapter.context)) {
       throw new HttpError(400, 'Body must be a chapter with id, name and context');
@@ -190,51 +167,42 @@ export class ModelStore {
     const slices = chapter.slices;
     if (
       !Array.isArray(slices) ||
-      !slices.every((s) => isObject(s) && isText(s.id) && isText(s.name)) ||
+      !slices.every((s) => isObject(s) && isText(s.id)) ||
       new Set(slices.map((s) => s.id)).size !== slices.length
     ) {
-      throw new HttpError(400, 'chapter.slices must be a list of slices with unique ids and names');
+      throw new HttpError(400, 'chapter.slices must be a list of slices with unique ids');
     }
-    const chapterDir = chapterDirName(chapter.name);
-    const files = slices.map((slice) => ({ slice, name: sliceFileName(slice) }));
-    if (new Set(files.map((f) => f.name.toLowerCase())).size !== files.length) {
-      throw new HttpError(409, 'Two slices would get the same file name');
-    }
+    const fileName = chapterFileName(chapter);
 
     return this.#run(async () => {
       const context = (await this.#readContexts(false))?.find((c) => c.id === chapter.context);
       if (!context) throw new HttpError(409, `Unknown context "${chapter.context}": push the contexts first`);
       const ctxDir = contextDirName(context.name);
-      const folder = path.join(this.#model, ctxDir, chapterDir);
+      const target = path.join(this.#model, ctxDir, fileName);
       const stale = [];
       for (const entry of await this.#scan()) {
         const doc = await this.#readChapter(entry.path, false);
         if (!doc) continue;
         const sameCtx = sameName(entry.ctx, ctxDir);
-        const sameFolder = sameCtx && sameName(entry.dir, chapterDir);
+        const sameFile = sameCtx && sameName(entry.file, fileName);
         if (doc.id === id) {
-          if (!sameFolder) stale.push(entry.path);
-        } else if (sameFolder) {
+          if (!sameFile) stale.push(entry.path);
+        } else if (sameFile) {
           throw new HttpError(409, `${this.#relative(entry.path)} already holds another chapter`);
         } else if (sameCtx && doc.context !== chapter.context) {
           throw new HttpError(409, `Folder ${ctxDir} already holds another context`);
         }
       }
-      await fs.mkdir(folder, { recursive: true });
-      for (const { slice, name } of files) await this.#write(path.join(folder, name), slice);
-      await this.#write(path.join(folder, CHAPTER_FILE), { ...chapter, slices: slices.map((s) => s.id) });
-      const keep = new Set(files.map((f) => f.name.toLowerCase()));
-      for (const name of await this.#sliceFiles(folder)) {
-        if (!keep.has(name.toLowerCase())) await fs.rm(path.join(folder, name), { force: true });
-      }
-      for (const old of stale) await this.#removeChapter(old);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      await this.#write(target, chapter);
+      for (const old of stale) await fs.rm(old, { force: true });
       await this.#cleanup();
-      return { path: this.#relative(path.join(folder, CHAPTER_FILE)) };
+      return { path: this.#relative(target) };
     });
   }
 
-  // Deletes every Chapter whose id is not in `chapterIds`, then empty folders. A folder whose
-  // chapter.yaml cannot be read is left alone.
+  // Deletes every Chapter whose id is not in `chapterIds`, then empty folders. A file that
+  // cannot be read is left alone.
   async prune(chapterIds) {
     if (!Array.isArray(chapterIds) || !chapterIds.every((c) => typeof c === 'string')) {
       throw new HttpError(400, 'Body must be { chapterIds: [text] }');
@@ -245,7 +213,7 @@ export class ModelStore {
       for (const entry of await this.#scan()) {
         const doc = await this.#readChapter(entry.path, false);
         if (!doc || keep.has(doc.id)) continue;
-        await this.#removeChapter(entry.path);
+        await fs.rm(entry.path, { force: true });
         removed++;
       }
       await this.#cleanup();
@@ -254,7 +222,7 @@ export class ModelStore {
   }
 
   // The stored Contexts and Chapters as an export file (format "event-model"), as the board writes
-  // it. Slice files not listed in their chapter.yaml are ignored.
+  // it.
   async pull() {
     return this.#run(async () => {
       const contexts = await this.#readContexts(true);
@@ -262,28 +230,10 @@ export class ModelStore {
       const chapters = [];
       for (const entry of await this.#scan()) {
         const doc = await this.#readChapter(entry.path, true);
-        if (!doc) continue;
-        const where = this.#relative(path.join(entry.path, CHAPTER_FILE));
         if (!contexts.some((c) => c.id === doc.context)) {
-          throw new HttpError(422, `${where}: context "${doc.context}" is not in ${CONTEXTS_FILE}`);
+          throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.context}" is not in ${CONTEXTS_FILE}`);
         }
-        if (!Array.isArray(doc.slices) || !doc.slices.every(isText)) {
-          throw new HttpError(422, `${where}: slices must be a list of slice ids`);
-        }
-        const byId = new Map();
-        for (const name of await this.#sliceFiles(entry.path)) {
-          const file = path.join(entry.path, name);
-          const slice = await this.#read(file, true, (s) => {
-            if (!isObject(s) || !isText(s.id)) throw new Error('needs slice id');
-          });
-          if (byId.has(slice.id)) throw new HttpError(422, `${this.#relative(file)}: slice id "${slice.id}" is in two files`);
-          byId.set(slice.id, slice);
-        }
-        const slices = doc.slices.map((sliceId) => {
-          if (!byId.has(sliceId)) throw new HttpError(422, `${where}: no file for slice "${sliceId}"`);
-          return byId.get(sliceId);
-        });
-        chapters.push({ ...doc, slices });
+        chapters.push(doc);
       }
       chapters.sort(byPosition);
       return { format: 'event-model', version: 1, contexts, chapters };
