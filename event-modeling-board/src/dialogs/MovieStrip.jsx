@@ -61,7 +61,7 @@ function Card({ screen, width, state, live, onClick }) {
 export function MovieStrip({ screens, onClose }) {
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(START_ZOOM);
-  const [maximized, setMaximized] = useState(false);
+  const [maximized, setMaximized] = useState(true); // always opens full screen (R11.6)
   const [size, setSize] = useState({ w: 0, h: 0 });
   const stage = useRef(null);
   const backdrop = useBackdropClose(onClose);

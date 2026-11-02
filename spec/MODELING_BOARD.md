@@ -424,7 +424,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R11.3** Layout: centred title "Screens", then "Screen *n* of *m*", then four round buttons, then the strip. The strip shows the **current** Screen big in the middle (blue frame), the others smaller (half size) and faded at the sides, cut off by the popup's edges. It opens on the first Screen.
 - **R11.4** A Screen is its mockup (R3.8, R3.9) at 4:3, scaled, with its **name** below (element name only; nothing when unnamed). Without a mockup it shows "No preview yet". Mockups are view-only (no clicks reach them). Only the current Screen and its two neighbours load their mockup.
 - **R11.5** Navigation: **←** / **→** go to the previous / next Screen (stopping at the ends); a click on another Screen makes it current. The strip slides to centre it.
-- **R11.6** Buttons, in this order: **Smaller** and **Larger** (size of the current Screen, six steps from 30% to 100% of what fits the window; starts at 80%), **Fit to the window** (100%), **Full screen** (the popup fills the window and back; **Alt+Enter** does the same). Zoom and full screen are not remembered. A button at its limit is disabled.
+- **R11.6** Buttons, in this order: **Smaller** and **Larger** (size of the current Screen, six steps from 30% to 100% of what fits the window; starts at 80%), **Fit to the window** (100%), **Full screen** (the popup fills the window and back; **Alt+Enter** does the same). The popup always opens full screen. Zoom and full screen are not remembered. A button at its limit is disabled.
 - **R11.7** The popup changes nothing on the board and is not an undo step. It is listed in the hotkey help (R1d.1).
 
 ## Out of scope for now
