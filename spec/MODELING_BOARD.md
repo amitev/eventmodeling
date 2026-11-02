@@ -413,7 +413,7 @@ The board stores its Chapters on the server (SERVER.md section 3), one file per 
 - **R10.1** A **Push to server** button (header, after Export JSON) sends the Contexts, then every Chapter, one request per Chapter, then asks the server to remove stored Chapters no longer on the board (deleted ones). Renamed Chapters and Chapters moved to another Context replace their old file. On success a notice says how many Chapters were pushed; on failure an alert gives the server's message and pushing stops. Nothing changes on the board.
 - **R10.2** A **Pull from server** button (next to it) rebuilds the board from the stored Contexts and Chapters. The server returns them as an export file (R6.2), checked as in R7.4; a failed check or error is shown in an alert and the board stays untouched. No confirmation is asked (unlike R7.2). Accepted: as R7.5. It is one undo step (R8.1).
 - **R10.3** All Contexts are stored, in list order, so empty Contexts and the Default (R1b.3) survive a pull.
-- **R10.4** The server stores a Chapter, slices inline, in one file `<context>/<chapter name> - <chapter id>.yaml` (SERVER.md S3.2), exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id.
+- **R10.4** The server stores a Chapter, slices inline, in one file `<context>/<chapter name> - <chapter id>.yaml` (SERVER.md S3.2), exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id. The server compacts the `html` of Screens on push (SERVER.md S3.10), so pulled HTML can differ in form (not in look) from what was pushed.
 
 ## 11. Movie strip
 

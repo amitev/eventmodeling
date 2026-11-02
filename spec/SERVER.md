@@ -19,7 +19,7 @@ HTTP server that hosts the built board ([MODELING_BOARD.md](./MODELING_BOARD.md)
 - **S2.5** On start print `Event Modeling Board: http://<host>:<port>` and `Model folder: <cwd>/.event-modeling/model`.
 - **S2.6** Missing board build: exit 1 with "Board build not found. Run "npm run build" first."
 - **S2.7** Port in use: exit 1 with "Port <port> is already in use."
-- **S2.8** The published package contains `server/index.js`, `server/app.js`, `server/api.js`, `server/model-store.js` and `server/public/`. `prepack` runs the build.
+- **S2.8** The published package contains `server/index.js`, `server/app.js`, `server/api.js`, `server/model-store.js`, `server/html-compact.js` and `server/public/`. `prepack` runs the build.
 - **S2.9** `--dev`: serve only `/api` (S1.1 and S1.3 do not apply); skip the build check (S2.6). The board comes from the Vite dev server.
 
 ## 2a. Development
@@ -43,6 +43,12 @@ The board pushes its Chapters to the server and pulls them back (MODELING_BOARD.
 - **S3.7** Files are written to a `.tmp` file, then renamed. A push writes the Chapter file, then removes stale files. Operations run one at a time.
 - **S3.8** Bodies are JSON (`Content-Type: application/json`, at most 50 MB). No CORS headers. No authentication: with `--host` other than localhost anyone who can reach the port can read and write the folder.
 - **S3.9** Not used (was: Slice files, now inline in the Chapter file, S3.2). Folders and non-`.yaml` files inside a Context folder are ignored on pull.
+- **S3.10** On push the `html` of every `SCREEN` element (R6.5) is compacted (`server/html-compact.js`, parse5); `url` and other fields are untouched. Pull returns what is stored. Existing files change when pushed again. The output is serialized by parse5, so `<html>`, `<head>` and `<body>` are always present and boolean attributes read `x=""`.
+  - Whitespace: runs collapse to one space. Spaces next to a block element, at the start and end of a block, and whitespace-only text between blocks are dropped; a space between inline content stays. Blocks are listed in `BLOCK`; any other element counts as inline. `<pre>`, `<textarea>` and `<listing>` text is kept as is. `<style>` CSS goes on one line: comments removed, whitespace runs one space, quoted strings kept.
+  - Comments are removed. `<!DOCTYPE>` is kept.
+  - Tags removed with their content: `script`, `noscript`, `title`, `meta`, `base`, `template`, `iframe`, `object`, `embed`, and `link` unless its `rel` has `stylesheet`.
+  - Attributes removed: `on*`, `data-*`, `aria-*`, `role`, `autocomplete`, `required`, `minlength`, `maxlength`, `pattern`, `autofocus`, `action`, `method`, `target`, `rel` (kept on a stylesheet `link`), `title`, `tabindex`, `contenteditable`, `spellcheck`, `draggable`, `name`.
+  - **Learning (implementation):** removing `name` ungroups radio buttons. Other removals do not change the sandboxed preview (R3.9).
 
 ### API
 

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { dump, load } from 'js-yaml';
+import { compactHtml } from './html-compact.js';
 
 export const DATA_DIR = '.event-modeling';
 export const CONTEXTS_FILE = 'contexts.yaml';
@@ -32,6 +33,16 @@ export const contextDirName = (name) => checkName(name.trim().replace(/ /g, '_')
 export function chapterFileName(chapter) {
   if (ILLEGAL.test(chapter.id)) throw new HttpError(400, `Chapter id "${chapter.id}" cannot be used in a file name`);
   return `${checkName(chapter.name, 'Chapter name')} - ${chapter.id.trim()}.yaml`;
+}
+
+// The Chapter with the HTML of its Screens compacted (S3.10). Slices and elements are not checked further.
+function compactScreens(chapter) {
+  const element = (el) =>
+    isObject(el) && el.type === 'SCREEN' && typeof el.html === 'string' ? { ...el, html: compactHtml(el.html) } : el;
+  return {
+    ...chapter,
+    slices: chapter.slices.map((s) => (Array.isArray(s.elements) ? { ...s, elements: s.elements.map(element) } : s)),
+  };
 }
 
 const byPosition = (a, b) => {
@@ -194,7 +205,7 @@ export class ModelStore {
         }
       }
       await fs.mkdir(path.dirname(target), { recursive: true });
-      await this.#write(target, chapter);
+      await this.#write(target, compactScreens(chapter));
       for (const old of stale) await fs.rm(old, { force: true });
       await this.#cleanup();
       return { path: this.#relative(target) };

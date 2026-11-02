@@ -11,6 +11,7 @@
     "server/app.js",
     "server/api.js",
     "server/model-store.js",
+    "server/html-compact.js",
     "server/public"
   ],
   "scripts": {
@@ -22,7 +23,8 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "js-yaml": "^5.5.0"
+    "js-yaml": "^5.5.0",
+    "parse5": "^8.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.2",
