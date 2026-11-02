@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from './mockup.js';
+import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 
 const ZOOMS = [0.3, 0.4, 0.5, 0.65, 0.8, 1]; // size of the current screen, 1 = fits the window
 const START_ZOOM = 4;

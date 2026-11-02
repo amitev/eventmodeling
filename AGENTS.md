@@ -36,21 +36,28 @@ We're still in alpha version. Forget about backwards compatibility when making c
 
 Board code, all in `event-modeling-board/src/`:
 
-- `EventModelBoard.jsx`: the board (`Board()` with its operations and hotkeys).
-- `nodes/`: the React Flow node components. `LaneNode.jsx`, `StickyNode.jsx`, `SliceNode.jsx`, `ChapterNode.jsx`; `index.js`: `nodeTypes`; `parts.jsx`: drag hooks and buttons they share.
-- `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
-- `cells.js`: pure rules about Cells and connections (`spotInCell`, `autoConnections`, `orient`, `selectOnly`, `confirmCopies`, …). No UI.
-- `BoardActions.js`: the `BoardActions` context through which the nodes call the board.
-- `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
-- `history.js`: undo/redo (`useHistory`) and the gesture context.
-- `InfoDialog.jsx`: the Markdown info editor. `HtmlDialog.jsx`: the Screen mockup popup. `MovieStrip.jsx`: the movie strip popup (R11). `mockup.js`: URL check, sandbox settings and size of a Screen mockup.
-- `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
-- `popup.js`: `useBackdropClose` and `useModalFocus`, which every popup must use (R1.17).
-- `fields.js`: fields of elements, copy and inheritance rules (R9). `FieldsDialog.jsx`: the fields popup.
-- `Search.jsx`: the Ctrl+F search box (R1e).
-- `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx` and `examples.js`: the example data tree and its rules.
-- `names.js`: file-safe names (R1.19): filter for name inputs and the name check.
-- `sync.js`: push and pull of Chapters to and from the server (R10).
+- `EventModelBoard.jsx`: the board (`Board()` with its operations and hotkeys). `main.jsx`: entry. `styles.css`: all styles. `Search.jsx`: the Ctrl+F search box (R1e).
+- `model/`: pure rules and data. No UI.
+  - `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories.
+  - `cells.js`: rules about Cells and connections (`spotInCell`, `autoConnections`, `orient`, `selectOnly`, `confirmCopies`, …).
+  - `fields.js`: fields of elements, copy and inheritance rules (R9).
+  - `examples.js`: the rules of the example data tree.
+  - `names.js`: file-safe names (R1.19): filter for name inputs and the name check.
+  - `mockup.js`: URL check, sandbox settings and size of a Screen mockup.
+- `state/`: the board's plumbing.
+  - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
+  - `sync.js`: push and pull of Chapters to and from the server (R10).
+  - `history.js`: undo/redo (`useHistory`) and the gesture context.
+  - `BoardActions.js`: the `BoardActions` context through which the nodes call the board.
+- `nodes/`: the React Flow node components. `LaneNode.jsx`, `StickyNode.jsx`, `SliceNode.jsx`, `ChapterNode.jsx`; `index.js`: `nodeTypes`; `parts.jsx`: drag hooks and buttons they share; `Notes.jsx`: the Notes card.
+- `dialogs/`: the popups.
+  - `InfoDialog.jsx`: the Markdown info editor.
+  - `HtmlDialog.jsx`: the Screen mockup popup.
+  - `MovieStrip.jsx`: the movie strip popup (R11).
+  - `FieldsDialog.jsx`: the fields popup.
+  - `Hotkeys.jsx`: the hotkey help dialog and the keys that add an element to a Cell.
+  - `popup.js`: `useBackdropClose` and `useModalFocus`, which every popup must use (R1.17).
+- `scenarios/`: `Scenarios.jsx`: the Scenarios card, its popup and scenario pruning. `ExampleTree.jsx`: the example data tree editor.
 
 ## Testing
 

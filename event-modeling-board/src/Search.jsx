@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KINDS } from './model.js';
+import { KINDS } from './model/model.js';
 
 // The search box (R1e): a floating box over the board. `items` are { id, kind, name, copy }.
 // `focusTick` changes when Ctrl+F is pressed again, to focus the input.

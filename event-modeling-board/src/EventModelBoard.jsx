@@ -11,7 +11,7 @@ import {
   useReactFlow,
   useStore,
 } from '@xyflow/react';
-import { pruneScenarios, ScenarioDialog, ScenariosView } from './Scenarios.jsx';
+import { pruneScenarios, ScenarioDialog, ScenariosView } from './scenarios/Scenarios.jsx';
 import {
   LANES,
   LANE_HEIGHT,
@@ -50,19 +50,19 @@ import {
   makeLane,
   makeEdge,
   makeEmptyBoard,
-} from './model.js';
-import { STORAGE_KEY, boardText, parseBoard, load, compareIds } from './io.js';
-import { pushBoard, pullBoard } from './sync.js';
-import { cleanName } from './names.js';
-import { InfoDialog } from './InfoDialog.jsx';
-import { FieldsDialog } from './FieldsDialog.jsx';
-import { HtmlDialog } from './HtmlDialog.jsx';
-import { MovieStrip } from './MovieStrip.jsx';
+} from './model/model.js';
+import { STORAGE_KEY, boardText, parseBoard, load, compareIds } from './state/io.js';
+import { pushBoard, pullBoard } from './state/sync.js';
+import { cleanName } from './model/names.js';
+import { InfoDialog } from './dialogs/InfoDialog.jsx';
+import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
+import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
+import { MovieStrip } from './dialogs/MovieStrip.jsx';
 import { SearchBox } from './Search.jsx';
-import { hasFields, inheritOnConnect, parentFields, propagateFields } from './fields.js';
-import { HistoryContext, useHistory } from './history.js';
-import { kindOfKey, hotkeyOf, HotkeysDialog } from './Hotkeys.jsx';
-import { BoardActions } from './BoardActions.js';
+import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
+import { HistoryContext, useHistory } from './state/history.js';
+import { kindOfKey, hotkeyOf, HotkeysDialog } from './dialogs/Hotkeys.jsx';
+import { BoardActions } from './state/BoardActions.js';
 import {
   acceptingLanes,
   spotInCell,
@@ -72,7 +72,7 @@ import {
   selectOnly,
   confirmCopies,
   orient,
-} from './cells.js';
+} from './model/cells.js';
 import { nodeTypes } from './nodes/index.js';
 
 // Draws the border of the selected Cell above everything else. It is positioned from the

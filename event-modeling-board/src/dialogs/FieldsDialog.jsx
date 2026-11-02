@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { FIELD_FLAGS, FIELD_TYPES, OBJECT, cloneFields, newField } from './fields.js';
+import { FIELD_FLAGS, FIELD_TYPES, OBJECT, cloneFields, newField } from '../model/fields.js';
 
 // The draft carries editing-only keys: `_k` (React key), `_new` and `_propagate` (a top-level
 // field created in this popup and whether to copy it down the chain).

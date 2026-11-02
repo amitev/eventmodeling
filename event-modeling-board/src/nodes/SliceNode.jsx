@@ -11,10 +11,10 @@ import {
   layoutSlices,
   settleStickies,
   centerStickies,
-} from '../model.js';
-import { cleanName, filterNameInput } from '../names.js';
-import { HistoryContext } from '../history.js';
-import { BoardActions } from '../BoardActions.js';
+} from '../model/model.js';
+import { cleanName, filterNameInput } from '../model/names.js';
+import { HistoryContext } from '../state/history.js';
+import { BoardActions } from '../state/BoardActions.js';
 import { InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
 
 // A slice is a vertical band across all lanes: one end-to-end piece of behavior. It is not

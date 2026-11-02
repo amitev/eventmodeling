@@ -1,8 +1,8 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from './model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
 
-import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from './fields.js';
-import { isExampleValue } from './examples.js';
-import { isWebUrl } from './mockup.js';
+import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
+import { isExampleValue } from '../model/examples.js';
+import { isWebUrl } from '../model/mockup.js';
 
 export const STORAGE_KEY = 'event-model-board';
 

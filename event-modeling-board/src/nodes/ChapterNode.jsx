@@ -1,8 +1,8 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
-import { LANE_WIDTH } from '../model.js';
-import { cleanName, filterNameInput } from '../names.js';
-import { BoardActions } from '../BoardActions.js';
+import { LANE_WIDTH } from '../model/model.js';
+import { cleanName, filterNameInput } from '../model/names.js';
+import { BoardActions } from '../state/BoardActions.js';
 import { InfoButton } from './parts.jsx';
 
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry

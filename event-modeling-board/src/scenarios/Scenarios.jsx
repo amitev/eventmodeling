@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
-import { useBackdropClose, useModalFocus } from './popup.js';
+import { useBackdropClose, useModalFocus } from '../dialogs/popup.js';
 import { ExampleTree, FreeEntries } from './ExampleTree.jsx';
-import { exampleLines, fitExample, previewOfRows, rowsOf, valueOfRows } from './examples.js';
+import { exampleLines, fitExample, previewOfRows, rowsOf, valueOfRows } from '../model/examples.js';
 
 const Icon = ({ children }) => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from './mockup.js';
+import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from '../model/mockup.js';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).

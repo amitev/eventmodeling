@@ -1,10 +1,10 @@
 // Pieces shared by the node components.
 import { useContext, useLayoutEffect, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { snap } from '../model.js';
-import { HistoryContext } from '../history.js';
-import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../mockup.js';
-import { BoardActions } from '../BoardActions.js';
+import { snap } from '../model/model.js';
+import { HistoryContext } from '../state/history.js';
+import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { BoardActions } from '../state/BoardActions.js';
 
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 export function useHorizontalDrag() {

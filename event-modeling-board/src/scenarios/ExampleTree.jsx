@@ -1,5 +1,5 @@
-import { OBJECT } from './fields.js';
-import { newItem, newRow } from './examples.js';
+import { OBJECT } from '../model/fields.js';
+import { newItem, newRow } from '../model/examples.js';
 
 // The tree that fills the example data of a scenario entry (R3.16). Its names and types come
 // from the element's fields; the user only fills the values (and adds or removes list items).

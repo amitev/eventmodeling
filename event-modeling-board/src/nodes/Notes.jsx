@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { renderMarkdown } from './InfoDialog.jsx';
+import { renderMarkdown } from '../dialogs/InfoDialog.jsx';
 
 // The card of a Notes element: its Markdown text, rendered. Editing opens the Markdown editor;
 // the View button (eye, hotkey V) opens it in read mode.

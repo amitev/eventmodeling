@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model.js';
-import { BoardActions } from '../BoardActions.js';
+import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
+import { BoardActions } from '../state/BoardActions.js';
 import { InfoButton, useChapterDrag } from './parts.jsx';
 
 export function LaneNode({ id, data }) {

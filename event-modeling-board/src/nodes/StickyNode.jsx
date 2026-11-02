@@ -1,10 +1,10 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
-import { KINDS, kindW, stretchWidth, stickyW, stickyH } from '../model.js';
-import { hasFields } from '../fields.js';
-import { ScenariosCard } from '../Scenarios.jsx';
-import { NotesCard } from '../Notes.jsx';
-import { BoardActions } from '../BoardActions.js';
+import { KINDS, kindW, stretchWidth, stickyW, stickyH } from '../model/model.js';
+import { hasFields } from '../model/fields.js';
+import { ScenariosCard } from '../scenarios/Scenarios.jsx';
+import { NotesCard } from './Notes.jsx';
+import { BoardActions } from '../state/BoardActions.js';
 import { CopyButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 
 export function StickyNode({ id, data, selected }) {
