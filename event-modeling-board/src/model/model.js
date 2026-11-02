@@ -98,7 +98,7 @@ export function pruneCopies(nodes) {
 }
 
 
-export const LANE_COLORS = ['none', 'orange', 'red', 'green', 'blue', 'pink', 'purple', 'yellow', 'brown', 'gray'];
+export const LANE_COLORS = ['none', 'red', 'orange', 'yellow', 'lime', 'green', 'turquoise', 'blue', 'purple', 'pink', 'brown', 'gray'];
 
 export const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
