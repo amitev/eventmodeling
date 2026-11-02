@@ -1,16 +1,17 @@
+SKILLs
+- Create a SKILL that copies from Martin's skills, but adjusts it for us
+- RENAME element names and slice types to match Martin's skills, otherwise we cannot reuse
+
 Slices
-- HTML editor as popup and preview for it
+
 
 Elements
 - Automatic name from previous element - too hard to do correctly.
 - Agentic - suggest automatic slice and element names
 
 Screens
-- Blurring/highlighting parts of the screen
-- Movie strip - The Movie-Strip allows you to go over all Screens like a real Prototype. It´s amazing for Management-Demos.
+- Blurring/highlighting parts of the screen (overlay?)
 - Agentic - generate a screen based on the look and feel of another screen (or previous screen). Using screenshots?
-- Tell the agent to make it consume less bytes.
-- Uglify on paste and add button to beautify?
 
 Specs
 - To learn the difference between GWT and story lines and see what to do with them

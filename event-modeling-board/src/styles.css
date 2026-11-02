@@ -442,7 +442,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .chapter-title span, .chapter-title input { pointer-events: auto; }
 .chapter-title input {
   width: 12em; height: 44px; box-sizing: border-box; font: inherit; line-height: 44px;
-  text-align: center; color: inherit;
+  text-align: center; color: inherit; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; outline: 1px solid rgba(0, 0, 0, 0.45);
 }
 .chapter-handle input { width: 150px; font: inherit; font-size: 12px; font-weight: 700; }
 .chapter-context {
