@@ -49,6 +49,8 @@ The board pushes its Chapters to the server and pulls them back (MODELING_BOARD.
   - Tags removed with their content: `script`, `noscript`, `title`, `meta`, `base`, `template`, `iframe`, `object`, `embed`, and `link` unless its `rel` has `stylesheet`.
   - Attributes removed: `on*`, `data-*`, `aria-*`, `role`, `autocomplete`, `required`, `minlength`, `maxlength`, `pattern`, `autofocus`, `action`, `method`, `target`, `rel` (kept on a stylesheet `link`), `title`, `tabindex`, `contenteditable`, `spellcheck`, `draggable`, `name`.
   - **Learning (implementation):** removing `name` ungroups radio buttons. Other removals do not change the sandboxed preview (R3.9).
+- **S3.11** `GET /api/model/contexts/:id/chapters` returns the Chapters of one Context as multi-document YAML (`Content-Type: application/yaml`): one document per Chapter, each starting with `---`, as stored (S3.2, S3.10), ordered by `x`, `y`, `id` (R6.8). Only that Context's folder is read. A Context without Chapters gives an empty body.
+- **S3.12** S3.11 takes the query parameter `screenContent` (`true` or `false`, default `true`). With `false` the `html` of every `SCREEN` element (R6.5) is left out; `url` and other fields stay. Any other value gets 400.
 
 ### API
 
@@ -59,4 +61,5 @@ Errors: `{ "error": text }` with the status below. Unknown `/api` paths get 404.
 | `PUT /api/model/contexts` | `{ contexts: [{ id, name }] }`: not empty, unique ids | Writes `contexts.yaml`; `{ count }`. 400 invalid body |
 | `PUT /api/model/chapters/:id` | The whole Chapter (R6.3, slices inline); `chapter.id` equals `:id`; slices have unique ids | Writes the Chapter file (S3.2); `{ path }` of it. 400 invalid body or name, 409 collision or unknown Context (S3.6) |
 | `POST /api/model/prune` | `{ chapterIds: [text] }` | Deletes Chapters not listed (their files) and empty folders (S3.5); `{ removed }`. A file that cannot be read stays. 400 invalid body |
+| `GET /api/model/contexts/:id/chapters?screenContent=` | | The Context's Chapters as multi-document YAML (S3.11); `screenContent=false` omits Screen `html` (S3.12). 400 invalid `screenContent`, 404 no `contexts.yaml` or unknown Context, 422 a file in the Context folder cannot be read or is invalid (as `GET /api/model`) |
 | `GET /api/model` | | Export file (MODELING_BOARD.md R6.2, slices inline): Contexts in file order, Chapters by `x`, `y`, `id` (R6.8). 404 no `contexts.yaml`, 422 a file cannot be read or has no Chapter `id`, `context` and `slices` list, or a Chapter's `context` is not in `contexts.yaml` (message names the file) |

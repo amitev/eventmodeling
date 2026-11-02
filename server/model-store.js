@@ -250,4 +250,37 @@ export class ModelStore {
       return { format: 'event-model', version: 1, contexts, chapters };
     });
   }
+
+  // The Chapters of one Context as multi-document YAML, as stored (S3.11). Only the Context folder is read.
+  // Without `screenContent` the `html` of every Screen is left out (S3.12).
+  async pullContextYaml(contextId, screenContent = true) {
+    const withoutHtml = (chapter) => ({
+      ...chapter,
+      slices: chapter.slices.map((s) =>
+        Array.isArray(s.elements)
+          ? {
+              ...s,
+              elements: s.elements.map((el) => {
+                if (!isObject(el) || el.type !== 'SCREEN') return el;
+                const { html, ...rest } = el;
+                return rest;
+              }),
+            }
+          : s,
+      ),
+    });
+    return this.#run(async () => {
+      const context = (await this.#readContexts(true))?.find((c) => c.id === contextId);
+      if (!context) throw new HttpError(404, `Unknown context "${contextId}"`);
+      const ctxDir = contextDirName(context.name);
+      const chapters = [];
+      for (const entry of await this.#scan()) {
+        if (!sameName(entry.ctx, ctxDir)) continue;
+        const doc = await this.#readChapter(entry.path, true);
+        if (doc.context === contextId) chapters.push(doc);
+      }
+      chapters.sort(byPosition);
+      return chapters.map((c) => `---\n${dump(screenContent ? c : withoutHtml(c), { noRefs: true, lineWidth: -1 })}`).join('');
+    });
+  }
 }

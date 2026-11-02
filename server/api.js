@@ -8,6 +8,13 @@ export function modelApi(store) {
   router.get('/model', async (req, res) => {
     res.json(await store.pull());
   });
+  router.get('/model/contexts/:id/chapters', async (req, res) => {
+    const { screenContent = 'true' } = req.query;
+    if (screenContent !== 'true' && screenContent !== 'false') {
+      return res.status(400).json({ error: 'screenContent must be true or false' });
+    }
+    res.type('application/yaml').send(await store.pullContextYaml(req.params.id, screenContent === 'true'));
+  });
   router.put('/model/contexts', async (req, res) => {
     res.json(await store.pushContexts(req.body?.contexts));
   });
