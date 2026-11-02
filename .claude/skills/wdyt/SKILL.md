@@ -9,6 +9,10 @@ description: Business analyst exploration of an event model board. Reads all sli
 
 ---
 
+Clarification: Posting the questions means reporting.
+
+---
+
 ## Step 1 — Gather inputs
 
 1. **Context name** — the bounded context to focus on (e.g. `Registration`, `Orders`) — ask if not provided.
