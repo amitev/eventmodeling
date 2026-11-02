@@ -398,7 +398,7 @@ export function cellAt(nodes, p) {
 
 
 export const chapterDefaults = {
-  dragHandle: '.chapter-handle',
+  draggable: false, // moved by a lane or slice header (useChapterDrag), not by React Flow
   deletable: false, // removed with the × button, never with the keyboard
   connectable: true,
   // Only the handle and the ports take the mouse; lanes and elements below stay usable.

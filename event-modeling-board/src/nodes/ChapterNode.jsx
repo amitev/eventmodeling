@@ -8,7 +8,8 @@ import { InfoButton } from './parts.jsx';
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 
 // A Chapter node is a transparent box over its lanes, with a large title centred above the
-// slices (double-click to rename), a small handle above it (drag it to move the Chapter) and
+// slices (double-click to rename), a small handle above it (info, Context, buttons; it does not
+// move the Chapter) and
 // two connection ports: incoming on the left side, outgoing on the right side.
 export function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
@@ -79,7 +80,6 @@ export function ChapterNode({ id, data }) {
       <div
         className={`chapter-handle nopan ${activeId === id ? 'active' : ''}`}
       >
-        <span>⠿</span>
         <InfoButton id={id} info={data.info} />
         <select
           className="chapter-context nodrag"
