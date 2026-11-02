@@ -710,7 +710,6 @@ function Board() {
       contexts,
       setChapterContext,
       addContext,
-      renameContext,
       removeContext,
       activate: setActiveId,
       openInfo: (id) => {
@@ -1251,6 +1250,17 @@ function Board() {
             </option>
           ))}
         </select>
+        <button
+          className="hotkeys-btn search-btn"
+          onClick={() => renameContext(filterId)}
+          disabled={!filterId}
+          title={filterId ? 'Rename the selected context' : 'Rename the selected context (choose a context first)'}
+          aria-label="Rename context"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M2 14l.8-3.2L11 2.6l2.4 2.4-8.2 8.2L2 14zM9.6 4l2.4 2.4" />
+          </svg>
+        </button>
         <span className="target" title="New slices are added to this Chapter">
           Add to: <strong>{active?.data.name}</strong>
         </span>

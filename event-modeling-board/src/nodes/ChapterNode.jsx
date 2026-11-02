@@ -13,7 +13,7 @@ const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdo
 export function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeChapter, compactChapter, openMovie, activeId } = useContext(BoardActions);
-  const { contexts, setChapterContext, addContext, renameContext, removeContext } =
+  const { contexts, setChapterContext, addContext, removeContext } =
     useContext(BoardActions);
   const screenCount = useStore((s) => {
     let count = 0;
@@ -96,16 +96,6 @@ export function ChapterNode({ id, data }) {
           ))}
           <option value={NEW_CONTEXT}>+ New context...</option>
         </select>
-        <button
-          className="chapter-compact nodrag"
-          title="Rename this context (for every Chapter that uses it)"
-          aria-label="Rename this context"
-          onClick={() => renameContext(contextId)}
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
-            <path d="M1 9L1.6 6.6L7 1.2L8.8 3L3.4 8.4Z" />
-          </svg>
-        </button>
         {contextId !== contexts[0]?.id && (
           <button
             className="chapter-compact nodrag"
