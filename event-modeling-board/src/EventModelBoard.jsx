@@ -10,6 +10,7 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
+  useNodesInitialized,
 } from '@xyflow/react';
 import { pruneScenarios, ScenarioDialog, ScenariosView } from './scenarios/Scenarios.jsx';
 import {
@@ -138,6 +139,14 @@ function Board() {
     },
     [getNodes, getNodesBounds, fitBounds]
   );
+  // The board opens fitted, once its Chapters are measured (R1.2).
+  const nodesInitialized = useNodesInitialized();
+  const openedFitted = useRef(false);
+  useEffect(() => {
+    if (!nodesInitialized || openedFitted.current) return;
+    openedFitted.current = true;
+    fitBoard();
+  }, [nodesInitialized, fitBoard]);
   const canvasRef = useRef(null);
 
   // `count` ids that are unused on the board and different from each other.
