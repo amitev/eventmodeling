@@ -104,7 +104,7 @@ function Board() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
-  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom, fitView } = useReactFlow();
   const canvasRef = useRef(null);
 
   // `count` ids that are unused on the board and different from each other.
@@ -978,6 +978,14 @@ function Board() {
       }
       return;
     }
+    // Shift+F fits the whole board in the window, as the Fit view control does (R1.20).
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') {
+      const el = e.target;
+      if (el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      e.preventDefault();
+      fitView();
+      return;
+    }
     if (!moveKey && (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift))) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
@@ -1307,6 +1315,7 @@ function Board() {
           onDragOver={onDragOver}
           defaultViewport={{ x: 20, y: 40, zoom: 0.6 }}
           minZoom={0.2}
+          ariaLabelConfig={{ 'controls.fitView.ariaLabel': 'Fit view (Shift+F)' }}
           snapToGrid
           autoPanOnNodeDrag={false}
           disableKeyboardA11y

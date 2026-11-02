@@ -39,6 +39,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - a name ending with a dot, or a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension), is ignored (previous kept), as an empty name is (R1a.3, R5.3, R1b.4, R1b.5).
 
   Import and a saved board are not checked (R7.4); the server refuses such names on push (SERVER.md S3.4).
+- **R1.20** **Fit view.** **Shift+F** does what the Fit view button of the zoom controls does: it zooms and pans so the whole board fits the window. Ignored while typing in a field or while a popup is open. The button's tooltip is "Fit view (Shift+F)" (R1d.2). Not an undo step.
 
 ## 1a. Multiple Chapters
 
@@ -82,7 +83,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 ## 1d. Hotkey help
 
-- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete, search), Search box, Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name, Scenario editor (R3.15), Info panel, Fields popup, Screen mockup popup, Scenarios view. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
+- **R1d.1** A keyboard-emoji (⌨️) button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete, search, fit view), Search box, Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name, Scenario editor (R3.15), Info panel, Fields popup, Screen mockup popup, Scenarios view. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
 - **R1d.2** Every control with a hotkey names it in its tooltip, in brackets after the description, e.g. "Undo (Ctrl+Z)", "Add a scenario (A)". The label stays unchanged, except where the hotkey is part of its design (scenario popup chips, R3.15). A new hotkey is not done until its tooltip names it.
 - **R1d.3** Tooltips never explain mouse gestures ("double-click to ...", "drag to ...", click or drop hints). An element's tooltip is its **full name** (none when unnamed), so a name cut off by an ellipsis can be read; a slice header's is the slice name, a scenario item's its name (R3.14).
 
