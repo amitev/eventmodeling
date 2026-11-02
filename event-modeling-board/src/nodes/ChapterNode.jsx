@@ -9,8 +9,7 @@ const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdo
 
 // A Chapter node is a transparent box over its lanes, with a large title centred above the
 // slices (double-click to rename), a small handle above it (info, Context, buttons; it does not
-// move the Chapter) and
-// two connection ports: incoming on the left side, outgoing on the right side.
+// move the Chapter) and two connection ports: incoming on the left side, outgoing on the right.
 export function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeChapter, compactChapter, openMovie, activeId } = useContext(BoardActions);
@@ -63,7 +62,7 @@ export function ChapterNode({ id, data }) {
         {editing ? (
           <input
             ref={ref}
-            className="nodrag"
+            className="nodrag nopan"
             defaultValue={data.name}
             onChange={(e) => filterNameInput(e.target)}
             onBlur={(e) => rename(e.target.value)}
@@ -72,7 +71,7 @@ export function ChapterNode({ id, data }) {
             }}
           />
         ) : (
-          <span className="nodrag" onDoubleClick={() => setEditing(true)}>
+          <span className="nodrag nopan" onDoubleClick={() => setEditing(true)}>
             {data.name}
           </span>
         )}
