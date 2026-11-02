@@ -45,7 +45,7 @@ Board code, all in `event-modeling-board/src/`:
   - `names.js`: file-safe names (R1.19): filter for name inputs and the name check.
   - `mockup.js`: URL check, sandbox settings and size of a Screen mockup. `beautify.js`: `beautifyHtml()`, the layout of the HTML in the mockup popup (R3.7).
 - `state/`: the board's plumbing.
-  - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
+  - `io.js`: board file writing (`serialize`) and reading (`parseBoard`), and localStorage loading.
   - `sync.js`: push and pull of Chapters to and from the server (R10).
   - `history.js`: undo/redo (`useHistory`) and the gesture context.
   - `BoardActions.js`: the `BoardActions` context through which the nodes call the board.

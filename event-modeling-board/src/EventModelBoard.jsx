@@ -51,7 +51,7 @@ import {
   makeEdge,
   makeEmptyBoard,
 } from './model/model.js';
-import { STORAGE_KEY, boardText, parseBoard, load, compareIds } from './state/io.js';
+import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard } from './state/sync.js';
 import { cleanName } from './model/names.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
@@ -755,19 +755,6 @@ function Board() {
     setScenarioEdit(null);
   };
 
-  const exportJson = () => {
-    const url = URL.createObjectURL(
-      new Blob([boardText(nodes, edges, contexts)], { type: 'application/json' })
-    );
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'event-model.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const fileInput = useRef(null);
-
   const pushToServer = async () => {
     try {
       const count = await pushBoard(nodes, edges, contexts);
@@ -787,23 +774,6 @@ function Board() {
       setContexts(board.contexts);
     } catch (err) {
       window.alert(`Could not pull from the server: ${err.message}`);
-    }
-  };
-
-  const importJson = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-importing the same file
-    if (!file) return;
-    try {
-      const board = parseBoard(await file.text());
-      if (!window.confirm('Replace the current board with the imported one?')) return;
-      setSelectedCell(null);
-      setActiveId(null);
-      setNodes(board.nodes);
-      setEdges(board.edges);
-      setContexts(board.contexts);
-    } catch (err) {
-      window.alert(`Could not import "${file.name}": ${err.message}`);
     }
   };
 
@@ -1233,19 +1203,6 @@ function Board() {
           + Chapter
         </button>
         <span className="spacer" />
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={importJson}
-        />
-        <button onClick={() => fileInput.current?.click()} title="Load a board from an exported JSON file">
-          Import JSON
-        </button>
-        <button onClick={exportJson} title="Download slices and their elements as JSON">
-          Export JSON
-        </button>
         <button onClick={pushToServer} title="Write every Chapter to the server's .event-modeling folder">
           Push to server
         </button>

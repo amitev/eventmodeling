@@ -307,13 +307,13 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **none** (`null`): anything else, also an empty slice.
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
 
-## 6. Export
+## 6. Board file
 
 Type names (slice, element and lane types) are written in **upper case** in the file; the colours and field types (R9.6) are not.
 
-The export file is the single, complete description of a board, written and read **only by software** (this app, other tools, LLMs), not people. It is plain JSON, chosen for exactness and strict checking, not readability. YAML was rejected: its readability only helps hand editing, while its silent type guessing (id `1e3` or value `no` misread) and many equivalent spellings work against exact import checks (R7.4) and byte-for-byte output (R6.9). Only JSON is read and written by Export and Import. The files stored by the server (section 10) are YAML, written by the server and read back only through it. The file states what exists and how it is connected and stores every user choice; values that follow from layout rules are left out and recomputed on read (R6.10).
+The board file is the single, complete description of a board, written and read **only by software** (this app, other tools, LLMs), not people. It is plain JSON, chosen for exactness and strict checking, not readability. YAML was rejected: its readability only helps hand editing, while its silent type guessing (id `1e3` or value `no` misread) and many equivalent spellings work against exact read checks (R7.4) and byte-for-byte output (R6.9). The board writes and reads it for the saved board (R1.6) and for the server (section 10); there is no file download or upload. The files stored by the server are YAML, written by the server and read back only through it. The file states what exists and how it is connected and stores every user choice; values that follow from layout rules are left out and recomputed on read (R6.10).
 
-- **R6.1** An **Export JSON** button downloads `event-model.json`.
+- **R6.1** Removed: there is no Export JSON button.
 - **R6.2** The file is one JSON object with exactly these fields, in this order:
   - `format`: the text `"event-model"`;
   - `version`: the number `1`;
@@ -359,23 +359,23 @@ The export file is the single, complete description of a board, written and read
   - **Stored:** every user choice, i.e. all fields in R6.2 to R6.5. A slice's `type` is the exception: it is written for readers of the file but worked out (R5b.1), so it is not read back.
   - **Not stored, worked out on load:** a slice's position (slices form one run, R5.7); the widths of lanes and Chapter (R1.8); lane height; an element's vertical position (centred in its lane, R3.6a). Also not stored: selected Cell, active Chapter, undo history, pan and zoom.
 
-## 7. Import
+## 7. Reading the file
 
-- **R7.1** **Import JSON** loads a file in the export format (section 6) and rebuilds the whole board from it (Chapters, lanes, slices, elements, connections, same ids). It replaces the current board; no merge.
-- **R7.2** The user must confirm before the current board is replaced.
-- **R7.3** Export then import reproduces the same board exactly; exporting again gives an identical file (R6.9).
+- **R7.1** Removed: there is no Import JSON button. The file is read for the saved board (R1.6) and a pull (R10.2), with the checks below.
+- **R7.2** Removed (see R7.1).
+- **R7.3** Writing then reading reproduces the same board exactly; writing again gives an identical file (R6.9).
 - **R7.4** The whole file is checked before anything changes. If a check fails, the file is rejected, the board stays untouched, and an error names the first problem and its location, e.g. `chapters[0].slices[1].elements[2].lane: no lane with id "q7w2e9r4t1u8" in this chapter`. The checks:
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (optional fields may be missing), and no others. `chapters` may be empty; every Chapter has at least one lane and one slice (R2.5, R5.19), lanes in type order with at least one of each required type (R2.10). `contexts` is not empty (R1b.3).
   - **Ids.** Every id is a non-empty text (not `null`); the R1.14 pattern is not checked, as it applies only to generated ids. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter whose type takes the element's type (R2.10). Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter), not the owner and not repeated; a `scenarios` or `notes` element is neither owner nor target. A `copyOf` is the id of a non-copy element of the same type (not `scenarios` or `notes`). In a scenario, each `element` is the id of a non-copy element of the Scenarios element's Chapter: an `event` in `given` and `then`, a `command` in `when`.
   - **Values.** `name` of a Context, Chapter, lane or slice, and `name` of a scenario, is not empty. An element `type` is one of the seven types and a lane `type` one of the five (R2.10), written in upper case (a value in lower case is rejected); a lane `color` is one of the twelve colours (R2.6). When present, `html` is a non-empty text on a `screen`, `url` an `http://` or `https://` address on a `screen` without `html`, `markdown` a non-empty text on a `notes` element, `info` a non-empty text (not on `notes` or `scenarios`), `fields` a non-empty list on a `screen`, `command`, `event` or `query` (never on a linked copy), and `flowEnd` is `true`. A slice `type` is `null` or one of the four types; its value is not used (the type is recomputed, R5b.2). A field has exactly the keys of R9.6: `name` non-empty and unique in its list, `type` one of the eight, the booleans true or false, `fields` only (and always) on an `object`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers. A scenario entry's `example` is an object whose values are text, `true`/`false`, or lists and objects of these.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios) and every element fits its slice with the margins (R5.16, R5.17): `x` plus element width (160px; 280px for Scenarios) plus margin (40px; 20px for Scenarios) is at most the slice `width`. A Spec lane holds at most one element per slice (R3.21). Nothing is corrected: a file breaking a check is rejected.
-- **R7.5** An accepted file is laid out as a saved board (R5.12). After import no Cell is selected, the first Chapter is active, and the import is one undo step (R8.1).
+- **R7.5** An accepted file is laid out as a saved board (R5.12). After a pull no Cell is selected, the first Chapter is active, and the pull is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
 ## 8. Undo and redo
 
-- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (name and HTML), moving (including to another Chapter) and deleting elements; adding, editing, copying, reordering and deleting scenarios; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; import; and pull from server (R10.2).
+- **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (name and HTML), moving (including to another Chapter) and deleting elements; adding, editing, copying, reordering and deleting scenarios; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and pull from server (R10.2).
 - **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Ignored while typing in a text field (its own undo applies) and while the scenario popup is open (R3.15).
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, reordering a slice or resizing a slice, is recorded once when it ends.
@@ -411,7 +411,7 @@ The export file is the single, complete description of a board, written and read
 
 The board stores its Chapters on the server (SERVER.md section 3), one file per Chapter.
 
-- **R10.1** A **Push to server** button (header, after Export JSON) sends the Contexts, then every Chapter, one request per Chapter, then asks the server to remove stored Chapters no longer on the board (deleted ones). Renamed Chapters and Chapters moved to another Context replace their old file. On success a notice says how many Chapters were pushed; on failure an alert gives the server's message and pushing stops. Nothing changes on the board.
+- **R10.1** A **Push to server** button (header, first of the right-hand buttons) sends the Contexts, then every Chapter, one request per Chapter, then asks the server to remove stored Chapters no longer on the board (deleted ones). Renamed Chapters and Chapters moved to another Context replace their old file. On success a notice says how many Chapters were pushed; on failure an alert gives the server's message and pushing stops. Nothing changes on the board.
 - **R10.2** A **Pull from server** button (next to it) rebuilds the board from the stored Contexts and Chapters. The server returns them as an export file (R6.2), checked as in R7.4; a failed check or error is shown in an alert and the board stays untouched. No confirmation is asked (unlike R7.2). Accepted: as R7.5. It is one undo step (R8.1).
 - **R10.3** All Contexts are stored, in list order, so empty Contexts and the Default (R1b.3) survive a pull.
 - **R10.4** The server stores a Chapter, slices inline, in one file `<context>/<chapter name> - <chapter id>.yaml` (SERVER.md S3.2), exported as in R6.3 and R6.4. The board always sends and receives whole Chapters, slices inline. Chapters are identified by their id. The server compacts the `html` of Screens on push (SERVER.md S3.10), so pulled HTML can differ in form (not in look) from what was pushed.
