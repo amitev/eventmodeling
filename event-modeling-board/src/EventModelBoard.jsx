@@ -98,12 +98,31 @@ function CellHighlight({ cell }) {
   return createPortal(<div className="cell-highlight" style={{ left, top, width, height }} />, host);
 }
 
+const FILTER_KEY = 'event-model-board-context-filter';
+
 function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
+  // The Context filter (R1b.7): the id of the only Context whose Chapters show, '' for all.
+  // Kept in the browser, not in the board.
+  const [contextFilter, setContextFilter] = useState(() => {
+    try {
+      return localStorage.getItem(FILTER_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const filterId = contexts.some((c) => c.id === contextFilter) ? contextFilter : '';
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTER_KEY, filterId);
+    } catch {
+      // ignore unavailable storage
+    }
+  }, [filterId]);
   const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom, fitView } = useReactFlow();
   const canvasRef = useRef(null);
 
@@ -120,31 +139,65 @@ function Board() {
   // the one last clicked or dragged, or the first one.
   const [activeId, setActiveId] = useState(null);
   const chapters = nodes.filter((n) => n.type === 'chapter');
+  // Chapters of other Contexts than the filter's are hidden with all they hold (R1b.7). A Chapter
+  // with an unknown Context counts as the Default's, as its handle shows.
+  const hiddenKey = filterId
+    ? chapters
+        .filter((c) => (contexts.some((x) => x.id === c.data.context) ? c.data.context : contexts[0].id) !== filterId)
+        .map((c) => c.id)
+        .join('|')
+    : '';
+  const hiddenChapters = useMemo(() => new Set(hiddenKey ? hiddenKey.split('|') : []), [hiddenKey]);
+  const isHidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
+  const displayNodes = useMemo(
+    () => nodes.map((n) => (!!n.hidden === isHidden(n) ? n : { ...n, hidden: isHidden(n) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodes, hiddenChapters]
+  );
 
   // An element arrow leaves the lower point of its source and enters the upper point of its
   // target when the target is below (same height counts as below), and the other way round
-  // when the target is above. Chosen on every render, so it follows moving elements.
+  // when the target is above. Chosen on every render, so it follows moving elements. An arrow
+  // to a hidden Chapter or element is hidden too.
   const displayEdges = useMemo(() => {
     const byId = new Map(nodes.map((n) => [n.id, n]));
+    const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
     const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
     return edges.map((e) => {
       const s = byId.get(e.source);
       const t = byId.get(e.target);
-      if (s?.type !== 'sticky' || t?.type !== 'sticky') return e;
+      const hidden = hiddenNode(s) || hiddenNode(t);
+      if (s?.type !== 'sticky' || t?.type !== 'sticky') return hidden === !!e.hidden ? e : { ...e, hidden };
       const down = centreY(t) >= centreY(s);
       return {
         ...e,
+        hidden,
         sourceHandle: down ? 'bottom-out' : 'top-out',
         targetHandle: down ? 'top-in' : 'bottom-in',
       };
     });
-  }, [nodes, edges]);
-  const active = chapters.find((c) => c.id === activeId) ?? chapters[0];
+  }, [nodes, edges, hiddenChapters]);
+  const visibleChapters = chapters.filter((c) => !hiddenChapters.has(c.id));
+  const active = visibleChapters.find((c) => c.id === activeId) ?? visibleChapters[0];
   const activeChapterId = active?.id;
 
   // The selected Cell, if any: { chapterId, laneId, sliceId }. Selection only: it is not
   // saved, exported or recorded for undo.
   const [selectedCell, setSelectedCell] = useState(null);
+  // Nothing hidden stays selected: its Cell, or it, could still be acted on by a hotkey.
+  useEffect(() => {
+    if (!hiddenChapters.size) return;
+    const hidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
+    setSelectedCell((c) => (c && hiddenChapters.has(c.chapterId) ? null : c));
+    setNodes((ns) => (ns.some((n) => n.selected && hidden(n)) ? ns.map((n) => (n.selected && hidden(n) ? { ...n, selected: false } : n)) : ns));
+  }, [hiddenChapters, setNodes]);
+  // Changing the filter fits the view to the Chapters that show (R1b.7), not on the first render.
+  const filterShown = useRef(filterId);
+  useEffect(() => {
+    if (filterShown.current === filterId) return;
+    filterShown.current = filterId;
+    setTimeout(() => fitView({ duration: 300 }), 50);
+  }, [filterId, fitView]);
   // The Chapter, lane or slice whose info is being edited.
   const [infoId, setInfoId] = useState(null);
   const [infoReading, setInfoReading] = useState(false); // the info panel opens in read mode
@@ -183,7 +236,7 @@ function Board() {
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const abs = (n) => [(byId.get(n.parentId)?.position.x ?? 0) + n.position.x, (byId.get(n.parentId)?.position.y ?? 0) + n.position.y];
     return nodes
-      .filter((n) => n.type === 'sticky')
+      .filter((n) => n.type === 'sticky' && !hiddenChapters.has(n.parentId))
       .map((n) => ({
         id: n.id,
         kind: n.data.kind,
@@ -193,7 +246,7 @@ function Board() {
       }))
       .filter((i) => i.name)
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
-  }, [nodes, search.open]);
+  }, [nodes, search.open, hiddenChapters]);
   const [notice, setNotice] = useState(null);
   const infoNode = nodes.find((n) => n.id === infoId);
   // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
@@ -514,7 +567,7 @@ function Board() {
     setNodes((ns) =>
       layered([
         ...ns,
-        makeChapter(id, x, y, `Chapter ${chapters.length + 1}`, contexts[0].id),
+        makeChapter(id, x, y, `Chapter ${chapters.length + 1}`, filterId || contexts[0].id),
         ...LANES.map((l, i) => makeLane(laneIds[i], id, l.type, l.label, l.y, 'none', width)),
         makeSlice(sliceId, SLICE_MIN_X, DEFAULT_SLICE_WIDTH, 'New Slice', id),
       ])
@@ -1174,6 +1227,20 @@ function Board() {
         <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
           ↷ Redo
         </button>
+        <select
+          className="context-filter"
+          value={filterId}
+          onChange={(e) => setContextFilter(e.target.value)}
+          title="Show only the Chapters of one Context"
+          aria-label="Context filter"
+        >
+          <option value="">All contexts</option>
+          {contexts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <span className="target" title="New slices are added to this Chapter">
           Add to: <strong>{active?.data.name}</strong>
         </span>
@@ -1228,7 +1295,7 @@ function Board() {
         <HistoryContext.Provider value={historyApi}>
         <BoardActions.Provider value={boardActions}>
         <ReactFlow
-          nodes={nodes}
+          nodes={displayNodes}
           edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}

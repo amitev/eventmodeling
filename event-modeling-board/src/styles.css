@@ -16,6 +16,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .toolbar button { padding: 4px 10px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
 .toolbar .chip { cursor: grab; border-color: #555; }
+.toolbar .context-filter { padding: 4px 6px; border: 1px solid #999; border-radius: 4px; background: #fff; max-width: 180px; }
 .chip.screen { background: var(--screen) !important; }
 .chip.command { background: var(--command) !important; }
 .chip.query { background: var(--query) !important; }

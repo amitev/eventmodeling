@@ -66,6 +66,10 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1b.4** The Chapter handle has a dropdown of all Contexts showing the Chapter's own; choosing one assigns it. The last entry, **+ New context...**, asks for a name, appends a Context and assigns it to the Chapter. An empty name or cancelling does nothing.
 - **R1b.5** A rename button next to the dropdown renames the Chapter's Context, for every Chapter sharing it. An empty name is ignored (previous kept).
 - **R1b.6** A delete button next to it deletes the Chapter's Context after confirmation; Chapters that used it move to the Default. The button is hidden for the Default.
+- **R1b.7** **Context filter.** A dropdown in the header, after Redo (tooltip "Show only the Chapters of one Context"), lists **All contexts** (no filter, the default) and every Context. With a Context chosen, only its Chapters show; the others are **hidden** with their lanes, slices, elements and arrows, and so are arrows between a shown and a hidden Chapter. Nothing is deleted or changed: ids, positions, data, push and pull (section 10) and the saved board (R1.6) are unaffected, and the filter is not an undo step.
+  - Changing the filter fits the view to the shown Chapters (as Fit view, R1.20; not on load) and deselects hidden elements and Cells.
+  - The filter is kept in the browser (localStorage key `event-model-board-context-filter`), not in the board file or on the server, and applies again on reload. If its Context no longer exists (deleted, pull, undo) it is All contexts.
+  - **+ Chapter** gives a new Chapter the filter's Context (the Default for All contexts). Changing a shown Chapter's Context to another one hides it. Toolbar buttons that act on the active Chapter only act on shown Chapters; the active Chapter is a shown one. Search (R1e) lists only elements of shown Chapters. A Chapter with an unknown Context counts as the Default's.
 
 ## 1c. Info
 
