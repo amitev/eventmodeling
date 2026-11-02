@@ -137,13 +137,13 @@ export const confirmCopies = (nodes, gone) => {
   return !count || window.confirm(`Also delete the ${count} linked copy(ies) of the deleted element(s)?`);
 };
 
-// Chapters connect to Chapters (as dragged); elements only along FLOWS_TO, and a connection
-// dragged the wrong way is turned around. Never to itself, at most once. Null when refused.
+// Chapters connect to Chapters of the same Context (as dragged); elements only along FLOWS_TO, and a
+// connection dragged the wrong way is turned around. Never to itself, at most once. Null when refused.
 export const orient = (nodes, c) => {
   const a = nodes.find((n) => n.id === c.source);
   const b = nodes.find((n) => n.id === c.target);
   if (!a || !b || a.id === b.id) return null;
-  if (a.type === 'chapter' && b.type === 'chapter') return [a.id, b.id];
+  if (a.type === 'chapter' && b.type === 'chapter') return a.data.context === b.data.context ? [a.id, b.id] : null;
   if (a.type !== 'sticky' || b.type !== 'sticky') return null;
   if (FLOWS_TO[a.data.kind]?.includes(b.data.kind)) return [a.id, b.id];
   if (FLOWS_TO[b.data.kind]?.includes(a.data.kind)) return [b.id, a.id];

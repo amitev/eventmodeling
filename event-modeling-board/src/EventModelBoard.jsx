@@ -387,6 +387,16 @@ function Board() {
     setEdges((es) => es.filter((e) => !pruned.gone.has(e.source) && !pruned.gone.has(e.target)));
   }, [nodes, setNodes, setEdges, markSilent]);
 
+  // Chapter arrows only join Chapters of one Context (R1b.8): those that no longer do (a Context
+  // changed or deleted, a loaded or pulled board) are removed, as part of the user's operation.
+  useEffect(() => {
+    const context = new Map(nodes.filter((n) => n.type === 'chapter').map((n) => [n.id, n.data.context]));
+    const crossing = (e) => context.has(e.source) && context.has(e.target) && context.get(e.source) !== context.get(e.target);
+    if (!edges.some(crossing)) return;
+    markSilent();
+    setEdges((es) => es.filter((e) => !crossing(e)));
+  }, [nodes, edges, setEdges, markSilent]);
+
   // The original of the linked copies made with Ctrl+C / Ctrl+V; memory only.
   const clipboard = useRef(null);
   const rememberCopy = useCallback((id) => {
