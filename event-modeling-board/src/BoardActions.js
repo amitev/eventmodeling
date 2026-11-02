@@ -1,0 +1,32 @@
+import { createContext } from 'react';
+
+// What the nodes may ask the board to do. `Board()` provides the real values.
+export const BoardActions = createContext({
+  editScenario: () => {},
+  newScenarioId: () => '',
+  rememberCopy: () => {},
+  openInfo: () => {},
+  openFields: () => {},
+  openHtml: () => {},
+  viewHtml: () => {},
+  openMovie: () => {},
+  viewScenarios: () => {},
+  readInfo: () => {},
+  titleEditId: null,
+  clearTitleEdit: () => {},
+  contexts: [],
+  setChapterContext: () => {},
+  addContext: () => {},
+  renameContext: () => {},
+  removeContext: () => {},
+  activate: () => {},
+  clearCell: () => {},
+  addSliceAfter: () => {},
+  removeSlice: () => {},
+  selectCell: () => {},
+  removeLane: () => {},
+  addLaneAfter: () => {},
+  removeChapter: () => {},
+  compactChapter: () => {},
+  activeId: null,
+});

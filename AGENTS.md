@@ -36,8 +36,11 @@ We're still in alpha version. Forget about backwards compatibility when making c
 
 Board code, all in `event-modeling-board/src/`:
 
-- `EventModelBoard.jsx`: the board (React Flow nodes, `Board()` with its operations and hotkeys).
+- `EventModelBoard.jsx`: the board (`Board()` with its operations and hotkeys).
+- `nodes/`: the React Flow node components. `LaneNode.jsx`, `StickyNode.jsx`, `SliceNode.jsx`, `ChapterNode.jsx`; `index.js`: `nodeTypes`; `parts.jsx`: drag hooks and buttons they share.
 - `model.js`: constants, element kinds and flow rules, layout/geometry rules, node factories. No UI.
+- `cells.js`: pure rules about Cells and connections (`spotInCell`, `autoConnections`, `orient`, `selectOnly`, `confirmCopies`, …). No UI.
+- `BoardActions.js`: the `BoardActions` context through which the nodes call the board.
 - `io.js`: export (`serialize`), import (`parseBoard`) and localStorage loading.
 - `history.js`: undo/redo (`useHistory`) and the gesture context.
 - `InfoDialog.jsx`: the Markdown info editor. `HtmlDialog.jsx`: the Screen mockup popup. `MovieStrip.jsx`: the movie strip popup (R11). `mockup.js`: URL check, sandbox settings and size of a Screen mockup.
