@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from '../model/mockup.js';
+import { beautifyHtml } from '../model/beautify.js';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
@@ -12,7 +13,7 @@ export const stripScripts = (html) =>
 // URL wins and disables the code editor. The code is on the left, the rendering on the right in
 // a sandboxed iframe, so the mockup's styles cannot reach the board. The changes only apply on Save.
 export function HtmlDialog({ title, initial, initialUrl = '', initialReading = false, onSave, onCancel }) {
-  const [text, setText] = useState(initial);
+  const [text, setText] = useState(() => beautifyHtml(initial)); // beautified when opened
   const [url, setUrl] = useState(initialUrl);
   const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
   const [reading, setReading] = useState(initialReading); // view mode: only the preview is shown
