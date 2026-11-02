@@ -39,7 +39,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - a name ending with a dot, or a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension), is ignored (previous kept), as an empty name is (R1a.3, R5.3, R1b.4, R1b.5).
 
   Import and a saved board are not checked (R7.4); the server refuses such names on push (SERVER.md S3.4).
-- **R1.20** **Fit view.** **Shift+F** does what the Fit view button of the zoom controls does: it zooms and pans so the whole board fits the window. Ignored while typing in a field or while a popup is open. The button's tooltip is "Fit view (Shift+F)" (R1d.2). Not an undo step.
+- **R1.20** **Fit view.** **Shift+F** does what the Fit view button of the zoom controls does: it zooms and pans so the whole board fits the window, **including 100px above each Chapter** (its handle fully, its title partly, R1a.3) (with 4% padding). The Fit view button of the zoom controls does the same, as does changing the Context filter (R1b.7). Ignored while typing in a field or while a popup is open. The button's tooltip is "Fit view (Shift+F)" (R1d.2). Not an undo step.
 
 ## 1a. Multiple Chapters
 

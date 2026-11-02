@@ -99,6 +99,9 @@ function CellHighlight({ cell }) {
 }
 
 const FILTER_KEY = 'event-model-board-context-filter';
+// How far above a Chapter's box Fit view reaches, in px. The title (top -126px, 44px high) and the
+// handle (top -74px) stand above the box; 100 shows the handle and the lower part of the title.
+const CHAPTER_TITLE_RISE = 100;
 
 function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
@@ -123,7 +126,18 @@ function Board() {
       // ignore unavailable storage
     }
   }, [filterId]);
-  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom, fitView } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom, fitBounds, getNodesBounds } = useReactFlow();
+  // Fit view: the shown Chapters with their title and handle, which stand above a Chapter's own
+  // box (R1.20), so they are not cut off.
+  const fitBoard = useCallback(
+    (duration = 0) => {
+      const shown = getNodes().filter((n) => n.type === 'chapter' && !n.hidden);
+      if (!shown.length) return;
+      const b = getNodesBounds(shown);
+      fitBounds({ x: b.x, y: b.y - CHAPTER_TITLE_RISE, width: b.width, height: b.height + CHAPTER_TITLE_RISE }, { padding: 0.04, duration });
+    },
+    [getNodes, getNodesBounds, fitBounds]
+  );
   const canvasRef = useRef(null);
 
   // `count` ids that are unused on the board and different from each other.
@@ -196,8 +210,8 @@ function Board() {
   useEffect(() => {
     if (filterShown.current === filterId) return;
     filterShown.current = filterId;
-    setTimeout(() => fitView({ duration: 300 }), 50);
-  }, [filterId, fitView]);
+    setTimeout(() => fitBoard(300), 50);
+  }, [filterId, fitBoard]);
   // The Chapter, lane or slice whose info is being edited.
   const [infoId, setInfoId] = useState(null);
   const [infoReading, setInfoReading] = useState(false); // the info panel opens in read mode
@@ -1015,7 +1029,7 @@ function Board() {
       const el = e.target;
       if (el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       e.preventDefault();
-      fitView();
+      fitBoard();
       return;
     }
     if (!moveKey && (e.ctrlKey || e.metaKey || e.altKey || (e.shiftKey && !withShift))) return;
@@ -1369,7 +1383,7 @@ function Board() {
         >
           <CellHighlight cell={selectedCell} />
           <Background gap={20} />
-          <Controls />
+          <Controls onFitView={fitBoard} />
           <MiniMap
             pannable
             zoomable
