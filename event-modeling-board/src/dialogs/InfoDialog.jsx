@@ -269,7 +269,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
           <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
         <div className="info-actions">
-          <button onClick={() => onSave(text)} title="Save (Ctrl+S)">Save</button>
+          <button className="primary" onClick={() => onSave(text)} title="Save (Ctrl+S)">Save</button>
           <button onClick={onCancel} title="Cancel (Esc)">Cancel</button>
         </div>
       </div>

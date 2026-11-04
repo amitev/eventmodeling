@@ -65,7 +65,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2); font-size: 13px;
 }
 .sticky.selected { outline: 2px solid #1a73e8; }
-.sticky.copy { border-style: dashed; opacity: 0.4; }
+.sticky.copy { border-style: dashed; opacity: 0.75; }
 .sticky-header .copy-mark {
   display: flex; flex: none; align-items: center; justify-content: center;
   width: 12px; height: 16px; margin: 0 4px 0 0; padding: 0;
@@ -347,12 +347,6 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   padding-top: 14px; border-top: 1px solid #e3e6ec;
 }
 .scenario-problem { flex: 1; color: #c62828; font-size: 12px; }
-.scenario-save {
-  padding: 8px 40px; border: 0; border-radius: 4px; background: #3d8bd4; color: #fff; font-size: 14px; cursor: pointer;
-}
-.scenario-cancel {
-  padding: 8px 24px; border: 1px solid #aab; border-radius: 4px; background: #fff; color: #222; font-size: 14px; cursor: pointer;
-}
 .scenario-example { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid #e3e6ec; }
 .scenario-example-head { padding: 14px 20px; margin-top: 30px; background: var(--c); color: #fff; }
 .scenario-example-title { font-size: 16px; font-weight: 700; }
@@ -385,7 +379,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   padding: 6px 10px; border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 4px; text-align: left; font-size: 13px;
   font-weight: 700; color: rgba(0, 0, 0, 0.8); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.search-result.copy { opacity: 0.4; }
+.search-result.copy { opacity: 0.75; }
 .search-result.active { outline: 2px solid #1a73e8; outline-offset: 1px; }
 .search-none { padding: 6px 4px; color: #99a; font-size: 13px; }
 
@@ -528,7 +522,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .info-preview th, .info-preview td { border: 1px solid #ccc; padding: 4px 8px; }
 .info-preview img { max-width: 100%; }
 .info-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid #ddd; }
-.info-actions button { padding: 4px 14px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
+.info-actions button, .scenario-actions button {
+  padding: 4px 14px; border: 1px solid #999; border-radius: 4px; background: #fff; color: #222;
+  font-size: 13px; cursor: pointer;
+}
+/* Every popup: the Save button is blue (class "primary"), Cancel and Close are white (R1.17). */
+.info-actions button.primary, .scenario-actions button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
 .hotkeys-dialog {
   display: flex; flex-direction: column; width: min(560px, 90vw); max-height: 80vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;

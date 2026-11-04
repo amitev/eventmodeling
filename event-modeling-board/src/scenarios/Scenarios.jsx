@@ -514,10 +514,10 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           </div>
           <div className="scenario-actions">
             {problem && <span className="scenario-problem">{problem}</span>}
-            <button className="scenario-save" title="Save (Ctrl+S)" onClick={save}>
+            <button className="primary" title="Save (Ctrl+S)" onClick={save}>
               Save
             </button>
-            <button className="scenario-cancel" title="Cancel (Esc)" onClick={onClose}>
+            <button title="Cancel (Esc)" onClick={onClose}>
               Cancel
             </button>
           </div>

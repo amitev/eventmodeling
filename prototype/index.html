@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Backoffice prototype</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px system-ui, sans-serif; color: #1f2937; background: #e5e7eb; display: flex; flex-direction: column; height: 100vh; }
+  header { display: flex; align-items: center; gap: 4px; padding: 8px 12px 0; background: #111827; }
+  header h1 { margin: 0 16px 0 0; font-size: 14px; color: #fff; }
+  .tab { padding: 8px 14px; border: 0; border-radius: 6px 6px 0 0; background: #374151; color: #d1d5db; font: inherit; cursor: pointer; }
+  .tab.active { background: #e5e7eb; color: #111827; font-weight: 600; }
+  .spacer { flex: 1; }
+  .reset { padding: 4px 10px; border: 1px solid #6b7280; border-radius: 6px; background: none; color: #d1d5db; font: inherit; cursor: pointer; margin-bottom: 6px; }
+  main { flex: 1; min-height: 0; position: relative; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #events { position: absolute; inset: 0; overflow: auto; padding: 16px; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  th { background: #f3f4f6; }
+  code { font: 12px ui-monospace, monospace; }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 8px; background: #111827; color: #fff; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Backoffice</h1>
+  <button class="tab" data-tab="User account">User account</button>
+  <button class="tab" data-tab="List of users">List of users</button>
+  <button class="tab" data-tab="Events">Events</button>
+  <span class="spacer"></span>
+  <button class="reset" id="reset" title="Clear the event store and restore the seed events">Reset</button>
+</header>
+<main>
+  <iframe id="frame"></iframe>
+  <div id="events" hidden></div>
+</main>
+<div id="toast"></div>
+<script>
+// ---- Screens (HTML taken 1:1 from the board) ----
+const SCREENS = {
+  'User account': "\u003c!DOCTYPE html>\u003chtml lang=\"en\">\u003chead>\u003cstyle>* { box-sizing: border-box; } body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; font: 15px system-ui, sans-serif; color: #1f2937; background: #f3f4f6; } form { width: min(100%, 360px); padding: 24px; background: white; border-radius: 14px; box-shadow: 0 8px 28px #11182718; } h1 { margin: 0; font-size: 1.5rem; } p { margin: 4px 0 18px; color: #6b7280; } label { display: block; margin: 12px 0 4px; font-weight: 600; } input { width: 100%; padding: 9px 10px; border: 1px solid #d1d5db; border-radius: 7px; font: inherit; } input:focus { outline: 3px solid #6366f140; border-color: #6366f1; } .terms { display: flex; gap: 8px; align-items: center; margin: 14px 0; font-size: .9rem; font-weight: 400; } .terms input { width: auto; } button { width: 100%; padding: 10px; border: 0; border-radius: 7px; background: #4f46e5; color: white; font: inherit; font-weight: 700; cursor: pointer; } button:hover { background: #4338ca; }\u003c/style>\u003c/head>\u003cbody>\u003cform>\u003ch1>Create account\u003c/h1>\u003cp>Sign up to get started.\u003c/p>\u003clabel for=\"name\">Full name\u003c/label> \u003cinput id=\"name\"> \u003clabel for=\"email\">Email address\u003c/label> \u003cinput id=\"email\" type=\"email\"> \u003clabel for=\"password\">Password\u003c/label> \u003cinput id=\"password\" type=\"password\"> \u003clabel for=\"confirm-password\">Confirm password\u003c/label> \u003cinput id=\"confirm-password\" type=\"password\"> \u003clabel class=\"terms\">\u003cinput type=\"checkbox\"> I agree to the terms and privacy policy.\u003c/label> \u003cbutton type=\"submit\">Create account\u003c/button>\u003c/form>\u003c/body>\u003c/html>",
+  'List of users': "\u003c!DOCTYPE html>\u003chtml lang=\"en\">\u003chead>\u003cstyle>* { box-sizing: border-box; } body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; font: 15px system-ui, sans-serif; color: #1f2937; background: #f3f4f6; } main { width: min(100%, 560px); padding: 24px; background: white; border-radius: 14px; box-shadow: 0 8px 28px #11182718; } h1 { margin: 0; font-size: 1.5rem; } .subtitle { margin: 4px 0 20px; color: #6b7280; } .user-list { margin: 0; padding: 0; list-style: none; } .user { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid #e5e7eb; } .avatar { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: #eef2ff; color: #4f46e5; font-weight: 700; } .details { min-width: 0; flex: 1; } .name { margin: 0; font-weight: 600; } .email { margin: 2px 0 0; color: #6b7280; overflow-wrap: anywhere; } .status { padding: 4px 9px; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 0.8rem; font-weight: 600; } .delete-button { padding: 7px 10px; border: 1px solid #fecaca; border-radius: 7px; background: white; color: #b91c1c; font: inherit; cursor: pointer; } .delete-button:hover { background: #fef2f2; } @media (max-width: 480px) { main { padding: 20px; } .user { gap: 8px; } .status { display: none; } }\u003c/style>\u003c/head>\u003cbody>\u003cmain>\u003ch1>Users\u003c/h1>\u003cp class=\"subtitle\">Manage your team members.\u003c/p>\u003cul class=\"user-list\">\u003cli class=\"user\">\u003cdiv class=\"avatar\">AM\u003c/div>\u003cdiv class=\"details\">\u003cp class=\"name\">Alex Morgan\u003c/p>\u003cp class=\"email\">alex.morgan@example.com\u003c/p>\u003c/div>\u003cspan class=\"status\">Active\u003c/span> \u003cbutton class=\"delete-button\" type=\"button\">Delete\u003c/button>\u003c/li>\u003cli class=\"user\">\u003cdiv class=\"avatar\">JL\u003c/div>\u003cdiv class=\"details\">\u003cp class=\"name\">Jamie Lee\u003c/p>\u003cp class=\"email\">jamie.lee@example.com\u003c/p>\u003c/div>\u003cspan class=\"status\">Active\u003c/span> \u003cbutton class=\"delete-button\" type=\"button\">Delete\u003c/button>\u003c/li>\u003cli class=\"user\">\u003cdiv class=\"avatar\">SK\u003c/div>\u003cdiv class=\"details\">\u003cp class=\"name\">Sam Kim\u003c/p>\u003cp class=\"email\">sam.kim@example.com\u003c/p>\u003c/div>\u003cspan class=\"status\">Active\u003c/span> \u003cbutton class=\"delete-button\" type=\"button\">Delete\u003c/button>\u003c/li>\u003c/ul>\u003c/main>\u003c/body>\u003c/html>",
+};
+
+// ---- Event store (in-browser, localStorage) ----
+const KEY = 'backoffice-prototype-events';
+const uid = () => Math.random().toString(36).slice(2, 8);
+const seed = () => [
+  ['Alex Morgan', 'alex.morgan@example.com'],
+  ['Jamie Lee', 'jamie.lee@example.com'],
+  ['Sam Kim', 'sam.kim@example.com'],
+].map(([name, email]) => ({ type: 'User account created', data: { userId: uid(), name, email }, at: new Date().toISOString() }));
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; } };
+let events = load() || seed();
+const save = () => localStorage.setItem(KEY, JSON.stringify(events));
+const append = (type, data) => { events.push({ type, data, at: new Date().toISOString() }); save(); };
+save();
+
+// ---- Commands ----
+const commands = {
+  'Create user account': ({ name, email }) => { // -> User account created
+    append('User account created', { userId: uid(), name, email });
+  },
+  'Delete user': ({ userId }) => { // -> User deleted
+    append('User deleted', { userId });
+  },
+};
+
+// ---- Read model: Users ----
+function users() {
+  const map = new Map();
+  for (const e of events) {
+    if (e.type === 'User account created') map.set(e.data.userId, { userId: e.data.userId, name: e.data.name, email: e.data.email });
+    if (e.type === 'User deleted') map.delete(e.data.userId);
+  }
+  return [...map.values()];
+}
+
+// ---- UI ----
+const frame = document.getElementById('frame');
+const eventsEl = document.getElementById('events');
+const toastEl = document.getElementById('toast');
+let current = 'User account';
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const initials = n => n.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+
+function bindUserAccount(doc) {
+  const form = doc.querySelector('form');
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const val = id => doc.getElementById(id).value.trim();
+    const name = val('name'), email = val('email');
+    if (!name || !email) { toast('Full name and email address are required'); return; }
+    commands['Create user account']({ name, email });
+    toast('User account created');
+    form.reset();
+  });
+}
+
+function renderUsers(doc) {
+  const list = doc.querySelector('.user-list');
+  list.innerHTML = users().map(u =>
+    `<li class="user"><div class="avatar">${esc(initials(u.name))}</div><div class="details"><p class="name">${esc(u.name)}</p><p class="email">${esc(u.email)}</p></div><span class="status">Active</span> <button class="delete-button" type="button" data-id="${esc(u.userId)}">Delete</button></li>`
+  ).join('');
+}
+
+function bindListOfUsers(doc) {
+  renderUsers(doc);
+  doc.querySelector('.user-list').addEventListener('click', ev => {
+    const btn = ev.target.closest('.delete-button');
+    if (!btn) return;
+    commands['Delete user']({ userId: btn.dataset.id });
+    renderUsers(doc);
+    toast('User deleted');
+  });
+}
+
+function renderEvents() {
+  eventsEl.innerHTML = '<table><thead><tr><th>#</th><th>Time</th><th>Event</th><th>Data</th></tr></thead><tbody>' +
+    events.map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.at.replace('T', ' ').slice(0, 19))}</td><td>${esc(e.type)}</td><td><code>${esc(JSON.stringify(e.data))}</code></td></tr>`).join('') +
+    '</tbody></table>';
+}
+
+function show(tab) {
+  current = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const isEvents = tab === 'Events';
+  frame.hidden = isEvents; eventsEl.hidden = !isEvents;
+  if (isEvents) { renderEvents(); return; }
+  frame.onload = () => {
+    const doc = frame.contentDocument;
+    if (tab === 'User account') bindUserAccount(doc); else bindListOfUsers(doc);
+  };
+  frame.srcdoc = SCREENS[tab];
+}
+
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+document.getElementById('reset').addEventListener('click', () => { events = seed(); save(); show(current); toast('Event store reset'); });
+show(current);
+</script>
+</body>
+</html>

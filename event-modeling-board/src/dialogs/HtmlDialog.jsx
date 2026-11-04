@@ -172,7 +172,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
           </div>
         </div>
         <div className="info-actions">
-          <button onClick={save} title="Save (Ctrl+S)">
+          <button className="primary" onClick={save} title="Save (Ctrl+S)">
             Save
           </button>
           <button onClick={onCancel} title="Cancel (Esc)">

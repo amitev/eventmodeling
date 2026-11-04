@@ -1,8 +1,26 @@
 SKILLs
 - Create a SKILL that copies from Martin's skills, but adjusts it for us
 - RENAME element names and slice types to match Martin's skills, otherwise we cannot reuse
+- A skill to tell it how to read the yaml file - what is copyOf for example, how to incorporate the lane/slice info
+- Martin: I ask AI to walk me through the new feature ("Walkthrough" is a skill as well) - It suggests what needs to change, which slices need adjusting and which new slices are required. That gives me a pretty good picture of what needs to happen. Then I review the walkthrough using existing skills like “wdyt?” (“what do you think”) and "scenario coverage". Finding the gaps while it´s cheap. In addition, Scenario coverage tells me how wide the safety net is. The scenarios in the event model are a reflection of the logic in the code.
+- Martin: Then I build the feature with one of the prepared build kits or with the “classic” build kit, which works in your codebase and follows the patterns it found earlier.
+- Martin: Last but not least, I check for drift after implementation, I typically run the model drift skill to make sure the code and the model still match. I also do this continuasly. AI detects any drift from the model and adjusts the model from code.
+You can do this at any point, even much later. In an EVL (L=legacy) codebase, it might be crucial after some PR reviews. It’s the same process every time.
+
+- Map the code
+- think in slices
+- review the spec
+- build
+- check for drift (continuously)
+
+- Residuality theory - https://www.linkedin.com/pulse/combining-residuality-theory-event-modeling-martin-dilger-8ogcf/
+
+
 
 Slices
+
+Questions
+- Introduce questions and answers to the spec
 
 
 Elements
@@ -32,6 +50,9 @@ Local undo/red
 Server
 - Server pushes only changed chapters/contexts.
 - Is it likely to have the model in one repo and the?
+
+Other features to add
+- https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 
 
 Agentic
