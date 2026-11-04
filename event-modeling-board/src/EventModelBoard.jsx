@@ -173,7 +173,11 @@ function Board() {
   const hiddenChapters = useMemo(() => new Set(hiddenKey ? hiddenKey.split('|') : []), [hiddenKey]);
   const isHidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
   const displayNodes = useMemo(
-    () => nodes.map((n) => (!!n.hidden === isHidden(n) ? n : { ...n, hidden: isHidden(n) })),
+    () =>
+      nodes.map((n) => {
+        const hidden = isHidden(n);
+        return !!n.hidden === hidden && !(hidden && n.selected) ? n : { ...n, hidden, selected: hidden ? false : n.selected };
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nodes, hiddenChapters]
   );
@@ -190,11 +194,13 @@ function Board() {
       const s = byId.get(e.source);
       const t = byId.get(e.target);
       const hidden = hiddenNode(s) || hiddenNode(t);
-      if (s?.type !== 'sticky' || t?.type !== 'sticky') return hidden === !!e.hidden ? e : { ...e, hidden };
+      const selected = hidden ? false : e.selected;
+      if (s?.type !== 'sticky' || t?.type !== 'sticky') return hidden === !!e.hidden && !(hidden && e.selected) ? e : { ...e, hidden, selected };
       const down = centreY(t) >= centreY(s);
       return {
         ...e,
         hidden,
+        selected,
         sourceHandle: down ? 'bottom-out' : 'top-out',
         targetHandle: down ? 'top-in' : 'bottom-in',
       };
@@ -213,7 +219,10 @@ function Board() {
     const hidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
     setSelectedCell((c) => (c && hiddenChapters.has(c.chapterId) ? null : c));
     setNodes((ns) => (ns.some((n) => n.selected && hidden(n)) ? ns.map((n) => (n.selected && hidden(n) ? { ...n, selected: false } : n)) : ns));
-  }, [hiddenChapters, setNodes]);
+    const byId = new Map(getNodes().map((n) => [n.id, n]));
+    const hiddenEdge = (e) => hidden(byId.get(e.source) ?? {}) || hidden(byId.get(e.target) ?? {});
+    setEdges((es) => (es.some((e) => e.selected && hiddenEdge(e)) ? es.map((e) => (e.selected && hiddenEdge(e) ? { ...e, selected: false } : e)) : es));
+  }, [hiddenChapters, setNodes, setEdges, getNodes]);
   // Changing the filter fits the view to the Chapters that show (R1b.7), not on the first render.
   const filterShown = useRef(filterId);
   useEffect(() => {
@@ -442,7 +451,10 @@ function Board() {
     (changes) => {
       const current = getNodes();
       const isSliceId = (id) => current.find((n) => n.id === id)?.type === 'slice';
-      const kept = changes.filter((c) => !(c.type === 'position' && isSliceId(c.id)));
+      const isHiddenId = (id) => !!current.find((n) => n.id === id)?.hidden;
+      const kept = changes.filter(
+        (c) => !(c.type === 'position' && isSliceId(c.id)) && !(c.type === 'select' && c.selected && isHiddenId(c.id))
+      );
       onNodesChange(kept);
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
       const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
@@ -1210,7 +1222,7 @@ function Board() {
     if (!KINDS[kind]) return;
     const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
     const ns = getNodes();
-    const cell = cellAt(ns, p);
+    const cell = cellAt(ns, p, hiddenChapters);
     if (!cell) return;
     const chapter = ns.find((n) => n.id === cell.chapterId);
     addSticky(kind, { cell, x: p.x - kindW(kind) / 2 - chapter.position.x });
@@ -1218,7 +1230,7 @@ function Board() {
 
   // Selects the Cell under the click, or clears the selection when it is outside every Cell.
   const selectCellAt = (e) => {
-    const cell = cellAt(getNodes(), screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    const cell = cellAt(getNodes(), screenToFlowPosition({ x: e.clientX, y: e.clientY }), hiddenChapters);
     if (cell) {
       chooseCell(cell);
       setActiveId(cell.chapterId);
@@ -1243,7 +1255,7 @@ function Board() {
   const dropDragged = (dragged) => {
     const ids = new Set(dragged.map((n) => n.id));
     setNodes((ns) =>
-      centerStickies(settleStickies(adoptStickies(ns, ids, dragOrigin.current), ids), ids)
+      centerStickies(settleStickies(adoptStickies(ns, ids, dragOrigin.current, hiddenChapters), ids), ids)
     );
   };
 

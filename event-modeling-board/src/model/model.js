@@ -334,8 +334,8 @@ export function centerStickies(nodes, only) {
 // Cell's Chapter and slice (its position is converted to the Chapter's coordinates and
 // kept inside the slice's margins; the lane centring is done by centerStickies). Over no
 // Cell it returns to where the drag started (`origin`: id -> { parentId, position }).
-// `only` limits it to those ids.
-export function adoptStickies(nodes, only, origin) {
+// `only` limits it to those ids. Hidden Chapters (a Set of ids) have no Cells to join.
+export function adoptStickies(nodes, only, origin, hidden) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   let changed = false;
   const next = nodes.map((n) => {
@@ -345,7 +345,7 @@ export function adoptStickies(nodes, only, origin) {
     const w = stickyW(n);
     const ax = parent.position.x + n.position.x;
     const ay = parent.position.y + n.position.y;
-    const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 });
+    const cell = cellAt(nodes, { x: ax + w / 2, y: ay + stickyH(n) / 2 }, hidden);
     // A Cell whose lane does not take this element type, or a Spec Cell that already holds
     // another element, counts as no Cell.
     if (
@@ -383,9 +383,11 @@ export const layered = (nodes) => [...nodes].sort((a, b) => LAYER[a.type] - LAYE
 // A Cell is the intersection of a lane and a slice of one Chapter: one box of the
 // Chapter's grid (lanes are the rows, slices the columns). It is not stored anywhere;
 // it follows from the lanes and slices. This finds the Cell under a canvas point
-// (flow coordinates), or null when the point is not inside any Cell.
-export function cellAt(nodes, p) {
+// (flow coordinates), or null when the point is not inside any Cell. Chapters in `hidden`
+// (a Set of ids, R1b.7) have no Cells.
+export function cellAt(nodes, p, hidden) {
   for (const c of chaptersOf(nodes)) {
+    if (hidden?.has(c.id)) continue;
     const lane = lanesOf(nodes, c.id).find(
       (l) =>
         p.y >= c.position.y + l.position.y && p.y < c.position.y + l.position.y + l.data.height
