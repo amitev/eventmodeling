@@ -4,7 +4,7 @@ import { useBackdropClose, useModalFocus } from './popup.js';
 import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 
 const ZOOMS = [0.3, 0.4, 0.5, 0.65, 0.8, 1]; // size of the current screen, 1 = fits the window
-const START_ZOOM = 4;
+const START_ZOOM = ZOOMS.length - 1;
 const NEIGHBOUR = 0.5; // the other screens are this much of the current one's size
 const CAPTION_H = 36;
 const GAP = 48;
