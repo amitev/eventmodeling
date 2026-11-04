@@ -29,11 +29,20 @@ function checkName(text, what) {
   return name;
 }
 
-export const contextDirName = (name) => checkName(name.trim().replace(/ /g, '_').toLowerCase(), 'Context name');
-export function chapterFileName(chapter) {
-  if (ILLEGAL.test(chapter.id)) throw new HttpError(400, `Chapter id "${chapter.id}" cannot be used in a file name`);
-  return `${checkName(chapter.name, 'Chapter name')} - ${chapter.id.trim()}.yaml`;
+// `contexts` would collide with contexts.yaml (S3.4).
+export function contextFileName(name) {
+  const base = checkName(name.trim().replace(/ /g, '_').toLowerCase(), 'Context name');
+  if (base === path.basename(CONTEXTS_FILE, '.yaml')) {
+    throw new HttpError(400, `Context name "${name}" cannot be used as a file name`);
+  }
+  return `${base}.yaml`;
 }
+
+const validSlices = (slices) => Array.isArray(slices) && slices.every((s) => isObject(s) && isText(s.id));
+
+// A stored file name: a plain `.yaml` name that is not contexts.yaml.
+const validFile = (v) =>
+  isText(v) && !ILLEGAL.test(v) && v.endsWith('.yaml') && v.length > 5 && !sameName(v, CONTEXTS_FILE);
 
 // The Chapter with the HTML of its Screens compacted (S3.10). Slices and elements are not checked further.
 function compactScreens(chapter) {
@@ -50,11 +59,13 @@ const byPosition = (a, b) => {
   return n(a.x) - n(b.x) || n(a.y) - n(b.y) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 };
 
+const yaml = (data) => dump(data, { noRefs: true, lineWidth: -1 });
+
 // The board kept under <root>/.event-modeling/model/:
-//   contexts.yaml                              the ordered Contexts [{ id, name }]
-//   <context>/<chapter name> - <chapter id>.yaml   one Chapter as exported, its slices inline
-// A Chapter is identified by its id inside the file, so a renamed Chapter or one moved to
-// another Context replaces its old file. All operations run one at a time.
+//   contexts.yaml        the ordered Contexts [{ id, name, file }]
+//   <context>.yaml       one Context { id, name, chapters: [Chapter] } as exported, slices inline
+// A Context is identified by its id inside the file, so a renamed Context (new `file`) replaces its old file.
+// All operations run one at a time.
 export class ModelStore {
   #root;
   #model;
@@ -75,25 +86,18 @@ export class ModelStore {
     return path.relative(this.#root, file).split(path.sep).join('/');
   }
 
-  async #folders(parent) {
+  // Context files: [{ file, path }]
+  async #scan() {
+    let entries;
     try {
-      return (await fs.readdir(parent, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
+      entries = await fs.readdir(this.#model, { withFileTypes: true });
     } catch (e) {
       if (e.code === 'ENOENT') return [];
       throw e;
     }
-  }
-
-  // Chapter files: [{ ctx, file, path }]
-  async #scan() {
-    const result = [];
-    for (const ctx of await this.#folders(this.#model)) {
-      const folder = path.join(this.#model, ctx);
-      for (const f of await fs.readdir(folder, { withFileTypes: true })) {
-        if (f.isFile() && f.name.endsWith('.yaml')) result.push({ ctx, file: f.name, path: path.join(folder, f.name) });
-      }
-    }
-    return result;
+    return entries
+      .filter((f) => f.isFile() && f.name.endsWith('.yaml') && !sameName(f.name, CONTEXTS_FILE))
+      .map((f) => ({ file: f.name, path: path.join(this.#model, f.name) }));
   }
 
   // Strict: a bad file throws 422 naming it. Not strict: a bad file gives null.
@@ -108,12 +112,16 @@ export class ModelStore {
     }
   }
 
-  // A Chapter file, or null when it cannot be read (not strict).
-  #readChapter(file, strict) {
+  // A Context file, or null when it cannot be read (not strict).
+  #readContextFile(file, strict) {
     return this.#read(file, strict, (doc) => {
-      if (!isObject(doc) || !isText(doc.id) || !isText(doc.context)) throw new Error('needs chapter id and context');
-      if (!Array.isArray(doc.slices) || !doc.slices.every((s) => isObject(s) && isText(s.id))) {
-        throw new Error('slices must be a list of slices with an id');
+      if (!isObject(doc) || !isText(doc.id) || !isText(doc.name)) throw new Error('needs context id and name');
+      if (!Array.isArray(doc.chapters) || !doc.chapters.every((c) => isObject(c) && isText(c.id))) {
+        throw new Error('chapters must be a list of chapters with an id');
+      }
+      for (const c of doc.chapters) {
+        if (c.context !== doc.id) throw new Error(`chapter "${c.id}" is not of context "${doc.id}"`);
+        if (!validSlices(c.slices)) throw new Error('slices must be a list of slices with an id');
       }
     });
   }
@@ -128,31 +136,20 @@ export class ModelStore {
     }
     return this.#read(file, strict, (list) => {
       if (!Array.isArray(list)) throw new Error('must be a list');
-      if (!list.every((c) => isObject(c) && isText(c.id) && isText(c.name))) {
-        throw new Error('every context needs id and name');
+      if (!list.every((c) => isObject(c) && isText(c.id) && isText(c.name) && validFile(c.file))) {
+        throw new Error('every context needs id, name and file');
       }
     });
   }
 
-  async #rmdir(folder) {
-    try {
-      await fs.rmdir(folder);
-    } catch (e) {
-      if (e.code !== 'ENOTEMPTY' && e.code !== 'EEXIST') throw e;
-    }
-  }
-
-  // Empty Context folders are removed.
-  async #cleanup() {
-    for (const ctx of await this.#folders(this.#model)) await this.#rmdir(path.join(this.#model, ctx));
-  }
-
-  async #write(file, data) {
+  async #write(file, text) {
     const temp = `${file}.tmp`;
-    await fs.writeFile(temp, dump(data, { noRefs: true, lineWidth: -1 }));
+    await fs.writeFile(temp, text);
     await fs.rename(temp, file);
   }
 
+  // Writes the ordered Contexts, then deletes the files of Contexts no longer listed. A file that
+  // cannot be read is left alone.
   async pushContexts(contexts) {
     const valid =
       Array.isArray(contexts) &&
@@ -160,75 +157,68 @@ export class ModelStore {
       contexts.every((c) => isObject(c) && isText(c.id) && isText(c.name)) &&
       new Set(contexts.map((c) => c.id)).size === contexts.length;
     if (!valid) throw new HttpError(400, 'Body must be { contexts: [{ id, name }] }: not empty, unique ids');
-    const list = contexts.map((c) => ({ id: c.id, name: c.name }));
+    const list = contexts.map((c) => ({ id: c.id, name: c.name, file: contextFileName(c.name) }));
+    const files = new Set(list.map((c) => c.file.toLowerCase()));
+    if (files.size !== list.length) throw new HttpError(409, 'Two contexts have the same file name');
+    const keep = new Set(list.map((c) => c.id));
     return this.#run(async () => {
       await fs.mkdir(this.#model, { recursive: true });
-      await this.#write(path.join(this.#model, CONTEXTS_FILE), list);
-      return { count: list.length };
-    });
-  }
-
-  // Stores a Chapter in the folder of its Context, which must have been pushed (pushContexts).
-  // The whole Chapter, slices inline, goes to one file.
-  async push(id, chapter) {
-    if (!isObject(chapter) || !isText(chapter.id) || !isText(chapter.name) || !isText(chapter.context)) {
-      throw new HttpError(400, 'Body must be a chapter with id, name and context');
-    }
-    if (chapter.id !== id) throw new HttpError(400, 'chapter.id does not match the URL');
-    const slices = chapter.slices;
-    if (
-      !Array.isArray(slices) ||
-      !slices.every((s) => isObject(s) && isText(s.id)) ||
-      new Set(slices.map((s) => s.id)).size !== slices.length
-    ) {
-      throw new HttpError(400, 'chapter.slices must be a list of slices with unique ids');
-    }
-    const fileName = chapterFileName(chapter);
-
-    return this.#run(async () => {
-      const context = (await this.#readContexts(false))?.find((c) => c.id === chapter.context);
-      if (!context) throw new HttpError(409, `Unknown context "${chapter.context}": push the contexts first`);
-      const ctxDir = contextDirName(context.name);
-      const target = path.join(this.#model, ctxDir, fileName);
-      const stale = [];
-      for (const entry of await this.#scan()) {
-        const doc = await this.#readChapter(entry.path, false);
-        if (!doc) continue;
-        const sameCtx = sameName(entry.ctx, ctxDir);
-        const sameFile = sameCtx && sameName(entry.file, fileName);
-        if (doc.id === id) {
-          if (!sameFile) stale.push(entry.path);
-        } else if (sameFile) {
-          throw new HttpError(409, `${this.#relative(entry.path)} already holds another chapter`);
-        } else if (sameCtx && doc.context !== chapter.context) {
-          throw new HttpError(409, `Folder ${ctxDir} already holds another context`);
-        }
-      }
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      await this.#write(target, compactScreens(chapter));
-      for (const old of stale) await fs.rm(old, { force: true });
-      await this.#cleanup();
-      return { path: this.#relative(target) };
-    });
-  }
-
-  // Deletes every Chapter whose id is not in `chapterIds`, then empty folders. A file that
-  // cannot be read is left alone.
-  async prune(chapterIds) {
-    if (!Array.isArray(chapterIds) || !chapterIds.every((c) => typeof c === 'string')) {
-      throw new HttpError(400, 'Body must be { chapterIds: [text] }');
-    }
-    const keep = new Set(chapterIds);
-    return this.#run(async () => {
+      await this.#write(path.join(this.#model, CONTEXTS_FILE), yaml(list));
       let removed = 0;
       for (const entry of await this.#scan()) {
-        const doc = await this.#readChapter(entry.path, false);
+        const doc = await this.#readContextFile(entry.path, false);
         if (!doc || keep.has(doc.id)) continue;
         await fs.rm(entry.path, { force: true });
         removed++;
       }
-      await this.#cleanup();
-      return { removed };
+      return { count: list.length, removed };
+    });
+  }
+
+  // Stores a whole Context with its Chapters, slices inline, in one file. The Context must have been
+  // pushed (pushContexts) with the same name.
+  async pushContext(id, context) {
+    if (!isObject(context) || !isText(context.id) || !isText(context.name) || !Array.isArray(context.chapters)) {
+      throw new HttpError(400, 'Body must be a context with id, name and chapters');
+    }
+    if (context.id !== id) throw new HttpError(400, 'context.id does not match the URL');
+    const { chapters } = context;
+    if (!chapters.every((c) => isObject(c) && isText(c.id) && isText(c.name))) {
+      throw new HttpError(400, 'Every chapter needs id and name');
+    }
+    if (new Set(chapters.map((c) => c.id)).size !== chapters.length) {
+      throw new HttpError(400, 'context.chapters must have unique ids');
+    }
+    for (const c of chapters) {
+      if (c.context !== id) throw new HttpError(400, `Chapter "${c.id}" is not of context "${id}"`);
+      if (!validSlices(c.slices) || new Set(c.slices.map((s) => s.id)).size !== c.slices.length) {
+        throw new HttpError(400, `Chapter "${c.id}": slices must be a list of slices with unique ids`);
+      }
+    }
+
+    return this.#run(async () => {
+      const stored = (await this.#readContexts(false))?.find((c) => c.id === id);
+      if (!stored) throw new HttpError(409, `Unknown context "${id}": push the contexts first`);
+      if (stored.name !== context.name) {
+        throw new HttpError(409, `Context "${id}" is named "${stored.name}": push the contexts first`);
+      }
+      const fileName = stored.file;
+      const target = path.join(this.#model, fileName);
+      const stale = [];
+      for (const entry of await this.#scan()) {
+        const doc = await this.#readContextFile(entry.path, false);
+        if (!doc) continue;
+        const sameFile = sameName(entry.file, fileName);
+        if (doc.id === id) {
+          if (!sameFile) stale.push(entry.path);
+        } else if (sameFile) {
+          throw new HttpError(409, `${this.#relative(entry.path)} already holds another context`);
+        }
+      }
+      await fs.mkdir(this.#model, { recursive: true });
+      await this.#write(target, yaml({ id, name: context.name, chapters: chapters.map(compactScreens) }));
+      for (const old of stale) await fs.rm(old, { force: true });
+      return { path: this.#relative(target) };
     });
   }
 
@@ -240,20 +230,25 @@ export class ModelStore {
       if (!contexts) throw new HttpError(404, `No model found in ${DATA_DIR}/model`);
       const chapters = [];
       for (const entry of await this.#scan()) {
-        const doc = await this.#readChapter(entry.path, true);
-        if (!contexts.some((c) => c.id === doc.context)) {
-          throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.context}" is not in ${CONTEXTS_FILE}`);
+        const doc = await this.#readContextFile(entry.path, true);
+        if (!contexts.some((c) => c.id === doc.id)) {
+          throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.id}" is not in ${CONTEXTS_FILE}`);
         }
-        chapters.push(doc);
+        chapters.push(...doc.chapters);
       }
       chapters.sort(byPosition);
-      return { format: 'event-model', version: 1, contexts, chapters };
+      return {
+        format: 'event-model',
+        version: 1,
+        contexts: contexts.map(({ id, name }) => ({ id, name })),
+        chapters,
+      };
     });
   }
 
-  // The Chapters of one Context as multi-document YAML, as stored (S3.11). Only the Context folder is read.
+  // The Chapters of one Context as multi-document YAML, as stored (S3.11). Only the Context file is read.
   // Without `screenContent` the `html` of every Screen is left out (S3.12).
-  async pullContextYaml(contextId, screenContent = true) {
+  async pullContext(contextId, screenContent = true) {
     const withoutHtml = (chapter) => ({
       ...chapter,
       slices: chapter.slices.map((s) =>
@@ -272,15 +267,120 @@ export class ModelStore {
     return this.#run(async () => {
       const context = (await this.#readContexts(true))?.find((c) => c.id === contextId);
       if (!context) throw new HttpError(404, `Unknown context "${contextId}"`);
-      const ctxDir = contextDirName(context.name);
-      const chapters = [];
-      for (const entry of await this.#scan()) {
-        if (!sameName(entry.ctx, ctxDir)) continue;
-        const doc = await this.#readChapter(entry.path, true);
-        if (doc.context === contextId) chapters.push(doc);
+      const entry = (await this.#scan()).find((e) => sameName(e.file, context.file));
+      if (!entry) return '';
+      const doc = await this.#readContextFile(entry.path, true);
+      if (doc.id !== contextId) throw new HttpError(422, `${this.#relative(entry.path)}: holds another context`);
+      return [...doc.chapters]
+        .sort(byPosition)
+        .map((c) => `---\n${yaml(screenContent ? c : withoutHtml(c))}`)
+        .join('');
+    });
+  }
+
+  // The stored Context with its file: { entry, doc }, `doc` null when it has no file (S3.5, S3.13).
+  async #contextDoc(contextId) {
+    const context = (await this.#readContexts(true))?.find((c) => c.id === contextId);
+    if (!context) throw new HttpError(404, `Unknown context "${contextId}"`);
+    const entry = (await this.#scan()).find((e) => sameName(e.file, context.file));
+    if (!entry) return { entry: null, doc: null };
+    const doc = await this.#readContextFile(entry.path, true);
+    if (doc.id !== contextId) throw new HttpError(422, `${this.#relative(entry.path)}: holds another context`);
+    return { entry, doc };
+  }
+
+  // Every Screen of the Context document, with where it is: [{ element, chapter, slice }].
+  static #screens(doc) {
+    const found = [];
+    for (const chapter of doc?.chapters ?? []) {
+      for (const slice of chapter.slices) {
+        for (const element of Array.isArray(slice.elements) ? slice.elements : []) {
+          if (isObject(element) && element.type === 'SCREEN') found.push({ element, chapter, slice });
+        }
       }
-      chapters.sort(byPosition);
-      return chapters.map((c) => `---\n${dump(screenContent ? c : withoutHtml(c), { noRefs: true, lineWidth: -1 })}`).join('');
+    }
+    return found;
+  }
+
+  static #summary({ element, chapter, slice }) {
+    return {
+      id: element.id,
+      name: element.name ?? '',
+      chapterId: chapter.id,
+      chapterName: chapter.name,
+      sliceId: slice.id,
+      ...(element.copyOf ? { copyOf: element.copyOf } : {}),
+    };
+  }
+
+  // The Screens of one Context (S3.13). `name` matches the whole name (a part with `contains`),
+  // `chapter` a Chapter id or name, all case-insensitively. No HTML is returned.
+  async findScreens(contextId, { name, chapter, contains = false } = {}) {
+    const lower = (v) => String(v ?? '').trim().toLowerCase();
+    return this.#run(async () => {
+      const { doc } = await this.#contextDoc(contextId);
+      return ModelStore.#screens(doc)
+        .filter((s) => {
+          if (chapter !== undefined && lower(chapter) !== lower(s.chapter.id) && lower(chapter) !== lower(s.chapter.name)) {
+            return false;
+          }
+          if (name === undefined) return true;
+          return contains ? lower(s.element.name).includes(lower(name)) : lower(s.element.name) === lower(name);
+        })
+        .map((s) => ({
+          ...ModelStore.#summary(s),
+          hasHtml: typeof s.element.html === 'string',
+          hasUrl: typeof s.element.url === 'string',
+        }));
+    });
+  }
+
+  // One Screen with its `html` or `url` (S3.14). A linked copy shows its original's.
+  async getScreen(contextId, screenId) {
+    return this.#run(async () => {
+      const { doc } = await this.#contextDoc(contextId);
+      const screens = ModelStore.#screens(doc);
+      const screen = screens.find((s) => s.element.id === screenId);
+      if (!screen) throw new HttpError(404, `Unknown screen "${screenId}"`);
+      const source = screen.element.copyOf
+        ? screens.find((s) => s.element.id === screen.element.copyOf)?.element
+        : screen.element;
+      const { html, url } = source ?? {};
+      return {
+        ...ModelStore.#summary(screen),
+        ...(typeof html === 'string' ? { html } : {}),
+        ...(typeof url === 'string' ? { url } : {}),
+      };
+    });
+  }
+
+  // Replaces the HTML of a Screen (S3.15): compacted (S3.10), and the `url` is dropped (a Screen has
+  // `html` or `url`, R3.7). A linked copy is refused: its original holds the HTML.
+  async putScreenHtml(contextId, screenId, html) {
+    if (typeof html !== 'string' || !html.trim()) throw new HttpError(400, 'Body must be { html: text }, not empty');
+    const compact = compactHtml(html);
+    return this.#run(async () => {
+      const { entry, doc } = await this.#contextDoc(contextId);
+      const screen = ModelStore.#screens(doc).find((s) => s.element.id === screenId);
+      if (!screen) throw new HttpError(404, `Unknown screen "${screenId}"`);
+      const { element } = screen;
+      if (element.copyOf) {
+        throw new HttpError(409, `Screen "${screenId}" is a linked copy: change its original "${element.copyOf}"`);
+      }
+      // `html` keeps the place of the field it replaces, else follows `info` or `name` (R6.5).
+      const keys = Object.keys(element);
+      const at = keys.findIndex((k) => k === 'html' || k === 'url');
+      const after = at >= 0 ? at - 1 : Math.max(keys.indexOf('info'), keys.indexOf('name'));
+      const next = {};
+      keys.forEach((k, i) => {
+        if (k !== 'html' && k !== 'url') next[k] = element[k];
+        if (i === after) next.html = compact;
+      });
+      if (!('html' in next)) next.html = compact;
+      const slice = screen.slice;
+      slice.elements = slice.elements.map((e) => (e === element ? next : e));
+      await this.#write(entry.path, yaml(doc));
+      return { html: compact };
     });
   }
 }

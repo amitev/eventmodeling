@@ -45,4 +45,4 @@ To use another server port, set `PORT` for both: `$env:PORT=8080; npm run dev` (
 
 ## Model storage
 
-The board's **Push to server** / **Pull from server** buttons store Contexts in `.event-modeling/model/contexts.yaml`, and each Chapter, with its slices, in `.event-modeling/model/<context>/<chapter name> - <chapter id>.yaml`, relative to the directory the CLI was started in.
+The board's **Push to server** / **Pull from server** buttons store Contexts in `.event-modeling/model/contexts.yaml`, and each Context, with its Chapters and their slices, in `.event-modeling/model/<context>.yaml`, relative to the directory the CLI was started in.

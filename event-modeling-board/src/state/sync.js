@@ -17,15 +17,17 @@ async function request(method, url, body) {
   return data;
 }
 
-// Writes the Contexts, then every Chapter, one request each, then removes the stored Chapters
-// that are no longer on the board (R10.1). Returns the number of Chapters.
+// Writes the Contexts, which removes the stored Contexts no longer on the board, then every Context
+// with its Chapters, one request each (R10.1). Returns the number of Chapters.
 export async function pushBoard(nodes, edges, contexts) {
   const { chapters, contexts: list } = serialize(nodes, edges, contexts);
   await request('PUT', '/api/model/contexts', { contexts: list });
-  for (const chapter of chapters) {
-    await request('PUT', `/api/model/chapters/${encodeURIComponent(chapter.id)}`, chapter);
+  for (const context of list) {
+    await request('PUT', `/api/model/contexts/${encodeURIComponent(context.id)}`, {
+      ...context,
+      chapters: chapters.filter((c) => c.context === context.id),
+    });
   }
-  await request('POST', '/api/model/prune', { chapterIds: chapters.map((c) => c.id) });
   return chapters.length;
 }
 
