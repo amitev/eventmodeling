@@ -76,7 +76,7 @@ export function ScenariosCard({ id, data, selected, width, onEdit, onView, newId
           </svg>
         </button>
       </div>
-      <div className="scenarios-list nowheel">
+      <div className="scenarios-list">
         {!scenarios.length && <div className="scenarios-empty">No scenarios yet</div>}
         {scenarios.map((s, i) => (
           <div

@@ -100,6 +100,9 @@ export function pruneCopies(nodes) {
 
 export const LANE_COLORS = ['none', 'red', 'orange', 'yellow', 'lime', 'green', 'turquoise', 'blue', 'purple', 'pink', 'brown', 'gray'];
 
+// Colours of a Notes element besides the default white (R3.24).
+export const NOTE_COLORS = ['red', 'green', 'yellow'];
+
 export const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 
 export const ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

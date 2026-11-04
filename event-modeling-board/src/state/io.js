@@ -1,4 +1,4 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, NOTE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
 import { isExampleValue } from '../model/examples.js';
@@ -114,6 +114,7 @@ export function serialize(nodes, edges, contexts) {
                 ...(n.data.info && n.data.kind !== 'scenarios' ? { info: n.data.info } : {}),
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
+                ...(n.data.kind === 'notes' && n.data.color ? { color: n.data.color } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 ...(n.data.kind === 'screen' && n.data.url ? { url: n.data.url } : {}),
                 ...(n.data.fields?.length ? { fields: serializeFields(n.data.fields) } : {}),
@@ -355,7 +356,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'url', 'markdown', 'info', 'fields']
+          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -397,6 +398,10 @@ export function parseBoard(text) {
           if (el.markdown === '') fail(at(ep, 'markdown'), 'must be left out when empty');
           if (el.type !== 'notes') fail(at(ep, 'markdown'), 'only a notes element can have markdown');
         }
+        if (hasKey(el, 'color')) {
+          if (el.type !== 'notes') fail(at(ep, 'color'), 'only a notes element can have a color');
+          if (!NOTE_COLORS.includes(el.color)) fail(at(ep, 'color'), `must be one of ${NOTE_COLORS.join(', ')}, or left out for white`);
+        }
         let fields = null;
         if (hasKey(el, 'fields')) {
           if (!hasFields(el.type)) fail(at(ep, 'fields'), `a ${el.type} element has no fields`);
@@ -430,6 +435,7 @@ export function parseBoard(text) {
             ...(el.html ? { html: el.html } : {}),
             ...(el.url ? { url: el.url } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),
+            ...(el.color ? { color: el.color } : {}),
             ...(el.info ? { info: el.info } : {}),
             ...(fields ? { fields } : {}),
             ...(scenarios ? { scenarios } : {}),

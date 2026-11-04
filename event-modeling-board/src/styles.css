@@ -227,6 +227,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .notes-eye { display: grid; place-items: center; padding: 0; border: 0; background: none; color: #667; cursor: pointer; }
 .notes-eye:hover { color: #1a73e8; }
+/* Colours (R3.24): a pastel card; the dots show while the header is hovered. */
+.sticky.notes.note-red { background: #fbd9d8; }
+.sticky.notes.note-green { background: #d9f0db; }
+.sticky.notes.note-yellow { background: #fff4b8; }
+.notes-colors { display: flex; gap: 4px; margin-left: auto; visibility: hidden; }
+.notes-head:hover .notes-colors { visibility: visible; }
+.notes-dot { box-sizing: border-box; width: 12px; height: 12px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.3); border-radius: 50%; cursor: pointer; }
+.notes-dot.dot-white { background: #fff; }
+.notes-dot.dot-red { background: rgb(239, 83, 80); }
+.notes-dot.dot-green { background: rgb(102, 187, 106); }
+.notes-dot.dot-yellow { background: rgb(255, 214, 10); }
+.notes-dot.current { outline: 2px solid #1a73e8; outline-offset: 1px; }
 .notes-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; font-size: 12px; line-height: 1.45; }
 .notes-body.notes-empty { color: #99a; font-style: italic; }
 .notes-body h1, .notes-body h2, .notes-body h3 { margin: 0.6em 0 0.3em; font-size: 1.15em; }
