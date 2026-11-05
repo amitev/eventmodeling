@@ -12,7 +12,8 @@ export const stripScripts = (html) =>
 // Modal to edit the mockup of a Screen (R3.7): either HTML code, or a web page by URL. The
 // URL wins and disables the code editor. The code is on the left, the rendering on the right in
 // a sandboxed iframe, so the mockup's styles cannot reach the board. The changes only apply on Save.
-export function HtmlDialog({ title, initial, initialUrl = '', initialReading = false, onSave, onCancel }) {
+// `readOnly` (a linked copy's popup, R3.22): view mode only, no Save.
+export function HtmlDialog({ title, initial, initialUrl = '', initialReading = false, readOnly = false, onSave, onCancel }) {
   const [text, setText] = useState(() => beautifyHtml(initial)); // beautified when opened
   const [url, setUrl] = useState(initialUrl);
   const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
@@ -56,14 +57,14 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
       else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'Enter') {
         e.preventDefault();
         setMaximized((v) => !v);
-      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+      } else if (!readOnly && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault(); // not the browser's Save page
         saveRef.current();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, [onCancel, readOnly]);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
@@ -77,23 +78,25 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
       >
         <div className="info-title">
           <span>{title}</span>
-          <button
-            className="info-mode"
-            title={reading ? 'Edit mode: show the editor' : 'View mode: show only the preview'}
-            aria-label={reading ? 'Edit mode' : 'View mode'}
-            onClick={() => setReading((v) => !v)}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              {reading ? (
-                <path d="M2 14l.8-3.2L11 2.6l2.4 2.4-8.2 8.2L2 14zM9.6 4l2.4 2.4" />
-              ) : (
-                <>
-                  <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
-                  <circle cx="8" cy="8" r="2" fill="currentColor" />
-                </>
-              )}
-            </svg>
-          </button>
+          {!readOnly && (
+            <button
+              className="info-mode"
+              title={reading ? 'Edit mode: show the editor' : 'View mode: show only the preview'}
+              aria-label={reading ? 'Edit mode' : 'View mode'}
+              onClick={() => setReading((v) => !v)}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                {reading ? (
+                  <path d="M2 14l.8-3.2L11 2.6l2.4 2.4-8.2 8.2L2 14zM9.6 4l2.4 2.4" />
+                ) : (
+                  <>
+                    <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+                    <circle cx="8" cy="8" r="2" fill="currentColor" />
+                  </>
+                )}
+              </svg>
+            </button>
+          )}
           <button
             className="info-mode info-maximize"
             title={maximized ? 'Restore the size (Alt+Enter)' : 'Full screen (Alt+Enter)'}
@@ -172,11 +175,13 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
           </div>
         </div>
         <div className="info-actions">
-          <button className="primary" onClick={save} title="Save (Ctrl+S)">
-            Save
-          </button>
-          <button onClick={onCancel} title="Cancel (Esc)">
-            Cancel
+          {!readOnly && (
+            <button className="primary" onClick={save} title="Save (Ctrl+S)">
+              Save
+            </button>
+          )}
+          <button onClick={onCancel} title={readOnly ? 'Close (Esc)' : 'Cancel (Esc)'}>
+            {readOnly ? 'Close' : 'Cancel'}
           </button>
         </div>
       </div>

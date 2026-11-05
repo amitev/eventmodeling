@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
-import { KINDS, kindW, stretchWidth, stickyW, stickyH } from '../model/model.js';
+import { KINDS, kindW, stretchWidth } from '../model/model.js';
 import { hasFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
@@ -8,7 +8,7 @@ import { BoardActions } from '../state/BoardActions.js';
 import { CopyButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 
 export function StickyNode({ id, data, selected }) {
-  const { setNodes, setCenter, getNode } = useReactFlow();
+  const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
   const titleRef = useRef(null);
 
@@ -22,21 +22,12 @@ export function StickyNode({ id, data, selected }) {
     const me = s.nodeLookup.get(id);
     return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
   });
-  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal } = useContext(BoardActions);
 
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
   const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
   const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf } : data;
-  const goToOriginal = () => {
-    if (!original) return;
-    const parent = original.parentId ? getNode(original.parentId) : null;
-    setCenter(
-      (parent?.position.x ?? 0) + original.position.x + stickyW(original) / 2,
-      (parent?.position.y ?? 0) + original.position.y + stickyH(original) / 2,
-      { duration: 400 }
-    );
-  };
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -55,41 +46,51 @@ export function StickyNode({ id, data, selected }) {
   };
 
   // The toolbar above a selected element (not Notes or Scenarios): the Info button, and for a Screen the
-  // HTML mockup button too. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a).
+  // HTML mockup button too. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a). A linked copy
+  // (R3.22) has only the eye of a Screen.
   const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
+  const eyeButton = (
+    <button
+      className="info-btn"
+      title="View (V)"
+      aria-label="View"
+      disabled={!shown.html && !shown.url}
+      onClick={() => viewHtml(id)}
+    >
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+        <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
+        <circle cx="8" cy="8" r="2" fill="currentColor" />
+      </svg>
+    </button>
+  );
   const toolbar =
-    data.kind === 'notes' || data.kind === 'scenarios' || isCopy ? null : (
+    data.kind === 'notes' || data.kind === 'scenarios' || (isCopy && !isScreen) ? null : (
       <NodeToolbar
         position={Position.Top}
         offset={8 * toolbarScale}
         className="element-toolbar nodrag nopan"
         style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
       >
-        <CopyButton id={id} />
-        <InfoButton id={id} info={data.info} hotkey="I" />
-        {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
-        {isScreen && (
+        {isCopy ? (
+          eyeButton
+        ) : (
           <>
-            <button
-              className="info-btn html-tool"
-              title="Edit HTML mockup (E)"
-              aria-label="Edit HTML mockup"
-              onClick={() => openHtml(id)}
-            >
-              {'</>'}
-            </button>
-            <button
-              className="info-btn"
-              title="View (V)"
-              aria-label="View"
-              disabled={!data.html && !data.url}
-              onClick={() => viewHtml(id)}
-            >
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                <path d="M1 8C3 4.5 5.5 3 8 3s5 1.5 7 5c-2 3.5-4.5 5-7 5S3 11.5 1 8Z" />
-                <circle cx="8" cy="8" r="2" fill="currentColor" />
-              </svg>
-            </button>
+            <CopyButton id={id} />
+            <InfoButton id={id} info={data.info} hotkey="I" />
+            {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
+            {isScreen && (
+              <>
+                <button
+                  className="info-btn html-tool"
+                  title="Edit HTML mockup (E)"
+                  aria-label="Edit HTML mockup"
+                  onClick={() => openHtml(id)}
+                >
+                  {'</>'}
+                </button>
+                {eyeButton}
+              </>
+            )}
           </>
         )}
       </NodeToolbar>
@@ -117,12 +118,12 @@ export function StickyNode({ id, data, selected }) {
           <button
             type="button"
             className="copy-mark nodrag nopan"
-            title="Go to original element"
+            title="Go to original element (G)"
             aria-label="Go to original element"
             disabled={!original}
             onClick={(e) => {
               e.stopPropagation();
-              goToOriginal();
+              goToOriginal(id);
             }}
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">

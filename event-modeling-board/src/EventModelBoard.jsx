@@ -298,8 +298,10 @@ function Board() {
   // down the chain, as one undo step.
   const fieldsNode = nodes.find((n) => n.id === fieldsId);
   // The Screen's mockup is saved on its own: HTML code, or a URL which replaces it (the code is
-  // cleared); blank ones are removed.
-  const htmlNode = htmlId && nodes.find((n) => n.id === htmlId && n.data.kind === 'screen' && !n.data.copyOf);
+  // cleared); blank ones are removed. A linked copy opens its original's mockup, read-only (R3.22).
+  const htmlTarget = htmlId && nodes.find((n) => n.id === htmlId && n.data.kind === 'screen');
+  const htmlCopy = !!htmlTarget?.data.copyOf;
+  const htmlNode = htmlCopy ? nodes.find((n) => n.id === htmlTarget.data.copyOf) : htmlTarget;
   const saveHtml = (text, url) => {
     const id = htmlId;
     setNodes((ns) =>
@@ -362,6 +364,22 @@ function Board() {
       zoom: Math.max(getZoom(), 1),
       duration: 400,
     });
+  };
+
+  // Moves the view to the original of a linked copy and selects it (R3.22).
+  const goToOriginal = (copyId) => {
+    const ns = getNodes();
+    const original = ns.find((m) => m.id === ns.find((c) => c.id === copyId)?.data.copyOf);
+    if (!original) return;
+    const parent = ns.find((m) => m.id === original.parentId);
+    setNodes((cur) => selectOnly(cur, original.id));
+    selectCellOf(original.id);
+    focusChapter(original);
+    setCenter(
+      (parent?.position.x ?? 0) + original.position.x + stickyW(original) / 2,
+      (parent?.position.y ?? 0) + original.position.y + stickyH(original) / 2,
+      { duration: 400 }
+    );
   };
 
   useEffect(() => {
@@ -740,6 +758,7 @@ function Board() {
     () => ({
       editScenario: (nodeId, scenarioId) => setScenarioEdit({ nodeId, scenarioId }),
       viewScenarios: setScenariosViewId,
+      goToOriginal,
       newScenarioId: () => newIds()[0],
       rememberCopy,
       contexts,
@@ -1081,11 +1100,14 @@ function Board() {
         setScenariosViewId(selected[0].id);
         return;
       }
-      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf && (selected[0].data.html || selected[0].data.url)) {
-        e.preventDefault();
-        setHtmlReading(true);
-        setHtmlId(selected[0].id);
-        return;
+      if (selected.length === 1 && selected[0].data.kind === 'screen') {
+        const original = selected[0].data.copyOf ? getNodes().find((n) => n.id === selected[0].data.copyOf) : selected[0];
+        if (original?.data.html || original?.data.url) {
+          e.preventDefault();
+          setHtmlReading(true);
+          setHtmlId(selected[0].id);
+          return;
+        }
       }
     }
     if (hk === 'e' && !e.shiftKey) {
@@ -1106,6 +1128,14 @@ function Board() {
         return;
       }
       if (hk === 'v') return;
+    }
+    if (e.key.toLowerCase() === 'g' && !e.shiftKey) {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].data.copyOf) {
+        e.preventDefault();
+        goToOriginal(selected[0].id);
+      }
+      return;
     }
     if (e.key.toLowerCase() === 'a') {
       const selected = getNodes().filter((n) => n.selected);
@@ -1439,8 +1469,9 @@ function Board() {
       )}
       {htmlNode && (
         <HtmlDialog
-          key={htmlNode.id}
-          initialReading={htmlReading}
+          key={htmlTarget.id}
+          initialReading={htmlReading || htmlCopy}
+          readOnly={htmlCopy}
           title={`Screen mockup${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
           initial={htmlNode.data.html ?? ''}
           initialUrl={htmlNode.data.url ?? ''}

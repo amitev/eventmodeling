@@ -9,6 +9,7 @@ export const BoardActions = createContext({
   openFields: () => {},
   openHtml: () => {},
   viewHtml: () => {},
+  goToOriginal: () => {},
   openMovie: () => {},
   viewScenarios: () => {},
   readInfo: () => {},
