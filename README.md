@@ -45,6 +45,6 @@ To use another server port, set `PORT` for both: `$env:PORT=8080; npm run dev` (
 
 ## Model storage
 
-The board's **Push to server** / **Pull from server** buttons store Contexts in `.event-modeling/model/contexts.yaml`, and each Context, with its Chapters and their slices, in `.event-modeling/model/<context>.yaml`, relative to the directory the CLI was started in.
+The board stores Contexts (it pushes after every change) in `.event-modeling/model/contexts.yaml`, and each Context, with its Chapters and their slices, in `.event-modeling/model/<context>.yaml`, relative to the directory the CLI was started in.
 
 LLM agents edit the same files in small steps through the `/api/model` editing API (`GET /api/model/rules` lists what is allowed; see `spec/SERVER.md` section 4). The open board updates itself when the server model changes.

@@ -17,9 +17,9 @@ If the user already provided context name in their message, use it directly.
 
 ## Step 2 — Load the model
 
-Find the relevant context in .event-modeling/model/contexts.yaml and using its name, locate the corresponding chapters (they're in a folder with the context name with whitespaces replaced with _).
+Find the relevant context in .event-modeling/model/contexts.yaml; its Chapters are in the file named by `file` of its entry (e.g. .event-modeling/model/backoffice.yaml).
 
-Then get Chapter information by calling http://localhost:5173/api/model/contexts/<context id>/chapters?screenContent=true
+Then get Chapter information by calling http://localhost:5173/api/model/contexts/<context id>?screenContent=true
 
 Each response contains screens, commands, events, read models, specs, scenarios, actors, automations, and the edges between them.
 

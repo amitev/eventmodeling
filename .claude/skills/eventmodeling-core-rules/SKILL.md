@@ -37,6 +37,7 @@ A **slice** is the thinnest possible vertical cut through the model — exactly 
 state-change slice = SCREEN/AUTOMATION → COMMAND → EVENT(s)
 state-view slice   = EVENT(s) → READMODEL → SCREEN/AUTOMATION
 automation slice   = EVENT(s) → AUTOMATION → COMMAND → EVENT(s)
+translation slice   = EVENT(s) → AUTOMATION → COMMAND → EVENT(s)
 ```
 
 A slice never mixes a COMMAND and a READMODEL — those are two different slice types (`state-change` and `state-view`), even when they belong to the same feature. Slices are independently deployable and only communicate with each other via events.

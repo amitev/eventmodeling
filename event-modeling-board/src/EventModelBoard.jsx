@@ -53,7 +53,7 @@ import {
   makeEmptyBoard,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
-import { pushBoard, pullBoard, serverState, watchRevision, StaleError } from './state/sync.js';
+import { pushBoard, pullBoard, watchRevision, StaleError } from './state/sync.js';
 import { cleanName } from './model/names.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
@@ -103,6 +103,8 @@ const FILTER_KEY = 'event-model-board-context-filter';
 // How far above a Chapter's box Fit view reaches, in px. The title (top -126px, 44px high) and the
 // handle (top -74px) stand above the box; 100 shows the handle and the lower part of the title.
 const CHAPTER_TITLE_RISE = 100;
+// How long after the last change the board is pushed to the server (R10.1), in ms.
+const PUSH_DELAY_MS = 1000;
 
 function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
@@ -871,70 +873,94 @@ function Board() {
     setScenarioEdit(null);
   };
 
-  // Sync with the server (R10.5 to R10.7). `serverText` is the board's file (R6.2) as of the last
-  // pull or push, so a board that differs has unsynced changes.
+  // Sync with the server (R10.1 to R10.7). `serverText` is the board's file (R6.2) as of the last
+  // pull or push, so a board that differs has changes not yet pushed.
   const serverRevision = useRef(null);
   const serverText = useRef(null);
   const syncing = useRef(false);
   const ownRevisions = useRef(new Set());
   const latestBoard = useRef(null);
   latestBoard.current = { nodes, edges, contexts };
+  const [syncTick, setSyncTick] = useState(0);
 
-  const pushToServer = async () => {
-    syncing.current = true;
-    try {
-      let revision = serverRevision.current;
-      if (revision === null) {
-        const state = await serverState();
-        if (!state.empty && !window.confirm('The server may hold a different model. Overwrite it with this board?')) return;
-        revision = state.revision;
-      }
-      const pushed = await pushBoard(nodes, edges, contexts, revision);
-      serverRevision.current = pushed.revision;
-      serverText.current = boardText(nodes, edges, contexts);
-      pushed.pushed.forEach((r) => ownRevisions.current.add(r));
-      setNotice(`Pushed ${pushed.count} ${pushed.count === 1 ? 'Chapter' : 'Chapters'} to the server.`);
-    } catch (err) {
-      window.alert(
-        err instanceof StaleError
-          ? 'The server model changed since the last pull. Pull it first.'
-          : `Could not push to the server: ${err.message}`
-      );
-    } finally {
-      syncing.current = false;
-    }
+  const rememberPushes = (revision, pushed) => {
+    serverRevision.current = revision;
+    pushed.forEach((r) => ownRevisions.current.add(r));
   };
 
-  const pullFromServer = async (auto = false) => {
+  const pullFromServer = async () => {
     syncing.current = true;
     try {
-      const { board, revision } = await pullBoard();
+      const opening = serverRevision.current === null;
+      const board = latestBoard.current;
+      const dropsChanges = !opening && boardText(board.nodes, board.edges, board.contexts) !== serverText.current;
+      const pulled = await pullBoard();
+      // Opening is not an undo step: undo must not bring back the saved board (R10.2).
+      if (opening) markSilent();
       setSelectedCell(null);
       setActiveId(null);
-      setNodes(board.nodes);
-      setEdges(board.edges);
-      setContexts(board.contexts);
-      serverRevision.current = revision;
-      serverText.current = boardText(board.nodes, board.edges, board.contexts);
-      if (auto) setNotice('The board was updated with the changes made on the server.');
+      setNodes(pulled.board.nodes);
+      setEdges(pulled.board.edges);
+      setContexts(pulled.board.contexts);
+      serverRevision.current = pulled.revision;
+      serverText.current = boardText(pulled.board.nodes, pulled.board.edges, pulled.board.contexts);
+      if (!opening) {
+        setNotice(
+          dropsChanges
+            ? "The server model changed: the board's own changes were replaced by it."
+            : 'The board was updated with the changes made on the server.'
+        );
+      }
     } catch (err) {
-      window.alert(`Could not pull from the server: ${err.message}`);
+      setNotice(`Could not pull from the server: ${err.message}`);
     } finally {
       syncing.current = false;
     }
   };
 
-  // Auto-pull (R10.6): a changed server model is pulled when the board has no unsynced changes.
+  const pushToServer = async (board) => {
+    if (syncing.current || serverRevision.current === null) return;
+    syncing.current = true;
+    let outcome = 'failed';
+    try {
+      const pushed = await pushBoard(board.nodes, board.edges, board.contexts, serverRevision.current);
+      rememberPushes(pushed.revision, pushed.pushed);
+      serverText.current = boardText(board.nodes, board.edges, board.contexts);
+      outcome = 'pushed';
+    } catch (err) {
+      if (err.pushed) rememberPushes(err.revision, err.pushed);
+      if (err instanceof StaleError) outcome = 'stale';
+      else setNotice(`Could not push to the server: ${err.message}`);
+    } finally {
+      syncing.current = false;
+    }
+    if (outcome === 'stale') pullFromServer();
+    else if (outcome === 'pushed') setSyncTick((t) => t + 1);
+  };
+
+  // Auto-push (R10.1): 1 s after the last change, the board is pushed. A failure is retried with the
+  // next change.
+  useEffect(() => {
+    if (serverRevision.current === null) return;
+    if (boardText(nodes, edges, contexts) === serverText.current) return;
+    const timer = setTimeout(() => pushToServer({ nodes, edges, contexts }), PUSH_DELAY_MS);
+    return () => clearTimeout(timer);
+    // pushToServer only uses refs and state setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges, contexts, syncTick]);
+
+  // Open and auto-pull (R10.2, R10.6): the server model replaces the board when it has no known
+  // revision (opening, or after a lost connection that never answered) or a revision of someone else.
   useEffect(
     () =>
       watchRevision((revision) => {
-        if (syncing.current || serverRevision.current === null) return;
-        if (revision === serverRevision.current || ownRevisions.current.has(revision)) return;
-        const board = latestBoard.current;
-        if (boardText(board.nodes, board.edges, board.contexts) === serverText.current) pullFromServer(true);
-        else setNotice("The server model changed. Pull it to see the changes; the board's own changes are then lost.");
+        if (syncing.current) return;
+        const known = serverRevision.current;
+        if (known !== null && (revision === known || ownRevisions.current.has(revision))) return;
+        pullFromServer();
       }),
     // pullFromServer only uses refs and state setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -1400,12 +1426,6 @@ function Board() {
           + Chapter
         </button>
         <span className="spacer" />
-        <button onClick={pushToServer} title="Write every Chapter to the server's .event-modeling folder">
-          Push to server
-        </button>
-        <button onClick={() => pullFromServer()} title="Replace the board with the Chapters stored on the server">
-          Pull from server
-        </button>
         <button
           className="hotkeys-btn search-btn"
           onClick={() => setSearch((s) => ({ open: true, tick: s.tick + 1 }))}

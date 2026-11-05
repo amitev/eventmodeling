@@ -29,7 +29,7 @@ HTTP server that hosts the built board ([MODELING_BOARD.md](./MODELING_BOARD.md)
 
 ## 3. Model storage
 
-The board pushes its Contexts, with their Chapters, to the server and pulls them back (MODELING_BOARD.md section 10).
+The board pushes its Contexts, with their Chapters, to the server after every change and pulls them back when it opens and when the server changes (MODELING_BOARD.md section 10).
 
 - **S3.1** Files live in `<cwd>/.event-modeling/model/`, where `<cwd>` is the directory the CLI was started in. The folder is created as needed.
 - **S3.2** Written with `js-yaml`.
