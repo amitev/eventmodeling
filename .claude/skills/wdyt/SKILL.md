@@ -27,13 +27,14 @@ Find the relevant context in .event-modeling/model/contexts.yaml
 
 Then get Chapter information using the endpoint defined in ../api.md
 NEVER read the chapter files directly; always use the API. The only allowed file is .event-modeling/model/contexts.yaml
+Use the `model-navigation` skill for cheap reads (outline first, then only the content you need).
 
-Each response contains screens, commands, events, read models, specs, scenarios, actors, automations, and the edges between them.
+Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `QUERY`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Queries have `fields`, and a `SCENARIOS` element holds the scenarios.
 
 Keep track of:
 - All slice titles and their element types
-- Which slices have GWT (Given/When/Then) scenarios (specs) and which don't
-- The names of all EVENTs, COMMANDs, READMODELs, and SCREENs
+- Which slices have a `SCENARIOS` element with Given/When/Then scenarios and which don't
+- The names of all EVENTs, COMMANDs, QUERYs, and SCREENs
 - Edges/relationships between elements
 
 ---
@@ -63,11 +64,11 @@ Every question and every summary theme must be written in plain business languag
 - Are there **states** in which this command should be **rejected**? (e.g. "cancel order" — can you cancel an already-shipped order?)
 - Is there a **lifecycle** implied by the events (created → active → suspended → deleted) that isn't explicitly modelled?
 
-### Category D: Missing read models / screens
-- Only flag missing screens or read models if the current slice clearly implies one is needed but it's absent — e.g. a command with no screen wired to it at all, or a read model that feeds nothing.
+### Category D: Missing queries / screens
+- Only flag missing screens or queries if the current slice clearly implies one is needed but it's absent — e.g. a command with no screen wired to it at all, or a query that feeds nothing.
 - **Do not assume** that a confirmation screen, list view, or success state is missing just because it isn't in this slice. The model may simply not have reached that slice yet. Only ask if the gap is visible within this slice's own element graph.
 
-### Category E: Missing GWT scenarios (specs)
+### Category E: Missing GWT scenarios
 - Never say "missing spec" or "no specs". Ask as a business question grounded in the actual fields of the flow. Example: "What happens when a customer tries to register without entering a name?" — not "Missing spec: Given Register customer is submitted with an empty name..."
 - For flows with no scenarios, name 2–3 specific questions a product owner would ask — one for the happy path, one or two for real edge cases that the fields suggest could occur.
 - For flows with only a happy path covered, ask specifically what the team expects when the obvious edge case occurs — without mentioning "spec" or "scenario".
@@ -83,13 +84,13 @@ Every question and every summary theme must be written in plain business languag
 - Are there **scheduled / recurring** events implied but not modelled?
 
 ### Category H: Data completeness
-- Only flag missing data if a **downstream element within this model** clearly needs it and it isn't there — e.g. a screen that displays a field the read model doesn't carry.
+- Only flag missing data if a **downstream element within this model** clearly needs it and it isn't there — e.g. a screen that displays a field the query doesn't carry.
 - **Do not flag technical/infrastructure fields** (IDs, timestamps, correlation IDs, version numbers) as missing — these are implementation decisions, not business gaps.
 - **Do not assume** notifications (welcome email, verification, webhook) are missing just because they aren't modelled. They may belong to a different slice or context not yet built. Only ask if the model explicitly implies a notification is needed but nothing wires to it.
 
 ### Category J: What happens here? (screens and their elements)
 
-For a screen element the model leaves open — a button with no command, a field nobody stores, a result with no next screen, a command with no rule — ask the facilitator's questions from **`eventmodeling-workshop-questions`** (what happens, what is stored, what comes next, which business rules apply, an example). Same catalog and wording as the questions the prototype asks its players; don't write a second list here. An example you ask for is a future GWT scenario — say so.
+For a screen element the model leaves open — a button with no command, a field nobody stores, a result with no next screen, a command with no rule — ask the facilitator's questions: what happens, what is stored, what comes next, which business rules apply, and for an example. An example you ask for is a future GWT scenario — say so.
 
 ### Category I: Structural shapes
 This category is about the **shape of the model**, not any one flow's business logic — it needs the edge/relationship data and per-slice scenario counts gathered across *all* slices in Step 2, so run it once after all slices are loaded, not per-slice. Check the full element graph against the four shapes defined in `eventmodeling-core-rules`'s **Structural Shapes** section (the bed, left chair, right chair, shelf) — read that section for what each shape is, its threshold, and which one is an always-flag anti-pattern vs. a context-dependent candidate; this section only covers how to word and report the finding once you've decided it holds up.

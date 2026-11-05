@@ -11,7 +11,7 @@ description: Design and render a real HTML/CSS mockup onto a Screen element (cre
 
 Design an HTML/CSS mockup and store it as the `html` of a `SCREEN` element — creating the element if it doesn't exist yet, or updating it in place if it does. Use this to build a realistic, styled mockup (forms, tables, real page layout) rather than a wireframe sketch. A Screen holds **one** HTML document. A multi-step form is one Screen per step, not one document with hidden sections.
 
-All endpoints are in [../api.md](../api.md) (base URL `http://localhost:3300`). The server compacts the `html` on every write.
+All endpoints are in [../api.md](../api.md) (base URL `http://localhost:3300`). The server compacts the `html` on every write. To look things up in the model, use the `model-navigation` skill (cheap reads).
 
 ## Step 1 — Parse arguments
 
@@ -63,7 +63,7 @@ The body is JSON: escape quotes and line breaks in the HTML, e.g. build the body
 ```json
 { "slice": "<slice id>", "lane": "<actor lane id>", "type": "SCREEN", "name": "<screen name>", "html": "<markup>", "fields": [...] }
 ```
-Returns the new element (HTTP 201). `x` is optional: without it the element is placed like the board does. `autoConnect` is `true` by default: it connects a Query above/below in the same slice to the Screen (Query → Screen), which copies the Query's fields to it.
+Returns the new element (HTTP 201). `x` is optional: without it the element is placed like the board does. `autoConnect` is `true` by default: it connects a Query below the Screen in the same slice (Query → Screen), which copies the Query's fields to it. Other arrows: see the `connections` skill.
 
 On an error (400, 404, 409, 412, 422) read `error`, fix the cause and retry; do not leave the screen without `html`.
 

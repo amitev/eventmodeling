@@ -29,6 +29,12 @@ When writing the specification use the minimal wording needed that still retains
 
 We're still in alpha version. Forget about backwards compatibility when making changes.
 
+## Skills
+
+Skills are in `.claude/skills/`. Read `spec/*` only to write or update a skill; never refer to it from a skill: no file names (`spec/...`) and no rule numbers (R9.4, S4.19, ...). State the rule itself in the skill instead.
+
+When a skill refers to another skill, use its name in backticks (e.g. `element-fields`), not the path of its `SKILL.md`.
+
 ## Code layout
 
 - `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `server/public/`.

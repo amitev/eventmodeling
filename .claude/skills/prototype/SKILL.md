@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: Build a clickable, event-sourced prototype of one context (a MODEL_CONTEXT or a timeline's effective context) as a single HTML page the platform serves — React standalone, no build step, no server logic. Built slice by slice — one block per slice, each with a hash of its slice — so a re-run regenerates only the slices that changed on the board. Screens become tabs (one per screen name) rebuilt 1:1 from the board's HTML screens or sketches; each read model is one component, each command the inputs and button that fire it; events are recorded in an in-browser event store and can be browsed; logic and todo lists follow the GWT scenarios, which also run as an in-page check; automations appear in their own tab when their todo list has items. Read-only on the board. Use for "build a prototype of X", "make the Registration context clickable", "update the prototype".
+description: Build a clickable prototype of one context as pages in the /prototype folder, from the HTML of the context's Screens (each rendered in an iframe and wired from the parent page). Reads the model through the server API; read-only on the board. Use for "build a prototype of X", "make the Registration context clickable", "update the prototype".
 ---
 
 Clarification: Posting the questions means reporting.
@@ -20,13 +20,14 @@ If the user already provided context name in their message, use it directly.
 Find the relevant context in .event-modeling/model/contexts.yaml; its Chapters are in the file named by `file` of its entry (e.g. .event-modeling/model/backoffice.yaml).
 
 Then get Chapter information by calling http://localhost:5173/api/model/contexts/<context id>?screenContent=true
+Use the `model-navigation` skill for other reads (outline first, then only the content you need).
 
-Each response contains screens, commands, events, read models, specs, scenarios, actors, automations, and the edges between them.
+Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `QUERY`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Queries have `fields`, and a `SCENARIOS` element holds the scenarios.
 
 Keep track of:
 - All slice titles and their element types
-- Which slices have GWT (Given/When/Then) scenarios (specs) and which don't
-- The names of all EVENTs, COMMANDs, READMODELs, and SCREENs
+- Which slices have a `SCENARIOS` element with Given/When/Then scenarios and which don't
+- The names of all EVENTs, COMMANDs, QUERYs, and SCREENs
 - Edges/relationships between elements
 
 ---

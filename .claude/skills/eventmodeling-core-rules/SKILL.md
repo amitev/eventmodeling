@@ -1,48 +1,49 @@
 ---
 name: eventmodeling-core-rules
-description: Shared, foundational rules for every event-modeling step — what a COMMAND/EVENT/READMODEL/SCREEN/AUTOMATION is, how each is named, and the anti-patterns to reject. Not a step of its own — referenced upfront by every other eventmodeling-* skill instead of each restating its own copy. Do not use standalone.
+description: Shared, foundational rules for event modeling on the board — what a SCREEN/COMMAND/EVENT/QUERY/PROCESSOR is, how each is named, how slices and arrows follow the flow, and the anti-patterns to reject. Not a task of its own — referenced upfront by the other skills (element-fields, scenarios, connections, wdyt, ...) instead of each restating its own copy. Do not use standalone.
 ---
 
 # Event Modeling — Core Rules
 
-These rules apply to every step of event modeling, regardless of which step's SKILL.md you're currently following. Read this once per session — a step's own file only states what's specific to that step, not these fundamentals.
+These rules apply to every task on the board, regardless of which skill you're currently following. Read this once per session — a skill's own file only states what's specific to it, not these fundamentals.
 
 ## Modes
 
-Which step you're in sets the posture — don't mix them.
+What you were asked to do sets the posture — don't mix them.
 
-- **Modeling Mode** — `brainstorming-events`, `plotting-events`, `storyboarding-events`, `identifying-inputs`, `identifying-outputs`, `designing-automation-chains`, `elaborating-scenarios`, `translating-external-events`: explore and build. Capture the process as completely as you can. A naming slip or an incomplete precondition is something to flag and move past, not a reason to stall the whole step — don't over-correct early.
-- **Critic Mode** — `validating-event-models`, `validating-event-models-checklist`, `checking-completeness`, `wdyt`, `optimizing-stream-design`: review what's already there. Apply every rule in this file strictly. Surface every violation, gap, and inconsistency — don't soften a finding because the model "mostly works." Post findings as comments (`handle-comment`) rather than silently fixing them, unless the step explicitly says to fix.
+- **Modeling Mode** — building or changing the model (`html-screen`, `element-fields`, `connections`, `scenarios`): explore and build. Capture the process as completely as you can. A naming slip or an incomplete precondition is something to flag and move past, not a reason to stall the whole task — don't over-correct early.
+- **Critic Mode** — reviewing what's already there (`wdyt`): apply every rule in this file strictly. Surface every violation, gap, and inconsistency — don't soften a finding because the model "mostly works." Post findings as comments rather than silently fixing them, unless asked to fix.
 
-Don't mix them in one pass: a modeling step is not the place to run a full rules audit, and a critic step is not the place to quietly add missing structure on the model's behalf instead of flagging it.
+Don't mix them in one pass: a modeling task is not the place to run a full rules audit, and a critic task is not the place to quietly add missing structure on the model's behalf instead of flagging it.
 
 ## Lanes — What Lives Where
 
-Every column on a timeline has (at most) four rows, and each element type belongs in exactly one:
+Every Chapter has lanes of these types, always in this top-to-bottom order (several lanes of one type are allowed; a Chapter always has at least one Actor, Interaction and Event lane), and each element type belongs to specific lane types:
 
 | Lane type | Elements allowed | What it represents |
 |---|---|---|
-| `actor` | SCREEN, AUTOMATION | Who or what initiates — a human via a screen, or a system via an automation |
-| `interaction` | COMMAND, READMODEL | The business intent going in (COMMAND), or the query result coming out (READMODEL) |
-| `swimlane` | EVENT | The business fact recorded — which system/entity's own story this event belongs to |
-| `spec` | SCENARIO | The Given/When/Then behavior spec for this column's COMMAND or READMODEL |
+| `ACTOR` | SCREEN, PROCESSOR | Who or what initiates — a human via a screen, or a system via a processor |
+| `INTERACTION` | COMMAND, QUERY | The business intent going in (COMMAND), or the query result coming out (QUERY) |
+| `EVENT` | EVENT | The business fact recorded — which system/entity's own story this event belongs to |
+| `INTEGRATION` | EVENT, QUERY | Optional. Facts and views of external systems |
+| `SPEC` | SCENARIOS, NOTES | The Given/When/Then scenarios and notes of the slice. At most one element per Cell |
 
-An EVENT never shares a column with another EVENT even across different swimlane rows — one column is one moment in time. See `place-element` for the full placement mechanics; this table is only "what belongs where," not "how to place it."
+The lane types and what they take are also in `GET /api/model/rules`. This table is only "what belongs where," not how to place it.
 
 ## Slices
 
-A **slice** is the thinnest possible vertical cut through the model — exactly one COMMAND, one READMODEL, or one AUTOMATION's command, never combined:
+A **slice** is a vertical band across all lanes that groups the elements of one piece of behaviour: the thinnest possible cut — one COMMAND's behaviour, or one QUERY's view, never combined. Slices communicate with each other only via events.
+
+The board works out a slice's **type** from its elements, ignoring SCENARIOS and NOTES (a linked copy counts as its original's type). You never choose it:
 
 ```
-state-change slice = SCREEN/AUTOMATION → COMMAND → EVENT(s)
-state-view slice   = EVENT(s) → READMODEL → SCREEN/AUTOMATION
-automation slice   = EVENT(s) → AUTOMATION → COMMAND → EVENT(s)
-translation slice   = EVENT(s) → AUTOMATION → COMMAND → EVENT(s)
+state change = SCREEN? → COMMAND → EVENT(s)                    only Screen, Command and Event, at least a Command and an Event
+state read   = QUERY → SCREEN (fed by EVENTs of earlier slices)  only Query and Screen, at least a Query
+automation   = EVENT(s) → QUERY → PROCESSOR → COMMAND → EVENT  a Processor, a Command and an Event, no element in an Integration lane
+translation  = as automation, with at least one element in an Integration lane
 ```
 
-A slice never mixes a COMMAND and a READMODEL — those are two different slice types (`state-change` and `state-view`), even when they belong to the same feature. Slices are independently deployable and only communicate with each other via events.
-
-Slices are not placed directly — they're **derived** from a completed model. Every COMMAND on the board implies a `state-change` slice, every READMODEL implies a `state-view` slice, every AUTOMATION implies an `automation` slice — **except** a `linkedTo` copy (see Linked Copies below), which implies no slice of its own: it's the same underlying COMMAND/EVENT/READMODEL reused elsewhere on the board, not a second independently-deployable thing, so only the origin node's column gets a `SLICE_BORDER`. `eventmodeling-slicing-event-models` makes that implicit structure explicit on the board once modeling is done; it never invents a slice that isn't already implied by an element that's there, and skips columns whose only COMMAND/READMODEL is a linked copy.
+Anything else (and an empty slice) has no type. A slice never mixes a COMMAND and a QUERY outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
 
 ## Elements
 
@@ -52,26 +53,26 @@ Slices are not placed directly — they're **derived** from a completed model. E
   - Valid: `OrderPlaced`, `PaymentAuthorized`, `UserRegistered`
   - Invalid: `SidebarOpened`, `RequestCompleted`, `ApiCalled` — these describe machinery or UI state, not business facts
 - Immutable — never modify or delete an event once created; a correction is a new event, not an edit.
-- Contains only captured facts. No computed or derived values — those belong in a READMODEL.
+- Contains only captured facts. No computed or derived values — those belong in a QUERY.
 
 ### COMMAND
 - Represents business intent — what an actor wants to do.
 - Can be rejected; only succeeds if its documented preconditions hold.
-- Carries every piece of information its validation needs that isn't in the stream's prior events. That includes context such as the current time or date, the acting user and the tenant. The decision never reads a clock or a session on its own. See `eventmodeling-identifying-inputs` → "Command input is self-contained".
+- Carries every piece of information its validation needs that isn't in the stream's prior events. That includes context such as the current time or date, the acting user and the tenant (fields marked `generated`). The decision never reads a clock or a session on its own.
 - Naming: imperative, business language.
   - Valid: `PlaceOrder`, `ConfirmPayment`, `CancelSubscription`
   - Invalid: `LoadOrders`, `FetchData`, `OpenDialog` — these are queries or UI-only actions, not business intent
-- Issued by exactly one SCREEN or AUTOMATION — never two. See `place-element`'s Step 7c for the mechanical check/fix; this rule is stated here, the fix lives there.
+- Issued by exactly one SCREEN or PROCESSOR — never two: one inbound arrow, from a Screen or a Processor.
 - Produces one or more EVENTs on success, or is rejected with no event.
 
-### READMODEL
+### QUERY
 - A projection built from events, shaped for a specific query.
 - Naming: noun phrase, business language, named for the data — not the machinery that produces it.
   - Valid: `OrderSummary`, `InvoiceList`
   - Invalid: `OrderSummaryProjector`, `InvoiceListRepository` — implementation detail leaking into the model
-- Optional — nothing requires a READMODEL to exist for a COMMAND or a downstream consumer.
-- Never drives COMMAND validation directly — a COMMAND is checked against its own documented preconditions, not a read model.
-- **List-shaped read models**: when the whole READMODEL represents multiple rows (each row shaped by its defined fields), not a single projected record, set `meta.listElement: true` on the node itself — this is a node-level flag, distinct from a field's own `cardinality: "List"` (a single field holding multiple values). Every todo-list read model (see `eventmodeling-designing-automation-chains`) is list-shaped and always gets `listElement: true`; the same applies to any other READMODEL whose query naturally returns a set of rows (e.g. `ProductList`, `InvoiceList`). `eventmodeling-elaborating-scenarios` reads this flag to decide whether a scenario needs row-level `examples`/`expectEmptyList` instead of a single accumulated result.
+- Optional — nothing requires a QUERY to exist for a COMMAND or a downstream consumer.
+- Never drives COMMAND validation directly — a COMMAND is checked against its own documented preconditions, not a query.
+- **List-shaped queries**: when the QUERY returns multiple rows (each row shaped by its fields), not a single projected record, give it one `list: true` field of type `object` holding the row's fields — a field's `list` flag, not a flag of the element. Every todo-list query (see Translation Chain below) is list-shaped; so is any other QUERY that naturally returns a set of rows (e.g. `ProductList`, `InvoiceList`).
 
 ### SCREEN
 - Represents what a user sees and can act on.
@@ -79,8 +80,9 @@ Slices are not placed directly — they're **derived** from a completed model. E
   - Valid: `Dashboard`, `OrderOverviewPage`
   - Invalid: `OrderOverviewComponent`, `ProjectorView`
 
-### AUTOMATION
+### PROCESSOR
 - Represents an automated actor — a processor, scheduler, or system reacting to events.
+- Has no fields of its own: it passes on the fields of the Query that feeds it (Query → Processor → Command).
 - Naming: what it does, in business language.
   - Valid: `BillingScheduler`, `InventoryReserver`
   - Invalid: `OrderServiceHandler` — implementation-flavored, not a business actor's name
@@ -88,74 +90,65 @@ Slices are not placed directly — they're **derived** from a completed model. E
 ## Causality
 
 - Every EVENT traces to the COMMAND that produced it.
-- Every COMMAND traces to the SCREEN or AUTOMATION that issued it — exactly one.
-- A process starts with a read (SCREEN + READMODEL) or an AUTOMATION reacting to an existing EVENT — never with an unmotivated COMMAND.
+- Every COMMAND traces to the SCREEN or PROCESSOR that issued it — exactly one.
+- A process starts with a read (QUERY + SCREEN) or a PROCESSOR reacting to an existing EVENT — never with an unmotivated COMMAND.
 
-## Role Catalog
+## Roles
 
-Every event model needs one, established before brainstorming events (it's the first mandatory step) — without it, downstream steps have no way to say *who* does what:
-
-- **Human roles** (Customer, Seller, Admin...) and **system actors** (Payment Gateway, Scheduler...), each with: a name in domain language, a one-line description, its key actions, and what it explicitly cannot do.
-- No COMMAND may be attributed to a generic "User" — it must name a specific role or actor from the catalog.
-- Every COMMAND is issued by exactly one role/actor (this is the same rule as the COMMAND single-issuer rule above, stated from the Role Catalog's side).
-- Every human role needs at least one COMMAND and one READMODEL — a role in the catalog that never acts and never sees anything is decorative, not modeled.
-
-See `eventmodeling-brainstorming-events` for how the catalog is built, `eventmodeling-identifying-inputs` for attributing commands to it, and `eventmodeling-validating-event-models` for re-checking it holds once the model is complete.
+- Name Actor lanes (and the Screens and Processors in them) for a specific **human role** (Customer, Seller, Admin...) or **system actor** (Payment Gateway, Scheduler...) in domain language. No COMMAND may be attributed to a generic "User".
+- Every COMMAND is issued by exactly one role/actor (the single-issuer rule above, from the roles' side).
+- A human role needs at least one COMMAND and one QUERY — a role that never acts and never sees anything is decorative, not modeled.
 
 ## Field Lineage (Information Completeness)
 
-Every field on every element has a known source: a same-named field on a connected upstream element, a `mapping` to a differently named field or a connected event, or `generated: true` where the information starts. Check it each time you add or rename a field. **A field with no source is a gap, not a detail to fill in later.** The full rule, per element type, is in `eventmodeling-information-completeness`.
+Every field on every element has a known source: a same-named field on a connected upstream element, or `generated: true` where the information starts. Check it each time you add or rename a field (see the `element-fields` skill for how fields move along arrows). **A field with no source is a gap, not a detail to fill in later.**
 
 ## Connections Read Forward
 
-A connection either goes **downward within the same column** (actor → interaction → swimlane → spec) or **forward to a later column** — never backward (right-to-left). This is why elements that belong together — a SCREEN and the READMODEL it queries, a SCREEN/AUTOMATION and the COMMAND it issues, a COMMAND and the EVENT it produces — should share a column whenever possible: the moment they don't, a backward arrow becomes a real risk.
+Within a slice an arrow goes vertically between lanes (Screen → Command → Event, Query → Screen). Between slices it goes **forward to a later slice** — never backward (right-to-left). This is why elements that belong together — a SCREEN and the QUERY it shows, a SCREEN/PROCESSOR and the COMMAND it issues, a COMMAND and the EVENT it produces — should share a slice whenever possible: the moment they don't, a backward arrow becomes a real risk.
 
-When an element's natural column is already occupied by something else, insert a new column immediately before or after (whichever keeps every connection forward) rather than wiring across the gap. See `place-element` for the mechanical insertion rules and each step's own placement section for where "before" vs. "after" applies.
+When an element's natural slice is already occupied by something else, add a new slice immediately before or after (whichever keeps every connection forward) rather than wiring across the gap. The allowed arrows and how to create them are in the `connections` skill.
 
-## Updating a Read Model That Already Feeds a Screen
+## Updating a Query That Already Feeds a Screen
 
-A later EVENT sometimes needs to change data an earlier READMODEL already shows on a SCREEN — e.g. a cancellation affecting an "active items" view placed several columns earlier. Wiring that later EVENT straight back into the existing READMODEL is never the fix: it's a backward connection, and the platform only accepts a backward `EVENT → READMODEL` edge when the READMODEL already has a `READMODEL → AUTOMATION` edge (the todo-list pattern — see Translation Chain below). A READMODEL that only feeds a SCREEN never qualifies for that exemption.
+A later EVENT sometimes needs to change data an earlier QUERY already shows on a SCREEN — e.g. a cancellation affecting an "active items" view placed several slices earlier. Wiring that later EVENT straight back into the existing QUERY is never the fix: it's a backward arrow (see Connections Read Forward).
 
-Instead, place a **new READMODEL node** in a new column **immediately after** the later event's column, then link it to the earlier READMODEL instance via the `linkedTo` copy mechanism below (`link_element`) — it *is* the same read model, carried forward to a later state, not an unrelated new one, so it uses the same copy mechanism as any other reused fact. Connect the later event forward into the linked copy, then update whichever field(s) that event actually changes (e.g. `status`) on the copy — the fields it inherited from the link that the new event doesn't touch stay as copied. Give it a matching SCREEN in that same new column — same screen name/title as the earlier one, showing the updated data, optionally re-marked/highlighted via `html-screen`'s Marks feature to call out what changed. A SCREEN can never itself be a `linkedTo` copy (the mechanism only supports COMMAND/EVENT/READMODEL), so the new SCREEN is placed as a plain node matching the earlier one's title, not linked. Leave the earlier READMODEL/SCREEN instance exactly as it is — it's still what that earlier point in the timeline correctly showed. Never delete it.
-
-See `eventmodeling-identifying-outputs` Step 5g for the full placement/wiring mechanics, and `place-element` Step 6 for the column-insertion mechanics.
+Instead, add a **new QUERY** in a slice **immediately after** the later EVENT's slice, with a matching SCREEN there (same name as the earlier one, showing the updated data). Connect the later EVENT forward into the new QUERY: the arrow copies the Event's fields into it, and the rest of the QUERY's fields are the ones the view needs. It is a normal QUERY, not a linked copy: a linked copy shows its original unchanged and cannot be edited, so use one only where the later point shows the same data unchanged. The new SCREEN is a normal Screen with its own mockup. Leave the earlier QUERY and SCREEN exactly as they are — they're still what that earlier point in the timeline correctly showed. Never delete them.
 
 ## Linked Copies
 
-A **linked copy** is a COMMAND/EVENT/READMODEL node that mirrors another node elsewhere on the board — most often needed because `set_connection`/auto-connect only ever pairs nodes on the same timeline, so a node on a different timeline can't be wired to directly. The same marking obligation applies whenever a node is reused rather than newly wired anywhere on the board, same timeline included: never place a node that repeats another swimlane's already-recorded fact under its own unlinked identity — either connect forward to the original, or mark it a linked copy. The one exception is a translation chain's own internal EVENT (`eventmodeling-designing-automation-chains`): it is a genuine new domain fact recorded in this side's own language, not a copy, even when it shares the external EVENT's name.
+A **linked copy** (`copyOf` the id of its original) is an element of the same type that mirrors another element elsewhere on the board — in another slice or Chapter. Any element except Scenarios and Notes can be copied; a copy of a copy is a copy of the original. Reuse a fact like this: never place an element that repeats another lane's already-recorded fact under its own unlinked identity — either connect forward to the original, or make a linked copy. The one exception is a translation chain's own internal EVENT (see Translation Chain below): it is a genuine new domain fact recorded in this side's own language, not a copy, even when it shares the external EVENT's name.
 
-To make one: place a normal new node of the same type (COMMAND/EVENT/READMODEL only) at the target spot, then link it to the origin (`link_element`, or the REST `.../nodes/:nodeId/link` fallback). This replaces the new node's `meta` with a full copy of the origin's and sets `meta.linkedTo` to the origin's node id — the authoritative pointer (a `data.linkedTo` also exists but is a rendering mirror only, not the source of truth). Wire the resulting copy to its own neighbors normally afterward.
+To make one: `POST /elements` with `{ slice, lane, copyOf }` (the lane must take the original's type), then connect it to its own neighbors normally (the `connections` skill).
 
-A linked copy is allowed to diverge from its origin afterward in the specific field(s) a newly-connected event actually drives — e.g. the "Updating a Read Model That Already Feeds a Screen" copy above, where `status` is updated post-link to the event's new value. The link establishes "this is the same underlying fact, not a duplicate" at creation time; it doesn't freeze the copy's fields identical to the origin's forever.
+A linked copy shows its original's type and content (name, fields, mockup) **live** and **cannot be changed**: only `slice`, `lane` and `x`; any other change is refused (409) and must be made on the original. It gets no fields from arrows, but its original's fields pass on along its arrows. So a copy never diverges from its original: a view that must show changed data is a new element (see Updating a Query That Already Feeds a Screen).
 
-**Scenarios (and storylines) are always added to the original, never to a copy.** A copy is the same fact reused, so its GWT spec lives once, in the origin's column. Before calling `add_scenario`/`add_storyline`, check `meta.linkedTo` on the target node and follow it to the origin. `eventmodeling-elaborating-scenarios` carries the step-by-step.
+**Scenarios are always added to the original, never to a copy.** A scenario can only choose an Event or Command that is not a copy and sits in the same Chapter as its Scenarios element. The `scenarios` skill carries the step-by-step.
 
-Never delete the original (the node with no `linkedTo`) once copies of it exist — copies reference it, and removing it breaks every copy. `eventmodeling-checking-completeness` already treats any `linkedTo`-marked node as an intentional copy, never a duplicate or missing-slice gap to flag.
-
-See `place-element` Step 6a for the mechanical linking steps.
+Deleting the original deletes all its copies, its arrows and the scenarios that use it: never delete an original that has copies without asking the user first.
 
 ## Translation Chain
 
-An AUTOMATION reacting to an event from another system — external (a webhook/API) or second-swimlane (another team's own timeline) — needs a two-stage shape, never a direct reaction:
+A PROCESSOR reacting to an event from another system — external (a webhook/API, an element in an Integration lane) or another team's own timeline — needs a two-stage shape, never a direct reaction:
 
 ```
-external EVENT → todo-list READMODEL → translation AUTOMATION + COMMAND → internal EVENT → worker automation's own todo list
+external EVENT → todo-list QUERY → translation PROCESSOR → COMMAND → internal EVENT → worker PROCESSOR's own todo-list QUERY
 ```
 
-- The external/second-swimlane EVENT opens only a *translation* automation's todo list — never a *worker* automation's todo list directly.
-- A translation automation's own todo list is opened by that external event and is never closed — it doesn't track "done," it only relays.
-- Its resulting COMMAND produces the internal EVENT the domain actually works with — that's the moment external data becomes a business fact in this domain's own language, ready for a worker automation (or anything else) to react to.
+- The external/other-team EVENT feeds only a *translation* processor's todo list — never a *worker* processor's todo list directly.
+- A translation processor's own todo list is opened by that external event and is never closed — it doesn't track "done," it only relays.
+- Its resulting COMMAND produces the internal EVENT the domain actually works with — that's the moment external data becomes a business fact in this domain's own language, ready for a worker processor (or anything else) to react to. Decide explicitly how the external payload's raw fields map to the internal EVENT's domain fields (correlation, idempotency, duplicate handling).
 
-Every AUTOMATION, translation or worker, needs its own todo-list READMODEL (opened by triggering events, closed by completion events) — no "pure relay" exemption. See `eventmodeling-designing-automation-chains` for the todo-list pattern and board placement mechanics, and `eventmodeling-translating-external-events` for mapping the external payload's raw fields to the internal EVENT's domain fields (correlation, idempotency, duplicate handling).
+Every PROCESSOR, translation or worker, needs its own todo-list QUERY (opened by triggering events, closed by completion events: EVENT → QUERY arrows) — no "pure relay" exemption. A todo-list QUERY is list-shaped (see QUERY above). A slice with a PROCESSOR, a COMMAND, an EVENT and an element in an Integration lane is a `translation` slice (see Slices).
 
 ## Open Questions vs. Decided Failures
 
 Two different things are easy to conflate, and conflating them corrupts completeness checking:
 
-- **Open question** — something genuinely undecided. Post it as a `COMMENT` (`handle-comment`) on the relevant node, worded as a question. There is no separate question type at the API level — it stays open (unresolved) until someone actually answers it, resolving means answering, not deleting the comment.
-- **Decided failure** — a rejection or error case whose behavior is already decided (e.g. "payment fails → reject, no event"). Model it as a SCENARIO with `expectError: true` and an `errorDescription` (see `eventmodeling-elaborating-scenarios`), never as a comment. It's permanent, specified behavior, not something waiting on an answer.
+- **Open question** — something genuinely undecided. Post it as a comment on the relevant element, worded as a question. There is no separate question type — it stays open (unresolved) until someone actually answers it, resolving means answering, not deleting the comment.
+- **Decided failure** — a rejection or error case whose behavior is already decided (e.g. "payment fails → reject, no event"). Model it as a scenario with an `error` text and no Then Events (the `scenarios` skill), never as a comment. It's permanent, specified behavior, not something waiting on an answer.
 
-A decided failure left as a lingering, unresolved question comment looks unresolved when it isn't. When counting completeness (`eventmodeling-checking-completeness`), only a genuinely unanswered question comment counts as a gap — a decided failure path needs its `expectError` scenario, not a comment standing in for one.
+A decided failure left as a lingering, unresolved question comment looks unresolved when it isn't. When counting completeness, only a genuinely unanswered question comment counts as a gap — a decided failure path needs its scenario with an `error`, not a comment standing in for one.
 
 ## Offline-First Thinking
 
@@ -177,34 +170,34 @@ Example (a template-driven health record system):
 
 ## Anti-Patterns
 
-- **Data-loading commands**: `LoadOrders`/`FetchData` are queries, not business intent — model as a READMODEL, not a COMMAND.
+- **Data-loading commands**: `LoadOrders`/`FetchData` are queries, not business intent — model as a QUERY, not a COMMAND.
 - **UI-interaction events**: `SidebarOpened`/`ButtonClicked` are UI state, not business facts — don't model them unless the business genuinely cares.
 - **Technical events**: `ApiCalled`/`ResponseReceived` describe machinery, not an outcome — find the business fact underneath.
-- **Calculated events**: an event whose value is recomputed as source data changes (a running total, an average) is a READMODEL, not an EVENT.
+- **Calculated events**: an event whose value is recomputed as source data changes (a running total, an average) is a QUERY, not an EVENT.
 
 ## Structural Shapes
 
-Beyond the local anti-patterns above, four recurring **connection shapes** are worth checking whenever the model's wiring is visible — a fan-out or fan-in count crossing a rough threshold. Only one is a real anti-pattern regardless of context; the other three are **candidates** — worth checking against the business context, not automatically wrong. Reason about the actual events/fields/scenarios involved before flagging a candidate; if the domain justifies the count, it's not a violation. These are internal shorthand names for spotting the shape — never surface "bed", "left chair", "right chair", or "shelf" in anything shown to a business stakeholder (a board comment, a report); describe the concern in plain terms instead.
+Beyond the local anti-patterns above, four recurring **connection shapes** are worth checking whenever the model's arrows are visible — a fan-out or fan-in count crossing a rough threshold. Only one is a real anti-pattern regardless of context; the other three are **candidates** — worth checking against the business context, not automatically wrong. Reason about the actual events/fields/scenarios involved before flagging a candidate; if the domain justifies the count, it's not a violation. These are internal shorthand names for spotting the shape — never surface "bed", "left chair", "right chair", or "shelf" in anything shown to a business stakeholder (a comment, a report); describe the concern in plain terms instead.
 
 - **The bed (real anti-pattern — always flag)** — one SCREEN wired to more than one COMMAND. A screen is where the user has already committed to one decision, so it should trigger exactly one command; wiring several to it means the choice is being made somewhere invisible to the model.
 - **The left chair (candidate)** — one COMMAND resulting in more than two EVENTs. May mean the command is doing more than one job, or it may be a single business outcome that legitimately fans out. Check whether the outcomes always happen together or could happen independently before treating it as a concern.
-- **The right chair (candidate)** — one READMODEL built from more than three EVENTs. May mean the view is answering more than one question at once, or it may be one coherent picture that genuinely needs that many sources. Check whether the fields shown belong to a single thing the user is checking before treating it as a concern.
-- **The shelf (candidate)** — one slice with noticeably more SCENARIOs than the others on the same timeline (a rough outlier, not a fixed threshold — compare against the typical count for that timeline). May mean the step is quietly covering ground that belongs to a separate step, or it may just be genuinely more complex. Check what the extra scenarios actually cover before treating it as a concern.
+- **The right chair (candidate)** — one QUERY built from more than three EVENTs. May mean the view is answering more than one question at once, or it may be one coherent picture that genuinely needs that many sources. Check whether the fields shown belong to a single thing the user is checking before treating it as a concern.
+- **The shelf (candidate)** — one slice with noticeably more scenarios than the others in the Chapter (a rough outlier, not a fixed threshold — compare against the typical count for that Chapter). May mean the step is quietly covering ground that belongs to a separate step, or it may just be genuinely more complex. Check what the extra scenarios actually cover before treating it as a concern.
 
 ## Flow & Causality
 
 Model causality, not strict sequence:
 
-- A timeline starts with a **state-view** (READMODEL feeding a SCREEN) or an **automation** reacting to an EVENT already on the board — never with an unmotivated COMMAND.
-- Every COMMAND must be traceable to a trigger: a SCREEN (a user decision) or an AUTOMATION (a system reaction).
-- A `state-change` slice must not follow another `state-change` slice without a trigger in between (a new SCREEN or AUTOMATION) — two COMMANDs in a row with nothing issuing the second one is a gap, not a shortcut.
+- A Chapter starts with a **state read** slice (a QUERY feeding a SCREEN) or an **automation** reacting to an EVENT already on the board — never with an unmotivated COMMAND.
+- Every COMMAND must be traceable to a trigger: a SCREEN (a user decision) or a PROCESSOR (a system reaction).
+- A `state change` slice must not follow another `state change` slice without a trigger in between (a new SCREEN or PROCESSOR) — two COMMANDs in a row with nothing issuing the second one is a gap, not a shortcut.
 
-Valid transitions between slices:
-- state-view → state-change
-- state-change → state-view
-- state-change → automation
-- automation → state-change
-- automation → state-view
+Valid transitions between slices (types as in Slices; a `translation` slice follows the rules of `automation`):
+- state read → state change
+- state change → state read
+- state change → automation
+- automation → state change
+- automation → state read
 
 ## Quick Self-Check
 
@@ -212,13 +205,12 @@ Before treating a model as done, verify:
 
 - [ ] Every EVENT is past tense and describes a business fact, not machinery or UI state
 - [ ] Every COMMAND is imperative business intent, not a data-loading query
-- [ ] Every READMODEL is named for its data, not its implementation
-- [ ] No EVENT holds a computed/aggregated value — that belongs in a READMODEL
-- [ ] Every COMMAND has exactly one issuer (one inbound SCREEN or AUTOMATION edge)
-- [ ] Every COMMAND traces back to a SCREEN (user decision) or AUTOMATION (system reaction)
-- [ ] The timeline starts with a state-view or an automation reacting to an event — not a bare COMMAND
-- [ ] No two `state-change`/`state-change` slices are chained without a new trigger between them
+- [ ] Every QUERY is named for its data, not its implementation
+- [ ] No EVENT holds a computed/aggregated value — that belongs in a QUERY
+- [ ] Every COMMAND has exactly one issuer (one inbound arrow from a SCREEN or PROCESSOR)
+- [ ] Every COMMAND traces back to a SCREEN (user decision) or PROCESSOR (system reaction)
+- [ ] The Chapter starts with a state read or an automation reacting to an event — not a bare COMMAND
+- [ ] No two `state change` slices are chained without a new trigger between them
 - [ ] No SCREEN is wired to more than one COMMAND (the bed — see Structural Shapes)
 - [ ] The model follows one real flow with real data, not a generic one (see Concrete Over Generic)
-
-This is the fast pass — the full, deeper check is `eventmodeling-validating-event-models-checklist`.
+- [ ] Every field has a source (see Field Lineage)
