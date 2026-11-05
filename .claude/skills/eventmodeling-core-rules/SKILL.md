@@ -150,6 +150,10 @@ Two different things are easy to conflate, and conflating them corrupts complete
 
 A decided failure left as a lingering, unresolved question comment looks unresolved when it isn't. When counting completeness, only a genuinely unanswered question comment counts as a gap — a decided failure path needs its scenario with an `error`, not a comment standing in for one.
 
+## Info and Notes
+
+`info` (Markdown on a Chapter, lane, slice or element) is reserved mainly for implementation details: formats, limits, integrations, technical constraints. Do not use it for source citations, summaries or traceability. A summary, an open question or a remark for the reader goes in a Notes element (Spec lane, one per Cell).
+
 ## Offline-First Thinking
 
 Model the business process as it would work without any software first, then translate to elements:

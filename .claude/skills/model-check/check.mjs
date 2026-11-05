@@ -138,6 +138,14 @@ for (const ch of chapters.filter(wanted)) {
     const slice = ch.slices.find((s) => s.elements.includes(sc));
     for (const s of sc.scenarios ?? []) {
       const ctx = { chapter: ch, slice, el: { ...sc, name: `scenario "${s.name}"` } };
+      const unknown = [];
+      for (const [tag, en] of [...s.given.map((g) => ['Given', g]), ...(s.when ? [['When', s.when]] : []), ...s.then.map((t) => ['Then', t])]) {
+        const target = byId.get(en.element)?.el;
+        if (!target) continue;
+        const known = new Set(fieldsOf(target).map((f) => f.name));
+        for (const k of Object.keys(en.example ?? {})) if (!known.has(k)) unknown.push(`${tag} ${nameOf(target)}.${k}`);
+      }
+      if (unknown.length) add('GAP', ctx, `example key(s) that are not fields of their element: ${unknown.join(', ')}`);
       if (s.when) used.add(s.when.element);
       if (!s.when) add('GAP', ctx, 'has no When (Command)');
       if (!s.then.length && s.error === null) add('GAP', ctx, 'has neither Then Events nor an expected error');

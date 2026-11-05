@@ -24,6 +24,7 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 - An arrow copies all the source's fields to the target, replacing same-named fields. An element's own `fields` in the same `POST` are kept, then the parent's fields are merged in: give each element only the fields it adds, the rest arrives by itself.
 - A Processor never gets an automatic arrow; every arrow not listed above is created with `POST /connections`.
 - The right-most Event of the previous slice is only a guess. When the Query should be fed by other Events (or by several), create it with `"autoConnect": false` and connect the right ones explicitly.
+- Do not use `info` on the elements you create for notes, source citations or summaries: it is reserved mainly for implementation details (formats, limits, integrations, technical constraints). Notes and summaries go in Notes elements.
 
 ## Recipes
 
@@ -41,7 +42,7 @@ Without a Screen (the trigger is not a person) it is not this recipe: use Automa
 ### State read — Query → Screen
 
 1. Slice as above.
-2. `POST /elements` Query: `{ slice: "$s", lane: <Interaction lane>, type: "QUERY", name, fields }`; fed by the Events that build it (an automatic arrow from the previous slice's right-most Event, or `autoConnect: false` and then `POST /connections` per Event, `{ from: <event>, to: "$q" }`). A Query that returns rows has a `list: true` `object` field.
+2. `POST /elements` Query: `{ slice: "$s", lane: <Interaction lane>, type: "QUERY", name, fields }`; fed by the Events that build it (an automatic arrow from the previous slice's right-most Event, or `autoConnect: false` and then `POST /connections` per Event, `{ from: <event>, to: "$q" }`). A Query that returns rows has a `list: true` `object` field. **Order matters:** each Event arrow copies the Event's fields into the Query as flat fields, and every later arrow out of the Query copies the Query's fields at that moment. So connect the Events first, then `PATCH` the Query to its final fields (the list field), and only then create the Screen (step 3) or connect the Query onward; otherwise the Screen gets the Event's flat fields.
 3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (what is entered or calculated on top of the Query's fields) → arrow Query → Screen, the Query's fields copied.
 
 Events from another Chapter cannot be reached by the automatic arrow: link them with a linked copy (`POST /elements` `{ slice, lane, copyOf }`) or connect them directly (`connections`).
@@ -49,11 +50,12 @@ Events from another Chapter cannot be reached by the automatic arrow: link them 
 ### Automation — Event → Query → Processor → Command → Event
 
 1. Slice as above.
-2. Query (the **todo list**, list-shaped): `{ type: "QUERY", lane: <Interaction lane> }`, fed by the Events that open it and, with the same rule, the Events that close it.
+2. Query (the **todo list**, list-shaped): `{ type: "QUERY", lane: <Interaction lane> }`, `autoConnect: false`. Connect the Events that **open** it (`POST /connections`, one per Event), then `PATCH` the Query to its final fields (the list field: arrows copy the Events' flat fields into it) **before** any arrow leaves it (step 5).
 3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, name }` (no fields).
 4. Command: `{ type: "COMMAND", lane: <Interaction lane>, name, fields }`.
 5. `POST /connections` `{ from: "$q", to: "$p" }` and `{ from: "$p", to: "$cmd" }`: the Processor passes the Query's fields on to the Command.
 6. **Only now** the Event(s): `{ type: "EVENT", lane: <Event lane>, name }` → arrow Command → Event is automatic. Fields copy one hop only, so an Event created before step 5 gets none of the Query's fields through the Command.
+7. The Events that **close** the todo list are these Events (the Command's): connect each to the Query (`POST /connections` `{ from: <event>, to: "$q" }`), then `PATCH` the Query's fields once more (the arrow copies the Event's flat fields into it). Without this arrow an item never closes.
 
 ### Translation — external Event → Query → Processor → Command → internal Event
 

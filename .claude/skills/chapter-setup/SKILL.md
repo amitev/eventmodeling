@@ -20,6 +20,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 | Flow end | `flowEnd: true` marks a slice as the end of a flow. |
 | Deleting | Deleting a lane or slice deletes its elements, their arrows, their linked copies and the scenarios that use them. Deleting a Chapter deletes all of its elements. Deleting a Context moves its Chapters to the Default. |
 | Ids | Created by the server, unique in the whole model. |
+| Info | Markdown on a Chapter, lane, slice or element, empty by default. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements. |
 
 ## Step 1 — Look first
 

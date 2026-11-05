@@ -1,6 +1,6 @@
 ---
 name: html-screen
-description: Design and render a real HTML/CSS mockup onto a Screen element (creating the element if needed) — this is the default skill for any "design a screen" / "storyboard this" request; wireframe sketches (storyboard-screen) are used only when the user explicitly asks for one
+description: Design and render a real HTML/CSS mockup onto a Screen element (creating the element if needed), optionally in the style of another Screen the user names — this is the default skill for any "design a screen" / "storyboard this" request; wireframe sketches (storyboard-screen) are used only when the user explicitly asks for one
 ---
 
 # HTML Screen Designer
@@ -22,6 +22,7 @@ Get the screen name from the user (and the Chapter, if they name one).
    - Several (names are not unique): ask the user which one (name the Chapters), never guess.
    - None: the screen is new. Get the target with `GET /api/model/outline` and ask the user in which Chapter and slice it goes. The `lane` is a lane of that Chapter with `type` `ACTOR` (see `GET /api/model/rules`); `slice` is a slice id of the Chapter. Ask if the Chapter has several Actor lanes.
 2. A linked copy (it has `copyOf` in `GET /api/model/elements/:id`) cannot be changed: use its original's id instead.
+3. **Style reference.** Only when the user **names** another Screen as the base for the look ("in the style of X", "same look as X", "based on X"): note its name for Step 2a. Never choose a reference yourself.
 
 ## Step 2 — If updating an existing screen, load its current HTML first
 
@@ -31,9 +32,22 @@ Get the screen name from the user (and the Chapter, if they name one).
 - If the screen has a `url` (it shows a web page) and no `html`: writing `html` **removes the `url`**. Ask the user before doing that.
 - Note the `fields` (Step 5).
 
+## Step 2a — Style from another Screen (only when the user named one)
+
+Skip this step unless Step 1 noted a style reference.
+
+1. Find the reference as in Step 1: `GET /api/model/search?q=<name>&type=SCREEN`, keep the results whose `name` equals it. Several: ask which one (name the Chapters). None: say so and ask.
+2. Read its mockup: `GET /api/model/elements/:id` (`html`). A linked copy has no `html` of its own: read its original (`copyOf`). Do not print the whole document into the conversation: pull out the `<style>` blocks and the repeated parts of the markup (header, navigation, buttons, inputs, tables, cards) with a short shell filter. See `model-navigation`.
+3. A reference with a `url` and no `html` (a web page) has no styling to take: tell the user and ask what to do. A reference with no mockup at all: say so.
+4. **Take the look:** the `<style>` rules (page background, colours, fonts and sizes, spacing, borders, radii, shadows) and the styling and class names of the components the new Screen also needs (buttons, inputs, labels, tables, cards, header or navigation bar, footer). Reuse its class names and markup patterns for those components, and copy only the CSS rules the new page uses.
+5. **Do not take:** the reference's content (texts, example data, field names, headings), or its page layout and width. The full-width rule of Step 3 still applies: a narrow centred card in the reference becomes the card style of an inner panel, not the width of the page. Take the layout too only when the user says so ("same layout").
+6. The reference is **never changed**: no `PATCH` on it.
+7. Updating an existing Screen with a style reference means restyling it: the user asked for a new look. Keep its content and structure; only the look changes.
+8. Two or more named references: ask which look wins where they differ.
+
 ## Step 3 — Design the page
 
-Write normal, full-size HTML/CSS — as if designing a real webpage, not a tiny thumbnail. The board lays the mockup out at **1024x768** (4:3) and scales it down to fit; content beyond 1024x768 is cut off and nothing scrolls. Design at a realistic scale (e.g. 16px body text, generous padding) and make it fit that frame.
+Write normal, full-size HTML/CSS — as if designing a real webpage, not a tiny thumbnail. With a style reference (Step 2a), its look is the base: the new page must read as part of the same product. The board lays the mockup out at **1024x768** (4:3) and scales it down to fit; content beyond 1024x768 is cut off and nothing scrolls. Design at a realistic scale (e.g. 16px body text, generous padding) and make it fit that frame.
 
 Guidelines:
 - **Keep it simple — this is a view-only mockup, not a working app.** No JavaScript, no interactivity beyond what a static page can show. The preview runs in a sandbox without scripts or form submission.
@@ -91,6 +105,7 @@ A field is `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, 
 
 Tell the user:
 - The element ID that was created or updated
+- The style reference, when there was one: which Screen (name, Chapter), what was taken (for example colours, fonts, buttons, header) and what was left out on purpose (content, width)
 - Whether the write succeeded (HTTP 200 for an update, 201 for a new screen) and the Chapter it is in
 - Which fields the screen now has, and which of them are generated
 - That the open board shows the change by itself (it pulls the server model and replaces any changes not yet pushed)
