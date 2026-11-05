@@ -10,6 +10,9 @@
     "server/index.js",
     "server/app.js",
     "server/api.js",
+    "server/http-error.js",
+    "server/model-edit.js",
+    "server/model-rules.js",
     "server/model-store.js",
     "server/html-compact.js",
     "server/public"

@@ -1,17 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
+import { HttpError } from './http-error.js';
+import { byPosition, canonical, validateModel } from './model-rules.js';
 
+export { HttpError };
 export const DATA_DIR = '.event-modeling';
 export const CONTEXTS_FILE = 'contexts.yaml';
-
-export class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
 
 const ILLEGAL = /[\\/:*?"<>|\u0000-\u001f]/;
 const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i;
@@ -54,11 +51,6 @@ function compactScreens(chapter) {
   };
 }
 
-const byPosition = (a, b) => {
-  const n = (v) => (Number.isFinite(v) ? v : 0);
-  return n(a.x) - n(b.x) || n(a.y) - n(b.y) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-};
-
 const yaml = (data) => dump(data, { noRefs: true, lineWidth: -1 });
 
 // The board kept under <root>/.event-modeling/model/:
@@ -70,6 +62,8 @@ export class ModelStore {
   #root;
   #model;
   #queue = Promise.resolve();
+  #revision = null;
+  #listeners = new Set();
 
   constructor(root) {
     this.#root = root;
@@ -80,6 +74,114 @@ export class ModelStore {
     const result = this.#queue.then(task);
     this.#queue = result.catch(() => {});
     return result;
+  }
+
+  // The revision (S4.1): a hash of the stored files, so it changes with every change of them.
+  async #revisionNow() {
+    const hash = createHash('sha256');
+    let names = [];
+    try {
+      names = (await fs.readdir(this.#model, { withFileTypes: true })).filter((f) => f.isFile() && f.name.endsWith('.yaml')).map((f) => f.name);
+    } catch (e) {
+      if (e.code !== 'ENOENT') throw e;
+    }
+    for (const name of names.sort()) {
+      hash.update(`${name}\0`).update(await fs.readFile(path.join(this.#model, name))).update('\0');
+    }
+    return hash.digest('hex').slice(0, 16);
+  }
+
+  // Runs `task` as a write (S4.2): with `ifMatch` the revision must be the current one. Gives its
+  // result and the new revision, which listeners get when it changed (S4.3).
+  #mutate(ifMatch, task) {
+    return this.#run(async () => {
+      if (ifMatch !== undefined && ifMatch !== '*' && ifMatch !== (await this.#revisionNow())) {
+        throw new HttpError(412, 'The model changed since this revision: pull it first');
+      }
+      const result = await task();
+      const revision = await this.#revisionNow();
+      if (revision !== this.#revision) {
+        this.#revision = revision;
+        for (const listener of this.#listeners) listener(revision);
+      }
+      return { result, revision };
+    });
+  }
+
+  revision() {
+    return this.#run(() => this.#revisionNow());
+  }
+
+  // `listener(revision)` is called after every change made through this store; returns how to stop.
+  subscribe(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  // The whole stored model { contexts: [{ id, name }], chapters }, checked as the board checks a pull
+  // (R7.4); none stored is an empty model.
+  async #loadModel() {
+    const stored = await this.#readContexts(true);
+    const model = { contexts: (stored ?? []).map(({ id, name }) => ({ id, name })), chapters: [] };
+    for (const entry of await this.#scan()) {
+      const doc = await this.#readContextFile(entry.path, true);
+      if (!model.contexts.some((c) => c.id === doc.id)) {
+        throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.id}" is not in ${CONTEXTS_FILE}`);
+      }
+      model.chapters.push(...structuredClone(doc.chapters));
+    }
+    try {
+      validateModel(model);
+      canonical(model);
+    } catch (e) {
+      throw new HttpError(422, `Stored model: ${e.message}`);
+    }
+    return model;
+  }
+
+  // Writes `model` as the stored files (S3.2), only those that change, and removes the files of
+  // Contexts that were deleted or renamed (S3.5).
+  async #store(model) {
+    const list = model.contexts.map((c) => ({ id: c.id, name: c.name, file: contextFileName(c.name) }));
+    if (new Set(list.map((c) => c.file.toLowerCase())).size !== list.length) {
+      throw new HttpError(409, 'Two contexts have the same file name');
+    }
+    await fs.mkdir(this.#model, { recursive: true });
+    const put = async (file, content) => {
+      const target = path.join(this.#model, file);
+      const same = await fs.readFile(target, 'utf8').then((old) => old === content, () => false);
+      if (!same) await this.#write(target, content);
+    };
+    for (const c of list) {
+      await put(c.file, yaml({ id: c.id, name: c.name, chapters: model.chapters.filter((ch) => ch.context === c.id) }));
+    }
+    await put(CONTEXTS_FILE, yaml(list));
+    const keep = new Map(list.map((c) => [c.id, c.file]));
+    for (const entry of await this.#scan()) {
+      const doc = await this.#readContextFile(entry.path, false);
+      if (doc && !(keep.has(doc.id) && sameName(keep.get(doc.id), entry.file))) await fs.rm(entry.path, { force: true });
+    }
+  }
+
+  // Reads the model for `fn(model)` (S4.8 to S4.11).
+  read(fn) {
+    return this.#run(async () => fn(await this.#loadModel()));
+  }
+
+  // Changes the model with `fn(model)`, which returns the result, and stores it when it is valid
+  // (section 4). Gives { result, revision }.
+  edit(fn, ifMatch) {
+    return this.#mutate(ifMatch, async () => {
+      const model = await this.#loadModel();
+      const result = fn(model);
+      try {
+        validateModel(model);
+      } catch (e) {
+        throw new HttpError(400, e.message);
+      }
+      await this.#store(model);
+      return result;
+    });
   }
 
   #relative(file) {
@@ -150,7 +252,7 @@ export class ModelStore {
 
   // Writes the ordered Contexts, then deletes the files of Contexts no longer listed. A file that
   // cannot be read is left alone.
-  async pushContexts(contexts) {
+  async pushContexts(contexts, ifMatch) {
     const valid =
       Array.isArray(contexts) &&
       contexts.length > 0 &&
@@ -161,7 +263,7 @@ export class ModelStore {
     const files = new Set(list.map((c) => c.file.toLowerCase()));
     if (files.size !== list.length) throw new HttpError(409, 'Two contexts have the same file name');
     const keep = new Set(list.map((c) => c.id));
-    return this.#run(async () => {
+    return this.#mutate(ifMatch, async () => {
       await fs.mkdir(this.#model, { recursive: true });
       await this.#write(path.join(this.#model, CONTEXTS_FILE), yaml(list));
       let removed = 0;
@@ -177,7 +279,7 @@ export class ModelStore {
 
   // Stores a whole Context with its Chapters, slices inline, in one file. The Context must have been
   // pushed (pushContexts) with the same name.
-  async pushContext(id, context) {
+  async pushContext(id, context, ifMatch) {
     if (!isObject(context) || !isText(context.id) || !isText(context.name) || !Array.isArray(context.chapters)) {
       throw new HttpError(400, 'Body must be a context with id, name and chapters');
     }
@@ -196,7 +298,7 @@ export class ModelStore {
       }
     }
 
-    return this.#run(async () => {
+    return this.#mutate(ifMatch, async () => {
       const stored = (await this.#readContexts(false))?.find((c) => c.id === id);
       if (!stored) throw new HttpError(409, `Unknown context "${id}": push the contexts first`);
       if (stored.name !== context.name) {
@@ -223,7 +325,7 @@ export class ModelStore {
   }
 
   // The stored Contexts and Chapters as an export file (format "event-model"), as the board writes
-  // it.
+  // it, with the revision (S4.1) it was read at.
   async pull() {
     return this.#run(async () => {
       const contexts = await this.#readContexts(true);
@@ -238,10 +340,13 @@ export class ModelStore {
       }
       chapters.sort(byPosition);
       return {
-        format: 'event-model',
-        version: 1,
-        contexts: contexts.map(({ id, name }) => ({ id, name })),
-        chapters,
+        data: {
+          format: 'event-model',
+          version: 1,
+          contexts: contexts.map(({ id, name }) => ({ id, name })),
+          chapters,
+        },
+        revision: await this.#revisionNow(),
       };
     });
   }
@@ -359,7 +464,7 @@ export class ModelStore {
   async putScreenHtml(contextId, screenId, html) {
     if (typeof html !== 'string' || !html.trim()) throw new HttpError(400, 'Body must be { html: text }, not empty');
     const compact = compactHtml(html);
-    return this.#run(async () => {
+    return this.#mutate(undefined, async () => {
       const { entry, doc } = await this.#contextDoc(contextId);
       const screen = ModelStore.#screens(doc).find((s) => s.element.id === screenId);
       if (!screen) throw new HttpError(404, `Unknown screen "${screenId}"`);

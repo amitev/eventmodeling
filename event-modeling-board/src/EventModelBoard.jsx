@@ -53,7 +53,7 @@ import {
   makeEmptyBoard,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
-import { pushBoard, pullBoard } from './state/sync.js';
+import { pushBoard, pullBoard, serverState, watchRevision, StaleError } from './state/sync.js';
 import { cleanName } from './model/names.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
@@ -871,27 +871,72 @@ function Board() {
     setScenarioEdit(null);
   };
 
+  // Sync with the server (R10.5 to R10.7). `serverText` is the board's file (R6.2) as of the last
+  // pull or push, so a board that differs has unsynced changes.
+  const serverRevision = useRef(null);
+  const serverText = useRef(null);
+  const syncing = useRef(false);
+  const ownRevisions = useRef(new Set());
+  const latestBoard = useRef(null);
+  latestBoard.current = { nodes, edges, contexts };
+
   const pushToServer = async () => {
+    syncing.current = true;
     try {
-      const count = await pushBoard(nodes, edges, contexts);
-      setNotice(`Pushed ${count} ${count === 1 ? 'Chapter' : 'Chapters'} to the server.`);
+      let revision = serverRevision.current;
+      if (revision === null) {
+        const state = await serverState();
+        if (!state.empty && !window.confirm('The server may hold a different model. Overwrite it with this board?')) return;
+        revision = state.revision;
+      }
+      const pushed = await pushBoard(nodes, edges, contexts, revision);
+      serverRevision.current = pushed.revision;
+      serverText.current = boardText(nodes, edges, contexts);
+      pushed.pushed.forEach((r) => ownRevisions.current.add(r));
+      setNotice(`Pushed ${pushed.count} ${pushed.count === 1 ? 'Chapter' : 'Chapters'} to the server.`);
     } catch (err) {
-      window.alert(`Could not push to the server: ${err.message}`);
+      window.alert(
+        err instanceof StaleError
+          ? 'The server model changed since the last pull. Pull it first.'
+          : `Could not push to the server: ${err.message}`
+      );
+    } finally {
+      syncing.current = false;
     }
   };
 
-  const pullFromServer = async () => {
+  const pullFromServer = async (auto = false) => {
+    syncing.current = true;
     try {
-      const board = await pullBoard();
+      const { board, revision } = await pullBoard();
       setSelectedCell(null);
       setActiveId(null);
       setNodes(board.nodes);
       setEdges(board.edges);
       setContexts(board.contexts);
+      serverRevision.current = revision;
+      serverText.current = boardText(board.nodes, board.edges, board.contexts);
+      if (auto) setNotice('The board was updated with the changes made on the server.');
     } catch (err) {
       window.alert(`Could not pull from the server: ${err.message}`);
+    } finally {
+      syncing.current = false;
     }
   };
+
+  // Auto-pull (R10.6): a changed server model is pulled when the board has no unsynced changes.
+  useEffect(
+    () =>
+      watchRevision((revision) => {
+        if (syncing.current || serverRevision.current === null) return;
+        if (revision === serverRevision.current || ownRevisions.current.has(revision)) return;
+        const board = latestBoard.current;
+        if (boardText(board.nodes, board.edges, board.contexts) === serverText.current) pullFromServer(true);
+        else setNotice("The server model changed. Pull it to see the changes; the board's own changes are then lost.");
+      }),
+    // pullFromServer only uses refs and state setters
+    []
+  );
 
   const isValidConnection = useCallback(
     (c) => {
@@ -1358,7 +1403,7 @@ function Board() {
         <button onClick={pushToServer} title="Write every Chapter to the server's .event-modeling folder">
           Push to server
         </button>
-        <button onClick={pullFromServer} title="Replace the board with the Chapters stored on the server">
+        <button onClick={() => pullFromServer()} title="Replace the board with the Chapters stored on the server">
           Pull from server
         </button>
         <button
