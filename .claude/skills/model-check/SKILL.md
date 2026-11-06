@@ -16,7 +16,7 @@ node .claude/skills/model-check/check.mjs [--base http://localhost:3300] [--cont
 ```
 
 - Run it from the repository root. The server must be running (default base `http://localhost:3300`; use `--base` for another port).
-- Without options it checks every Chapter. `--context` or `--chapter` limits what is **reported**; the whole model is still read, because arrows and linked copies cross Chapters.
+- Without options it checks every Chapter. `--context` or `--chapter` limits what is **reported**; the whole model is still read, because linked copies point to originals in other Chapters.
 - Output: a count line, then one line per finding, rules first:
   `[KIND] Chapter > Slice: TYPE "Name" (id) - message`
 - `--dependencies` adds, after the findings, one line per slice: the Events it produces and the Events of other slices it depends on (see Slices and dependencies).
@@ -27,7 +27,7 @@ node .claude/skills/model-check/check.mjs [--base http://localhost:3300] [--cont
 |---|---|---|
 | `RULE` | Breaks a modelling rule: a Command with more than one issuer, a Screen that triggers more than one Command, an arrow that goes backward to an earlier slice, a slice with more than one Command, Processor or (without a Processor) Query, or one that mixes a Command and a Query without a Processor | Report it; fix only when asked. A slice that breaks the one-element rule: propose a split (see Slices and dependencies) |
 | `GAP` | Something missing: no name, not connected, no fields, a field with no source, no mockup, an empty slice or a slice with no type, a Command with no issuer / no Event / no scenario, an Event no Command produces, a Query no Event feeds or that feeds nothing, a Processor without a todo-list Query or Command, a scenario with no When / no outcome, a Scenarios element with no scenarios, a scenario example with a key that is not a field of its element, the default name "New Slice" | Report it; ask before filling it, never invent content |
-| `CANDIDATE` | Worth a look, not necessarily wrong: a Command with more than two Events, a Query built from more than three Events, a slice with many more scenarios than the others, a Command named like a query or UI action, a second element with the same name and type (should it be a linked copy?), a Then Event the When Command does not produce, a slice whose name differs from its Command, Query or Processor (case and spacing are ignored; an automation slice may carry the Processor's or its Command's name) | Judge it against the business context first (see Structural Shapes in the core rules); drop it if the domain justifies it |
+| `CANDIDATE` | Worth a look, not necessarily wrong: a Command with more than two Events, a Query built from more than three Events, a slice with many more scenarios than the others, a Command named like a query or UI action, a second element with the same name and type (should it be a linked copy?), a Then Event the When Command does not produce, an **arrow that crosses Chapters** (recommended: a linked copy in the same Chapter instead, `connections` "Across Chapters"), a slice whose name differs from its Command, Query or Processor (case and spacing are ignored; an automation slice may carry the Processor's or its Command's name) | Judge it against the business context first (see Structural Shapes in the core rules); drop it if the domain justifies it |
 
 ## Slices and dependencies
 
@@ -42,7 +42,7 @@ A slice is one Command, one Query, or one Processor with its Events, Query and C
 
 - Naming quality: Event tense, business language, implementation names. Read the names yourself against the core rules.
 - Scenario example values against the fields (only that every example **key** is a field of its element is checked), mockup content, or whether a flow starts with a trigger.
-- Arrows across Chapters are included in the arrow checks, but a field's source is compared by top-level name only.
+- A field's source is compared by name only (top-level, and the row fields of a list field). Arrows across Chapters are reported as candidates; where one exists it is still followed for the source check.
 - Fields that start a flow legitimately have no source (for example what a user enters on a Screen): only Command, Event and Query fields are checked for a source; mark the rest `generated` where the system creates them.
 
 ## After the run

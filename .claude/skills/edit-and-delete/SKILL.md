@@ -16,7 +16,7 @@ Read `eventmodeling-core-rules` first. To look things up in the model, use the `
 | Screen content | Setting `html` removes `url` and the reverse. `html` and `url` only on a Screen; `markdown` and `color` only on Notes; `fields` only on Screen, Command, Event, Query. |
 | Linked copy | Accepts only `slice`, `lane` and `x`. Any other change gets 409 naming the original: change the original. |
 | Move | `slice` and `lane` come **together**. The lane must take the element's type. Without `x` the element is placed like the board does; with `x` as given. Its arrows stay and none are added. `x` alone moves it inside its Cell. |
-| Move to another Chapter | Allowed (also for linked copies). Scenarios that use the element are **deleted**. A Scenarios element cannot change Chapter (409). |
+| Move to another Chapter | Allowed (also for linked copies). Scenarios that use the element are **deleted**. Its arrows stay, so those to elements of the old Chapter now cross Chapters: report them and offer to replace each with a linked copy (`connections`, "Across Chapters"). A Scenarios element cannot change Chapter (409). |
 | Spec lane | Holds at most one element per slice: a move into an occupied Cell is refused. |
 | Rename | A name is used everywhere by id: scenarios and linked copies show the new name by themselves. A rename of a field is not propagated (see `element-fields`). |
 | Info | Markdown, empty by default; not on Scenarios or Notes. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements. |

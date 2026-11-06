@@ -86,6 +86,7 @@ Rules of thumb:
 - One Chapter per process phase with its own actors, rules or deadlines. Don't force a one-Chapter model if the document describes distinct phases; don't split a short, linear process just to have several.
 - Keep each Chapter to roughly 6–15 slices. Beyond that, split at a natural phase boundary.
 - Where a second organisation acts (the authority, a subcontractor, a payment provider), their events are **external events**: they sit in an Integration lane and get the translation treatment (the Translation Chain in the core rules, the translation recipe of `slice-builder`), not a freehand Command.
+- Chapters depend on each other only through Events, and **arrows never cross Chapters**: an Event of an earlier Chapter that a later one needs is used through a linked copy placed in the later Chapter. A scenario cannot use a copy, so rules that depend on another Chapter's Events are stated in the summary notes.
 - Include a final Chapter only if the source has a genuinely distinct phase (e.g. contract execution/delivery after award); don't pad.
 
 **Tender / bid example (bidder perspective)** — a starting point to adapt, not a template to force:
@@ -113,7 +114,7 @@ Work **one Chapter at a time**, in order, with the skills below. Do not skip ste
 | Order the events of the Chapter | core rules (Flow & Causality) | list the Chapter's events in time order first, then build the slices around them |
 | Build each slice | `slice-builder` | state change (Screen → Command → Event), state read (Query → Screen), automation, translation for external parties: one atomic batch per slice |
 | Fields | `element-fields` | the `data` facts become fields; fields without a source are `generated` or a question |
-| Arrows between slices | `connections` | the arrows `slice-builder` cannot add by itself |
+| Arrows between slices | `connections` | the arrows `slice-builder` cannot add by itself. **Never across Chapters**: a fact of an earlier Chapter reaches this one through a linked copy placed in this Chapter (`connections`, "Across Chapters") |
 | Names | `naming` | every element, slice and Chapter |
 | Fix-ups, renames, moves | `edit-and-delete` | as the model takes shape |
 

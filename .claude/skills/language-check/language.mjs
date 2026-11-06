@@ -61,14 +61,15 @@ for (const info of originals.filter(({ el }) => el.type === 'COMMAND')) {
     const evo = ev.el.copyOf ? byId.get(ev.el.copyOf) ?? ev : ev;
     const ew = words(evo.el.name);
     if (cw.length > 1 && ew.length > 1) {
-      const shared = cw.slice(1).filter((w) => ew.slice(0, -1).includes(w));
+      const stem = (w) => w.replace(/(ing|ed|es|s|d|e)$/, '');
+      const shared = cw.slice(1).filter((w) => ew.slice(0, -1).some((x) => stem(x) === stem(w)));
       if (!shared.length && inScope(info)) add('CANDIDATE', info, `Command "${info.el.name}" produces Event "${evo.el.name}": they share no subject word`);
     }
   }
 }
 for (const info of originals.filter(({ el }) => el.type === 'EVENT')) {
   const ew = words(info.el.name);
-  if (ew.length > 1 && !pastTense(ew[ew.length - 1]) && inScope(info)) add('CANDIDATE', info, `Event "${info.el.name}" does not end in a past-tense word: a business fact that already happened?`);
+  if (ew.length > 1 && !ew.some(pastTense) && inScope(info)) add('CANDIDATE', info, `Event "${info.el.name}" has no past-tense word: a business fact that already happened?`);
 }
 
 // 3. The same field name defined differently on different elements.

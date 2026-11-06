@@ -23,7 +23,7 @@ Do not read the model yourself. Run the bundled script from the repository root:
 node .claude/skills/prototype/export-model.mjs --context <context id or name> [--base http://localhost:3300] [--out prototype/model.js]
 ```
 
-It reads the model through the server API (all Chapters: arrows and linked copies cross Chapters) and writes `prototype/model.js`: `const MODEL = { context, screens, commands, events, queries, processors, scenarios }`. Linked copies are folded into their originals. It prints the counts; tell the user how many Screens have no mockup (their tab shows a placeholder).
+It reads the model through the server API (all Chapters: linked copies point to originals in other Chapters, and older models may have arrows across Chapters) and writes `prototype/model.js`: `const MODEL = { context, screens, commands, events, queries, processors, scenarios }`. Linked copies are folded into their originals. It prints the counts; tell the user how many Screens have no mockup (their tab shows a placeholder).
 
 | In `MODEL` | Holds |
 |---|---|

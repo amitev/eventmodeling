@@ -45,7 +45,7 @@ Without a Screen (the trigger is not a person) it is not this recipe: use Automa
 2. `POST /elements` Query: `{ slice: "$s", lane: <Interaction lane>, type: "QUERY", name, fields }`; fed by the Events that build it (an automatic arrow from the previous slice's right-most Event, or `autoConnect: false` and then `POST /connections` per Event, `{ from: <event>, to: "$q" }`). A Query that returns rows has a `list: true` `object` field. **Order matters:** each Event arrow copies the Event's fields into the Query as flat fields, and every later arrow out of the Query copies the Query's fields at that moment. So connect the Events first, then `PATCH` the Query to its final fields (the list field), and only then create the Screen (step 3) or connect the Query onward; otherwise the Screen gets the Event's flat fields.
 3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (what is entered or calculated on top of the Query's fields) → arrow Query → Screen, the Query's fields copied.
 
-Events from another Chapter cannot be reached by the automatic arrow: link them with a linked copy (`POST /elements` `{ slice, lane, copyOf }`) or connect them directly (`connections`).
+Events from another Chapter are not connected directly (the recommendation in `connections`, "Across Chapters"): place a linked copy of the Event in **this** Chapter (`POST /elements` `{ slice, lane, copyOf, "autoConnect": false }`, never into the state read slice itself) and connect the copy to the Query with `POST /connections`.
 
 ### Automation — Event → Query → Processor → Command → Event
 

@@ -104,6 +104,7 @@ for (const ch of chapters.filter(wanted)) {
       for (const t of el.connectsTo ?? []) {
         const target = byId.get(t);
         if (target && target.chapter === ch && target.si < info.si) add('RULE', ctx, `arrow goes backward to "${nameOf(target.el)}" in an earlier slice (${target.slice.name})`);
+        if (target && target.chapter !== ch) add('CANDIDATE', ctx, `arrow to "${nameOf(target.el)}" in another Chapter (${target.chapter.name}): recommended: a linked copy of one element in the same Chapter as the other, connected instead`);
       }
 
       if (el.type === 'COMMAND') {
@@ -136,8 +137,10 @@ for (const ch of chapters.filter(wanted)) {
       }
 
       if (['COMMAND', 'EVENT', 'QUERY'].includes(el.type) && !isCopy && ps.length) {
-        const upstream = new Set(sourcesOf(el).flatMap((s) => (s.fields ?? []).map((f) => f.name)));
-        const orphan = (el.fields ?? []).filter((f) => !f.generated && !upstream.has(f.name)).map((f) => f.name);
+        const names = (fs) => (fs ?? []).flatMap((f) => [f.name, ...(f.type === 'object' ? names(f.fields) : [])]);
+        const leafFields = (fs) => (fs ?? []).flatMap((f) => (f.type === 'object' ? leafFields(f.fields) : [f]));
+        const upstream = new Set(sourcesOf(el).flatMap((s) => names(s.fields)));
+        const orphan = leafFields(el.fields).filter((f) => !f.generated && !upstream.has(f.name)).map((f) => f.name);
         if (orphan.length) add('GAP', ctx, `field(s) with no source upstream and not generated: ${orphan.join(', ')}`);
       }
     }

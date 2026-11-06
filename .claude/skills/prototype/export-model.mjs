@@ -27,7 +27,7 @@ if (ctx.length !== 1) {
 }
 const context = ctx[0];
 
-// All Chapters are read: arrows and linked copies cross Chapters and Contexts.
+// All Chapters are read: linked copies point to originals in other Chapters (and older models may have arrows across Chapters).
 const els = new Map();
 const inContext = new Set();
 for (const c of contexts) {

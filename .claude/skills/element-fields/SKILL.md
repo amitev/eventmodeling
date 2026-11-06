@@ -68,7 +68,7 @@ Do what the board does (breadth-first, each element once, the source itself neve
    - a `PROCESSOR` or a linked copy: change nothing, but **keep following** its `connectsTo`.
    - `SCENARIOS` and `NOTES` have no arrows.
 3. One `PATCH /elements/:id` per changed element, all in one `POST /ops` (include the source's own `PATCH` first).
-4. Elements are in other slices and Chapters too: follow the arrows there; read their fields with `GET /chapters/:id?screenContent=false` per Chapter.
+4. Elements are in other slices too: follow the arrows there; read their fields with `GET /chapters/:id?screenContent=false`. Arrows normally stay within one Chapter (a fact of another Chapter reaches this one through a linked copy, which shows its original's fields live), so nothing is copied across Chapters. An older arrow that does cross a Chapter is followed like any other: read the other Chapter the same way.
 5. Copy the new field objects exactly (same type, flags, nested fields) so the copies are identical.
 
 ### D. Get from parent (pull fields into an element)

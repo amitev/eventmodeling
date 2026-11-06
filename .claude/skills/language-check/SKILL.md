@@ -28,7 +28,7 @@ All are `CANDIDATE`: questions, not verdicts. Judge each against the business co
 | The same type and name on two elements | One fact (use a linked copy of the first) or two different things (rename one)? |
 | Nearly the same name (same type, small spelling difference) | The same concept spelled two ways? Which spelling wins? |
 | A Command and the Event it produces share no subject word (`Place Order` → `Payment Received`) | A wrong arrow, a wrong name, or a legitimate different outcome? |
-| An Event whose last word is not a past-tense word, or a Command that starts like one | Does the name follow the naming rules? (The word lists are approximate.) |
+| An Event with no past-tense word in its name, or a Command that starts like one | Does the name follow the naming rules? (The word lists are approximate.) |
 | A field with the same name but a different type or list-ness on different elements | One definition, or two concepts that need two names? |
 
 ## Synonyms and the glossary
