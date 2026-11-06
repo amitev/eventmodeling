@@ -28,7 +28,7 @@ Short reference. The definitions behind the element rules are in `eventmodeling-
 
 | Thing | Rule |
 |---|---|
-| Slice | Named for the behaviour it models, not its type: "Place order", "Order overview". Not left as "New Slice" |
+| Slice | Named **exactly like its Command, Query or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing. An automation slice may carry the Processor's name or its Command's. Never left as "New Slice" |
 | Scenario | A short business sentence for one case: "Place order with a valid payment", "Reject order when stock is empty". Not empty. The reason goes in the description |
 | Lane | By role or system actor on an Actor lane (Customer, Seller, Payment Gateway), never a generic "User"; other lanes keep their type name unless the user wants one |
 | Chapter | By the business process it covers ("Orders", "Registration"); ask when unclear. Not left as "Chapter 1" |

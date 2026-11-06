@@ -45,6 +45,8 @@ translation  = as automation, with at least one element in an Integration lane
 
 Anything else (and an empty slice) has no type. A slice never mixes a COMMAND and a QUERY outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
 
+**A slice is named exactly like its Command, Query or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing, never a broader "feature" name. An automation or translation slice may carry the Processor's name or its Command's. Never leave the default "New Slice".
+
 ## Elements
 
 ### EVENT

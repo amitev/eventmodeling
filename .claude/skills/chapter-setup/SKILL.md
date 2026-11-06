@@ -60,7 +60,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 
 | Do | Call |
 |---|---|
-| Add at the end | `POST /chapters/:id/slices` `{ "name"? }` (default name "New Slice", width 220) |
+| Add at the end | `POST /chapters/:id/slices` `{ "name"? }` (default name "New Slice", width 220). Name it like the Command, Query or Processor it will hold; do not leave "New Slice" |
 | Add **between** | `POST /chapters/:id/slices` `{ "name", "after": "<slice id>" }`: the new slice goes right after that slice |
 | Add **first** | `after` needs a slice, so add the slice after the first one and move it: `PATCH /slices/:newId` `{ "index": 0 }`. In one `POST /ops` use `"as": "s"` on the create op and `"/slices/$s"` in the path of the next |
 | Move | `PATCH /slices/:id` `{ "index": n }`, `n` the 0-based place among the Chapter's slices. Its elements move with it |

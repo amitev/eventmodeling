@@ -16,6 +16,8 @@ You can do this at any point, even much later. In an EVL (L=legacy) codebase, it
 - Residuality theory - https://www.linkedin.com/pulse/combining-residuality-theory-event-modeling-martin-dilger-8ogcf/
 
 
+Lanes
+- Fix name editing
 
 Slices
 

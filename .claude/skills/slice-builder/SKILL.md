@@ -13,7 +13,7 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 
 1. **Chapter and place.** `GET /api/model/outline`. Ask which Chapter, and after which slice the new one goes (or at the end). The Chapter needs lanes for the types below: one lane per needed type. Several lanes of one type: ask which. A missing type: ask, then add it as `chapter-setup` says.
 2. **Type of slice and the business behaviour**, in the user's words: who does what, which facts are recorded, what is shown. Pick the recipe below. Not clear which one: ask.
-3. **Names** in business language, as the core rules say: slice named for the behaviour; Screen as a user calls it; Command imperative; Event past tense; Query a noun phrase. Unsure: ask.
+3. **Names** in business language, as the core rules and `naming` say: the slice named exactly like its Command, Query or Processor; Screen as a user calls it; Command imperative; Event past tense; Query a noun phrase. Unsure: ask.
 4. **Fields** (names, types, flags) of each element: from the user or from the upstream elements (they copy along the arrows). Do not invent data: a field with no source is `generated: true` or a question to the user.
 5. Existing elements the slice must reuse (an Event of an earlier slice feeding a Query): find them in the outline by name; several matches: ask.
 
@@ -67,7 +67,7 @@ As Automation, plus at least one element in an **Integration** lane (an Event or
 
 ```json
 { "ops": [
-  { "method": "POST", "path": "/chapters/CH1234/slices", "body": { "name": "Place order", "after": "SL1234" }, "as": "s" },
+  { "method": "POST", "path": "/chapters/CH1234/slices", "body": { "name": "Place Order", "after": "SL1234" }, "as": "s" },
   { "method": "POST", "path": "/elements", "body": { "slice": "$s", "lane": "LA0001", "type": "SCREEN", "name": "Checkout",
       "fields": [{ "name": "customerName" }, { "name": "quantity", "type": "integer" }] }, "as": "screen" },
   { "method": "POST", "path": "/elements", "body": { "slice": "$s", "lane": "LA0002", "type": "COMMAND", "name": "Place Order",
