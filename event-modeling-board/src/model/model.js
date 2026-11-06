@@ -44,9 +44,9 @@ export const SLICE_MIN_WIDTH = 120;
 
 export const KINDS = {
   screen: { label: 'Screen', lane: 0, color: '#e2e2e2', h: 146 }, // as tall as one with a mockup (R3.6b)
-  command: { label: 'Command', lane: 1, color: '#7cc3f2' },
-  query: { label: 'Query', lane: 1, color: '#8fd694' },
-  event: { label: 'Event', lane: 2, color: '#ffb366' },
+  command: { label: 'Command', lane: 1, color: '#7cc3f2', h: 146 }, // fixed as tall as a Screen; fields scroll (R3.6c)
+  query: { label: 'Query', lane: 1, color: '#8fd694', h: 146 },
+  event: { label: 'Event', lane: 2, color: '#ffb366', h: 146 },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️', h: 114 }, // a cogwheel under its name (R3.6)
   // Not part of the flow: it connects to nothing (R4.7).
   scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, maxW: 560, h: 200, pad: SLICE_PADDING / 2, stretch: true },

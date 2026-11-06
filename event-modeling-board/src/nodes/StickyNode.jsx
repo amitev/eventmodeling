@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
 import { KINDS, kindW, stretchWidth } from '../model/model.js';
 import { hasFields } from '../model/fields.js';
@@ -54,6 +54,15 @@ export function StickyNode({ id, data, selected }) {
   const isCopy = !!data.copyOf;
   const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
   const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf } : data;
+
+  // The fields scroll in the fixed-height body (R3.6c). `nowheel` makes the wheel scroll them, not zoom the board,
+  // only while the element is selected.
+  const bodyRef = useRef(null);
+  const [scrolls, setScrolls] = useState(false);
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    setScrolls(!!el && el.scrollHeight > el.clientHeight);
+  }, [shown.fields]);
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -206,7 +215,7 @@ export function StickyNode({ id, data, selected }) {
           </svg>
         </div>
       ) : (
-        <div className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}`}>
+        <div ref={bodyRef} className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}${scrolls && selected ? ' nowheel' : ''}`}>
         {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
         {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
         </div>

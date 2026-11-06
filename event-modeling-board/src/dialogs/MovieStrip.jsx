@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { MOVIE_HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 
 const ZOOMS = [0.3, 0.4, 0.5, 0.65, 0.8, 1]; // size of the current screen, 1 = fits the window
 const START_ZOOM = ZOOMS.length - 1;
@@ -17,6 +17,14 @@ function Icon({ children }) {
     </svg>
   );
 }
+
+// Appended to an HTML mockup: sends Esc, the arrow keys (not while typing in a field) and Alt+Enter to the popup.
+const KEY_RELAY =
+  '<script>addEventListener("keydown",function(e){var t=e.target;' +
+  'var typing=t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable);' +
+  'var arrow=e.key==="ArrowLeft"||e.key==="ArrowRight";' +
+  'if(e.key==="Escape"||(arrow&&!typing)||(e.altKey&&e.key==="Enter")){e.preventDefault();' +
+  'parent.postMessage({movieKey:{key:e.key,altKey:e.altKey}},"*")}})</script>';
 
 // One screen of the strip: its mockup scaled to `width`, the name below. Only the screens near
 // the current one load their mockup.
@@ -37,9 +45,9 @@ function Card({ screen, width, state, live, onClick }) {
               key={screen.url ?? 'code'}
               className="movie-frame"
               title={screen.name || 'Screen mockup'}
-              sandbox={screen.url ? URL_SANDBOX : HTML_SANDBOX}
+              sandbox={screen.url ? URL_SANDBOX : MOVIE_HTML_SANDBOX}
               scrolling="no"
-              {...(screen.url ? { src: screen.url } : { srcDoc: screen.html })}
+              {...(screen.url ? { src: screen.url } : { srcDoc: screen.html + KEY_RELAY })}
               style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${width / MOCKUP_W})` }}
             />
           )
@@ -86,8 +94,18 @@ export function MovieStrip({ screens, onClose }) {
       else return;
       e.preventDefault();
     };
+    // Keys pressed inside an HTML mockup do not reach this window: its script (KEY_RELAY) posts them.
+    const onMessage = (e) => {
+      const key = e.data?.movieKey;
+      const fromFrame = Array.from(document.querySelectorAll('.movie-frame')).some((f) => f.contentWindow === e.source);
+      if (fromFrame && typeof key?.key === 'string') onKey({ key: key.key, altKey: !!key.altKey, preventDefault() {} });
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('message', onMessage);
+    };
   }, [onClose, last]);
 
   const fit = Math.max(120, Math.min(size.w * 0.7, ((size.h - CAPTION_H - 2 * MARGIN) * MOCKUP_W) / MOCKUP_H));
