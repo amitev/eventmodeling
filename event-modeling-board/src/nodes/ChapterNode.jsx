@@ -3,7 +3,7 @@ import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
 import { LANE_WIDTH } from '../model/model.js';
 import { cleanName, filterNameInput } from '../model/names.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { InfoButton } from './parts.jsx';
+import { CopyContextButton, InfoButton } from './parts.jsx';
 
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 
@@ -107,6 +107,7 @@ export function ChapterNode({ id, data }) {
             </svg>
           </button>
         )}
+        <CopyContextButton chapterId={id} className="chapter-compact" />
         <button
           className="chapter-compact nodrag"
           title={screenCount ? 'Movie strip' : 'Movie strip (this Chapter has no Screen)'}

@@ -149,8 +149,9 @@ export function CopyButton({ id }) {
 }
 
 // "Copy Context": puts the ids of the Context, Chapter, Slice (and the element, when `elementId` is
-// given) in the clipboard. `className` is the button style of its place (element toolbar or slice header).
-export function CopyContextButton({ elementId, sliceId, className = 'info-btn' }) {
+// given) in the clipboard; with `chapterId` only the Context and Chapter. `className` is the button style
+// of its place (element toolbar, slice header or Chapter handle).
+export function CopyContextButton({ elementId, sliceId, chapterId, className = 'info-btn' }) {
   const { copyContext } = useContext(BoardActions);
   return (
     <button
@@ -160,7 +161,7 @@ export function CopyContextButton({ elementId, sliceId, className = 'info-btn' }
       onDoubleClick={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
-        copyContext({ elementId, sliceId });
+        copyContext({ elementId, sliceId, chapterId });
       }}
     >
       <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">

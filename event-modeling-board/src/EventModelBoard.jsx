@@ -490,17 +490,17 @@ function Board() {
       clipboard.current = element.data.copyOf ?? element.id;
     }
   }, [getNodes]);
-  // Puts "Context <id> Chapter <id> Slice <id> [Element <id>]" in the system clipboard; `{ elementId }`
-  // (its slice is worked out) or `{ sliceId }` (no element).
+  // Puts "Context <id> Chapter <id> [Slice <id> [Element <id>]]" in the system clipboard; `{ elementId }`
+  // (its slice is worked out), `{ sliceId }` (no element) or `{ chapterId }` (no slice).
   const copyContext = useCallback(
-    ({ elementId, sliceId }) => {
+    ({ elementId, sliceId, chapterId }) => {
       const ns = getNodes();
       const element = elementId ? ns.find((n) => n.id === elementId) : null;
-      const slice = element ? sliceOf(slices(ns), element) : ns.find((n) => n.id === sliceId);
-      const chapter = slice && ns.find((n) => n.id === slice.parentId);
+      const slice = chapterId ? null : element ? sliceOf(slices(ns), element) : ns.find((n) => n.id === sliceId);
+      const chapter = chapterId ? ns.find((n) => n.id === chapterId) : slice && ns.find((n) => n.id === slice.parentId);
       if (!chapter) return;
       const context = contexts.some((c) => c.id === chapter.data.context) ? chapter.data.context : contexts[0].id;
-      const text = `Context ${context} Chapter ${chapter.id} Slice ${slice.id}${element ? ` Element ${element.id}` : ''}`;
+      const text = `Context ${context} Chapter ${chapter.id}${slice ? ` Slice ${slice.id}` : ''}${element ? ` Element ${element.id}` : ''}`;
       navigator.clipboard.writeText(text).then(
         () => setNotice(`Copied: ${text}`),
         () => setNotice('Could not copy to the clipboard.')

@@ -32,13 +32,12 @@ Elements
 Screens
 - Enlarge screens on hovering
 - Blurring/highlighting parts of the screen (overlay?)
-- Agentic - generate a screen based on the look and feel of another screen (or previous screen). Using screenshots?
 
 Specs
 - To learn the difference between GWT and story lines and see what to do with them
 
 Common
-- Unify button styling
+
 
 Export
 - Generate spec document
@@ -52,7 +51,9 @@ Local undo/red
 
 Server
 - Server pushes only changed chapters/contexts.
-- Is it likely to have the model in one repo and the?
+
+CLI
+- Install skills
 
 Other features to add
 - https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
