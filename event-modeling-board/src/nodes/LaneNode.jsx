@@ -6,7 +6,7 @@ import { InfoButton, useChapterDrag } from './parts.jsx';
 
 export function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeLane, addLaneAfter } = useContext(BoardActions);
+  const { removeLane, addLaneAfter, overview } = useContext(BoardActions);
   // The last lane of a required type (Actor, Interaction, Event) of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
     const parent = s.nodeLookup.get(id)?.parentId;
@@ -129,7 +129,7 @@ export function LaneNode({ id, data }) {
           contentEditable={editing ? 'plaintext-only' : undefined}
           suppressContentEditableWarning
           spellCheck={false}
-          onDoubleClick={() => setEditing(true)}
+          onDoubleClick={overview ? undefined : () => setEditing(true)}
           onBlur={editing ? (e) => rename(e.currentTarget.textContent) : undefined}
           onKeyDown={
             editing

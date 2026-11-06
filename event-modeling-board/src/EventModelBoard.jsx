@@ -50,6 +50,7 @@ import {
   makeSlice,
   makeLane,
   makeEdge,
+  OVERVIEW_EDGE_COLORS,
   makeEmptyBoard,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
@@ -113,6 +114,8 @@ function Board() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
+  // The overview (R1f): a read-only, high-level view without slice borders, titles and buttons.
+  const [overview, setOverview] = useState(false);
   // The Context filter (R1b.7): the id of the only Context whose Chapters show, '' for all.
   // Kept in the browser, not in the board.
   const [contextFilter, setContextFilter] = useState(() => {
@@ -200,15 +203,22 @@ function Board() {
       const selected = hidden ? false : e.selected;
       if (s?.type !== 'sticky' || t?.type !== 'sticky') return hidden === !!e.hidden && !(hidden && e.selected) ? e : { ...e, hidden, selected };
       const down = centreY(t) >= centreY(s);
+      const color = overview ? OVERVIEW_EDGE_COLORS[s.data?.kind] : undefined;
       return {
         ...e,
         hidden,
         selected,
         sourceHandle: down ? 'bottom-out' : 'top-out',
         targetHandle: down ? 'top-in' : 'bottom-in',
+        ...(color
+          ? {
+              style: { ...e.style, stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' },
+              markerEnd: { ...e.markerEnd, color },
+            }
+          : {}),
       };
     });
-  }, [nodes, edges, hiddenChapters]);
+  }, [nodes, edges, hiddenChapters, overview]);
   const visibleChapters = chapters.filter((c) => !hiddenChapters.has(c.id));
   const active = visibleChapters.find((c) => c.id === activeId) ?? visibleChapters[0];
   const activeChapterId = active?.id;
@@ -266,6 +276,26 @@ function Board() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  // Ctrl+H switches the high level view on and off; Esc switches it off.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.altKey || modalOpen.current) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        setOverview(false);
+        return;
+      }
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'h') return;
+      e.preventDefault(); // not the browser's history
+      setOverview((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => {
+    if (overview) setSelectedCell(null);
+  }, [overview]);
   const searchItems = useMemo(() => {
     if (!search.open) return [];
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -403,12 +433,14 @@ function Board() {
     },
     [setNodes, setEdges]
   );
+  const historyBlocked = useRef(false); // no undo or redo behind a popup or in the overview
+  historyBlocked.current = scenarioOpen.current || overview;
   const { hist, undo, redo, api: historyApi, markSilent } = useHistory({
     nodes,
     edges,
     contexts,
     restore,
-    blocked: scenarioOpen,
+    blocked: historyBlocked,
   });
 
   // Scenarios whose Events/Commands were deleted (or left the Chapter) are deleted too. The
@@ -767,7 +799,9 @@ function Board() {
 
   const boardActions = useMemo(
     () => ({
-      editScenario: (nodeId, scenarioId) => setScenarioEdit({ nodeId, scenarioId }),
+      overview,
+      // The overview is read-only: the actions that edit do nothing there; the views still open.
+      editScenario: (nodeId, scenarioId) => !overview && setScenarioEdit({ nodeId, scenarioId }),
       viewScenarios: setScenariosViewId,
       goToOriginal,
       newScenarioId: () => newIds()[0],
@@ -778,6 +812,7 @@ function Board() {
       removeContext,
       activate: setActiveId,
       openInfo: (id) => {
+        if (overview) return;
         setInfoReading(false);
         setInfoId(id);
       },
@@ -785,8 +820,9 @@ function Board() {
         setInfoReading(true);
         setInfoId(id);
       },
-      openFields: setFieldsId,
+      openFields: (id) => !overview && setFieldsId(id),
       openHtml: (id) => {
+        if (overview) return;
         setHtmlReading(false);
         setHtmlId(id);
       },
@@ -823,6 +859,7 @@ function Board() {
       nodes,
       rememberCopy,
       titleEditId,
+      overview,
     ]
   );
 
@@ -1101,6 +1138,8 @@ function Board() {
 
   cellKeys.current = (e) => {
     if (infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
+    // The overview is read-only: only V (view) and Shift+F (fit) work.
+    if (overview && !(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') && !(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'v')) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
@@ -1328,6 +1367,7 @@ function Board() {
   // A button released over a Cell adds the element there; anywhere else adds nothing.
   const onDrop = (e) => {
     e.preventDefault();
+    if (overview) return;
     const kind = e.dataTransfer.getData('application/event-model');
     if (!KINDS[kind]) return;
     const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
@@ -1372,9 +1412,9 @@ function Board() {
   const selectedLane = selectedCell && nodes.find((n) => n.id === selectedCell.laneId);
 
   return (
-    <div className="app">
+    <div className={`app${overview ? ' overview' : ''}`}>
       <header className="toolbar">
-        <strong>Event Modeling Board</strong>
+        <strong className="keep">Event Modeling Board</strong>
         <button onClick={undo} disabled={!hist.undo} title="Undo (Ctrl+Z)">
           ↶ Undo
         </button>
@@ -1382,7 +1422,7 @@ function Board() {
           ↷ Redo
         </button>
         <select
-          className="context-filter"
+          className="context-filter keep"
           value={filterId}
           onChange={(e) => setContextFilter(e.target.value)}
           title="Show only the Chapters of one Context"
@@ -1434,9 +1474,21 @@ function Board() {
         <button className="chip chapter-btn" onClick={addChapter} title="Add a new Chapter">
           + Chapter
         </button>
-        <span className="spacer" />
+        <span className="spacer keep" />
         <button
-          className="hotkeys-btn search-btn"
+          className={`hotkeys-btn keep${overview ? ' pressed' : ''}`}
+          onClick={() => setOverview((v) => !v)}
+          aria-pressed={overview}
+          title={overview ? 'Leave the high level view (Ctrl+H)' : 'High level view: read-only, without slice borders and buttons (Ctrl+H)'}
+          aria-label="High level view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+            <path d="M1.5 6.5H14.5M1.5 10H14.5" />
+          </svg>
+        </button>
+        <button
+          className="hotkeys-btn search-btn keep"
           onClick={() => setSearch((s) => ({ open: true, tick: s.tick + 1 }))}
           title="Search elements by name (Ctrl+F)"
           aria-label="Search"
@@ -1446,7 +1498,7 @@ function Board() {
             <path d="M10 10L14.5 14.5" />
           </svg>
         </button>
-        <button className="hotkeys-btn" onClick={() => setHelpOpen(true)} title="Hotkeys" aria-label="Hotkeys">
+        <button className="hotkeys-btn keep" onClick={() => setHelpOpen(true)} title="Hotkeys" aria-label="Hotkeys">
           ⌨️
         </button>
       </header>
@@ -1496,6 +1548,9 @@ function Board() {
           onConnect={onConnect}
           onDrop={onDrop}
           onDragOver={onDragOver}
+          nodesDraggable={!overview}
+          nodesConnectable={!overview}
+          edgesReconnectable={!overview}
           defaultViewport={{ x: 20, y: 40, zoom: 0.6 }}
           minZoom={0.2}
           ariaLabelConfig={{ 'controls.fitView.ariaLabel': 'Fit view (Shift+F)' }}
@@ -1503,10 +1558,10 @@ function Board() {
           autoPanOnNodeDrag={false}
           disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
-          <CellHighlight cell={selectedCell} />
+          <CellHighlight cell={overview ? null : selectedCell} />
           <Background gap={20} />
           <Controls onFitView={fitBoard} />
           <MiniMap
@@ -1531,6 +1586,7 @@ function Board() {
         <InfoDialog
           key={infoNode.id}
           initialReading={infoReading}
+          readOnly={overview}
           title={
             infoNode.type === 'sticky' && infoNode.data.kind !== 'notes'
               ? `${KINDS[infoNode.data.kind].label}${infoNode.data.name ? ` — ${infoNode.data.name}` : ''}`
@@ -1544,8 +1600,8 @@ function Board() {
       {htmlNode && (
         <HtmlDialog
           key={htmlTarget.id}
-          initialReading={htmlReading || htmlCopy}
-          readOnly={htmlCopy}
+          initialReading={htmlReading || htmlCopy || overview}
+          readOnly={htmlCopy || overview}
           title={`Screen mockup${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
           initial={htmlNode.data.html ?? ''}
           initialUrl={htmlNode.data.url ?? ''}

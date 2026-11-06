@@ -38,9 +38,9 @@ export function useChapterDrag(nodeId, skip) {
   const { setNodes, getNodes } = useReactFlow();
   const zoom = useStore((s) => s.transform[2]);
   const history = useContext(HistoryContext);
-  const { activate, clearCell } = useContext(BoardActions);
+  const { activate, clearCell, overview } = useContext(BoardActions);
   return (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || overview) return; // the overview is read-only
     clearCell(); // pressing a header selects something else
     if (e.target.closest('button, input') || skip?.()) return;
     const chapterId = getNodes().find((n) => n.id === nodeId)?.parentId;

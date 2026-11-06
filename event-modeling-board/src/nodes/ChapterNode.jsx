@@ -12,7 +12,7 @@ const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdo
 // move the Chapter) and two connection ports: incoming on the left side, outgoing on the right.
 export function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
-  const { removeChapter, compactChapter, openMovie, activeId } = useContext(BoardActions);
+  const { removeChapter, compactChapter, openMovie, activeId, overview } = useContext(BoardActions);
   const { contexts, setChapterContext, addContext, removeContext } =
     useContext(BoardActions);
   const screenCount = useStore((s) => {
@@ -71,7 +71,7 @@ export function ChapterNode({ id, data }) {
             }}
           />
         ) : (
-          <span className="nodrag nopan" onDoubleClick={() => setEditing(true)}>
+          <span className="nodrag nopan" onDoubleClick={overview ? undefined : () => setEditing(true)}>
             {data.name}
           </span>
         )}

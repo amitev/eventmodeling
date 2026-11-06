@@ -108,12 +108,12 @@ const MARKDOWN_TOOLS = [
 ];
 
 // Modal to edit the Markdown info of a Chapter, lane or slice: editor on the left, preview on
-// the right. The changes only apply on Save.
-export function InfoDialog({ title, initial, initialReading = false, onSave, onCancel }) {
+// the right. The changes only apply on Save. `readOnly` (the overview, R1f): preview only, no Save.
+export function InfoDialog({ title, initial, initialReading = false, readOnly = false, onSave, onCancel }) {
   const [text, setText] = useState(initial);
   const textRef = useRef(initial); // the latest text, for the Ctrl+S listener
   textRef.current = text;
-  const [reading, setReading] = useState(initialReading); // read mode: only the preview is shown
+  const [reading, setReading] = useState(initialReading || readOnly); // read mode: only the preview is shown
   const backdrop = useBackdropClose(onCancel);
   const modal = useModalFocus();
   const area = useRef(null);
@@ -168,7 +168,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onCancel();
-      else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+      else if (!readOnly && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault(); // not the browser's Save page
         onSave(textRef.current);
       } else if ((e.ctrlKey || e.metaKey) && !e.altKey && area.current && e.key.toLowerCase() === 'z') {
@@ -188,13 +188,14 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel, onSave]);
+  }, [onCancel, onSave, readOnly]);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
       <div ref={modal} tabIndex={-1} className="info-dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="info-title">
           <span>{title}</span>
+          {!readOnly && (
           <button
             className="info-mode"
             title={reading ? 'Write mode: show the editor' : 'Read mode: show only the preview'}
@@ -212,6 +213,7 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
               )}
             </svg>
           </button>
+          )}
         </div>
         <div className={`info-panes${reading ? ' reading' : ''}`}>
           {!reading && (
@@ -269,8 +271,8 @@ export function InfoDialog({ title, initial, initialReading = false, onSave, onC
           <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
         <div className="info-actions">
-          <button className="primary" onClick={() => onSave(text)} title="Save (Ctrl+S)">Save</button>
-          <button onClick={onCancel} title="Cancel (Esc)">Cancel</button>
+          {!readOnly && <button className="primary" onClick={() => onSave(text)} title="Save (Ctrl+S)">Save</button>}
+          <button onClick={onCancel} title={readOnly ? 'Close (Esc)' : 'Cancel (Esc)'}>{readOnly ? 'Close' : 'Cancel'}</button>
         </div>
       </div>
     </div>,

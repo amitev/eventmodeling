@@ -28,5 +28,6 @@ export const BoardActions = createContext({
   addLaneAfter: () => {},
   removeChapter: () => {},
   compactChapter: () => {},
+  overview: false,
   activeId: null,
 });

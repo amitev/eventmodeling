@@ -568,6 +568,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .toolbar .hotkeys-btn { padding: 2px 8px; font-size: 16px; }
 .toolbar .search-btn { display: inline-grid; place-items: center; }
+
+/* The overview (R1f): read-only and high-level. No toolbar commands, slice borders and titles,
+   lane buttons, Chapter handle, element toolbars or card buttons; lanes keep their names. */
+.app.overview .toolbar > :not(.keep) { display: none; }
+.toolbar .hotkeys-btn.pressed { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.app.overview .slice { background: none; }
+.app.overview .slice::after, .app.overview .slice-header, .app.overview .slice-handle { display: none; }
+.app.overview .lane-type, .app.overview .chapter-handle, .app.overview .element-toolbar { display: none; }
+.app.overview .lane-header :is(.lane-remove, .lane-color, .lane-add, .lane-letter, .info-btn) { display: none; }
+.app.overview .notes-colors, .app.overview .scenarios-foot, .app.overview .scenario-icon { display: none; }
+.app.overview .scenario-item { pointer-events: none; }
+.app.overview .lane-header, .app.overview .lane-header:active { cursor: default; }
 /* The fields popup (R9.3). */
 .fields-dialog {
   display: flex; flex-direction: column; width: min(960px, 94vw); max-height: 85vh;

@@ -99,6 +99,13 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1e.3** Each result is only the name, on the colour of its element type (R3.1); a linked copy is semi-transparent (75%), as on the board (R3.22). The first result is highlighted; **↑** / **↓** move the highlight (wrapping), the mouse also moves it.
 - **R1e.4** **Enter** or a click on a result **focuses** the element and closes the box: the element and its Cell are selected (R5a.12), its Chapter becomes active (R1a.4), and the view moves to centre it, zooming in to at least 100% (never zooming out). **Esc** or **×** closes the box without changing anything.
 
+## 1f. High level view
+
+- **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
+- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, High level view, search and hotkey buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
+- **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Query green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
+- **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning, zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
+
 ## 2. Lanes
 
 - **R2.1** Elements sit in horizontal swimlanes stacked top to bottom.

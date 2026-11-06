@@ -452,6 +452,15 @@ export const edgeDefaults = {
   style: { strokeWidth: 3 },
 };
 
+// Arrow colour by the type of the source element in the overview (R1f.3).
+export const OVERVIEW_EDGE_COLORS = {
+  screen: '#8a8a8a',
+  command: '#6f93b3',
+  query: '#7aa64f',
+  event: '#e08a3c',
+  processor: '#9b7cc4',
+};
+
 // Arrows between Chapters are darker than arrows between elements.
 export const chapterEdgeDefaults = {
   markerEnd: { type: MarkerType.ArrowClosed, color: '#5b5b6b' },

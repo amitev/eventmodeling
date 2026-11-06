@@ -20,6 +20,7 @@ const HOTKEYS = [
       ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'],
       ['Backspace / Delete', 'Delete the selected elements or arrows'],
       ['Ctrl+F', 'Search elements by name'],
+      ['Ctrl+H', 'High level view (Esc leaves it)'],
       ['Shift+F', 'Fit view: show the whole board'],
     ],
   },

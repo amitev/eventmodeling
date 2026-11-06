@@ -34,7 +34,7 @@ export function StickyNode({ id, data, selected }) {
     const me = s.nodeLookup.get(id);
     return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
   });
-  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview } = useContext(BoardActions);
 
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
@@ -123,7 +123,7 @@ export function StickyNode({ id, data, selected }) {
       <div
         className="sticky-header"
         title={shown.name || undefined}
-        onDoubleClick={isCopy ? undefined : () => setEditingTitle(true)}
+        onDoubleClick={isCopy || overview ? undefined : () => setEditingTitle(true)}
       >
         {isCopy && (
           <button
