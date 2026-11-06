@@ -40,6 +40,7 @@ const HOTKEYS = [
       ['Ctrl+← / Ctrl+→', 'Move the slice left / right'],
       ['Shift+C', 'Compact the slice'],
       ['Shift+I', 'Open the slice info'],
+      ['Shift+A', 'Copy Context: Context, Chapter, Slice (and the selected element) ids to the clipboard'],
       ['Shift+E', 'Mark / unmark the slice as the end of a flow'],
       ['S', 'Add a Screen in the Cell (a Scenarios element in a Spec lane)'],
       ['C', 'Add a Command in the Cell'],
@@ -64,6 +65,7 @@ const HOTKEYS = [
       ['V', 'View the HTML mockup of a Screen, or of the original of a linked copy (see also Scenarios, Notes)'],
       ['G', 'Select the original of a linked copy and go to it'],
       ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
+      ['Shift+A', 'Copy Context: Context, Chapter, Slice and Element ids to the clipboard'],
     ],
   },
   {

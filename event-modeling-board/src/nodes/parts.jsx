@@ -148,6 +148,30 @@ export function CopyButton({ id }) {
   );
 }
 
+// "Copy Context": puts the ids of the Context, Chapter, Slice (and the element, when `elementId` is
+// given) in the clipboard. `className` is the button style of its place (element toolbar or slice header).
+export function CopyContextButton({ elementId, sliceId, className = 'info-btn' }) {
+  const { copyContext } = useContext(BoardActions);
+  return (
+    <button
+      className={`${className} nodrag`}
+      title="Copy Context (Shift+A)"
+      aria-label="Copy Context"
+      onDoubleClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        copyContext({ elementId, sliceId });
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <rect x="2" y="2.5" width="10" height="10" rx="1.5" />
+        <rect x="4.5" y="0.8" width="5" height="3" rx="1" fill="currentColor" />
+        <path d="M4.5 7.5H9.5M4.5 10H8" />
+      </svg>
+    </button>
+  );
+}
+
 // The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
 // iframe and scaled down to the body's width, so there is nothing to scroll.
 export function ScreenPreview({ html, url, title }) {

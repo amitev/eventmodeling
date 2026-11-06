@@ -5,6 +5,7 @@ export const BoardActions = createContext({
   editScenario: () => {},
   newScenarioId: () => '',
   rememberCopy: () => {},
+  copyContext: () => {},
   openInfo: () => {},
   openFields: () => {},
   openHtml: () => {},

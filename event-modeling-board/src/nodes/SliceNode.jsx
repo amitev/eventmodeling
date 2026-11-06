@@ -15,7 +15,7 @@ import {
 import { cleanName, filterNameInput } from '../model/names.js';
 import { HistoryContext } from '../state/history.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
+import { CopyContextButton, InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
 
 // A slice is a vertical band across all lanes: one end-to-end piece of behavior. It is not
 // selectable; clicking its header selects the top Cell of the slice.
@@ -195,6 +195,7 @@ export function SliceNode({ id, data }) {
           )}
         </div>
         <div className="slice-actions">
+          <CopyContextButton sliceId={id} className="slice-add" />
           <button
             className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}
             title={data.flowEnd ? 'Flow end: remove the mark (Shift+E)' : 'Flow end: mark this slice as the end of a flow (Shift+E)'}

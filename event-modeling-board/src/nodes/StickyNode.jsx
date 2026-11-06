@@ -5,7 +5,7 @@ import { hasFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions } from '../state/BoardActions.js';
-import { CopyButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
+import { CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 
 // A cogwheel with 8 teeth and a centre hole, as one path in a 100x100 box.
 const COG_PATH = (() => {
@@ -71,9 +71,9 @@ export function StickyNode({ id, data, selected }) {
     update({ name: name.trim() });
   };
 
-  // The toolbar above a selected element (not Notes or Scenarios): the Info button, and for a Screen the
-  // HTML mockup button too. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a). A linked copy
-  // (R3.22) has only the eye of a Screen.
+  // The toolbar above a selected element: Copy and Info, the Fields and HTML mockup buttons where they
+  // apply, and Copy Context. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a). A linked copy
+  // (R3.22) has the eye of a Screen, and Notes and Scenarios only Copy Context.
   const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
   const eyeButton = (
     <button
@@ -89,43 +89,62 @@ export function StickyNode({ id, data, selected }) {
       </svg>
     </button>
   );
-  const toolbar =
-    data.kind === 'notes' || data.kind === 'scenarios' || (isCopy && !isScreen) ? null : (
-      <NodeToolbar
-        position={Position.Top}
-        offset={8 * toolbarScale}
-        className="element-toolbar nodrag nopan"
-        style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
-      >
-        {isCopy ? (
-          eyeButton
-        ) : (
-          <>
-            <CopyButton id={id} />
-            <InfoButton id={id} info={data.info} hotkey="I" />
-            {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
-            {isScreen && (
-              <>
-                <button
-                  className="info-btn html-tool"
-                  title="Edit HTML mockup (E)"
-                  aria-label="Edit HTML mockup"
-                  onClick={() => openHtml(id)}
-                >
-                  {'</>'}
-                </button>
-                {eyeButton}
-              </>
-            )}
-          </>
-        )}
-      </NodeToolbar>
-    );
+  const copyContextButton = <CopyContextButton elementId={id} />;
+  // Notes and Scenarios have only the Copy Context button; a linked copy the eye (Screen) and that button.
+  const toolbar = (
+    <NodeToolbar
+      position={Position.Top}
+      offset={8 * toolbarScale}
+      className="element-toolbar nodrag nopan"
+      style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
+    >
+      {data.kind === 'notes' || data.kind === 'scenarios' ? (
+        copyContextButton
+      ) : isCopy ? (
+        <>
+          {isScreen && eyeButton}
+          {copyContextButton}
+        </>
+      ) : (
+        <>
+          <CopyButton id={id} />
+          <InfoButton id={id} info={data.info} hotkey="I" />
+          {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
+          {isScreen && (
+            <>
+              <button
+                className="info-btn html-tool"
+                title="Edit HTML mockup (E)"
+                aria-label="Edit HTML mockup"
+                onClick={() => openHtml(id)}
+              >
+                {'</>'}
+              </button>
+              {eyeButton}
+            </>
+          )}
+          {copyContextButton}
+        </>
+      )}
+    </NodeToolbar>
+  );
 
   if (data.kind === 'scenarios') {
-    return <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} onView={viewScenarios} newId={newScenarioId} />;
+    return (
+      <>
+        <ScenariosCard id={id} data={data} selected={selected} width={width} onEdit={editScenario} onView={viewScenarios} newId={newScenarioId} />
+        {toolbar}
+      </>
+    );
   }
-  if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />;
+  if (data.kind === 'notes') {
+    return (
+      <>
+        <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />
+        {toolbar}
+      </>
+    );
+  }
 
   const zoomable = isScreen && !!(shown.html || shown.url);
   return (

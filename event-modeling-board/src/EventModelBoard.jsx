@@ -490,6 +490,24 @@ function Board() {
       clipboard.current = element.data.copyOf ?? element.id;
     }
   }, [getNodes]);
+  // Puts "Context <id> Chapter <id> Slice <id> [Element <id>]" in the system clipboard; `{ elementId }`
+  // (its slice is worked out) or `{ sliceId }` (no element).
+  const copyContext = useCallback(
+    ({ elementId, sliceId }) => {
+      const ns = getNodes();
+      const element = elementId ? ns.find((n) => n.id === elementId) : null;
+      const slice = element ? sliceOf(slices(ns), element) : ns.find((n) => n.id === sliceId);
+      const chapter = slice && ns.find((n) => n.id === slice.parentId);
+      if (!chapter) return;
+      const context = contexts.some((c) => c.id === chapter.data.context) ? chapter.data.context : contexts[0].id;
+      const text = `Context ${context} Chapter ${chapter.id} Slice ${slice.id}${element ? ` Element ${element.id}` : ''}`;
+      navigator.clipboard.writeText(text).then(
+        () => setNotice(`Copied: ${text}`),
+        () => setNotice('Could not copy to the clipboard.')
+      );
+    },
+    [getNodes, contexts]
+  );
   // Hotkeys of a selected Cell (R5a.11). The handler is assigned further down, where the
   // actions it needs are defined; this listener stays registered.
   const cellKeys = useRef(null);
@@ -806,6 +824,7 @@ function Board() {
       goToOriginal,
       newScenarioId: () => newIds()[0],
       rememberCopy,
+      copyContext,
       contexts,
       setChapterContext,
       addContext,
@@ -858,6 +877,7 @@ function Board() {
       contexts,
       nodes,
       rememberCopy,
+      copyContext,
       titleEditId,
       overview,
     ]
@@ -1150,6 +1170,7 @@ function Board() {
       e.key === 'Backspace' ||
       e.key.toLowerCase() === 'i' ||
       e.key.toLowerCase() === 'e' ||
+      e.key.toLowerCase() === 'a' ||
       e.key.toLowerCase() === 'c';
     // Ctrl+←/→ moves the slice.
     const moveKey =
@@ -1256,11 +1277,23 @@ function Board() {
       }
       return;
     }
-    if (e.key.toLowerCase() === 'a') {
+    if (e.key.toLowerCase() === 'a' && !e.shiftKey) {
       const selected = getNodes().filter((n) => n.selected);
       if (selected.length === 1 && selected[0].data.kind === 'scenarios') {
         e.preventDefault();
         setScenarioEdit({ nodeId: selected[0].id, scenarioId: null });
+      }
+      return;
+    }
+    // Shift+A copies the Context, Chapter, Slice and (when one is selected) Element ids.
+    if (e.shiftKey && e.key.toLowerCase() === 'a') {
+      const selected = getNodes().filter((n) => n.selected);
+      if (selected.length === 1 && selected[0].type === 'sticky') {
+        e.preventDefault();
+        copyContext({ elementId: selected[0].id });
+      } else if (selectedCell) {
+        e.preventDefault();
+        copyContext({ sliceId: selectedCell.sliceId });
       }
       return;
     }
