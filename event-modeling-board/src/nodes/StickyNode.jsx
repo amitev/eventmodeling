@@ -147,7 +147,14 @@ export function StickyNode({ id, data, selected }) {
   }
 
   const zoomable = isScreen && !!(shown.html || shown.url);
+  // The handles are siblings of the scaled `.sticky`: React Flow measures them from their screen position, so
+  // inside the hover zoom (R3.10a) they were measured scaled and the arrows ended at wrong points.
   return (
+    <>
+      <Handle id="top-in" type="target" position={Position.Top} />
+      <Handle id="top-out" type="source" position={Position.Top} />
+      <Handle id="bottom-out" type="source" position={Position.Bottom} />
+      <Handle id="bottom-in" type="target" position={Position.Bottom} />
     <div
       className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
       onPointerEnter={zoomable ? startGrowing : undefined}
@@ -156,8 +163,6 @@ export function StickyNode({ id, data, selected }) {
       onPointerUp={zoomable ? startGrowing : undefined}
     >
       {toolbar}
-      <Handle id="top-in" type="target" position={Position.Top} />
-      <Handle id="top-out" type="source" position={Position.Top} />
       <div
         className="sticky-header"
         title={shown.name || undefined}
@@ -206,8 +211,7 @@ export function StickyNode({ id, data, selected }) {
         {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
         </div>
       )}
-      <Handle id="bottom-out" type="source" position={Position.Bottom} />
-      <Handle id="bottom-in" type="target" position={Position.Bottom} />
     </div>
+    </>
   );
 }

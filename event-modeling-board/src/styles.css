@@ -235,7 +235,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky.processor .sticky-header .title-input { flex: 1; text-align: center; }
 .sticky.processor .cogwheel { display: flex; justify-content: center; height: 88px; }
 .sticky.processor .cogwheel path { fill: var(--processor); stroke: rgba(0, 0, 0, 0.45); stroke-width: 1.5; stroke-linejoin: round; }
-.sticky.processor .react-flow__handle-top { top: 26px; }
+.react-flow__node:has(> .sticky.processor) > .react-flow__handle-top { top: 26px; }
 
 /* Notes: a fixed 280x200 card showing rendered Markdown; vertical scrolling only. */
 .chip.notes { background: var(--notes) !important; }
