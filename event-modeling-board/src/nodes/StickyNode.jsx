@@ -19,9 +19,23 @@ const COG_PATH = (() => {
   return `M${pts.join('L')}ZM${50 + hole} 50A${hole} ${hole} 0 1 0 ${50 - hole} 50A${hole} ${hole} 0 1 0 ${50 + hole} 50Z`;
 })();
 
+const ZOOM_DELAY_MS = 300;
+
 export function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
+  // A Screen with a mockup grows only after the mouse stayed over it for ZOOM_DELAY_MS (R3.10a).
+  const [grown, setGrown] = useState(false);
+  const growTimer = useRef(null);
+  const stopGrowing = () => {
+    clearTimeout(growTimer.current);
+    setGrown(false);
+  };
+  const startGrowing = () => {
+    clearTimeout(growTimer.current);
+    growTimer.current = setTimeout(() => setGrown(true), ZOOM_DELAY_MS);
+  };
+  useEffect(() => () => clearTimeout(growTimer.current), []);
   const titleRef = useRef(null);
 
   useEffect(() => {
@@ -113,9 +127,14 @@ export function StickyNode({ id, data, selected }) {
   }
   if (data.kind === 'notes') return <NotesCard id={id} data={data} selected={selected} width={width} onEdit={openInfo} onRead={readInfo} />;
 
+  const zoomable = isScreen && !!(shown.html || shown.url);
   return (
     <div
-      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${isScreen && (shown.html || shown.url) ? ' zoomable' : ''}`}
+      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
+      onPointerEnter={zoomable ? startGrowing : undefined}
+      onPointerLeave={zoomable ? stopGrowing : undefined}
+      onPointerDown={zoomable ? stopGrowing : undefined}
+      onPointerUp={zoomable ? startGrowing : undefined}
     >
       {toolbar}
       <Handle id="top-in" type="target" position={Position.Top} />
