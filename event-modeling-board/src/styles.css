@@ -153,6 +153,15 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .screen-frame-box { position: relative; width: 100%; height: 118px; overflow: hidden; background: #fff; box-sizing: border-box; }
 /* Every Screen is as tall as one with a mockup: 26px header + 118px body (a 4:3 preview of the 158px body width) + borders. */
 .sticky.screen { min-height: 146px; }
+/* A Screen with a mockup grows 2.5x under the mouse (R3.10a): only drawn so, the layout stays. Not while
+   dragged. Its node is raised above the others for the time. */
+.sticky.screen.zoomable { transition: transform 0.15s ease-out; transform-origin: 50% 0; }
+.react-flow__node:not(.dragging) > .sticky.screen.zoomable:hover { transform: scale(2.5); }
+/* While grown the header is hidden: only the mockup shows, filling the element. */
+.react-flow__node:not(.dragging) > .sticky.screen.zoomable:hover .sticky-header { display: none; }
+.react-flow__node:not(.dragging) > .sticky.screen.zoomable:hover .sticky-body { border-radius: 3px; }
+.react-flow__node:not(.dragging) > .sticky.screen.zoomable:hover .screen-frame-box { height: 146px; }
+.react-flow__node:not(.dragging):has(> .sticky.screen.zoomable:hover) { z-index: 1000 !important; }
 .screen-frame { position: absolute; top: 0; left: 0; display: block; transform-origin: 0 0; border: 0; pointer-events: none; background: #fff; }
 
 .lane-header {
@@ -623,6 +632,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   position: absolute; z-index: 4; pointer-events: none; box-sizing: border-box;
   border: 2px solid rgba(26, 115, 232, 0.55); border-radius: 2px;
 }
+/* The highlight sits outside the nodes' stacking context, so no node z-index can lift an enlarged Screen above
+   it (R3.10a): it goes below the nodes for the time. */
+.react-flow__renderer:has(.sticky.screen.zoomable:hover) .cell-highlight { z-index: -1; }
 
 /* Movie strip (R11) */
 .chapter-compact:disabled { opacity: 0.4; cursor: default; }

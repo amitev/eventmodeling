@@ -115,7 +115,7 @@ export function StickyNode({ id, data, selected }) {
 
   return (
     <div
-      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}`}
+      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${isScreen && (shown.html || shown.url) ? ' zoomable' : ''}`}
     >
       {toolbar}
       <Handle id="top-in" type="target" position={Position.Top} />
