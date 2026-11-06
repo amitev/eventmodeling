@@ -65,6 +65,18 @@ for (const ch of chapters.filter(wanted)) {
     if (slice.name === 'New Slice') add('GAP', { chapter: ch, slice }, 'slice still has the default name "New Slice"');
     if (!real.length) add('GAP', { chapter: ch, slice }, 'slice is empty');
     else if (slice.type === null) add('GAP', { chapter: ch, slice }, 'slice has no type: elements or arrows are missing for any of the four slice types');
+    const ofType = (t) => real.filter((e) => e.type === t);
+    const [cmds, qrys, procs] = [ofType('COMMAND'), ofType('QUERY'), ofType('PROCESSOR')];
+    const list = (xs) => xs.map(nameOf).join(', ');
+    if (cmds.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${cmds.length} Commands (${list(cmds)}): a slice has one; propose a split`);
+    if (procs.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${procs.length} Processors (${list(procs)}): a slice has one; propose a split`);
+    if (cmds.length && qrys.length && !procs.length) add('RULE', { chapter: ch, slice }, `slice mixes a Command (${list(cmds)}) and a Query (${list(qrys)}) without a Processor: a slice has one Command or one Query; propose a split`);
+    if (!procs.length && !cmds.length && qrys.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${qrys.length} Queries (${list(qrys)}): a slice has one; propose a split`);
+    const main = procs.length === 1 ? [procs[0], ...cmds] : cmds.length === 1 && !qrys.length ? [cmds[0]] : qrys.length === 1 && !cmds.length ? [qrys[0]] : null;
+    const key = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (main && slice.name !== 'New Slice' && !main.some((m) => key(nameOf(m)) === key(slice.name))) {
+      add('CANDIDATE', { chapter: ch, slice }, `slice name "${slice.name}" differs from its ${main[0].type} "${nameOf(main[0])}": name a slice exactly like its element`);
+    }
     for (const sc of slice.elements.filter((e) => e.type === 'SCENARIOS')) {
       sliceOfScenarios.push({ slice, count: sc.scenarios?.length ?? 0 });
       if (!sc.scenarios?.length) add('GAP', { chapter: ch, slice, el: sc }, 'Scenarios element has no scenarios');
@@ -172,4 +184,38 @@ for (const f of findings) {
   const where = [f.chapter, f.slice].filter(Boolean).join(' > ');
   const who = f.el ? ` ${f.el.type ?? ''} "${f.el.name ?? nameOf(f.el)}" (${f.el.id ?? ''})` : '';
   console.log(`[${f.kind}] ${where}:${who} - ${f.msg}`);
+}
+
+// Slices depend on each other only through Events: a Query reads Events of another slice (arrows), a Command
+// is checked against Events that its scenarios give (Given).
+if ('dependencies' in args) {
+  const whenScenarios = new Map();
+  for (const { el } of byId.values()) for (const s of el.scenarios ?? []) if (s.when) whenScenarios.set(s.when.element, [...(whenScenarios.get(s.when.element) ?? []), s]);
+  const label = (info) => `${info.chapter.name} > ${info.slice.name}`;
+  console.log('\nDependencies between slices (through Events only):');
+  let any = false;
+  for (const ch of chapters.filter(wanted)) {
+    for (const slice of ch.slices) {
+      const produced = new Set(), consumed = new Set();
+      for (const el of slice.elements) {
+        if (el.type === 'COMMAND') {
+          for (const c of childrenOf(el)) if (c.type === 'EVENT' && !c.copyOf) produced.add(nameOf(c));
+          for (const s of whenScenarios.get(original(el).id) ?? []) for (const g of s.given) {
+            const home = byId.get(g.element);
+            if (home && home.slice !== slice) consumed.add(`${nameOf(home.el)} (${label(home)})`);
+          }
+        }
+        if (el.type === 'QUERY') {
+          for (const p of parentsOf(el).filter((x) => x.type === 'EVENT')) {
+            const home = byId.get(original(p).id);
+            if (home && home.slice !== slice) consumed.add(`${nameOf(home.el)} (${label(home)})`);
+          }
+        }
+      }
+      if (!produced.size && !consumed.size) continue;
+      any = true;
+      console.log(`- ${ch.name} > ${slice.name}: produces ${[...produced].join(', ') || 'nothing'}; depends on ${[...consumed].join(', ') || 'no other slice'}`);
+    }
+  }
+  if (!any) console.log('none');
 }

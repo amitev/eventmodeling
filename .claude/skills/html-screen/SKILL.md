@@ -22,7 +22,7 @@ Get the screen name from the user (and the Chapter, if they name one).
    - Several (names are not unique): ask the user which one (name the Chapters), never guess.
    - None: the screen is new. Get the target with `GET /api/model/outline` and ask the user in which Chapter and slice it goes. The `lane` is a lane of that Chapter with `type` `ACTOR` (see `GET /api/model/rules`); `slice` is a slice id of the Chapter. Ask if the Chapter has several Actor lanes.
 2. A linked copy (it has `copyOf` in `GET /api/model/elements/:id`) cannot be changed: use its original's id instead.
-3. **Style reference.** Only when the user **names** another Screen as the base for the look ("in the style of X", "same look as X", "based on X"): note its name for Step 2a. Never choose a reference yourself.
+3. **Style reference.** Only when the user — or a skill that calls this one (for example `add-next-slice`) — **names** another Screen as the base for the look ("in the style of X", "same look as X", "based on X"): note its name for Step 2a. Never choose a reference yourself.
 
 ## Step 2 — If updating an existing screen, load its current HTML first
 
