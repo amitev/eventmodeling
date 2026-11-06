@@ -11,7 +11,7 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 
 ## Step 1 — Gather (ask, do not assume)
 
-1. **Chapter and place.** `GET /api/model/outline`. Ask which Chapter, and after which slice the new one goes (or at the end). The Chapter needs lanes for the types below: one lane per needed type. Several lanes of one type: ask which. A missing type: ask, then add it as `chapter-setup` says.
+1. **Chapter and place.** `GET /api/model/outline`. Ask which Chapter, and after which slice the new one goes (or at the end). The Chapter needs lanes for the types below: one lane per needed type. Several lanes of one type: ask which. A missing type: ask, then add it as `chapter-setup` says. Several Actor lanes: Processors go in a system-actor lane, Screens in a human-role lane; prefer system-actor lanes on top of the human ones when adding a lane.
 2. **Type of slice and the business behaviour**, in the user's words: who does what, which facts are recorded, what is shown. Pick the recipe below. Not clear which one: ask.
 3. **Names** in business language, as the core rules and `naming` say: the slice named exactly like its Command, Query or Processor; Screen as a user calls it; Command imperative; Event past tense; Query a noun phrase. Unsure: ask.
 4. **Fields** (names, types, flags) of each element: from the user or from the upstream elements (they copy along the arrows). Do not invent data: a field with no source is `generated: true` or a question to the user.

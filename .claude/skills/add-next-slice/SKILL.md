@@ -56,7 +56,7 @@ Build it with `slice-builder`: gather nothing from the user (Step 1 decided it),
 
 - **Type:** state change for a new Command (Screen → Command → Event), state read for a new Query (Query → Screen), automation for a new Processor (and translation when an external party acts). Per the core concept above, one Command, Query or Processor per slice.
 - **Name the slice after its element** (the Command, Query or Processor name), never leave "New Slice".
-- **Lanes:** the lane of the needed type. If the Chapter has more than one lane of a type (for example several Actor lanes for different roles), use the one the story's earlier slices use for that role; when nothing points to one, use the first of that type, and say which in the report.
+- **Lanes:** the lane of the needed type. If the Chapter has more than one lane of a type (for example several Actor lanes for different roles), use the one the story's earlier slices use for that role; when nothing points to one, use the first of that type, and say which in the report. A Processor goes in a system-actor lane; system-actor lanes are preferably the top Actor lanes, above the human roles.
 - **Place** it after the last slice (or where Step 0 said).
 - **Arrows and fields** as the recipe says: a Query is fed by the previous slice's Events (automatic arrow from the previous slice's right-most Event; connect other Events explicitly), and the Screen inherits the fields.
 - Do not use `info` for anything but implementation details (`slice-builder`).

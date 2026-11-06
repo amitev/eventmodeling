@@ -17,7 +17,7 @@ Read `eventmodeling-core-rules` first (what each element is, field lineage). End
 | Field | `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`. `type` default `string`; one of `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (list: `GET /api/model/rules` → `fieldTypes`). Only `object` has `fields` (nested, any depth). Flags (`list`, `id`, `optional`, `generated`, `pii`, `technical`) default `false`. A list of values is `list: true`. |
 | Names | Not empty, unique within their list. |
 | Flags | `id` identifies the object; `optional` may be missing; `generated` is created by the system (an id, the current date, the acting user); `pii` is personal data; `technical` is an implementation detail. |
-| Flow | Arrows: Screen → Command, Processor → Command, Command → Event, Event → Query, Query → Screen, Query → Processor. See the `connections` skill. |
+| Flow | Arrows: Screen → Command, Processor → Command, Command → Event, Event → Query, Event → Processor, Query → Screen, Query → Processor. See the `connections` skill. |
 | Copy | Fields are **copied**, never linked. A copied field **replaces** the same-named field of the target as a whole (nested `fields` included, no deep merge), in place; new names are appended. |
 | Processor | Holds no fields but passes them on: Query → Processor → Command copies the Query's fields to the Command. |
 | Linked copy | An element with `copyOf` is **never a target** (it shows its original's fields; change the original, a `PATCH` on it gets 409). As a **source** it gives its original's fields. |

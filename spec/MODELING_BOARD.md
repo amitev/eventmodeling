@@ -218,6 +218,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - Processor → Command
   - Command → Event
   - Event → Query
+  - Event → Processor
   - Query → Screen
   - Query → Processor
 
@@ -228,8 +229,9 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - A Screen above a Query: Query → Screen.
   - A Query under a Screen: Query → Screen.
   - A Query when the slice just before its own has an Event: Event → Query. With several Events, the right-most (nearest by height on a tie).
+  - A Processor with a Query in its slice: Query → Processor, the nearest by height (above or under). Without a Query, an Event in an Integration lane (R2.10) of its slice: Event → Processor, the nearest by height. Never both.
 
-  Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1).
+  Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds none for a Processor (S4.16).
 
 ## 5. Slices
 

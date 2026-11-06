@@ -52,6 +52,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 `POST /chapters/:id/lanes` `{ "type", "after", "name"?, "color"?, "info"? }`.
 - `type` is `ACTOR`, `INTERACTION`, `EVENT`, `INTEGRATION` or `SPEC`. `name` defaults to the type name, `color` to `none`.
 - `after` is the id of a lane of the Chapter. The new lane goes right below it. The order must hold: the type may not come before the type of `after`, nor after the type of the lane that follows. A refusal (400) names the order.
+- Preferred: system actors (Actor lanes with Processors) on the top Actor lanes, human roles (Actor lanes with Screens) below. A new lane can only go below an existing lane (`after`), so in a new Chapter use the first Actor lane for the system actor (rename it) and add the human-role lane after it; add further system-actor lanes after the last system-actor lane. Do not reorder existing lanes unasked.
 - Typical: Integration goes below the last Event lane; Spec goes below the last Event or Integration lane.
 
 `PATCH /lanes/:id` `{ "name"?, "info"?, "color"? }` (the type never changes). `DELETE /lanes/:id` deletes its elements; 409 for the last Actor, Interaction or Event lane.

@@ -99,6 +99,7 @@ Anything else (and an empty slice) has no type. A slice never mixes a COMMAND an
 
 - Name Actor lanes (and the Screens and Processors in them) for a specific **human role** (Customer, Seller, Admin...) or **system actor** (Payment Gateway, Scheduler...) in domain language. No COMMAND may be attributed to a generic "User".
 - Every COMMAND is issued by exactly one role/actor (the single-issuer rule above, from the roles' side).
+- **Lane order (preferred):** when a Chapter has several Actor lanes, put the **system actors** (the lanes with PROCESSORs) on the **top** lanes and the human roles (the lanes with SCREENs) below them, closest to the Interaction lane. Place new Actor lanes accordingly; do not reorder existing lanes unasked.
 - A human role needs at least one COMMAND and one QUERY — a role that never acts and never sees anything is decorative, not modeled.
 
 ## Field Lineage (Information Completeness)

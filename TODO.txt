@@ -26,10 +26,12 @@ Questions
 
 
 Elements
+- Change the icon of automation to a cog
 - Automatic name from previous element - too hard to do correctly.
 - Agentic - suggest automatic slice and element names
 
 Screens
+- Enlarge screens on hovering
 - Blurring/highlighting parts of the screen (overlay?)
 - Agentic - generate a screen based on the look and feel of another screen (or previous screen). Using screenshots?
 

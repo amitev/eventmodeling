@@ -11,7 +11,7 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 
 | | Rule |
 |---|---|
-| Allowed pairs | Screen → Command, Processor → Command, Command → Event, Event → Query, Query → Screen, Query → Processor. Nothing else: not two elements of one type, not Screen → Event, and so on. The list is `connections` in `GET /api/model/rules`. |
+| Allowed pairs | Screen → Command, Processor → Command, Command → Event, Event → Query, Event → Processor, Query → Screen, Query → Processor. Nothing else: not two elements of one type, not Screen → Event, and so on. The list is `connections` in `GET /api/model/rules`. |
 | Direction | Fixed by the pair. `POST /connections` accepts the elements in **either order** and creates the arrow in the right direction. |
 | Not connectable | `SCENARIOS` and `NOTES` elements have no arrows. |
 | No self, no repeat | An element is never connected to itself. A pair is connected **at most once**: a repeat is refused (400). |
@@ -36,7 +36,7 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 
 - Every matching rule makes its arrow. Each arrow copies fields as above.
 - Moving an element (`PATCH` with `slice`, `lane`, `x`) creates **no** arrows and keeps the existing ones.
-- A Processor never gets an automatic arrow: connect it yourself.
+- A Processor never gets an automatic arrow from the server (the board does connect it): connect it yourself.
 - Not automatic, so connect them yourself: Event → Query across more than one slice, Query → Processor, Processor → Command, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").
 
 ## Step 1 — Find the elements

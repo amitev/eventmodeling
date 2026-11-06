@@ -64,7 +64,7 @@ export const FLOWS_TO = {
   screen: ['command'],
   processor: ['command'],
   command: ['event'],
-  event: ['query'],
+  event: ['query', 'processor'],
   query: ['screen', 'processor'],
 };
 
