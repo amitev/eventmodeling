@@ -6,6 +6,7 @@ import {
   kindW,
   padOf,
   snapUp,
+  snap,
   leftAligned,
   stickyW,
   stickyH,
@@ -76,6 +77,8 @@ export function autoConnections(nodes, node) {
   if (kind === 'command') {
     const screen = above('screen');
     if (screen) pairs.push([screen.id, node.id]);
+    const processor = nearest(others.filter((n) => n.data.kind === 'processor'));
+    if (processor) pairs.push([processor.id, node.id]);
   }
   if (kind === 'event') {
     const command = above('command');
@@ -113,6 +116,52 @@ export function autoConnections(nodes, node) {
     if (event) pairs.push([event.id, node.id]);
   }
   return pairs;
+}
+
+// The compact layout of an automation or translation slice: the Query first, the Command (the
+// action) next to it in the same lane, the Processor centred above both, the Event(s) under the
+// Command; the other elements (an Integration Event, ...) left aligned. `els` are the slice's
+// elements, `left` its left edge, `isIntegration(n)` tells an element in an Integration lane.
+// Returns { xs: Map of element id to x, width: the content width }, or null when the slice has no
+// single Query, Command and Processor outside Integration lanes, or no Event.
+export function automationLayout(els, laneIdOf, isIntegration, left) {
+  const core = els.filter((n) => !isIntegration(n));
+  const only = (kind) => {
+    const list = core.filter((n) => n.data.kind === kind);
+    return list.length === 1 ? list[0] : null;
+  };
+  const query = only('query');
+  const command = only('command');
+  const processor = only('processor');
+  const events = core.filter((n) => n.data.kind === 'event');
+  if (!query || !command || !processor || !events.length) return null;
+
+  const w = stickyW;
+  const xs = new Map();
+  const rightOfLane = new Map();
+  const put = (n, x) => {
+    xs.set(n.id, x);
+    const lane = laneIdOf(n);
+    rightOfLane.set(lane, Math.max(rightOfLane.get(lane) ?? -Infinity, x + w(n)));
+  };
+  // Elements of one lane go side by side in their current order, from `start` or after the last one placed.
+  const row = (list, start) => {
+    for (const n of [...list].sort((a, b) => a.position.x - b.position.x)) {
+      const lane = laneIdOf(n);
+      put(n, rightOfLane.has(lane) ? rightOfLane.get(lane) + GRID : start(n));
+    }
+  };
+
+  const queryX = left + padOf('query');
+  const commandX = queryX + w(query) + GRID;
+  put(query, queryX);
+  put(command, commandX);
+  put(processor, snap((queryX + commandX + w(command)) / 2 - w(processor) / 2));
+  row(events, () => commandX);
+  row(els.filter((n) => !xs.has(n.id)), (n) => left + padOf(n.data.kind));
+
+  const right = Math.max(...els.map((n) => xs.get(n.id) + w(n) + padOf(n.data.kind)));
+  return { xs, width: right - left };
 }
 
 // The elements whose centre is in the Cell.

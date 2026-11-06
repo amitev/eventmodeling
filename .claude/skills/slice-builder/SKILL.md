@@ -19,10 +19,10 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 
 ## How the server wires things
 
-- Elements are placed in the lane you name, with `x` left out (placed like the board does; the slice widens as needed). Only the lane decides the row.
-- With `autoConnect` (default `true`) a new element gets arrows **within its slice** at once, using the elements that exist at that moment: Command with a Screen above ← Screen; Event with a Command above ← Command; Screen with a Query below ← Query; Query with a Screen above → Screen; a Query also ← the right-most Event of the **previous slice**. Create elements in the order of the recipe so these arrows appear.
+- Elements are placed in the lane you name, with `x` left out (placed like the board does; the slice widens as needed). Only the lane decides the row. The one case where you give `x` is the automation layout (see Automation).
+- With `autoConnect` (default `true`) a new element gets arrows **within its slice** at once, using the elements that exist at that moment: Command with a Screen above ← Screen; Event with a Command above ← Command; Screen with a Query below ← Query; Query with a Screen above → Screen; a Query also ← the right-most Event of the **previous slice**; Command with a Processor in the slice ← Processor (nearest); Processor with a Query in the slice ← Query (nearest), else ← the nearest Event in an Integration lane. Create elements in the order of the recipe so these arrows appear.
 - An arrow copies all the source's fields to the target, replacing same-named fields. An element's own `fields` in the same `POST` are kept, then the parent's fields are merged in: give each element only the fields it adds, the rest arrives by itself.
-- A Processor never gets an automatic arrow; every arrow not listed above is created with `POST /connections`.
+- Every arrow not listed above is created with `POST /connections`.
 - The right-most Event of the previous slice is only a guess. When the Query should be fed by other Events (or by several), create it with `"autoConnect": false` and connect the right ones explicitly.
 - Do not use `info` on the elements you create for notes, source citations or summaries: it is reserved mainly for implementation details (formats, limits, integrations, technical constraints). Notes and summaries go in Notes elements.
 
@@ -49,17 +49,18 @@ Events from another Chapter are not connected directly (the recommendation in `c
 
 ### Automation — Event → Query → Processor → Command → Event
 
+**Layout:** the Query comes first and the Command (the action) sits **next to it, to its right, in the same Interaction lane**; the Processor is in the Actor lane above them; the Event is in the Event lane **directly under the Command** (same `x`). Give these `x` (relative to the slice, 160px wide elements, 20px gap, 40px margin): Query `40`, Command `220`, Processor `140` (centred over both, snapped to the 20px grid like the board's compaction, R5.20a), Event `220`. Never leave the Event's `x` out: the server would centre it, not put it under the Command.
+
 1. Slice as above.
-2. Query (the **todo list**, list-shaped): `{ type: "QUERY", lane: <Interaction lane> }`, `autoConnect: false`. Connect the Events that **open** it (`POST /connections`, one per Event), then `PATCH` the Query to its final fields (the list field: arrows copy the Events' flat fields into it) **before** any arrow leaves it (step 5).
-3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, name }` (no fields).
-4. Command: `{ type: "COMMAND", lane: <Interaction lane>, name, fields }`.
-5. `POST /connections` `{ from: "$q", to: "$p" }` and `{ from: "$p", to: "$cmd" }`: the Processor passes the Query's fields on to the Command.
-6. **Only now** the Event(s): `{ type: "EVENT", lane: <Event lane>, name }` → arrow Command → Event is automatic. Fields copy one hop only, so an Event created before step 5 gets none of the Query's fields through the Command.
-7. The Events that **close** the todo list are these Events (the Command's): connect each to the Query (`POST /connections` `{ from: <event>, to: "$q" }`), then `PATCH` the Query's fields once more (the arrow copies the Event's flat fields into it). Without this arrow an item never closes.
+2. Query (the **todo list**, list-shaped): `{ type: "QUERY", lane: <Interaction lane>, x: 40 }`, `autoConnect: false`. Connect the Events that **open** it (`POST /connections`, one per Event), then `PATCH` the Query to its final fields (the list field: arrows copy the Events' flat fields into it) **before** any arrow leaves it (step 3).
+3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, x: 140, name }` (no fields) → arrow Query → Processor is automatic.
+4. Command: `{ type: "COMMAND", lane: <Interaction lane>, x: 220, name, fields }` → arrow Processor → Command is automatic: the Processor passes the Query's fields on to the Command. (If the arrows did not appear, e.g. with `autoConnect: false`, add them with `POST /connections` `{ from: "$q", to: "$p" }` and `{ from: "$p", to: "$cmd" }`.)
+5. **Only now** the Event(s): `{ type: "EVENT", lane: <Event lane>, x: 220, name }` → arrow Command → Event is automatic. Fields copy one hop only, so an Event created before step 4 gets none of the Query's fields through the Command. With several Events, put the first at `x: 220` and place the others beside it in the Event lane.
+6. The Events that **close** the todo list are these Events (the Command's): connect each to the Query (`POST /connections` `{ from: <event>, to: "$q" }`), then `PATCH` the Query's fields once more (the arrow copies the Event's flat fields into it). Without this arrow an item never closes.
 
 ### Translation — external Event → Query → Processor → Command → internal Event
 
-As Automation, plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user where the external Event is and which Integration lane to use. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language.
+As Automation (same layout: Query first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user where the external Event is and which Integration lane to use. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language.
 
 ## Step 2 — Write
 

@@ -47,7 +47,7 @@ export const KINDS = {
   command: { label: 'Command', lane: 1, color: '#7cc3f2' },
   query: { label: 'Query', lane: 1, color: '#8fd694' },
   event: { label: 'Event', lane: 2, color: '#ffb366' },
-  processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️' },
+  processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️', h: 114 }, // a cogwheel under its name (R3.6)
   // Not part of the flow: it connects to nothing (R4.7).
   scenarios: { label: 'Scenarios', color: '#2f6fdb', w: 280, maxW: 560, h: 200, pad: SLICE_PADDING / 2, stretch: true },
   // Free Markdown text shown in the element; same size as Scenarios. Connects to nothing.

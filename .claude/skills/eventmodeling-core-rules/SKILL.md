@@ -43,7 +43,9 @@ automation   = EVENT(s) → QUERY → PROCESSOR → COMMAND → EVENT  a Process
 translation  = as automation, with at least one element in an Integration lane
 ```
 
-Anything else (and an empty slice) has no type. A slice never mixes a COMMAND and a QUERY outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
+Anything else (and an empty slice) has no type.
+
+**Automation layout** (also translation): the Processor in the Actor lane on top, the QUERY first and the COMMAND (the action) **next to it, to its right, in the same Interaction lane**, the EVENT in the Event lane **directly under the COMMAND**. Build it as the Automation recipe of `slice-builder` says. A slice never mixes a COMMAND and a QUERY outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
 
 **A slice is named exactly like its Command, Query or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing, never a broader "feature" name. An automation or translation slice may carry the Processor's name or its Command's. Never leave the default "New Slice".
 

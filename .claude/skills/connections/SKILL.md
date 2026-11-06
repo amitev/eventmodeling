@@ -33,11 +33,14 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 | Screen, with a Query below | Query → Screen |
 | Query, with a Screen above | Query → Screen |
 | Query, when the slice just before has Events | Event → Query, from the right-most Event (the nearest lane on a tie) |
+| Command, with a Processor in the slice | Processor → Command, from the nearest Processor |
+| Processor, with a Query in the slice | Query → Processor, from the nearest Query |
+| Processor, no Query but an Event in an Integration lane of the slice | Event → Processor, from the nearest such Event |
 
 - Every matching rule makes its arrow. Each arrow copies fields as above.
 - Moving an element (`PATCH` with `slice`, `lane`, `x`) creates **no** arrows and keeps the existing ones.
-- A Processor never gets an automatic arrow from the server (the board does connect it): connect it yourself.
-- Not automatic, so connect them yourself: Event → Query across more than one slice, Query → Processor, Processor → Command, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").
+- Create the Query before the Processor and the Processor before the Command, or their arrows do not appear.
+- Not automatic, so connect them yourself: Event → Query across more than one slice, Event → Processor outside an Integration lane, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").
 
 ## Step 1 — Find the elements
 

@@ -224,6 +224,8 @@ function autoPairs(chapter, slice, el) {
   if (el.type === 'COMMAND') {
     const screen = above('SCREEN');
     if (screen) pairs.push([screen, el]);
+    const processor = nearest(others.filter((e) => e.type === 'PROCESSOR'));
+    if (processor) pairs.push([processor, el]);
   }
   if (el.type === 'EVENT') {
     const command = above('COMMAND');
@@ -232,6 +234,14 @@ function autoPairs(chapter, slice, el) {
   if (el.type === 'SCREEN') {
     const query = below('QUERY');
     if (query) pairs.push([query, el]);
+  }
+  if (el.type === 'PROCESSOR') {
+    // The nearest Query; without one, the nearest Event in an Integration lane.
+    const inIntegration = (e) => chapter.lanes.find((l) => l.id === e.lane)?.type === 'INTEGRATION';
+    const source =
+      nearest(others.filter((e) => e.type === 'QUERY')) ??
+      nearest(others.filter((e) => e.type === 'EVENT' && inIntegration(e)));
+    if (source) pairs.push([source, el]);
   }
   if (el.type === 'QUERY') {
     const screen = above('SCREEN');

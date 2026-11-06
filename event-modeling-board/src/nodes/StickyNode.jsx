@@ -7,6 +7,18 @@ import { NotesCard } from './Notes.jsx';
 import { BoardActions } from '../state/BoardActions.js';
 import { CopyButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 
+// A cogwheel with 8 teeth and a centre hole, as one path in a 100x100 box.
+const COG_PATH = (() => {
+  const teeth = 8, step = (2 * Math.PI) / teeth, outer = 48, root = 38, hole = 15;
+  const pt = (r, a) => `${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`;
+  const pts = [];
+  for (let i = 0; i < teeth; i++) {
+    const a = i * step;
+    pts.push(pt(root, a - 0.3 * step), pt(outer, a - 0.17 * step), pt(outer, a + 0.17 * step), pt(root, a + 0.3 * step));
+  }
+  return `M${pts.join('L')}ZM${50 + hole} 50A${hole} ${hole} 0 1 0 ${50 - hole} 50A${hole} ${hole} 0 1 0 ${50 + hole} 50Z`;
+})();
+
 export function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
@@ -113,7 +125,6 @@ export function StickyNode({ id, data, selected }) {
         title={shown.name || undefined}
         onDoubleClick={isCopy ? undefined : () => setEditingTitle(true)}
       >
-        {KINDS[data.kind].icon && <span className="kind-icon">{KINDS[data.kind].icon}</span>}
         {isCopy && (
           <button
             type="button"
@@ -145,10 +156,18 @@ export function StickyNode({ id, data, selected }) {
           <span className={`title ${shown.name ? '' : 'empty'}`}>{shown.name || 'Name'}</span>
         )}
       </div>
-      <div className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}`}>
-      {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
-      {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
-      </div>
+      {data.kind === 'processor' ? (
+        <div className="cogwheel">
+          <svg width="88" height="88" viewBox="0 0 100 100" aria-hidden="true">
+            <path d={COG_PATH} fillRule="evenodd" />
+          </svg>
+        </div>
+      ) : (
+        <div className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}`}>
+        {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
+        {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
+        </div>
+      )}
       <Handle id="bottom-out" type="source" position={Position.Bottom} />
       <Handle id="bottom-in" type="target" position={Position.Bottom} />
     </div>

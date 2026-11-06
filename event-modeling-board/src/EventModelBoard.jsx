@@ -73,6 +73,7 @@ import {
   selectOnly,
   confirmCopies,
   orient,
+  automationLayout,
 } from './model/cells.js';
 import { nodeTypes } from './nodes/index.js';
 
@@ -661,7 +662,8 @@ function Board() {
   );
 
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
-  // the default width. Elements are left aligned, not centred. If every Cell of the slice holds
+  // the default width. Elements are left aligned, not centred. An automation or translation slice
+  // (one Query, Command and Processor, an Event) gets its own layout (R5.20a). Otherwise, if every Cell of the slice holds
   // at most one element, each starts at the left margin; otherwise all elements keep their layout
   // and move together so that the left-most starts at the left margin.
   // Later slices move left. With `onlySliceId` only that slice is compacted.
@@ -684,6 +686,13 @@ function Board() {
             continue;
           }
           const w = stickyW;
+          const isIntegration = (n) => lanes.find((l) => l.id === laneIdOf(n))?.data.type === 'integration';
+          const auto = automationLayout(els, laneIdOf, isIntegration, sl.position.x);
+          if (auto) {
+            widths.set(sl.id, Math.max(SLICE_MIN_WIDTH, snapUp(auto.width)));
+            for (const n of els) shifts.set(n.id, auto.xs.get(n.id) - n.position.x);
+            continue;
+          }
           const cells = new Map();
           for (const n of els) cells.set(laneIdOf(n), [...(cells.get(laneIdOf(n)) ?? []), n]);
           const crowded = [...cells.values()].some((c) => c.length > 1);

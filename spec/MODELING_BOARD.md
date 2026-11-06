@@ -139,7 +139,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   | Command | blue |
   | Query | green |
   | Event | orange |
-  | Processor | lavender, shown with a ⚙️ gear emoji |
+  | Processor | lavender cogwheel (R3.6a1), ⚙️ on its toolbar button |
   | Scenarios | blue, a card instead of a sticky (R3.11) |
   | Notes | white card (yellow on its toolbar button and the minimap), a card instead of a sticky (R3.18) |
 
@@ -148,7 +148,8 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 - **R3.4** The body cannot be edited and ignores double-click. It shows the Screen mockup (R3.7 to R3.10) or the element's fields (R9.5). An element has no `text` field.
 - **R3.4a** Double-clicking the header edits the name (R3.6b); Enter, Esc and clicking away save. One line. The editor looks like the name (same place and font, thin outline only), so the element does not resize or move while editing.
 - **R3.5** Selected elements can be deleted with Backspace or Delete.
-- **R3.6** Only Processor carries an icon (⚙️), at the start of its header. The type is shown by header colour (R3.1), not a label.
+- **R3.6** Only Processor carries an icon (⚙️), on its toolbar button. The type is shown by header colour (R3.1), not a label.
+- **R3.6a1** A Processor is no sticky: no box, header bar, border or shadow. It shows its name centred above a lavender cogwheel (88px, 8 teeth, centre hole, thin dark outline), 160px wide and 114px tall. The name edits as R3.4a. Its top connection points sit on the cogwheel's top, not above the name. It has no body or fields (R9.1); R3.6b applies to the other types.
 - **R3.6a** Elements are always vertically centred in their lane: when added, dropped or dragged (snapping to the centre of the lane released in), when their size changes (e.g. showing a Screen mockup), and on load or import. One taller than its lane aligns to the lane's top edge.
 - **R3.6b** Every element has a header bar and a body. The header holds the free-text **name** in semi-bold (600), filled with the type's colour (R3.1). The name has **no default**: a new element shows a faint "Name" placeholder (not saved or exported). A long name is cut off with an ellipsis. While edited, the name's input has a white background. The body is white and empty, except the Screen mockup and its editor and the fields (R9.5). The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content. A **Screen** is at least **146px** tall (118px body), whether or not it has a mockup, so all Screens match one with a mockup (R3.8).
 
@@ -229,9 +230,10 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - A Screen above a Query: Query → Screen.
   - A Query under a Screen: Query → Screen.
   - A Query when the slice just before its own has an Event: Event → Query. With several Events, the right-most (nearest by height on a tie).
+  - A Command in a slice with a Processor: Processor → Command, the nearest by height (above or under).
   - A Processor with a Query in its slice: Query → Processor, the nearest by height (above or under). Without a Query, an Event in an Integration lane (R2.10) of its slice: Event → Processor, the nearest by height. Never both.
 
-  Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds none for a Processor (S4.16).
+  Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds the same arrows (S4.16).
 
 ## 5. Slices
 
@@ -268,8 +270,11 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - If **every Cell of the slice holds at most one element**, each element starts at the left margin and the content width is that of the widest element.
   - If **any Cell holds several**, the elements keep their relative positions and lanes and move together so the left-most starts at the left margin; the content width runs from the left edge of the left-most element to the right edge of the right-most. So the right padding is at least the margin too (40px; 20px next to a Scenarios element).
   - A slice without elements gets 220px.
+  - An **automation or translation** slice with exactly one Query, one Command and one Processor, none in an Integration lane (R2.10), and at least one Event, is laid out by R5.20a instead of the two rules above.
 
   Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes; one undo step (R8.1). **Shift+C** with a Cell selected compacts only that Cell's slice the same way (R5a.11); slices after it still close the gap.
+
+- **R5.20a** **Automation layout.** Compaction (R5.20) lays out a matching slice as: the Query at the left margin; the Command in the same lane, to its right with a 20px gap; the Processor centred (on the grid) above both; each Event directly under the Command (several Events in one Cell go side by side, left to right in their current order, from the Command's x). Lanes do not change. Other elements (e.g. an Event in an Integration lane) are left aligned at the margin, after any element already in their lane. Content width as R5.20 (right edge of the right-most element plus its margin).
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
