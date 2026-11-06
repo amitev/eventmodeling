@@ -171,10 +171,11 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   writing-mode: vertical-rl; transform: rotate(180deg);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* Renaming happens right on the rotated title: no ellipsis, a visible caret and outline. */
-.lane-header .lane-label.editing {
-  text-overflow: clip; cursor: text; outline: 2px solid #1a73e8; outline-offset: 1px;
-  background: #fff; border-radius: 2px; user-select: text; min-height: 2em;
+/* Renaming uses a horizontal input floating over the header (R2.4a). */
+.lane-name-input {
+  position: fixed; z-index: 30; transform: translateY(-50%); width: 200px; box-sizing: border-box;
+  padding: 3px 6px; font: 700 12px system-ui, sans-serif; text-transform: uppercase;
+  border: 1px solid #1a73e8; border-radius: 3px; background: #fff; outline: 2px solid rgba(26, 115, 232, 0.3);
 }
 .lane-remove, .lane-add {
   position: relative; flex: none; width: 18px; height: 18px; padding: 0; cursor: pointer;

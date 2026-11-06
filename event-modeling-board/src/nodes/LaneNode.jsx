@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
 import { BoardActions } from '../state/BoardActions.js';
@@ -39,9 +40,11 @@ export function LaneNode({ id, data }) {
     return `${first ? ' first' : ''}${last ? ' last' : ''}`;
   });
   const [editing, setEditing] = useState(false);
+  const [editAt, setEditAt] = useState(null); // where the horizontal name editor goes, in window pixels
   const [picking, setPicking] = useState(false);
   const ref = useRef(null);
   const colorRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (!picking) return;
@@ -58,15 +61,15 @@ export function LaneNode({ id, data }) {
   };
 
   useEffect(() => {
-    const el = ref.current;
-    if (!editing || !el) return;
-    el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    if (editing) inputRef.current?.select();
   }, [editing]);
+
+  const startEditing = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    setEditAt({ left: r.left, top: r.top + r.height / 2 });
+    setEditing(true);
+  };
 
   const rename = (text) => {
     setEditing(false);
@@ -121,29 +124,33 @@ export function LaneNode({ id, data }) {
           )}
         </div>
         <InfoButton id={id} info={data.info} />
-        {/* Edited in place: the same rotated element becomes editable text. */}
+        {/* Edited in a horizontal input floating over the header: the label column is too narrow for it. */}
         <span
           ref={ref}
-          className={`lane-label${editing ? ' editing' : ''}`}
+          className="lane-label"
           title={editing ? undefined : `${data.label === LANE_TYPES[data.type].label ? '' : `${data.label}, `}${LANE_TYPES[data.type].label} lane`}
-          contentEditable={editing ? 'plaintext-only' : undefined}
-          suppressContentEditableWarning
-          spellCheck={false}
-          onDoubleClick={overview ? undefined : () => setEditing(true)}
-          onBlur={editing ? (e) => rename(e.currentTarget.textContent) : undefined}
-          onKeyDown={
-            editing
-              ? (e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }
-                }
-              : undefined
-          }
+          onDoubleClick={overview ? undefined : startEditing}
         >
           {data.label}
         </span>
+        {editing &&
+          createPortal(
+            <input
+              ref={inputRef}
+              className="lane-name-input"
+              style={{ left: editAt.left, top: editAt.top }}
+              defaultValue={data.label}
+              spellCheck={false}
+              onBlur={(e) => rename(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+              }}
+            />,
+            document.body
+          )}
         <button
           className="lane-add"
           title={`Add lane below: ${LANE_TYPES[data.type].label}`}
