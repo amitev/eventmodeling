@@ -289,6 +289,29 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     setFocusError(false);
   }, [focusError]);
 
+  // Arrow keys move the card selection: ←/→ within Given or Then, ↑/↓ between Given, When and Then
+  // (the nearest column of the next section). Nothing selected: the first card. Stops at the edges.
+  const moveSelection = (dRow, dCol) => {
+    const rows = [draft.given, draft.when ? [draft.when] : [], draft.then]
+      .map((row) => row.filter((e) => byId.has(e.element)))
+      .filter((row) => row.length);
+    if (!rows.length) return;
+    const r = rows.findIndex((row) => row.some((e) => e.key === selected));
+    if (r < 0) {
+      setSelected(rows[0][0].key);
+    } else {
+      const c = rows[r].findIndex((e) => e.key === selected);
+      const nr = Math.min(Math.max(r + dRow, 0), rows.length - 1);
+      const nc = dRow ? Math.min(c, rows[nr].length - 1) : Math.min(Math.max(c + dCol, 0), rows[r].length - 1);
+      setSelected(rows[nr][nc].key);
+    }
+    setProblem('');
+  };
+
+  useEffect(() => {
+    document.querySelector(`.scenario-dialog [data-entry="${selected}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+
   // Hotkeys (assigned on every render; the listener stays registered).
   const keys = useRef(null);
   keys.current = (e) => {
@@ -304,6 +327,13 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e.target)) return;
+    const arrow = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (arrow) {
+      if (picker) return;
+      e.preventDefault();
+      moveSelection(...arrow);
+      return;
+    }
     const k = e.key.toLowerCase();
     const section = { g: 'given', w: 'when', t: 'then' }[k];
     if (section) {
@@ -412,6 +442,7 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
     return (
       <div
         key={e.key}
+        data-entry={e.key}
         className={`gwt-card ${c.kind}${selected === e.key ? ' selected' : ''}`}
         onClick={() => {
           setSelected(e.key);

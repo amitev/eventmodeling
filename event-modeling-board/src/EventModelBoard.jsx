@@ -1154,8 +1154,8 @@ function Board() {
     // Ctrl+←/→ moves the slice.
     const moveKey =
       e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
-    // Ctrl+1 ... Ctrl+9 open the scenario of that place in the selected Scenarios element.
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+    // 1 ... 9 open the scenario of that place in the selected Scenarios element.
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
       const el = e.target;
       if (el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       const selected = getNodes().filter((n) => n.selected);

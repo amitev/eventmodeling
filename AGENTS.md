@@ -13,6 +13,8 @@ Main technologies that are used:
 
 The Agent and LLM should NOT assume anything, bur rather ask for clarification and confirmation.
 
+The Agent and LLM must NOT edit files in `.event-modeling/model/` manually. Use the SKILLs and the server API.
+
 All (without any exception) the requirements and learnings during the implementation are documented in `spec/`. The specification is updated with every change so that it stays relevant.
 
 - [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).

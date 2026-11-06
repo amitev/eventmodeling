@@ -74,10 +74,28 @@ export async function pullBoard() {
   }
 }
 
+const RETRY_MS = 3000;
+
 // Calls `onRevision(revision)` whenever the server's model changes (R10.6); the stream reconnects
-// by itself and then reports the current revision. Returns how to stop.
+// and then reports the current revision. Returns how to stop.
 export function watchRevision(onRevision) {
-  const events = new EventSource('/api/model/events');
-  events.onmessage = (e) => onRevision(JSON.parse(e.data).revision);
-  return () => events.close();
+  let events;
+  let timer;
+  let stopped = false;
+  const open = () => {
+    events = new EventSource('/api/model/events');
+    events.onmessage = (e) => onRevision(JSON.parse(e.data).revision);
+    // The browser reconnects by itself after a lost connection, but gives up for good on an error answer
+    // (e.g. the dev proxy while the server restarts): then a new stream is opened.
+    events.onerror = () => {
+      if (stopped || events.readyState !== EventSource.CLOSED) return;
+      timer = setTimeout(open, RETRY_MS);
+    };
+  };
+  open();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+    events.close();
+  };
 }

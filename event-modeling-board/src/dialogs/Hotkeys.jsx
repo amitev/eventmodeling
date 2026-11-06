@@ -71,7 +71,7 @@ const HOTKEYS = [
     keys: [
       ['A', 'Add a scenario'],
       ['V', 'View the scenarios'],
-      ['Ctrl+1 ... Ctrl+9', 'Open the first ... ninth scenario'],
+      ['1 ... 9', 'Open the first ... ninth scenario'],
     ],
   },
   {
@@ -95,6 +95,8 @@ const HOTKEYS = [
       ['W', 'Choose the When command'],
       ['T', 'Choose a Then event'],
       ['E', 'Add or edit the expected error (Then Error)'],
+      ['← / →', 'Select the previous / next card in Given or Then'],
+      ['↑ / ↓', 'Select a card in the section above / below (Given, When, Then)'],
       ['Ctrl+S', 'Save and close'],
       ['Esc', 'Close the list, or close without saving'],
     ],
