@@ -89,7 +89,7 @@ export function LaneNode({ id, data }) {
         {LANE_TYPES[data.type].label}
       </div>
       <div
-        className="lane-header nodrag nopan"
+        className={`lane-header nodrag nopan${picking ? ' picking' : ''}`}
         style={{ width: LABEL_ZONE }}
         onPointerDown={startChapterDrag}
       >

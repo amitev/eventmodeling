@@ -162,6 +162,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   cursor: grab; user-select: none; touch-action: none;
 }
 .lane-header:active { cursor: grabbing; }
+/* To keep the header quiet, its buttons (except the info button) show only while the mouse is over it;
+   otherwise the title takes their room and shows as much of its name as possible. */
+.lane-header:not(:hover):not(:focus-within):not(.picking) :is(.lane-remove, .lane-color, .lane-add, .lane-letter) { display: none; }
 /* The title reads bottom to top; long titles are cut off with an ellipsis (full name on hover). */
 .lane-header .lane-label {
   margin: 0; cursor: inherit; flex: 1; min-height: 0; max-height: 100%;
