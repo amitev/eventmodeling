@@ -45,7 +45,7 @@ The script cannot see synonyms (`Customer` / `Client` / `Buyer`). Judge them you
 
 1. Report: the count, then the findings grouped by kind, each with the proposed action. Keep it short; with no findings, say so.
 2. Do not rename on your own. Rename with `edit-and-delete` (a rename shows everywhere by id; a field rename is not propagated: `element-fields`), only after the user agrees.
-3. A repeated fact becomes a linked copy: delete the duplicate and create the copy with `slice-builder` / `edit-and-delete` only after the user agrees; the duplicate's arrows and scenarios are lost with it, so check them first.
+3. A repeated fact becomes a linked copy: delete the duplicate and create the copy with `slice-modeler` / `edit-and-delete` only after the user agrees; the duplicate's arrows and scenarios are lost with it, so check them first.
 4. After changes, run the check again.
 5. A script error (`GET ... -> status`) names the failed request: a wrong `--base` or a stopped server is the usual cause.
 

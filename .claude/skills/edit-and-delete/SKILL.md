@@ -50,7 +50,7 @@ Several changes (for example delete an element and add its replacement): one `PO
 The type cannot be changed. To turn, say, an Event into a Command, **replace** the element:
 1. Note what it has: name, fields, arrows (parents and children), scenarios, copies.
 2. Confirm with the user: the replacement loses its arrows, copies and scenarios, and the fields it passed on stay downstream.
-3. In one `POST /ops`: create the new element in a lane that takes the new type (`slice-builder` and `connections` explain the automatic arrows), with the fields; add the arrows that remain valid (the allowed pairs differ per type); then delete the old element.
+3. In one `POST /ops`: create the new element in a lane that takes the new type (`slice-modeler` and `connections` explain the automatic arrows), with the fields; add the arrows that remain valid (the allowed pairs differ per type); then delete the old element.
 4. Report which arrows, copies and scenarios could not be carried over and must be redone (`scenarios`).
 
 ## After a change

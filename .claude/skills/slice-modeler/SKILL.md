@@ -1,9 +1,9 @@
 ---
-name: slice-builder
+name: slice-modeler
 description: Build a whole slice in one atomic call — the slice, its elements in the right lanes, the arrows and the fields — for the four slice types (state change, state read, automation, translation). Use for "add a slice for X", "model the Place Order step", "create a screen, command and event for Y", "add a view for Z", "add an automation that reacts to E".
 ---
 
-# Slice Builder
+# Slice Modeler
 
 Read `eventmodeling-core-rules` first (element types, lanes, slice types, naming, causality). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The details live in other skills: `chapter-setup` (slices, lanes), `connections` (arrows), `element-fields` (fields), `html-screen` (mockup), `scenarios` (Given/When/Then).
 

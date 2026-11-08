@@ -38,7 +38,7 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 
 - Every matching rule makes its arrow. Each arrow copies fields as above.
 - Event → Processor is never automatic and the server refuses it (board drag only).
-- **External Events** (Integration lane) never feed a read model directly: translate them with a Processor and Command into an internal Event, and connect that Event to the Query. See `slice-builder` (Translation). Reason: replay of two separate sources is not reproducible, and external streams are kept only for a limited time.
+- **External Events** (Integration lane) never feed a read model directly: translate them with a Processor and Command into an internal Event, and connect that Event to the Query. See `slice-modeler` (Translation). Reason: replay of two separate sources is not reproducible, and external streams are kept only for a limited time.
 - Moving an element (`PATCH` with `slice`, `lane`, `x`) creates **no** arrows and keeps the existing ones.
 - Create the Query before the Processor and the Processor before the Command, or their arrows do not appear.
 - Not automatic, so connect them yourself: Event → Query across more than one slice, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").

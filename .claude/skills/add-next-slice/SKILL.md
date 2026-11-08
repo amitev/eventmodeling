@@ -1,19 +1,19 @@
 ---
 name: add-next-slice
-description: Decide on and create a genuinely new slice from scratch when the model does not yet suggest an obvious next capability — the story on the board has no slice for what naturally comes next. Use for "add the next slice", "what comes next", "continue the model", "add another step". Do not use for - building a slice the user has fully specified (use `slice-builder`), or changing, moving or deleting existing slices and elements (use `chapter-setup`, `edit-and-delete`).
+description: Decide on and create a genuinely new slice from scratch when the model does not yet suggest an obvious next capability — the story on the board has no slice for what naturally comes next. Use for "add the next slice", "what comes next", "continue the model", "add another step". Do not use for - building a slice the user has fully specified (use `slice-modeler`), or changing, moving or deleting existing slices and elements (use `chapter-setup`, `edit-and-delete`).
 ---
 
 # Add Next Slice
 
 **Purpose**: Given a Chapter whose story has no slice yet for what naturally comes next, decide on a plausible next capability and create it as a brand-new slice — Screen, Command or Query, and Event — all at once, with a real mockup that matches the Chapter's existing look.
 
-Read `eventmodeling-core-rules` first (slices, lanes, naming, causality). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The slice itself is built with `slice-builder`; this skill decides **what** to build and finishes the Screen.
+Read `eventmodeling-core-rules` first (slices, lanes, naming, causality). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The slice itself is built with `slice-modeler`; this skill decides **what** to build and finishes the Screen.
 
 ---
 
 ## Core concept: a slice is one Command, one Query, or one Processor
 
-A slice is one Command, one Query, or one Processor, with the Event(s), Query and Command around it (the four slice types and their shapes are in the core rules and in `slice-builder`). The slice you create must obey them like any other. If the capability you decide on needs both a Command and a Query (for example "place an order" needs a `Place Order` Command and an `Order Details` Query), that is **two slices**: create them one at a time, each its own batch.
+A slice is one Command, one Query, or one Processor, with the Event(s), Query and Command around it (the four slice types and their shapes are in the core rules and in `slice-modeler`). The slice you create must obey them like any other. If the capability you decide on needs both a Command and a Query (for example "place an order" needs a `Place Order` Command and an `Order Details` Query), that is **two slices**: create them one at a time, each its own batch.
 
 ---
 
@@ -52,14 +52,14 @@ If several next steps are equally reasonable, pick the one that best continues t
 
 ## Step 2 — Create the slice
 
-Build it with `slice-builder`: gather nothing from the user (Step 1 decided it), pick the recipe for the slice type, and write one atomic batch.
+Build it with `slice-modeler`: gather nothing from the user (Step 1 decided it), pick the recipe for the slice type, and write one atomic batch.
 
 - **Type:** state change for a new Command (Screen → Command → Event), state read for a new Query (Query → Screen), automation for a new Processor (and translation when an external party acts). Per the core concept above, one Command, Query or Processor per slice.
 - **Name the slice after its element** (the Command, Query or Processor name), never leave "New Slice".
 - **Lanes:** the lane of the needed type. If the Chapter has more than one lane of a type (for example several Actor lanes for different roles), use the one the story's earlier slices use for that role; when nothing points to one, use the first of that type, and say which in the report. A Processor goes in a system-actor lane; system-actor lanes are preferably the top Actor lanes, above the human roles.
 - **Place** it after the last slice (or where Step 0 said).
 - **Arrows and fields** as the recipe says: a Query is fed by the previous slice's Events (automatic arrow from the previous slice's right-most Event; connect other Events explicitly), and the Screen inherits the fields.
-- Do not use `info` for anything but implementation details (`slice-builder`).
+- Do not use `info` for anything but implementation details (`slice-modeler`).
 
 ## Step 3 — Replace the placeholder Screen, matching the Chapter's style
 

@@ -34,7 +34,7 @@ node .claude/skills/model-check/check.mjs [--base http://localhost:3300] [--cont
 A slice is one Command, one Query, or one Processor with its Events, Query and Command (the core rules, Slices). The check flags a slice that has more than one Command or Processor, more than one Query without a Processor, or a Command and a Query without a Processor. A linked copy counts like any element.
 
 - **Naming:** name a slice exactly like its Command, Query or Processor (`Place Order`); an automation slice may carry the Processor's name or its Command's. The check ignores case and spacing, so `Place order` matches `Place Order`.
-- **Splitting:** the skill proposes, the user decides. Describe the proposed new slices (which elements move to which new slice, in which order) and **ask before moving anything**. After a yes: `chapter-setup` creates the slice (`after` the right one), `edit-and-delete` moves each element (`PATCH` with `slice` and `lane`: arrows stay, none are added, a Cell holds at most one Spec element). Build a missing part with `slice-builder`, then run the check again for the Chapter.
+- **Splitting:** the skill proposes, the user decides. Describe the proposed new slices (which elements move to which new slice, in which order) and **ask before moving anything**. After a yes: `chapter-setup` creates the slice (`after` the right one), `edit-and-delete` moves each element (`PATCH` with `slice` and `lane`: arrows stay, none are added, a Cell holds at most one Spec element). Build a missing part with `slice-modeler`, then run the check again for the Chapter.
 - **Dependencies:** slices depend on each other only through Events, never directly or through shared state. A Query depends on the Events that feed it from another slice (arrows). A Command depends on the Events the Given entries of its scenarios name when they come from another slice. `--dependencies` prints that per slice; report it in chat as "X depends on the Events of Y". Do not write it to the board.
 - Patterns, a description template and a worked example are in `reference/patterns.md` and `reference/example.md`.
 
@@ -50,7 +50,7 @@ A slice is one Command, one Query, or one Processor with its Events, Query and C
 1. Report to the user: the counts, then the findings grouped by Chapter and slice, rules first. Keep it short; when there are none, say so.
 2. Do not fix findings on your own. Offer the fix with the skill that does it:
    - names, structure, lanes, slices → `chapter-setup`
-   - missing elements and arrows → `slice-builder`, `connections`
+   - missing elements and arrows → `slice-modeler`, `connections`
    - fields and their sources → `element-fields`
    - missing mockup → `html-screen`
    - missing scenarios → `scenarios`

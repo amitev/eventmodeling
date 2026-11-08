@@ -5,7 +5,7 @@ description: Live event-storming facilitator — asks questions about any busine
 
 # Event Storming
 
-Read `eventmodeling-core-rules` once per session first (what an Event is, causality). You also use `naming` (Event names), `chapter-setup` (Chapters, slices, lanes), `edit-and-delete` (rename, move, delete), `model-navigation` (cheap reads) and, at hand-over, `slice-builder`, `element-fields`, `connections`, `html-screen` and `scenarios`. Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`).
+Read `eventmodeling-core-rules` once per session first (what an Event is, causality). You also use `naming` (Event names), `chapter-setup` (Chapters, slices, lanes), `edit-and-delete` (rename, move, delete), `model-navigation` (cheap reads) and, at hand-over, `slice-modeler`, `element-fields`, `connections`, `html-screen` and `scenarios`. Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`).
 
 **Posture: Modeling Mode.** Explore and capture; a wrong name or order is cheap to fix by talking. Do not audit while storming.
 
@@ -103,9 +103,9 @@ After every five to eight new Events, and whenever the user asks, **read the tim
 When the user says the storm is done, or asks to detail it, enrich the Event slices **in place**, one at a time, in time order:
 
 1. For each Event slice, work out from the conversation **what triggers it**: a person on a Screen (then a Command), a system (a Processor), an external party (a translation slice, the Event in an Integration lane: move the Event with `PATCH` `{ slice, lane }`). Fill gaps by **asking** the user: who does it, what do they enter, what rule applies. Never invent.
-2. Build the missing parts **inside the existing slice** with the recipes of `slice-builder` (do not create a new slice): the Command in the Interaction lane and the Screen or Processor in the Actor lane. The Event already exists, so connect the Command to it with `POST /connections` `{ from: <command>, to: <event> }` (the Screen → Command arrow is automatic when the Screen exists first); fields copy along the arrows (`element-fields`, `connections`).
+2. Build the missing parts **inside the existing slice** with the recipes of `slice-modeler` (do not create a new slice): the Command in the Interaction lane and the Screen or Processor in the Actor lane. The Event already exists, so connect the Command to it with `POST /connections` `{ from: <command>, to: <event> }` (the Screen → Command arrow is automatic when the Screen exists first); fields copy along the arrows (`element-fields`, `connections`).
 3. **Rename the slice to its Command** (`Place Order`), as the core rules and `model-check` expect. The Event keeps its name.
-4. Queries the Events feed (what a user needs to see) are **new slices** after the slice that produces the Event: `slice-builder`, state read recipe.
+4. Queries the Events feed (what a user needs to see) are **new slices** after the slice that produces the Event: `slice-modeler`, state read recipe.
 5. Mockups with `html-screen`; scenarios from the rules the user gave with `scenarios`.
 6. Then run `model-check` for the Chapter and report the findings; the open hot spots stay as red Notes until the user answers them.
 

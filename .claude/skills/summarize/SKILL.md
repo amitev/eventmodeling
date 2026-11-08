@@ -5,7 +5,7 @@ description: Turn a document (PDF, Word, Markdown, text, URL) or an image into a
 
 # Summarize a source into an event model
 
-This is a front-end for the modeling skills, not a replacement. It owns three things the others don't: reading an unstructured source, deciding the Chapter structure from it, and keeping every modeled element traceable back to the source. Everything else is delegated. Read `eventmodeling-core-rules` once per session first — it defines the elements, naming and lane rules this skill depends on. The others it uses: `naming`, `model-navigation`, `chapter-setup`, `slice-builder`, `connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `edit-and-delete`.
+This is a front-end for the modeling skills, not a replacement. It owns three things the others don't: reading an unstructured source, deciding the Chapter structure from it, and keeping every modeled element traceable back to the source. Everything else is delegated. Read `eventmodeling-core-rules` once per session first — it defines the elements, naming and lane rules this skill depends on. The others it uses: `naming`, `model-navigation`, `chapter-setup`, `slice-modeler`, `connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `edit-and-delete`.
 
 Posture: Modeling Mode (see the core rules) for Steps 2–6, Critic Mode for Step 7. Capture the source as completely as you can; flag and move on rather than stalling.
 
@@ -85,7 +85,7 @@ A Chapter is one timeline = one coherent process or bounded context. From the `p
 Rules of thumb:
 - One Chapter per process phase with its own actors, rules or deadlines. Don't force a one-Chapter model if the document describes distinct phases; don't split a short, linear process just to have several.
 - Keep each Chapter to roughly 6–15 slices. Beyond that, split at a natural phase boundary.
-- Where a second organisation acts (the authority, a subcontractor, a payment provider), their events are **external events**: they sit in an Integration lane and get the translation treatment (the Translation Chain in the core rules, the translation recipe of `slice-builder`), not a freehand Command.
+- Where a second organisation acts (the authority, a subcontractor, a payment provider), their events are **external events**: they sit in an Integration lane and get the translation treatment (the Translation Chain in the core rules, the translation recipe of `slice-modeler`), not a freehand Command.
 - Chapters depend on each other only through Events, and **arrows never cross Chapters**: an Event of an earlier Chapter that a later one needs is used through a linked copy placed in the later Chapter. A scenario cannot use a copy, so rules that depend on another Chapter's Events are stated in the summary notes.
 - Include a final Chapter only if the source has a genuinely distinct phase (e.g. contract execution/delivery after award); don't pad.
 
@@ -112,9 +112,9 @@ Work **one Chapter at a time**, in order, with the skills below. Do not skip ste
 |---|---|---|
 | Create or find the Context and Chapter | `chapter-setup` | creates the Chapter (or finds the one to extend), then adds the **Summary** Spec lane and, if the Chapter has no other Spec lane, a second Spec lane for the Scenarios. In a Chapter that already exists, ask the user before adding a lane |
 | Order the events of the Chapter | core rules (Flow & Causality) | list the Chapter's events in time order first, then build the slices around them |
-| Build each slice | `slice-builder` | state change (Screen → Command → Event), state read (Query → Screen), automation, translation for external parties: one atomic batch per slice |
+| Build each slice | `slice-modeler` | state change (Screen → Command → Event), state read (Query → Screen), automation, translation for external parties: one atomic batch per slice |
 | Fields | `element-fields` | the `data` facts become fields; fields without a source are `generated` or a question |
-| Arrows between slices | `connections` | the arrows `slice-builder` cannot add by itself. **Never across Chapters**: a fact of an earlier Chapter reaches this one through a linked copy placed in this Chapter (`connections`, "Across Chapters") |
+| Arrows between slices | `connections` | the arrows `slice-modeler` cannot add by itself. **Never across Chapters**: a fact of an earlier Chapter reaches this one through a linked copy placed in this Chapter (`connections`, "Across Chapters") |
 | Names | `naming` | every element, slice and Chapter |
 | Fix-ups, renames, moves | `edit-and-delete` | as the model takes shape |
 
