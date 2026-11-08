@@ -5,6 +5,8 @@ description: Business analyst exploration of an event model board. Reads all sli
 
 # WDYT — What Do You Think?
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 > **Before doing anything else**, ...
 
 ---
@@ -23,10 +25,10 @@ If the user already provided context name in their message, use it directly.
 
 ## Step 2 — Load the model
 
-Find the relevant context in .event-modeling/model/contexts.yaml
+Find the relevant context with `GET /api/model/outline` (the Contexts with their ids and names).
 
 Then get Chapter information using the endpoint defined in ../api.md
-NEVER read the chapter files directly; always use the API. The only allowed file is .event-modeling/model/contexts.yaml
+NEVER read the model files directly (not even `contexts.yaml`); always use the API.
 Use the `model-navigation` skill for cheap reads (outline first, then only the content you need).
 
 Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `QUERY`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Queries have `fields`, and a `SCENARIOS` element holds the scenarios.

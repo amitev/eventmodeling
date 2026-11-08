@@ -5,6 +5,8 @@ description: Shared, foundational rules for event modeling on the board — what
 
 # Event Modeling — Core Rules
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 These rules apply to every task on the board, regardless of which skill you're currently following. Read this once per session — a skill's own file only states what's specific to it, not these fundamentals.
 
 ## Modes

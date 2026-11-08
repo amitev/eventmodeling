@@ -5,6 +5,8 @@ description: Decide on and create a genuinely new slice from scratch when the mo
 
 # Add Next Slice
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 **Purpose**: Given a Chapter whose story has no slice yet for what naturally comes next, decide on a plausible next capability and create it as a brand-new slice — Screen, Command or Query, and Event — all at once, with a real mockup that matches the Chapter's existing look.
 
 Read `eventmodeling-core-rules` first (slices, lanes, naming, causality). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The slice itself is built with `slice-modeler`; this skill decides **what** to build and finishes the Screen.

@@ -5,6 +5,8 @@ description: Cross-Chapter and cross-Context consistency pass on the model's lan
 
 # Language Check
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first, and `naming` (the naming rules the findings refer to). To look things up in the model, use the `model-navigation` skill (cheap reads). `model-check` checks one Chapter at a time; this skill compares **all Chapters and Contexts**, which is where inconsistent language hides. The check changes **nothing**.
 
 ## Run

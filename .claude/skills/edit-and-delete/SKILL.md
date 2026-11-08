@@ -5,6 +5,8 @@ description: Safely rename, edit, move or delete an existing element through the
 
 # Edit and Delete Elements
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first. To look things up in the model, use the `model-navigation` skill (cheap reads). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. Fields, arrows, scenarios and structure (lanes, slices, Chapters) have their own skills: `element-fields`, `connections`, `scenarios`, `chapter-setup`.
 
 ## Rules to know

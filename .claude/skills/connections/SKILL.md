@@ -5,6 +5,8 @@ description: Link elements with arrows (and remove arrows) through the server AP
 
 # Connections (arrows)
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (what each element is, "Connections Read Forward"). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). An arrow copies fields: see the `element-fields` skill.
 
 ## Rules to know

@@ -5,6 +5,8 @@ description: Read-only quality check of the model — runs a bundled script that
 
 # Model Check
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (the rules the findings refer to). The check changes **nothing** and costs few tokens: the script does the reading and prints only findings. Do not re-derive its checks by reading the model yourself.
 
 For business questions to the product owner use `wdyt` instead. This skill is the technical pass.

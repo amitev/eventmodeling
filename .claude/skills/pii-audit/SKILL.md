@@ -5,6 +5,8 @@ description: Read-only audit of personal data in the model — a bundled script 
 
 # PII Audit
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first. To look things up in the model, use the `model-navigation` skill (cheap reads). The audit changes **nothing**: the script does the reading and prints only the result. Do not re-derive it by reading fields yourself.
 
 A field is flagged with `pii: true` when it is personally identifiable information (the flags of a field are in `element-fields`). Fields are copied by name along the arrows, so one personal field usually appears on several elements, and the audit compares them by name.

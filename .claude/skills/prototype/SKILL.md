@@ -3,6 +3,8 @@ name: prototype
 description: Build a clickable prototype of one context in the /prototype folder — Screens from the board's HTML, an in-browser event store, Commands decided by the Given/When/Then scenarios, Queries as projections of the Events, todo lists with an Automations tab, and an in-page scenario check. A bundled script exports the model; read-only on the board. Use for "build a prototype of X", "make the Registration context clickable", "update the prototype".
 ---
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Clarification: Posting the questions means reporting.
 
 ---

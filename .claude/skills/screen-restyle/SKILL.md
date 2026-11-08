@@ -5,6 +5,8 @@ description: Restyle many Screens at once to the look of one base Screen the use
 
 # Screen Restyle
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first. To look things up in the model, use the `model-navigation` skill (cheap reads). The mockup rules (one document per Screen, 1024×768, no scripts, what the server removes, full width) are those of `html-screen`; its "Step 2a — Style from another Screen" says what a style reference takes and what it leaves. This skill applies that to **many existing Screens**.
 
 > **The previous mockups are not saved.** A write replaces a Screen's `html`; the server keeps no history. You decided that the user restyles at their own risk, so there is no backup step. That is why Step 3 ends with a confirmation before the first write.

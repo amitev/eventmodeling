@@ -5,6 +5,8 @@ description: Design and render a real HTML/CSS mockup onto a Screen element (cre
 
 # HTML Screen Designer
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 > **DEFAULT SCREEN SKILL**: Reach for this skill on any ordinary "design a screen" / "storyboard this" request — it is the default, rendering a real HTML/CSS mockup onto a `SCREEN` element.
 
 > **MANDATORY RENDER**: The write call in Step 4 is **not optional**. This skill exists solely to produce rendered mockups. A `SCREEN` element without `html` is an empty placeholder that adds no value to the model. If the write call is skipped or fails, the task is incomplete — retry or report the error.

@@ -5,6 +5,8 @@ description: Create, change or remove the fields (data) of a Screen, Command, Ev
 
 # Element Fields
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (what each element is, field lineage). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads).
 
 > **The server does less than the board.** It copies fields only when an arrow is added. `PATCH` with `fields` **replaces the whole list** and copies **nothing** downstream. *Propagate* and *Get from parent* are done by you, with the steps below.

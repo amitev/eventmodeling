@@ -5,6 +5,8 @@ description: Set up and reshape the structure of the model through the server AP
 
 # Chapter Setup (structure)
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). Elements, fields, arrows and scenarios have their own skills: `html-screen`, `element-fields`, `connections`, `scenarios`.
 
 ## Rules to know

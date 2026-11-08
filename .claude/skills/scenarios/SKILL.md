@@ -5,6 +5,8 @@ description: Create, change, copy, reorder or delete Given/When/Then scenarios o
 
 # Given/When/Then Scenarios
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (what Events and Commands are, naming). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). Example data come from the fields of the chosen elements: see the `element-fields` skill for the fields.
 
 ## Rules to know

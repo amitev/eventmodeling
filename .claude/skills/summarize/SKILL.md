@@ -5,6 +5,8 @@ description: Turn a document (PDF, Word, Markdown, text, URL) or an image into a
 
 # Summarize a source into an event model
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 This is a front-end for the modeling skills, not a replacement. It owns three things the others don't: reading an unstructured source, deciding the Chapter structure from it, and keeping every modeled element traceable back to the source. Everything else is delegated. Read `eventmodeling-core-rules` once per session first — it defines the elements, naming and lane rules this skill depends on. The others it uses: `naming`, `model-navigation`, `chapter-setup`, `slice-modeler`, `connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `edit-and-delete`.
 
 Posture: Modeling Mode (see the core rules) for Steps 2–6, Critic Mode for Step 7. Capture the source as completely as you can; flag and move on rather than stalling.

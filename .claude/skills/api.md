@@ -5,7 +5,7 @@ Bodies are JSON (max 50 MB). No authentication. Errors: `{ "error": text }` with
 
 ## Storage
 
-Folder `<cwd>/.event-modeling/model/`:
+Folder `<cwd>/.event-modeling/model/`. **Agents never read, create, edit or delete these files: the model is read and changed only through the API.**
 - `contexts.yaml`: ordered list of `{ id, name, file }`; the first is the Default.
 - `<file>` (e.g. `backoffice.yaml`): one Context `{ id, name, chapters }`, slices inline.
 

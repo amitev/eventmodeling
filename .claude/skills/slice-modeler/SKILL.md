@@ -5,6 +5,8 @@ description: Build a whole slice in one atomic call — the slice, its elements 
 
 # Slice Modeler
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` first (element types, lanes, slice types, naming, causality). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The details live in other skills: `chapter-setup` (slices, lanes), `connections` (arrows), `element-fields` (fields), `html-screen` (mockup), `scenarios` (Given/When/Then).
 
 A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one revision, one write. A refused op changes nothing and its message starts `ops[<index>]: `.

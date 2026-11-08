@@ -5,6 +5,8 @@ description: Interview the user to find out which technologies slices are to be 
 
 # Slice Implementation Skill Builder
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Every skill this builder generates states this rule.
+
 Builds the three slice-implementation skills for one technology: **state change**, **state read** and **automation** (automation and translation share one skill). The technology-neutral knowledge of what each slice type means and how to read it from the server lives in this skill's `reference/` folder; the builder adds the technology. Read `eventmodeling-core-rules` first. Endpoints: [../api.md](../api.md).
 
 | File | Holds |

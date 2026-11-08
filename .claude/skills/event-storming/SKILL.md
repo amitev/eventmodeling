@@ -5,6 +5,8 @@ description: Live event-storming facilitator — asks questions about any busine
 
 # Event Storming
 
+**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+
 Read `eventmodeling-core-rules` once per session first (what an Event is, causality). You also use `naming` (Event names), `chapter-setup` (Chapters, slices, lanes), `edit-and-delete` (rename, move, delete), `model-navigation` (cheap reads) and, at hand-over, `slice-modeler`, `element-fields`, `connections`, `html-screen` and `scenarios`. Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`).
 
 **Posture: Modeling Mode.** Explore and capture; a wrong name or order is cheap to fix by talking. Do not audit while storming.
