@@ -22,7 +22,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 | Flow end | `flowEnd: true` marks a slice as the end of a flow. |
 | Deleting | Deleting a lane or slice deletes its elements, their arrows, their linked copies and the scenarios that use them. Deleting a Chapter deletes all of its elements. Deleting a Context moves its Chapters to the Default. |
 | Ids | Created by the server, unique in the whole model. |
-| Info | Markdown on a Chapter, lane, slice or element, empty by default. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements. |
+| Info | Markdown on a Chapter, lane, slice or element, empty by default. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements (which may also carry implementation details). |
 
 ## Step 1 — Look first
 
@@ -56,6 +56,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 - `after` is the id of a lane of the Chapter. The new lane goes right below it. The order must hold: the type may not come before the type of `after`, nor after the type of the lane that follows. A refusal (400) names the order.
 - Preferred: system actors (Actor lanes with Processors) on the top Actor lanes, human roles (Actor lanes with Screens) below. A new lane can only go below an existing lane (`after`), so in a new Chapter use the first Actor lane for the system actor (rename it) and add the human-role lane after it; add further system-actor lanes after the last system-actor lane. Do not reorder existing lanes unasked.
 - Typical: Integration goes below the last Event lane; Spec goes below the last Event or Integration lane.
+- **One Integration lane per external system**, named after the system, its `info` describing how the system reaches us (core rules, "External systems"). Ask the user for the name and details; a second system gets its own lane, added after the last Integration lane.
 
 `PATCH /lanes/:id` `{ "name"?, "info"?, "color"? }` (the type never changes). `DELETE /lanes/:id` deletes its elements; 409 for the last Actor, Interaction or Event lane.
 

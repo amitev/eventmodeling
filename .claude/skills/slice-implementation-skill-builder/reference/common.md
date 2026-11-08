@@ -24,7 +24,7 @@ Result: the Chapter as stored (name, `info`, lanes) with **only this slice** in 
 
 - Use `screenContent=true` only when the Screen's HTML is to be built too.
 - Linked copies (`copyOf`) hold no content: read the original with `GET /api/model/elements/<copyOf>`.
-- Chapter, lane and element `info`: implementation details (formats, limits, integrations). Read them all; they bind the code.
+- Chapter, lane and element `info`, and the `NOTES` elements of the slice (Spec lane; they may hold implementation details, among other things): implementation details (formats, limits, integrations). Read them all; they bind the code. A red Note is an open question, not a requirement: ask about it, do not guess.
 
 Every field has `name`, `type`, flags (`list`, `generated`, `pii`, ...) and, for `object`, children. Field names are kept exactly. `connectsTo` lists the arrows out of an element; parents are the elements whose `connectsTo` holds its id.
 

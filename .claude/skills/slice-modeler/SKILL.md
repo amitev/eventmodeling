@@ -26,7 +26,7 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 - An arrow copies all the source's fields to the target, replacing same-named fields. An element's own `fields` in the same `POST` are kept, then the parent's fields are merged in: give each element only the fields it adds, the rest arrives by itself.
 - Every arrow not listed above is created with `POST /connections`.
 - The right-most Event of the previous slice is only a guess. When the Query should be fed by other Events (or by several), create it with `"autoConnect": false` and connect the right ones explicitly.
-- Do not use `info` on the elements you create for notes, source citations or summaries: it is reserved mainly for implementation details (formats, limits, integrations, technical constraints). Notes and summaries go in Notes elements.
+- Do not use `info` on the elements you create for notes, source citations or summaries: it is reserved mainly for implementation details (formats, limits, integrations, technical constraints). Notes and summaries go in Notes elements, which may also carry implementation details (one Notes element per Spec Cell).
 
 ## Recipes
 
@@ -62,7 +62,7 @@ Events from another Chapter are not connected directly (the recommendation in `c
 
 ### Translation — external Event → Query → Processor → Command → internal Event
 
-As Automation (same layout: Query first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user where the external Event is and which Integration lane to use. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language. **Never connect the external Event to any other Query** (a read model): it is stored as an internal Event first, and only that Event feeds read models. On replay the internal Event is at the same point in the event store, which two separate sources cannot guarantee; external streams also keep events only for a limited time.
+As Automation (same layout: Query first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user which external system it is, where its Event comes from and which Integration lane to use (one lane per system, named after it, its `info` saying how the system reaches us: core rules, "External systems"; none yet: ask for the name and details, then add it as `chapter-setup` says). Create the external Event **first** (it opens the todo list): `POST /elements` `{ slice: "$s", lane: <Integration lane>, type: "EVENT", name: <as the system names it>, fields: <its payload> }`, or reuse an existing one (find it in the outline); then create the Query with `autoConnect: false` and connect the external Event to it with `POST /connections`. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language. **Never connect the external Event to any other Query** (a read model): it is stored as an internal Event first, and only that Event feeds read models. On replay the internal Event is at the same point in the event store, which two separate sources cannot guarantee; external streams also keep events only for a limited time.
 
 ## Step 2 — Write
 

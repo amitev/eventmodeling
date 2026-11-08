@@ -15,7 +15,7 @@ Both share one shape: a todo list (Query) feeds a Processor, which issues a Comm
 | `COMMAND` element (arrow Processor → Command) | the action: `fields` (`generated` ones are filled by the system) |
 | `EVENT` elements after the Command | the facts recorded; these Events **close** the item they belong to (automation) |
 | `SCENARIOS` element in the Spec lane | examples for the Command (`given`, `when`, `then`, `error`) |
-| Translation only: the Integration-lane element | the external Event/Query: its fields are the source data; where it comes from is in `info`, else ask |
+| Translation only: the Integration-lane element | the external Event/Query: its fields are the source data; the lane's `info` (the system, how it reaches us: format, delivery, ordering, retention, authentication) and the element's `info` bind the code; missing: ask |
 
 ## Step 4 — Implement (neutral part)
 

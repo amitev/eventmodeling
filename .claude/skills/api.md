@@ -119,4 +119,4 @@ Example: `{ "ops": [{ "method": "POST", "path": "/chapters/CH/slices", "body": {
 
 - Push order: `PUT /model/contexts`, then `PUT /model/contexts/:id` per Context, each with the `ETag` of the previous answer in `If-Match`.
 - Context names are file names: they must not contain `\ / : * ? " < > |` or control characters, end with a dot, be empty, be `contexts` or be a Windows device name.
-- `info` (Markdown on Chapters, lanes, slices and elements) is reserved mainly for implementation details: not for source citations, summaries or traceability. Summaries go in `NOTES` elements.
+- `info` (Markdown on Chapters, lanes, slices and elements) is reserved mainly for implementation details: not for source citations, summaries or traceability. Summaries go in `NOTES` elements, which may also carry implementation details.

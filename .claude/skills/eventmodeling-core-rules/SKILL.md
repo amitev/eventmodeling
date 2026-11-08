@@ -32,6 +32,14 @@ Every Chapter has lanes of these types, always in this top-to-bottom order (seve
 
 The lane types and what they take are also in `GET /api/model/rules`. This table is only "what belongs where," not how to place it.
 
+### External systems
+
+An external system is modeled in an **Integration lane**: one lane per external system, **named after the system** (e.g. "Payment Provider", never just "Integration" once there is a second system).
+- **Lane `info`:** what the system is and how it reaches this one: delivery (webhook, queue, polling, file), format, ordering, retention, authentication, limits. Implementation details only (the slice's Notes may add more).
+- **Its Events and Queries** carry the system's own names and fields (its language, as it sends them), not this domain's. Per-element details (endpoint, payload source, example) go in the element's `info`.
+- Details the user has not given are **asked, never invented**; leave `info` empty until known.
+- The external Event never feeds a read model; it is relayed by a translation slice into an internal Event (Translation Chain).
+
 ## Slices
 
 A **slice** is a vertical band across all lanes that groups the elements of one piece of behaviour: the thinnest possible cut — one COMMAND's behaviour, or one QUERY's view, never combined. Slices communicate with each other only via events.
@@ -159,7 +167,7 @@ A decided failure left as a lingering, unresolved question comment looks unresol
 
 ## Info and Notes
 
-`info` (Markdown on a Chapter, lane, slice or element) is reserved mainly for implementation details: formats, limits, integrations, technical constraints. Do not use it for source citations, summaries or traceability. A summary, an open question or a remark for the reader goes in a Notes element (Spec lane, one per Cell).
+`info` (Markdown on a Chapter, lane, slice or element) is reserved mainly for implementation details: formats, limits, integrations, technical constraints. Do not use it for source citations, summaries or traceability. A summary, an open question or a remark for the reader goes in a Notes element (Spec lane, one per Cell). A slice's Notes element may also carry implementation details (among other things): implementation details are read from `info` **and** from the slice's Notes.
 
 ## Offline-First Thinking
 

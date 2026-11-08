@@ -21,7 +21,7 @@ Read `eventmodeling-core-rules` first. To look things up in the model, use the `
 | Move to another Chapter | Allowed (also for linked copies). Scenarios that use the element are **deleted**. Its arrows stay, so those to elements of the old Chapter now cross Chapters: report them and offer to replace each with a linked copy (`connections`, "Across Chapters"). A Scenarios element cannot change Chapter (409). |
 | Spec lane | Holds at most one element per slice: a move into an occupied Cell is refused. |
 | Rename | A name is used everywhere by id: scenarios and linked copies show the new name by themselves. A rename of a field is not propagated (see `element-fields`). |
-| Info | Markdown, empty by default; not on Scenarios or Notes. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements. |
+| Info | Markdown, empty by default; not on Scenarios or Notes. Reserved mainly for implementation details (formats, limits, integrations, technical constraints). Not for source citations, summaries or traceability: summaries go in Notes elements (which may also carry implementation details). |
 | Delete | `DELETE /elements/:id` removes the element **and** its linked copies, all arrows to and from them, and every scenario that uses them. Answer: `{ removed: { elements, scenarios } }`. |
 | Fields already copied | Deleting an element or an arrow does not remove the fields it copied downstream. |
 

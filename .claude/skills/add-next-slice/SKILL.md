@@ -42,7 +42,8 @@ A slice is one Command, one Query, or one Processor, with the Event(s), Query an
    - the natural following **lifecycle stage** (placed → paid → shipped → …);
    - an **unaddressed affordance** on an existing Screen: a button or link with nothing behind it. Only for this, read the mockup of the last one or two Screens (`GET /api/model/elements/:id`, `html`; filter it, do not print it all);
    - a **gap** the existing entity clearly has: created but never updated, cancelled or shown in detail; an action with no confirmation or overview; an Event that no Query reads;
-   - open **red Notes** in the Chapter (open questions) that name a missing step.
+   - open **red Notes** in the Chapter (open questions) that name a missing step;
+   - an **external party's reaction**: the story, a Note or the request names an external system whose fact this Chapter must take in (a payment confirmed, a delivery reported). Only then is a translation slice a candidate; never invent an external system.
 3. Prefer the option that most directly **continues the existing narrative** over one that starts an unrelated thread: the goal is the slice that makes the most sense as *next*, not just any plausible one.
 4. `model-check` (for this Chapter) lists unfinished work: slices with no type, Screens with no mockup, Events nothing reads. Use it as input, and name unfinished slices in the report; creating the new slice is still the task.
 
@@ -56,7 +57,7 @@ If several next steps are equally reasonable, pick the one that best continues t
 
 Build it with `slice-modeler`: gather nothing from the user (Step 1 decided it), pick the recipe for the slice type, and write one atomic batch.
 
-- **Type:** state change for a new Command (Screen → Command → Event), state read for a new Query (Query → Screen), automation for a new Processor (and translation when an external party acts). Per the core concept above, one Command, Query or Processor per slice.
+- **Type:** state change for a new Command (Screen → Command → Event), state read for a new Query (Query → Screen), automation for a new Processor, and translation when an external system's fact comes in. A translation needs the system's name, its Event and how it reaches us (Integration lane named after it, `info`; core rules, "External systems"): take them from the story, a Note or the request. Not named there: do not infer them; choose another next step and record the translation in the report as needing the user's input. Per the core concept above, one Command, Query or Processor per slice.
 - **Name the slice after its element** (the Command, Query or Processor name), never leave "New Slice".
 - **Lanes:** the lane of the needed type. If the Chapter has more than one lane of a type (for example several Actor lanes for different roles), use the one the story's earlier slices use for that role; when nothing points to one, use the first of that type, and say which in the report. A Processor goes in a system-actor lane; system-actor lanes are preferably the top Actor lanes, above the human roles.
 - **Place** it after the last slice (or where Step 0 said).
