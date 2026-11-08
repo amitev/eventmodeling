@@ -92,7 +92,7 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 - **S4.9** `GET /outline?context=` returns the Contexts (only the one with id `context`, when given), each with its Chapters: `id`, `name`, `x`, `y`, `connectsTo`, lanes (`id`, `name`, `type`) and slices (`id`, `name`, `type`, `flowEnd?`, `width`) with their elements `{ id, type, name, lane, x, copyOf?, connectsTo }` (`name` of a linked copy is its original's). No `html`, `url`, `fields`, `info`, `markdown` or scenarios. Order as R6.8.
 - **S4.10** `GET /search?q=&type=&context=` lists elements `{ id, type, name, chapterId, sliceId, lane }`. `q`: part of the name, case-insensitive; `type`: an element type (upper case); `context`: a Context id. Without all three, all elements.
 - **S4.11** `GET /chapters/:id?screenContent=` returns the Chapter as stored (R6.3; `screenContent` as S3.12). `GET /elements/:id` returns the element as stored (R6.5), a linked copy as its own entry (unlike S3.14).
-
+- **S4.21** `GET /chapters/:id?slice=` (with S4.11) returns the Chapter as stored with only the slice with that id in `slices`: all Chapter fields and lanes stay, the other slices are left out. Used to build one slice. The slice must be in that Chapter: otherwise 404; not text 400. `screenContent` applies.
 ### Write
 
 - **S4.12** **Contexts.** `POST /contexts` `{ name }`; `PATCH /contexts/:id` `{ name }`; `DELETE /contexts/:id` (its Chapters move to the Default, R1b.6).
@@ -113,7 +113,7 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 | Request | Result |
 |---|---|
 | `GET /api/model/revision`, `GET /api/model/events`, `GET /api/model/rules`, `GET /api/model/outline`, `GET /api/model/search` | S4.1, S4.3, S4.8 to S4.10 |
-| `GET /api/model/chapters/:id`, `GET /api/model/elements/:id` | S4.11 |
+| `GET /api/model/chapters/:id`, `GET /api/model/elements/:id` | S4.11, S4.21 (`?slice=`) |
 | `POST /api/model/contexts`, `PATCH`/`DELETE /api/model/contexts/:id` | S4.12 |
 | `POST /api/model/chapters`, `PATCH`/`DELETE /api/model/chapters/:id`, `PUT`/`DELETE /api/model/chapters/:id/connections/:targetId` | S4.13 |
 | `POST /api/model/chapters/:id/lanes`, `PATCH`/`DELETE /api/model/lanes/:id` | S4.14 |

@@ -381,9 +381,14 @@ function search(model, { query }) {
 }
 
 function getChapter(model, { params, query }) {
-  const { screenContent = 'true' } = query;
+  const { screenContent = 'true', slice } = query;
   if (screenContent !== 'true' && screenContent !== 'false') throw bad('screenContent must be true or false');
+  if (slice !== undefined && typeof slice !== 'string') throw bad('slice must be text');
   const chapter = structuredClone(found(index(model).chapters, params.id, 'chapter'));
+  if (slice !== undefined) {
+    chapter.slices = chapter.slices.filter((s) => s.id === slice);
+    if (!chapter.slices.length) throw unknown('slice', slice);
+  }
   if (screenContent === 'false') {
     for (const s of chapter.slices) for (const e of s.elements) if (e.type === 'SCREEN') delete e.html;
   }

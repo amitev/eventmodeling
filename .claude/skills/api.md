@@ -67,7 +67,7 @@ Types are upper case. Start with `GET /rules` and `GET /outline`. Names of items
 | `GET /rules` | `{ elementTypes, laneTypes: [{ type, label, takes }], connections: [{ from, to }], laneColors, noteColors, fieldTypes, fieldFlags }` |
 | `GET /outline?context=` | Contexts (only `context` if given) → Chapters `{ id, name, x, y, connectsTo, lanes: [{ id, name, type }], slices: [{ id, name, type, flowEnd?, width, elements: [{ id, type, name, lane, x, copyOf?, connectsTo }] }] }`. No `html`, `url`, `fields`, `info`, `markdown`, scenarios. A copy's `name` is its original's. |
 | `GET /search?q=&type=&context=` | `[{ id, type, name, chapterId, sliceId, lane }]`. `q`: part of the name, case-insensitive; `type`: element type; `context`: Context id |
-| `GET /chapters/:id?screenContent=` | The Chapter as stored (`screenContent=false` omits Screen `html`) |
+| `GET /chapters/:id?screenContent=&slice=` | The Chapter as stored (`screenContent=false` omits Screen `html`). With `slice=<sliceId>` only that slice is in `slices`; Chapter fields and all lanes stay (404 if the slice is not in the Chapter) |
 | `GET /elements/:id` | The element as stored (a copy as its own entry) |
 
 ### Write
