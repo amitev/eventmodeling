@@ -20,7 +20,7 @@ A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one r
 ## How the server wires things
 
 - Elements are placed in the lane you name, with `x` left out (placed like the board does; the slice widens as needed). Only the lane decides the row. The one case where you give `x` is the automation layout (see Automation).
-- With `autoConnect` (default `true`) a new element gets arrows **within its slice** at once, using the elements that exist at that moment: Command with a Screen above ← Screen; Event with a Command above ← Command; Screen with a Query below ← Query; Query with a Screen above → Screen; a Query also ← the right-most Event of the **previous slice**; Command with a Processor in the slice ← Processor (nearest); Processor with a Query in the slice ← Query (nearest), else ← the nearest Event in an Integration lane. Create elements in the order of the recipe so these arrows appear.
+- With `autoConnect` (default `true`) a new element gets arrows **within its slice** at once, using the elements that exist at that moment: Command with a Screen above ← Screen; Event with a Command above ← Command; Screen with a Query below ← Query; Query with a Screen above → Screen; a Query also ← the right-most Event of the **previous slice**; Command with a Processor in the slice ← Processor (nearest); Processor with a Query in the slice ← Query (nearest). Create elements in the order of the recipe so these arrows appear.
 - An arrow copies all the source's fields to the target, replacing same-named fields. An element's own `fields` in the same `POST` are kept, then the parent's fields are merged in: give each element only the fields it adds, the rest arrives by itself.
 - Every arrow not listed above is created with `POST /connections`.
 - The right-most Event of the previous slice is only a guess. When the Query should be fed by other Events (or by several), create it with `"autoConnect": false` and connect the right ones explicitly.
@@ -60,7 +60,7 @@ Events from another Chapter are not connected directly (the recommendation in `c
 
 ### Translation — external Event → Query → Processor → Command → internal Event
 
-As Automation (same layout: Query first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user where the external Event is and which Integration lane to use. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language.
+As Automation (same layout: Query first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Query of the external system there), which is what makes the slice a translation. Ask the user where the external Event is and which Integration lane to use. The Query is the todo list (never closed). The Command's Event is the internal fact in this domain's language. **Never connect the external Event to any other Query** (a read model): it is stored as an internal Event first, and only that Event feeds read models. On replay the internal Event is at the same point in the event store, which two separate sources cannot guarantee; external streams also keep events only for a limited time.
 
 ## Step 2 — Write
 

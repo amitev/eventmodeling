@@ -67,7 +67,7 @@ The slice depends on the Events that open its todo list; the Event its own Comma
 
 ### 4. External Event → translation
 
-An external party's Event (in an Integration lane) feeds a todo-list Query; the Processor and Command turn it into an internal Event. The slice depends on the external Event only.
+An external party's Event (in an Integration lane) feeds a todo-list Query; the Processor and Command turn it into an internal Event. The slice depends on the external Event only. No other Query is fed by the external Event: read models are fed by the internal Event (replay stays reproducible; external streams are kept only for a limited time). Flag an arrow from an Integration-lane Event to any other Query as a finding.
 
 ---
 

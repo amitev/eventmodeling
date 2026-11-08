@@ -11,7 +11,7 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 
 | | Rule |
 |---|---|
-| Allowed pairs | Screen → Command, Processor → Command, Command → Event, Event → Query, Event → Processor, Query → Screen, Query → Processor. Nothing else: not two elements of one type, not Screen → Event, and so on. The list is `connections` in `GET /api/model/rules`. |
+| Allowed pairs | Screen → Command, Processor → Command, Command → Event, Event → Query, Query → Screen, Query → Processor. Nothing else: not two elements of one type, not Screen → Event, and so on. The list is `connections` in `GET /api/model/rules`. |
 | Direction | Fixed by the pair. `POST /connections` accepts the elements in **either order** and creates the arrow in the right direction. |
 | Not connectable | `SCENARIOS` and `NOTES` elements have no arrows. |
 | No self, no repeat | An element is never connected to itself. A pair is connected **at most once**: a repeat is refused (400). |
@@ -35,12 +35,13 @@ Read `eventmodeling-core-rules` first (what each element is, "Connections Read F
 | Query, when the slice just before has Events | Event → Query, from the right-most Event (the nearest lane on a tie) |
 | Command, with a Processor in the slice | Processor → Command, from the nearest Processor |
 | Processor, with a Query in the slice | Query → Processor, from the nearest Query |
-| Processor, no Query but an Event in an Integration lane of the slice | Event → Processor, from the nearest such Event |
 
 - Every matching rule makes its arrow. Each arrow copies fields as above.
+- Event → Processor is never automatic and the server refuses it (board drag only).
+- **External Events** (Integration lane) never feed a read model directly: translate them with a Processor and Command into an internal Event, and connect that Event to the Query. See `slice-builder` (Translation). Reason: replay of two separate sources is not reproducible, and external streams are kept only for a limited time.
 - Moving an element (`PATCH` with `slice`, `lane`, `x`) creates **no** arrows and keeps the existing ones.
 - Create the Query before the Processor and the Processor before the Command, or their arrows do not appear.
-- Not automatic, so connect them yourself: Event → Query across more than one slice, Event → Processor outside an Integration lane, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").
+- Not automatic, so connect them yourself: Event → Query across more than one slice, an element in a different slice from its partner. Anything across Chapters: never connect directly, use a linked copy (see "Across Chapters").
 
 ## Step 1 — Find the elements
 

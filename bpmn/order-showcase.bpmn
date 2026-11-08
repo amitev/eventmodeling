@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Order_showcase" targetNamespace="http://eventmodeling/showcase/order-showcase">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Carrier" name="Carrier" />
+    <bpmn:participant id="Participant_Order" name="Order showcase" processRef="Process_Order" />
+    <bpmn:participant id="Participant_Payment" name="Payment provider" />
+    <bpmn:messageFlow id="Msg_PaymentStatus" name="Payment status" sourceRef="Participant_Payment" targetRef="Task_RecordPayment" />
+    <bpmn:messageFlow id="Msg_ParcelHandedOver" name="Parcel handed over" sourceRef="Participant_Carrier" targetRef="Task_TrackShipment" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Order" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Shopper" name="Shopper">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PlaceOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_OrderPlaced</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CancelOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_OrderCancelled</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Support" name="Support agent">
+        <bpmn:flowNodeRef>Task_ShipOrderManual</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TrackShipment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Tracked</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Automation" name="Automation">
+        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ChargePayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_PaymentCharged</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RecordPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_PaymentRecorded</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ShipRoute</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ShipOrderAuto</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ShipMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_OrderShipped</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ConfirmationSent</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_PlaceOrder" name="Place order">
+      <bpmn:documentation>Command Place order (El0103). Screen: Checkout (El0105). Slice Place order (Sl0001).</bpmn:documentation>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="Event_OrderPlaced" name="Order placed">
+      <bpmn:documentation>Event Order placed (El0104). Feeds the Orders query (El0201).</bpmn:documentation>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:exclusiveGateway id="Gateway_Cancel" name="Shopper cancels?" default="Flow_NoCancel">
+      <bpmn:documentation>Cancel order is available from the My orders screen (El0302), which reads the Orders query (El0201). The model has no arrow from Order placed to Cancel order: this branch is an interpretation.</bpmn:documentation>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cancel</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoCancel</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_CancelOrder" name="Cancel order">
+      <bpmn:documentation>Command Cancel order (El0303). Screen: My orders (El0302, copy of El0202). Query: Orders (El0201). Slice Cancel order (Sl0003).</bpmn:documentation>
+      <bpmn:incoming>Flow_Cancel</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_OrderCancelled" name="Order cancelled">
+      <bpmn:documentation>Event Order cancelled (El0304).</bpmn:documentation>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="Gateway_Split">
+      <bpmn:documentation>Both automations read the Orders query (copies El0403 and El0803 of El0201), so they start together once an order is placed.</bpmn:documentation>
+      <bpmn:incoming>Flow_NoCancel</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCharge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToConfirm</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_ChargePayment" name="Charge payment">
+      <bpmn:documentation>Command Charge payment (El0402). Processor: Charge on order (El0401). Query: Orders (El0403). Slice Charge payment (Sl0004).</bpmn:documentation>
+      <bpmn:incoming>Flow_ToCharge</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="Event_PaymentCharged" name="Payment charged">
+      <bpmn:documentation>Event Payment charged (El0404). Feeds the Payment status query (El0502) of the Payment provider.</bpmn:documentation>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:serviceTask id="Task_RecordPayment" name="Record payment">
+      <bpmn:documentation>Command Record payment (El0503). Processor: Sync payment (El0501). Query: Payment status (El0502, Payment provider). Slice Sync payment (Sl0005).</bpmn:documentation>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="Event_PaymentRecorded" name="Payment recorded">
+      <bpmn:documentation>Event Payment recorded (El0504).</bpmn:documentation>
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:exclusiveGateway id="Gateway_ShipRoute" name="Shipping route" default="Flow_Auto">
+      <bpmn:documentation>Ship order (El0604) has two triggers in the model: the Pick list screen (El0602) and the Auto-ship paid orders processor (El0605). Treating them as alternatives after payment is an interpretation.</bpmn:documentation>
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manual</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Auto</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ShipOrderManual" name="Ship order">
+      <bpmn:documentation>Command Ship order (El0604). Screen: Pick list (El0602). Slice Ship order (Sl0006).</bpmn:documentation>
+      <bpmn:incoming>Flow_Manual</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_ShipOrderAuto" name="Ship order">
+      <bpmn:documentation>Command Ship order (El0604). Processor: Auto-ship paid orders (El0605). Slice Ship order (Sl0006).</bpmn:documentation>
+      <bpmn:incoming>Flow_Auto</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ShipMerge">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateThrowEvent id="Event_OrderShipped" name="Order shipped">
+      <bpmn:documentation>Event Order shipped (El0603, Shipping events lane). Feeds the Shipment status query (El0702).</bpmn:documentation>
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:userTask id="Task_TrackShipment" name="Track shipment">
+      <bpmn:documentation>Screen: Shipment tracking (El0703). Query: Shipment status (El0702). Fed by Order shipped (El0603) and the Carrier event Parcel handed over (El0701). Slice Track shipment (Sl0007, no command).</bpmn:documentation>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Tracked">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_SendConfirmation" name="Send confirmation">
+      <bpmn:documentation>Command Send confirmation (El0802). Processor: Send confirmation mail (El0801). Query: Orders (El0803). Slice Confirm order (Sl0008).</bpmn:documentation>
+      <bpmn:incoming>Flow_ToConfirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ConfirmationSent" name="Confirmation sent">
+      <bpmn:documentation>Event Confirmation sent (El0804).</bpmn:documentation>
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_PlaceOrder" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_PlaceOrder" targetRef="Event_OrderPlaced" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Event_OrderPlaced" targetRef="Gateway_Cancel" />
+    <bpmn:sequenceFlow id="Flow_Cancel" name="yes" sourceRef="Gateway_Cancel" targetRef="Task_CancelOrder" />
+    <bpmn:sequenceFlow id="Flow_NoCancel" name="no" sourceRef="Gateway_Cancel" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_CancelOrder" targetRef="End_OrderCancelled" />
+    <bpmn:sequenceFlow id="Flow_ToCharge" sourceRef="Gateway_Split" targetRef="Task_ChargePayment" />
+    <bpmn:sequenceFlow id="Flow_ToConfirm" sourceRef="Gateway_Split" targetRef="Task_SendConfirmation" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ChargePayment" targetRef="Event_PaymentCharged" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Event_PaymentCharged" targetRef="Task_RecordPayment" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_RecordPayment" targetRef="Event_PaymentRecorded" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Event_PaymentRecorded" targetRef="Gateway_ShipRoute" />
+    <bpmn:sequenceFlow id="Flow_Manual" name="manual" sourceRef="Gateway_ShipRoute" targetRef="Task_ShipOrderManual" />
+    <bpmn:sequenceFlow id="Flow_Auto" name="automatic" sourceRef="Gateway_ShipRoute" targetRef="Task_ShipOrderAuto" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_ShipOrderManual" targetRef="Gateway_ShipMerge" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_ShipOrderAuto" targetRef="Gateway_ShipMerge" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_ShipMerge" targetRef="Event_OrderShipped" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Event_OrderShipped" targetRef="Task_TrackShipment" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_TrackShipment" targetRef="End_Tracked" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_SendConfirmation" targetRef="End_ConfirmationSent" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Participant_Carrier_di" bpmnElement="Participant_Carrier" isHorizontal="true">
+        <dc:Bounds x="160" y="20" width="1880" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Order_di" bpmnElement="Participant_Order" isHorizontal="true">
+        <dc:Bounds x="160" y="120" width="1880" height="740" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Payment_di" bpmnElement="Participant_Payment" isHorizontal="true">
+        <dc:Bounds x="160" y="920" width="1880" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Shopper_di" bpmnElement="Lane_Shopper" isHorizontal="true">
+        <dc:Bounds x="190" y="120" width="1850" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Support_di" bpmnElement="Lane_Support" isHorizontal="true">
+        <dc:Bounds x="190" y="360" width="1850" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Automation_di" bpmnElement="Lane_Automation" isHorizontal="true">
+        <dc:Bounds x="190" y="600" width="1850" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_1_di" bpmnElement="Start_1">
+        <dc:Bounds x="232" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PlaceOrder_di" bpmnElement="Task_PlaceOrder">
+        <dc:Bounds x="330" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_OrderPlaced_di" bpmnElement="Event_OrderPlaced">
+        <dc:Bounds x="482" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="450" y="265" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Cancel_di" bpmnElement="Gateway_Cancel" isMarkerVisible="true">
+        <dc:Bounds x="565" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="540" y="175" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CancelOrder_di" bpmnElement="Task_CancelOrder">
+        <dc:Bounds x="670" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_OrderCancelled_di" bpmnElement="End_OrderCancelled">
+        <dc:Bounds x="842" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="810" y="265" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="695" y="635" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ChargePayment_di" bpmnElement="Task_ChargePayment">
+        <dc:Bounds x="810" y="620" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_PaymentCharged_di" bpmnElement="Event_PaymentCharged">
+        <dc:Bounds x="972" y="642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="940" y="685" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RecordPayment_di" bpmnElement="Task_RecordPayment">
+        <dc:Bounds x="1070" y="620" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_PaymentRecorded_di" bpmnElement="Event_PaymentRecorded">
+        <dc:Bounds x="1232" y="642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1200" y="685" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ShipRoute_di" bpmnElement="Gateway_ShipRoute" isMarkerVisible="true">
+        <dc:Bounds x="1315" y="635" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1290" y="595" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ShipOrderManual_di" bpmnElement="Task_ShipOrderManual">
+        <dc:Bounds x="1420" y="440" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ShipOrderAuto_di" bpmnElement="Task_ShipOrderAuto">
+        <dc:Bounds x="1420" y="620" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ShipMerge_di" bpmnElement="Gateway_ShipMerge" isMarkerVisible="true">
+        <dc:Bounds x="1575" y="635" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_OrderShipped_di" bpmnElement="Event_OrderShipped">
+        <dc:Bounds x="1692" y="642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1660" y="685" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TrackShipment_di" bpmnElement="Task_TrackShipment">
+        <dc:Bounds x="1790" y="440" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Tracked_di" bpmnElement="End_Tracked">
+        <dc:Bounds x="1952" y="462" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendConfirmation_di" bpmnElement="Task_SendConfirmation">
+        <dc:Bounds x="810" y="740" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ConfirmationSent_di" bpmnElement="End_ConfirmationSent">
+        <dc:Bounds x="972" y="762" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="940" y="805" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="268" y="240" />
+        <di:waypoint x="330" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="430" y="240" />
+        <di:waypoint x="482" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="518" y="240" />
+        <di:waypoint x="565" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cancel_di" bpmnElement="Flow_Cancel">
+        <di:waypoint x="615" y="240" />
+        <di:waypoint x="670" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="222" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoCancel_di" bpmnElement="Flow_NoCancel">
+        <di:waypoint x="590" y="265" />
+        <di:waypoint x="590" y="660" />
+        <di:waypoint x="695" y="660" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="598" y="420" width="16" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="770" y="240" />
+        <di:waypoint x="842" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToCharge_di" bpmnElement="Flow_ToCharge">
+        <di:waypoint x="745" y="660" />
+        <di:waypoint x="810" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToConfirm_di" bpmnElement="Flow_ToConfirm">
+        <di:waypoint x="720" y="685" />
+        <di:waypoint x="720" y="780" />
+        <di:waypoint x="810" y="780" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="910" y="660" />
+        <di:waypoint x="972" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1008" y="660" />
+        <di:waypoint x="1070" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1170" y="660" />
+        <di:waypoint x="1232" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
+        <di:waypoint x="1268" y="660" />
+        <di:waypoint x="1315" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Manual_di" bpmnElement="Flow_Manual">
+        <di:waypoint x="1340" y="635" />
+        <di:waypoint x="1340" y="480" />
+        <di:waypoint x="1420" y="480" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1348" y="540" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Auto_di" bpmnElement="Flow_Auto">
+        <di:waypoint x="1365" y="660" />
+        <di:waypoint x="1420" y="660" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1362" y="642" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9">
+        <di:waypoint x="1520" y="480" />
+        <di:waypoint x="1600" y="480" />
+        <di:waypoint x="1600" y="635" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="1520" y="660" />
+        <di:waypoint x="1575" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
+        <di:waypoint x="1625" y="660" />
+        <di:waypoint x="1692" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12">
+        <di:waypoint x="1710" y="642" />
+        <di:waypoint x="1710" y="480" />
+        <di:waypoint x="1790" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13">
+        <di:waypoint x="1890" y="480" />
+        <di:waypoint x="1952" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14">
+        <di:waypoint x="910" y="780" />
+        <di:waypoint x="972" y="780" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Msg_PaymentStatus_di" bpmnElement="Msg_PaymentStatus">
+        <di:waypoint x="1120" y="920" />
+        <di:waypoint x="1120" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1128" y="880" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Msg_ParcelHandedOver_di" bpmnElement="Msg_ParcelHandedOver">
+        <di:waypoint x="1840" y="80" />
+        <di:waypoint x="1840" y="440" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1848" y="260" width="110" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

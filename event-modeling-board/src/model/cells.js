@@ -89,15 +89,8 @@ export function autoConnections(nodes, node) {
     if (query) pairs.push([query.id, node.id]);
   }
   if (kind === 'processor') {
-    // The nearest Query; without one, the nearest Event in an Integration lane.
-    const inIntegration = (n) => {
-      const cell = cellOfElement(nodes, n);
-      return nodes.find((l) => l.id === cell?.laneId)?.data.type === 'integration';
-    };
-    const source =
-      nearest(others.filter((n) => n.data.kind === 'query')) ??
-      nearest(others.filter((n) => n.data.kind === 'event' && inIntegration(n)));
-    if (source) pairs.push([source.id, node.id]);
+    const query = nearest(others.filter((n) => n.data.kind === 'query'));
+    if (query) pairs.push([query.id, node.id]);
   }
   if (kind === 'query') {
     const screen = above('screen');

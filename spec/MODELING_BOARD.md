@@ -233,7 +233,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - Query → Screen
   - Query → Processor
 
-  Dragging such a pair the wrong way (e.g. Command to Screen) creates the connection in the right direction (Screen → Command). Any other pair, including two elements of one type, is refused. Scenarios (R3.11) and Notes (R3.18) elements are in no pair, so cannot be connected. The rules apply to new connections only: existing ones, imported or saved, are not checked, except that import refuses an arrow to or from a Scenarios or Notes element (R7).
+  Dragging such a pair the wrong way (e.g. Command to Screen) creates the connection in the right direction (Screen → Command). Any other pair, including two elements of one type, is refused. Event → Processor is made only by dragging on the board (never automatic, R4.8; the server refuses it, S4.18). Scenarios (R3.11) and Notes (R3.18) elements are in no pair, so cannot be connected. The rules apply to new connections only: existing ones, imported or saved, are not checked, except that import refuses an arrow to or from a Scenarios or Notes element (R7).
 - **R4.8** **Automatic arrows.** An added element (R3.3) gets these arrows (R4.7) at once, within the same slice. "Above" and "under" mean another lane; the nearest such element is used. An already connected pair is not connected again. Moving an element creates no arrows.
   - A Command under a Screen: Screen → Command.
   - An Event under a Command: Command → Event.
@@ -241,7 +241,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - A Query under a Screen: Query → Screen.
   - A Query when the slice just before its own has an Event: Event → Query. With several Events, the right-most (nearest by height on a tie).
   - A Command in a slice with a Processor: Processor → Command, the nearest by height (above or under).
-  - A Processor with a Query in its slice: Query → Processor, the nearest by height (above or under). Without a Query, an Event in an Integration lane (R2.10) of its slice: Event → Processor, the nearest by height. Never both.
+  - A Processor with a Query in its slice: Query → Processor, the nearest by height (above or under). Event → Processor is never automatic.
 
   Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds the same arrows (S4.16).
 
@@ -331,6 +331,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **state read** (`STATE_READ`): only Query and Screen, with at least a Query;
   - **none** (`null`): anything else, also an empty slice.
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
+- **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Query directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Query. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it. The Translation Chain of the `eventmodeling-core-rules` skill is the source of truth.
 
 ## 6. Board file
 
