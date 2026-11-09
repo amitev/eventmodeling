@@ -15,7 +15,9 @@
     "server/model-rules.js",
     "server/model-store.js",
     "server/html-compact.js",
-    "server/public"
+    "server/init.js",
+    "server/public",
+    ".claude/skills"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

@@ -29,9 +29,19 @@ Opens at `http://localhost:3300`.
 | `-p`, `--port <port>` | `PORT` env, else `3300` | Port to listen on |
 | `--host <host>` | `localhost` | Host to bind to |
 | `--dev` | | API only, no build needed (used by `npm run dev`) |
+| `--init` | | Install the skills into the current directory, then exit |
+| `--target <dir>` | `.claude/skills` | With `--init`: skills folder |
 | `-h`, `--help` | | Show usage |
 
 Example: `npx event-modeling-cli --port 8080 --host 0.0.0.0`
+
+## Skills
+
+```sh
+npx event-modeling-cli@latest --init
+```
+
+Creates `.event-modeling/` and copies the packaged skills and `api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
 
 ## Develop
 
