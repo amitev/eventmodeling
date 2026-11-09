@@ -357,7 +357,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .gwt-options { display: flex; flex-direction: column; gap: 4px; max-height: 320px; margin-top: 6px; padding: 3px; overflow-y: auto; }
 .gwt-option {
-  display: flex; align-items: center; gap: 12px; width: 100%; padding: 7px 10px; box-sizing: border-box;
+  display: flex; flex: none; align-items: center; gap: 12px; width: 100%; padding: 7px 10px; box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 4px; font-size: 16px; font-weight: 700;
   color: rgba(0, 0, 0, 0.8); text-align: left; cursor: pointer;
 }
@@ -412,20 +412,20 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 
 /* The search box (R1e): floats over the board, above the popups. */
 .search-box {
-  position: fixed; z-index: 1200; top: 64px; left: 50%; transform: translateX(-50%); width: min(420px, 90vw);
+  position: fixed; z-index: 1200; top: 64px; left: 50%; transform: translateX(-50%); width: min(560px, 90vw);
   padding: 8px; background: #fff; border: 1px solid #c9cfdc; border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 .search-input-row { display: flex; gap: 6px; }
-.search-input-row input { flex: 1; min-width: 0; padding: 6px 8px; font: 14px system-ui, sans-serif; }
-.search-close { width: 28px; padding: 0; border: 1px solid #aab; border-radius: 4px; background: #fff; cursor: pointer; }
+.search-input-row input { flex: 1; min-width: 0; padding: 8px 10px; font: 18px system-ui, sans-serif; }
+.search-close { width: 36px; padding: 0; border: 1px solid #aab; border-radius: 4px; background: #fff; font-size: 18px; cursor: pointer; }
 .search-results { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; margin-top: 5px; padding: 3px; overflow-y: auto; }
 .search-result {
-  padding: 6px 10px; border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 4px; text-align: left; font-size: 13px;
+  flex: none; padding: 7px 10px; border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 4px; text-align: left; font-size: 16px;
   font-weight: 700; color: rgba(0, 0, 0, 0.8); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .search-result.copy { opacity: 0.75; }
 .search-result.active { outline: 2px solid #1a73e8; outline-offset: 1px; }
-.search-none { padding: 6px 4px; color: #99a; font-size: 13px; }
+.search-none { padding: 6px 4px; color: #99a; font-size: 16px; }
 
 /* The read-only view of all scenarios (white background). */
 .scenarios-view {
