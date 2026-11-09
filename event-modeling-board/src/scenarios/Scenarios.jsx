@@ -4,6 +4,7 @@ import { useReactFlow } from '@xyflow/react';
 import { useBackdropClose, useModalFocus } from '../dialogs/popup.js';
 import { ExampleTree, FreeEntries } from './ExampleTree.jsx';
 import { exampleLines, fitExample, previewOfRows, rowsOf, valueOfRows } from '../model/examples.js';
+import { KINDS } from '../model/model.js';
 
 const Icon = ({ children }) => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -231,6 +232,72 @@ const SECTIONS = {
 const isTyping = (t) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
+// The list to choose an Event or Command from: a filter field (name or slice) over boxes in the
+// element's colour, like the search box (R1e). Arrows and Enter choose without the mouse.
+function ElementPicker({ options, empty, onPick }) {
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const activeRow = useRef(null);
+  const q = query.trim().toLowerCase();
+  const shown = useMemo(
+    () => (q ? options.filter((c) => `${c.name} ${c.where}`.toLowerCase().includes(q)) : options),
+    [options, q],
+  );
+  const current = Math.min(active, shown.length - 1);
+
+  useEffect(() => {
+    activeRow.current?.scrollIntoView({ block: 'nearest' });
+  }, [current, shown]);
+
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (shown.length) setActive((current + (e.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length);
+    } else if (e.key === 'Enter' && shown[current]) {
+      e.preventDefault();
+      onPick(shown[current]);
+    }
+  };
+
+  return (
+    <div className="gwt-menu" role="menu">
+      <input
+        autoFocus
+        className="gwt-filter"
+        value={query}
+        placeholder="Filter by name or slice"
+        spellCheck={false}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setActive(0);
+        }}
+        onKeyDown={onKeyDown}
+      />
+      <div className="gwt-options">
+        {shown.length ? (
+          shown.map((c, i) => (
+            <button
+              key={c.id}
+              type="button"
+              role="menuitem"
+              ref={i === current ? activeRow : null}
+              className={`gwt-option${i === current ? ' active' : ''}`}
+              style={{ background: KINDS[c.kind].color }}
+              onMouseMove={() => setActive(i)}
+              onClick={() => onPick(c)}
+            >
+              <span className={`gwt-option-name${c.name ? '' : ' empty'}`}>{c.name || 'Untitled'}</span>
+              <small>{c.where}</small>
+            </button>
+          ))
+        ) : (
+          <div className="gwt-none">{options.length ? 'No element found' : empty}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // The popup to edit one scenario. Nothing is applied before Save. `candidates` are the Events and
 // Commands of the Chapter: { id, kind, name, fields, where }.
 export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
@@ -418,19 +485,11 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           </button>
         )}
         {picker === section && (
-          <div className="gwt-menu" role="menu">
-            {options.length ? (
-              options.map((c) => (
-                <button key={c.id} role="menuitem" className={`gwt-option ${c.kind}`} onClick={() => pick(section, c)}>
-                  <span className="gwt-dot" />
-                  <span className={c.name ? '' : 'empty'}>{c.name || 'Untitled'}</span>
-                  <small>{c.where}</small>
-                </button>
-              ))
-            ) : (
-              <div className="gwt-none">No {plural} in this Chapter</div>
-            )}
-          </div>
+          <ElementPicker
+            options={options}
+            empty={`No ${plural} in this Chapter`}
+            onPick={(c) => pick(section, c)}
+          />
         )}
       </span>
     );
