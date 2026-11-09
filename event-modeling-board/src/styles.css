@@ -545,9 +545,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .info-sep { width: 1px; height: 18px; margin: 0 6px; background: #ccc; }
 .info-editor {
   box-sizing: border-box; width: 100%; flex: 1; min-height: 0; resize: none; padding: 12px; border: 0;
-  font: 13px/1.5 ui-monospace, Consolas, monospace; outline: none;
+  font: 16px/1.5 ui-monospace, Consolas, monospace; outline: none;
 }
-.info-preview { padding: 12px 16px; overflow: auto; font-size: 13px; line-height: 1.5; }
+.info-preview { padding: 12px 16px; overflow: auto; font-size: 16px; line-height: 1.5; }
 .info-preview h1, .info-preview h2, .info-preview h3 { margin: 0.8em 0 0.4em; }
 .info-preview h1:first-child, .info-preview h2:first-child, .info-preview h3:first-child { margin-top: 0; }
 .info-preview p, .info-preview ul, .info-preview ol, .info-preview pre, .info-preview blockquote { margin: 0 0 0.8em; }
