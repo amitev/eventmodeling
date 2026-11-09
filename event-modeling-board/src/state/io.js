@@ -133,7 +133,7 @@ export function serialize(nodes, edges, contexts) {
   return {
     format: 'event-model',
     version: 1,
-    contexts: contexts.map((c) => ({ id: c.id, name: c.name })),
+    contexts: contexts.map((c) => ({ id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}) })),
     chapters,
   };
 }
@@ -274,10 +274,11 @@ export function parseBoard(text) {
 
   data.contexts.forEach((x, xi) => {
     const xp = `contexts[${xi}]`;
-    object(x, ['id', 'name'], xp);
+    object(x, ['id', 'name'], xp, ['info']);
     claim(x.id, 'context', at(xp, 'id'));
     name(x.name, at(xp, 'name'));
-    contexts.push({ id: x.id, name: x.name });
+    optionalInfo(x, xp);
+    contexts.push({ id: x.id, name: x.name, ...(x.info ? { info: x.info } : {}) });
   });
 
   data.chapters.forEach((c, ci) => {

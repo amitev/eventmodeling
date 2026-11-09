@@ -398,17 +398,19 @@ function getChapter(model, { params, query }) {
 // ---------- Contexts ----------
 
 function createContext(model, { body: b }) {
-  const { name } = body(b, ['name']);
+  const { name, info } = body(b, ['name', 'info']);
   const ix = index(model);
   const context = { id: newId(ix), name: text(name, 'name') };
+  if (info !== undefined) setOptional(context, 'info', info);
   model.contexts.push(context);
   return { ...context };
 }
 
 function patchContext(model, { params, body: b }) {
-  const { name } = body(b, ['name']);
+  const p = body(b, ['name', 'info']);
   const context = found(index(model).contexts, params.id, 'context');
-  context.name = text(name, 'name');
+  if ('name' in p) context.name = text(p.name, 'name');
+  if ('info' in p) setOptional(context, 'info', p.info);
   return { ...context };
 }
 

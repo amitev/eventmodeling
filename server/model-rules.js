@@ -196,6 +196,7 @@ export function validateModel({ contexts, chapters }) {
   contexts.forEach((c, i) => {
     claim(c.id, 'context', `contexts[${i}].id`);
     if (!isText(c.name)) fail(`contexts[${i}].name`, 'must not be empty');
+    if (c.info !== undefined && !isText(c.info)) fail(`contexts[${i}].info`, 'must be left out when empty');
   });
   const contextIds = new Set(contexts.map((c) => c.id));
 

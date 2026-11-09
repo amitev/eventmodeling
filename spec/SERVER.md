@@ -37,7 +37,7 @@ The board pushes its Contexts, with their Chapters, to the server after every ch
 
 - **S3.1** Files live in `<cwd>/.event-modeling/model/`, where `<cwd>` is the directory the CLI was started in. The folder is created as needed.
 - **S3.2** Written with `js-yaml`.
-  - `contexts.yaml`: the ordered list of Contexts, each `id`, `name` and `file` (the file name of the Context file, e.g. `backoffice.yaml`). The first is the Default. The server sets `file` from the name on push (S3.3); the board does not send it. Reads use `file`, they do not recompute it. Not part of the export file (R6.2).
+  - `contexts.yaml`: the ordered list of Contexts, each `id`, `name`, optional `info` (omitted when empty) and `file` (the file name of the Context file, e.g. `backoffice.yaml`). The first is the Default. The server sets `file` from the name on push (S3.3); the board does not send it. Reads use `file`, they do not recompute it. Not part of the export file (R6.2).
   - `<context>.yaml`: one file per Context: `id`, `name` and `chapters`, the list of its Chapters as received (MODELING_BOARD.md R6.3), slices inline (R6.4). Every Chapter's `context` equals the Context `id`.
   - The server does not check a Chapter further; the board does on pull (R10.2).
 - **S3.3** `file` is the Context name lower-cased, trimmed, each space replaced by `_`, plus `.yaml`. A rename changes it; the Context push (S3.5) replaces the old file.
@@ -65,7 +65,7 @@ Errors: `{ "error": text }` with the status below. Unknown `/api` paths get 404.
 
 | Request | Body | Result |
 |---|---|---|
-| `PUT /api/model/contexts` | `{ contexts: [{ id, name }] }`: not empty, unique ids | Writes `contexts.yaml` with `file` added (S3.2); deletes the files of Contexts not listed (S3.5); `{ count, removed }`. `If-Match` required (S4.2). 400 invalid body or name (S3.4), 409 same `file` twice (S3.6), 412 stale revision, 428 no `If-Match` |
+| `PUT /api/model/contexts` | `{ contexts: [{ id, name, info? }] }`: not empty, unique ids, `info` text if present | Writes `contexts.yaml` with `file` added (S3.2); deletes the files of Contexts not listed (S3.5); `{ count, removed }`. `If-Match` required (S4.2). 400 invalid body or name (S3.4), 409 same `file` twice (S3.6), 412 stale revision, 428 no `If-Match` |
 | `PUT /api/model/contexts/:id` | The whole Context `{ id, name, chapters }` (R6.3, slices inline); `id` equals `:id`; every Chapter has `id`, `name`, `context` = `:id` and slices with unique ids; chapter ids unique | Writes the Context file (S3.2); `{ path }` of it. `If-Match` required (S4.2). 400 invalid body or name, 409 collision, unknown Context or other name (S3.6), 412 stale revision, 428 no `If-Match` |
 | `GET /api/model/contexts/:id?screenContent=` | | The Context's Chapters as multi-document YAML (S3.11); `screenContent=false` omits Screen `html` (S3.12). 400 invalid `screenContent`, 404 no `contexts.yaml` or unknown Context, 422 the Context file cannot be read, is invalid or holds another Context (as `GET /api/model`) |
 | `GET /api/model/contexts/:id/screens?name=&chapter=&contains=` | | The Context's Screens without `html` (S3.13). 400 invalid `contains`, 404 unknown Context, 422 as `GET /api/model/contexts/:id` |
@@ -99,7 +99,7 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 - **S4.21** `GET /chapters/:id?slice=` (with S4.11) returns the Chapter as stored with only the slice with that id in `slices`: all Chapter fields and lanes stay, the other slices are left out. Used to build one slice. The slice must be in that Chapter: otherwise 404; not text 400. `screenContent` applies.
 ### Write
 
-- **S4.12** **Contexts.** `POST /contexts` `{ name }`; `PATCH /contexts/:id` `{ name }`; `DELETE /contexts/:id` (its Chapters move to the Default, R1b.6).
+- **S4.12** **Contexts.** `POST /contexts` `{ name, info? }`; `PATCH /contexts/:id` `{ name?, info? }` (`info` null or empty removes it; `name` optional); `DELETE /contexts/:id` (its Chapters move to the Default, R1b.6).
 - **S4.13** **Chapters.** `POST /chapters` `{ context, name, x?, y? }` creates the Chapter as R1a.2 (`x`, `y` default 0). `PATCH /chapters/:id` `{ name?, info?, context?, x?, y? }`. `DELETE /chapters/:id`. `PUT` and `DELETE /chapters/:id/connections/:targetId` add and remove a Chapter connection (R1a.10).
 - **S4.14** **Lanes.** `POST /chapters/:id/lanes` `{ type, after, name?, color? }` adds a lane right below lane `after`; `name` defaults to the type name (R2.2); the type order must hold (R2.10, R2.3a). `PATCH /lanes/:id` `{ name?, info?, color? }`; the type never changes. `DELETE /lanes/:id`.
 - **S4.15** **Slices.** `POST /chapters/:id/slices` `{ name?, after?, width? }`: `name` defaults to "New Slice", `after` is a slice id (default: the last), `width` to 220. `PATCH /slices/:id` `{ name?, info?, flowEnd?, width?, index? }`; `index` is the 0-based place among the Chapter's slices (R5.8). `DELETE /slices/:id`.

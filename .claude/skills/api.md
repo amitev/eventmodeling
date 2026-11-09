@@ -6,7 +6,7 @@ Bodies are JSON (max 50 MB). No authentication. Errors: `{ "error": text }` with
 ## Storage
 
 Folder `<cwd>/.event-modeling/model/`. **Agents never read, create, edit or delete these files: the model is read and changed only through the API.**
-- `contexts.yaml`: ordered list of `{ id, name, file }`; the first is the Default.
+- `contexts.yaml`: ordered list of `{ id, name, info?, file }`; the first is the Default.
 - `<file>` (e.g. `backoffice.yaml`): one Context `{ id, name, chapters }`, slices inline.
 
 A Chapter's `context` is a Context `id` that must exist in `contexts.yaml`.
@@ -32,7 +32,7 @@ Chapters of Context `:id` as multi-document YAML (`application/yaml`): one `---`
 - Query `screenContent`: `true` (default) | `false`. `false` omits the `html` of `SCREEN` elements.
 
 ### `PUT /api/model/contexts`
-Needs `If-Match`. Body: `{ "contexts": [{ "id", "name" }] }` (not empty, unique ids). Replaces `contexts.yaml` and deletes the files of Contexts no longer listed.
+Needs `If-Match`. Body: `{ "contexts": [{ "id", "name", "info"? }] }` (not empty, unique ids). Replaces `contexts.yaml` and deletes the files of Contexts no longer listed.
 Returns `{ "count", "removed" }`.
 
 ### `PUT /api/model/contexts/:id`
@@ -74,8 +74,8 @@ Types are upper case. Start with `GET /rules` and `GET /outline`. Names of items
 
 | Request | Body | Notes |
 |---|---|---|
-| `POST /contexts` | `{ name }` | Name is a file name (see Rules) |
-| `PATCH /contexts/:id` | `{ name }` | |
+| `POST /contexts` | `{ name, info? }` | Name is a file name (see Rules) |
+| `PATCH /contexts/:id` | `{ name?, info? }` | `info` null or empty removes it |
 | `DELETE /contexts/:id` | | 409 for the Default (the first). Its Chapters move to the Default: `{ moved }` |
 | `POST /chapters` | `{ context, name, x?, y? }` | Starts with Actor, Interaction, Event lanes and one "New Slice" (220). `x`, `y` multiples of 20, default 0 |
 | `PATCH /chapters/:id` | `{ name?, info?, context?, x?, y? }` | |

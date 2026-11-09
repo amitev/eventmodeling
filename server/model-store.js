@@ -122,7 +122,7 @@ export class ModelStore {
   // (R7.4); none stored is an empty model.
   async #loadModel() {
     const stored = await this.#readContexts(true);
-    const model = { contexts: (stored ?? []).map(({ id, name }) => ({ id, name })), chapters: [] };
+    const model = { contexts: (stored ?? []).map(({ id, name, info }) => ({ id, name, ...(info ? { info } : {}) })), chapters: [] };
     for (const entry of await this.#scan()) {
       const doc = await this.#readContextFile(entry.path, true);
       if (!model.contexts.some((c) => c.id === doc.id)) {
@@ -142,7 +142,7 @@ export class ModelStore {
   // Writes `model` as the stored files (S3.2), only those that change, and removes the files of
   // Contexts that were deleted or renamed (S3.5).
   async #store(model) {
-    const list = model.contexts.map((c) => ({ id: c.id, name: c.name, file: contextFileName(c.name) }));
+    const list = model.contexts.map((c) => ({ id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}), file: contextFileName(c.name) }));
     if (new Set(list.map((c) => c.file.toLowerCase())).size !== list.length) {
       throw new HttpError(409, 'Two contexts have the same file name');
     }
@@ -256,10 +256,10 @@ export class ModelStore {
     const valid =
       Array.isArray(contexts) &&
       contexts.length > 0 &&
-      contexts.every((c) => isObject(c) && isText(c.id) && isText(c.name)) &&
+      contexts.every((c) => isObject(c) && isText(c.id) && isText(c.name) && (c.info === undefined || isText(c.info))) &&
       new Set(contexts.map((c) => c.id)).size === contexts.length;
-    if (!valid) throw new HttpError(400, 'Body must be { contexts: [{ id, name }] }: not empty, unique ids');
-    const list = contexts.map((c) => ({ id: c.id, name: c.name, file: contextFileName(c.name) }));
+    if (!valid) throw new HttpError(400, 'Body must be { contexts: [{ id, name, info? }] }: not empty, unique ids');
+    const list = contexts.map((c) => ({ id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}), file: contextFileName(c.name) }));
     const files = new Set(list.map((c) => c.file.toLowerCase()));
     if (files.size !== list.length) throw new HttpError(409, 'Two contexts have the same file name');
     const keep = new Set(list.map((c) => c.id));
@@ -343,7 +343,7 @@ export class ModelStore {
         data: {
           format: 'event-model',
           version: 1,
-          contexts: contexts.map(({ id, name }) => ({ id, name })),
+          contexts: contexts.map(({ id, name, info }) => ({ id, name, ...(info ? { info } : {}) })),
           chapters,
         },
         revision: await this.#revisionNow(),

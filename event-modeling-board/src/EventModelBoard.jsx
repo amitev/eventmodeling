@@ -246,6 +246,8 @@ function Board() {
   // The Chapter, lane or slice whose info is being edited.
   const [infoId, setInfoId] = useState(null);
   const [infoReading, setInfoReading] = useState(false); // the info panel opens in read mode
+  // The Context whose info is being edited (toolbar button).
+  const [contextInfoId, setContextInfoId] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   // The element whose title is to be edited (asked for by the Enter hotkey).
   const [titleEditId, setTitleEditId] = useState(null);
@@ -261,7 +263,7 @@ function Board() {
   // The Chapter whose movie strip is open.
   const [movieId, setMovieId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId || !!fieldsId || !!htmlId || !!scenariosViewId || !!movieId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!contextInfoId || !!fieldsId || !!htmlId || !!scenariosViewId || !!movieId;
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
@@ -798,6 +800,21 @@ function Board() {
     if (!name) return;
     setContexts((cs) => cs.map((c) => (c.id === contextId ? { ...c, name } : c)));
   };
+
+  // Saves the info of the Context whose info popup is open, as one undo step.
+  const saveContextInfo = (text) => {
+    setContexts((cs) =>
+      cs.map((c) => {
+        if (c.id !== contextInfoId) return c;
+        const next = { ...c };
+        delete next.info;
+        if (text.trim()) next.info = text;
+        return next;
+      })
+    );
+    setContextInfoId(null);
+  };
+  const contextInfo = contexts.find((c) => c.id === contextInfoId);
 
   // The Default (first) Context cannot be deleted; its Chapters' Contexts move to it.
   const removeContext = (contextId) => {
@@ -1479,6 +1496,19 @@ function Board() {
             <path d="M2 14l.8-3.2L11 2.6l2.4 2.4-8.2 8.2L2 14zM9.6 4l2.4 2.4" />
           </svg>
         </button>
+        <button
+          className={`hotkeys-btn search-btn context-info${contexts.some((c) => c.id === filterId && c.info) ? ' has-info' : ''}`}
+          onClick={() => setContextInfoId(filterId)}
+          disabled={!filterId}
+          title={filterId ? 'Info of the selected context' : 'Info of the selected context (choose a context first)'}
+          aria-label="Context info"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 7.2V11.5" />
+            <circle cx="8" cy="4.8" r="0.4" />
+          </svg>
+        </button>
         <span className="target" title="New slices are added to this Chapter">
           Add to: <strong>{active?.data.name}</strong>
         </span>
@@ -1628,6 +1658,16 @@ function Board() {
           initial={infoNode.data[infoField] ?? ''}
           onSave={saveInfo}
           onCancel={() => setInfoId(null)}
+        />
+      )}
+      {contextInfo && (
+        <InfoDialog
+          key={contextInfo.id}
+          readOnly={overview}
+          title={`Context — ${contextInfo.name}`}
+          initial={contextInfo.info ?? ''}
+          onSave={saveContextInfo}
+          onCancel={() => setContextInfoId(null)}
         />
       )}
       {htmlNode && (

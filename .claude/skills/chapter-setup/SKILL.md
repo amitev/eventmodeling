@@ -13,7 +13,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 
 | | Rule |
 |---|---|
-| Context | `{ id, name }`. The first Context is the **Default**: it cannot be deleted (409), but can be renamed. Every Chapter has exactly one Context. |
+| Context | `{ id, name, info? }`. The first Context is the **Default**: it cannot be deleted (409), but can be renamed. Every Chapter has exactly one Context. |
 | Context name | Becomes a file name: it must not contain `\ / : * ? " < > |` or control characters, end with a dot, be empty, be `contexts`, or be a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension). Two Contexts must not collide as file names (case-insensitive). The server refuses (400, 409); never change a name to make it fit: ask. |
 | Chapter / slice / lane names | Not file names and not checked by the server, but the board filters the same characters: avoid them. A name is never empty. |
 | Chapter | Starts with an Actor, an Interaction and an Event lane and one "New Slice" (220 wide), no elements. `x`, `y` are whole multiples of 20 (default 0). |
@@ -35,7 +35,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 | Do | Call |
 |---|---|
 | Create | `POST /contexts` `{ "name" }` |
-| Rename | `PATCH /contexts/:id` `{ "name" }` |
+| Rename | `PATCH /contexts/:id` `{ "name" }` (info: `{ "info" }`, empty removes it) |
 | Delete | `DELETE /contexts/:id` → `{ moved }`: the ids of the Chapters that moved to the Default |
 
 ## Step 3 — Chapters
