@@ -13,8 +13,8 @@ Builds the three slice-implementation skills for one technology: **state change*
 |---|---|
 | [reference/common.md](reference/common.md) | frontmatter rules, find the slice, fetch it (`GET /chapters/:id?slice=`, S4.21), report |
 | [reference/state-change.md](reference/state-change.md) | Screen → Command → Event: what to read, what to implement |
-| [reference/state-read.md](reference/state-read.md) | Event(s) → Query → Screen: what to read, what to implement |
-| [reference/automation.md](reference/automation.md) | Event → Query → Processor → Command → Event, and translation: what to read, what to implement |
+| [reference/state-read.md](reference/state-read.md) | Event(s) → Read Model → Screen: what to read, what to implement |
+| [reference/automation.md](reference/automation.md) | Event → Read Model → Processor → Command → Event, and translation: what to read, what to implement |
 
 ## Rules (no exceptions)
 
@@ -40,7 +40,7 @@ Cover every topic. Ask what is needed to write instructions an agent can follow 
 | 3 | **Frameworks** | Web/application framework, dependency injection, serialization, any framework the user wants or forbids |
 | 4 | **Event store** | Which store or library; how events are named, serialized and versioned; stream per what (id of what); optimistic concurrency; how Events of the model map to event types |
 | 5 | **Command handling** | Style (e.g. function, aggregate, decider, handler class); how a Command arrives (HTTP, message, other); validation; error/refusal representation (maps to the `error` scenarios); idempotency; how `generated` fields (time, acting user, ids) are produced |
-| 6 | **Read models** | Where they are stored; how projections run (inline, async, catch-up/rebuild); how a Query is exposed; keys and `list` fields |
+| 6 | **Read models** | Where they are stored; how projections run (inline, async, catch-up/rebuild); how a Read Model is exposed; keys and `list` fields |
 | 7 | **Automation and translation** | How Processors are triggered (subscription, polling, schedule, message bus); retry and idempotency; how the todo list is kept; for translation: how external Events arrive (webhook, queue, polling, other) and where the mapping to internal Events lives |
 | 8 | **Project layout** | Existing project or new; root folder; folder structure (suggest, as the default: `<context name>/<chapter name>/<slice name>/`, one folder per slice, Context and Chapter folders from the model names; the user confirms or changes it); file names and casing; how model names map to code names (casing, suffixes); where shared code goes |
 | 9 | **Field types** | For each model field type and flag (`list`, `generated`, `pii`, `object`, ...) the exact type or handling in this stack; how `pii` fields are treated |
@@ -71,7 +71,7 @@ Write the skills (and the shared decisions file if chosen) from the `reference/`
 - Every technology statement traces to a confirmed answer or to documentation the user confirmed. No invented API, option or command. Where something is still unknown at implementation time, the skill says to ask the user.
 - Keep the rule of the type files that business rules come only from the scenarios and the model; the stack decides how, never what.
 - Examples use the user's naming rules and a neutral business example (e.g. Place Order), never real project data.
-- No UI: a generated skill builds no Screen, view, form or page, and does not use a Screen's `html`/`url`. It uses a Screen only to read the fields that arrive at a Command or leave a Query.
+- No UI: a generated skill builds no Screen, view, form or page, and does not use a Screen's `html`/`url`. It uses a Screen only to read the fields that arrive at a Command or leave a Read Model.
 - Keep each skill short; shared facts go in the decisions file once, referenced from each skill.
 
 ## Step 6 — Verify and report

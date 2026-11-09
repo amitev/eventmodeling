@@ -79,7 +79,7 @@ The body is JSON: escape quotes and line breaks in the HTML, e.g. build the body
 ```json
 { "slice": "<slice id>", "lane": "<actor lane id>", "type": "SCREEN", "name": "<screen name>", "html": "<markup>", "fields": [...] }
 ```
-Returns the new element (HTTP 201). `x` is optional: without it the element is placed like the board does. `autoConnect` is `true` by default: it connects a Query below the Screen in the same slice (Query → Screen), which copies the Query's fields to it. Other arrows: see the `connections` skill.
+Returns the new element (HTTP 201). `x` is optional: without it the element is placed like the board does. `autoConnect` is `true` by default: it connects a Read Model below the Screen in the same slice (Read Model → Screen), which copies the Read Model's fields to it. Other arrows: see the `connections` skill.
 
 On an error (400, 404, 409, 412, 422) read `error`, fix the cause and retry; do not leave the screen without `html`.
 
@@ -88,18 +88,18 @@ On an error (400, 404, 409, 412, 422) read `error`, fix the cause and retry; do 
 Every screen, new or updated, needs `fields`: every piece of data the mockup shows or lets the user enter must be a field of the Screen, named exactly as in the mockup. A screen with only a title and no fields is an empty placeholder from a data-lineage standpoint, even if the mockup itself looks complete.
 
 A field is `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`; `type` is one of `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (an `object` has its own `fields`; `list: true` for a list). Flags default to `false`.
-- **Shown from a read model** (Query → Screen): the field comes from the Query. Never invent it.
+- **Shown from a read model** (Read Model → Screen): the field comes from the Read Model. Never invent it.
 - **Entered by the user** (goes to a Command): a normal field (`generated: false`).
 - **Session values and display-only calculations** (current user, today's date, totals): `generated: true`.
 - Mark `pii: true` for personal data and `id: true` for identifiers.
 
 **For a brand-new screen**
-1. Find the Query that feeds it: in `GET /api/model/outline` (the Chapter's slices) look for a `QUERY` element whose `connectsTo` will point to the screen, usually in the same slice or the one before; `GET /api/model/elements/:queryId` gives its `fields`.
-2. Design the mockup around those fields, then send them, plus the entered and generated fields, as `fields` in the `POST`. The Query's own fields are also copied when `autoConnect` adds the arrow; fields of the same name are replaced by the Query's.
-3. No Query is connected yet: use `fields` for what the mockup shows, and say so in the report.
+1. Find the Read Model that feeds it: in `GET /api/model/outline` (the Chapter's slices) look for a `READ_MODEL` element whose `connectsTo` will point to the screen, usually in the same slice or the one before; `GET /api/model/elements/:readModelId` gives its `fields`.
+2. Design the mockup around those fields, then send them, plus the entered and generated fields, as `fields` in the `POST`. The Read Model's own fields are also copied when `autoConnect` adds the arrow; fields of the same name are replaced by the Read Model's.
+3. No Read Model is connected yet: use `fields` for what the mockup shows, and say so in the report.
 
 **For an existing screen**
-1. `GET /api/model/elements/:id` → current `fields` (those from the Query are already in it).
+1. `GET /api/model/elements/:id` → current `fields` (those from the Read Model are already in it).
 2. Keep every existing field unless the user asked to remove it. `fields` in a `PATCH` **replaces the whole list**: send the existing fields plus the new ones.
 3. Fields you add are not copied to the connected Command; say so in the report so the user can update the Command.
 

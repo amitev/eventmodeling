@@ -100,9 +100,9 @@ Types are upper case. Start with `GET /rules` and `GET /outline`. Names of items
 
 **Create element** `POST /elements`: `{ slice, lane, type, name?, info?, html?, url?, markdown?, color?, fields?, x?, autoConnect? }`, or `{ slice, lane, copyOf, x?, autoConnect? }` for a linked copy (original is not a copy; not `SCENARIOS`/`NOTES`).
 - The lane belongs to the slice's Chapter and takes the type (`GET /rules`). A `SPEC` lane holds one element per slice.
-- `html`/`url` only for `SCREEN` (not both), `markdown`/`color` (`red`, `green`, `yellow`) only for `NOTES`, `fields` only for `SCREEN`, `COMMAND`, `EVENT`, `QUERY`, no `info`/`name` for `SCENARIOS`/`NOTES`.
+- `html`/`url` only for `SCREEN` (not both), `markdown`/`color` (`red`, `green`, `yellow`) only for `NOTES`, `fields` only for `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`, no `info`/`name` for `SCENARIOS`/`NOTES`.
 - `x`: from the left edge of the slice, at least the margin (40; 20 for `SCENARIOS`/`NOTES`). Without it the element is placed like the board does; the slice grows as needed.
-- `autoConnect` (default `true`) adds the arrows the board adds (Screen→Command, Command→Event, Query→Screen, Event→Query).
+- `autoConnect` (default `true`) adds the arrows the board adds (Screen→Command, Command→Event, Read Model→Screen, Event→Read Model).
 - `fields`: `[{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }]`; `type` default `string` (`object` has `fields`), flags default `false`.
 
 **Change element** `PATCH /elements/:id`: `{ name?, info?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`. `null` removes an optional field. Setting `html` removes `url` and the reverse. `slice` and `lane` come together and move it (also to another Chapter; scenarios that use it are deleted; a `SCENARIOS` element cannot change Chapter). A linked copy accepts only `slice`, `lane`, `x`; other fields get 409 naming the original.

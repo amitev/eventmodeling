@@ -45,7 +45,7 @@ const walk = (fields, base, path) => {
   }
 };
 for (const { el, chapter, slice } of byId.values()) {
-  if (el.copyOf || !['SCREEN', 'COMMAND', 'EVENT', 'QUERY'].includes(el.type)) continue;
+  if (el.copyOf || !['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL'].includes(el.type)) continue;
   walk(el.fields, { el, chapter, slice }, '');
 }
 const key = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');

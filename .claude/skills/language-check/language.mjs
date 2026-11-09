@@ -32,11 +32,11 @@ const distance = (a, b) => {
 
 const findings = [];
 const add = (kind, info, msg) => findings.push({ kind, info, msg });
-const originals = [...byId.values()].filter(({ el }) => !el.copyOf && ['SCREEN', 'COMMAND', 'EVENT', 'QUERY', 'PROCESSOR'].includes(el.type));
+const originals = [...byId.values()].filter(({ el }) => !el.copyOf && ['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL', 'PROCESSOR'].includes(el.type));
 const inScope = (info) => wanted(info.chapter);
 
 // 1. The same name twice, and near-duplicate names, within one element type (all Chapters and Contexts).
-for (const type of ['SCREEN', 'COMMAND', 'EVENT', 'QUERY', 'PROCESSOR']) {
+for (const type of ['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL', 'PROCESSOR']) {
   const list = originals.filter(({ el }) => el.type === type && (el.name ?? '').trim());
   for (let i = 0; i < list.length; i++) {
     for (let j = i + 1; j < list.length; j++) {
@@ -74,7 +74,7 @@ for (const info of originals.filter(({ el }) => el.type === 'EVENT')) {
 
 // 3. The same field name defined differently on different elements.
 const defs = new Map();
-for (const info of originals.filter(({ el }) => ['SCREEN', 'COMMAND', 'EVENT', 'QUERY'].includes(el.type))) {
+for (const info of originals.filter(({ el }) => ['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL'].includes(el.type))) {
   for (const f of info.el.fields ?? []) {
     const k = key(f.name);
     defs.set(k, [...(defs.get(k) ?? []), { f, info }]);

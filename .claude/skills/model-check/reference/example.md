@@ -16,8 +16,8 @@ The elements of the Chapter (one Chapter, slices left to right):
 Place Order        Command   → produces Order Placed
 Confirm Order      Command   → produces Order Confirmed
 Authorize Payment  Command   → produces Payment Authorized
-Order Details      Query     ← reads Order Placed, Order Confirmed
-Payment Status     Query     ← reads Payment Authorized
+Order Details      Read Model ← reads Order Placed, Order Confirmed
+Payment Status     Read Model ← reads Payment Authorized
 Reserve Inventory  Processor ← todo list opened by Payment Authorized; its Command issues Reserve Inventory
 ```
 
@@ -27,9 +27,9 @@ One slice per element, never combined, each named like its element:
 Slice: Place Order          type: state change   (Screen → Command → Event)
 Slice: Confirm Order        type: state change
 Slice: Authorize Payment    type: state change
-Slice: Order Details        type: state read     (Query → Screen)
+Slice: Order Details        type: state read     (Read Model → Screen)
 Slice: Payment Status       type: state read
-Slice: Reserve Inventory    type: automation     (todo list Query → Processor → Command → Event)
+Slice: Reserve Inventory    type: automation     (todo list Read Model → Processor → Command → Event)
 ```
 
 There is no combined "Order Management" or "Payment Processing" slice.
@@ -78,7 +78,7 @@ After a yes: add the slice after "Orders" (`chapter-setup`), rename the first, m
 ## Checklist
 
 ```
-[ ] Each slice has exactly one Command, one Query or one Processor (with its todo-list Query and Command)
+[ ] Each slice has exactly one Command, one Read Model or one Processor (with its todo-list Read Model and Command)
 [ ] A slice has the same name as its element (case and spacing ignored)
 [ ] The slice type is what the recipe says (not null)
 [ ] Dependencies are stated as "depends on the Events of X", not "depends on slice X"

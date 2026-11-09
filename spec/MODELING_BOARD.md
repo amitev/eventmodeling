@@ -74,7 +74,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ## 1c. Info
 
 - **R1c.1** A Chapter, lane, slice and element (except Notes, which is Markdown text itself, R3.18, and Scenarios) can carry **info**: Markdown text, empty by default.
-- **R1c.1a** **Element toolbar.** While exactly one element is selected, a toolbar floats above it (white, thin border, shadow; it does not capture the element's drag). Buttons are 24x24px on screen at zoom 100% and below; zoomed in, the toolbar (buttons, icons, spacing, gap to the element) grows with the zoom up to 28x28px buttons. It holds the copy button (two overlapping squares, drawn and exactly centred, R1.3a; R3.22), the button **i** (as on slices, R1c.2; filled when the element has info) and, for a Screen, **`</>`**, which edits its HTML mockup, and an **eye**, which views it (R3.7). For a Screen, Command, Event and Query it also holds the **Fields** button (three lines icon; filled when the element has fields, R9.2). The key **F** (without modifiers) opens the fields popup while one such element is selected. **i** opens the info panel (R1c.3), titled with the element's type and name, as does the key **I** (without Shift) while one such element is selected (Shift+I stays the slice's info, R5a.11). The toolbar is for future element-level actions. It also holds the **Copy Context** button (R1c.6), last. Notes and Scenarios elements have a toolbar with only that button, as they have no info. A linked copy (R3.22) has a toolbar with the eye (Screen copies only) and the Copy Context button.
+- **R1c.1a** **Element toolbar.** While exactly one element is selected, a toolbar floats above it (white, thin border, shadow; it does not capture the element's drag). Buttons are 24x24px on screen at zoom 100% and below; zoomed in, the toolbar (buttons, icons, spacing, gap to the element) grows with the zoom up to 28x28px buttons. It holds the copy button (two overlapping squares, drawn and exactly centred, R1.3a; R3.22), the button **i** (as on slices, R1c.2; filled when the element has info) and, for a Screen, **`</>`**, which edits its HTML mockup, and an **eye**, which views it (R3.7). For a Screen, Command, Event and Read Model it also holds the **Fields** button (three lines icon; filled when the element has fields, R9.2). The key **F** (without modifiers) opens the fields popup while one such element is selected. **i** opens the info panel (R1c.3), titled with the element's type and name, as does the key **I** (without Shift) while one such element is selected (Shift+I stays the slice's info, R5a.11). The toolbar is for future element-level actions. It also holds the **Copy Context** button (R1c.6), last. Notes and Scenarios elements have a toolbar with only that button, as they have no info. A linked copy (R3.22) has a toolbar with the eye (Screen copies only) and the Copy Context button.
 - **R1c.2** Each has an **i** button in its header, before its label: Chapter: in its handle, before the Context dropdown; lane: in its label zone, between the colour button and the name; slice: at the left of its header, before the name. Filled when the item has info, plain otherwise. For a slice, **Shift+I** with one of its Cells selected opens the same panel (R5a.11).
 - **R1c.3** The button opens a modal panel titled with the item's kind and name: the Markdown editor on the left, with helper buttons above it, and a live preview on the right. The panel is 90% of the window width (at most 2400px) and 90% of its height.
   - Buttons: **B** (bold), *I* (italic), ~~S~~ (strikethrough), a separator, task list, table, code, link. Each acts on the selected text, or inserts a placeholder when nothing is selected: `**`, `*`, `~~`; inline code in backticks (a fenced block for several lines); `[text](url)` with `url` selected; task list `- [ ] Task` and `- [x] Resolved task` (with a selection: toggles `- [ ]` on the selected lines); a 2-column table.
@@ -104,7 +104,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 - **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
 - **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, High level view, search and hotkey buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
-- **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Query green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
+- **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Read Model green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
 - **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning, zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
 
 ## 2. Lanes
@@ -126,9 +126,9 @@ Business requirements agreed so far. They describe behaviour, not implementation
   | Type | Letter | Takes |
   |------|--------|-------|
   | Actor | A | Screen, Processor |
-  | Interaction | I | Command, Query |
+  | Interaction | I | Command, Read Model |
   | Event | E | Event |
-  | Integration | 🔗 | Event, Query (external integrations) |
+  | Integration | 🔗 | Event, Read Model (external integrations) |
   | Spec | S | Scenarios, Notes (at most **one element per Cell**, left aligned, R3.21) |
 
   Several lanes of one type are allowed. The type is shown as small faint uppercase text in the upper part of the lane's first Cell (first slice), centred horizontally; elements are drawn above it. Each lane offers the letter button of the next type in the list (Actor: I; Interaction: E; Event: 🔗 and S, as Integration is optional; Integration: S); a Spec lane has none. A Chapter always has at least one Actor, Interaction and Event lane (R2.5, R7.4).
@@ -145,7 +145,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   | ------ | -------- |
   | Screen | light grey |
   | Command | blue |
-  | Query | green |
+  | Read Model | green |
   | Event | orange |
   | Processor | lavender cogwheel (R3.6a1), ⚙️ on its toolbar button |
   | Scenarios | blue, a card instead of a sticky (R3.11) |
@@ -159,8 +159,8 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 - **R3.6** Only Processor carries an icon (⚙️), on its toolbar button. The type is shown by header colour (R3.1), not a label.
 - **R3.6a1** A Processor is no sticky: no box, header bar, border or shadow. It shows its name centred above a lavender cogwheel (88px, 8 teeth, centre hole, thin dark outline), 160px wide and 114px tall. The name edits as R3.4a. Its top connection points sit on the cogwheel's top, not above the name. It has no body or fields (R9.1); R3.6b applies to the other types.
 - **R3.6a** Elements are always vertically centred in their lane: when added, dropped or dragged (snapping to the centre of the lane released in), when their size changes (e.g. showing a Screen mockup), and on load or import. One taller than its lane aligns to the lane's top edge.
-- **R3.6b** Every element has a header bar and a body. The header holds the free-text **name** in semi-bold (600), filled with the type's colour (R3.1). The name has **no default**: a new element shows a faint "Name" placeholder (not saved or exported). A long name is cut off with an ellipsis. While edited, the name's input has a white background. The body is white and empty, except the Screen mockup and its editor and the fields (R9.5). The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content. A **Screen** is at least **146px** tall (118px body), whether or not it has a mockup, so all Screens match one with a mockup (R3.8). **Command**, **Query** and **Event** are exactly **146px** tall (as a Screen), no more, no less: see R3.6c.
-- **R3.6c** The fields of a Command, Query or Event (R9.5) scroll vertically in the body when they do not fit. The mouse wheel over the body zooms the board (R1.2), as everywhere; it scrolls the fields only while the element is **selected** (clicked) and its fields overflow. Other types are unchanged (R3.6b).
+- **R3.6b** Every element has a header bar and a body. The header holds the free-text **name** in semi-bold (600), filled with the type's colour (R3.1). The name has **no default**: a new element shows a faint "Name" placeholder (not saved or exported). A long name is cut off with an ellipsis. While edited, the name's input has a white background. The body is white and empty, except the Screen mockup and its editor and the fields (R9.5). The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content. A **Screen** is at least **146px** tall (118px body), whether or not it has a mockup, so all Screens match one with a mockup (R3.8). **Command**, **Read Model** and **Event** are exactly **146px** tall (as a Screen), no more, no less: see R3.6c.
+- **R3.6c** The fields of a Command, Read Model or Event (R9.5) scroll vertically in the body when they do not fit. The mouse wheel over the body zooms the board (R1.2), as everywhere; it scrolls the fields only while the element is **selected** (clicked) and its fields overflow. Other types are unchanged (R3.6b).
 
 ### Screen elements
 
@@ -228,20 +228,20 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   - Screen → Command
   - Processor → Command
   - Command → Event
-  - Event → Query
+  - Event → Read Model
   - Event → Processor
-  - Query → Screen
-  - Query → Processor
+  - Read Model → Screen
+  - Read Model → Processor
 
   Dragging such a pair the wrong way (e.g. Command to Screen) creates the connection in the right direction (Screen → Command). Any other pair, including two elements of one type, is refused. Event → Processor is made only by dragging on the board (never automatic, R4.8; the server refuses it, S4.18). Scenarios (R3.11) and Notes (R3.18) elements are in no pair, so cannot be connected. The rules apply to new connections only: existing ones, imported or saved, are not checked, except that import refuses an arrow to or from a Scenarios or Notes element (R7).
 - **R4.8** **Automatic arrows.** An added element (R3.3) gets these arrows (R4.7) at once, within the same slice. "Above" and "under" mean another lane; the nearest such element is used. An already connected pair is not connected again. Moving an element creates no arrows.
   - A Command under a Screen: Screen → Command.
   - An Event under a Command: Command → Event.
-  - A Screen above a Query: Query → Screen.
-  - A Query under a Screen: Query → Screen.
-  - A Query when the slice just before its own has an Event: Event → Query. With several Events, the right-most (nearest by height on a tie).
+  - A Screen above a Read Model: Read Model → Screen.
+  - A Read Model under a Screen: Read Model → Screen.
+  - A Read Model when the slice just before its own has an Event: Event → Read Model. With several Events, the right-most (nearest by height on a tie).
   - A Command in a slice with a Processor: Processor → Command, the nearest by height (above or under).
-  - A Processor with a Query in its slice: Query → Processor, the nearest by height (above or under). Event → Processor is never automatic.
+  - A Processor with a Read Model in its slice: Read Model → Processor, the nearest by height (above or under). Event → Processor is never automatic.
 
   Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds the same arrows (S4.16).
 
@@ -280,11 +280,11 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - If **every Cell of the slice holds at most one element**, each element starts at the left margin and the content width is that of the widest element.
   - If **any Cell holds several**, the elements keep their relative positions and lanes and move together so the left-most starts at the left margin; the content width runs from the left edge of the left-most element to the right edge of the right-most. So the right padding is at least the margin too (40px; 20px next to a Scenarios element).
   - A slice without elements gets 220px.
-  - An **automation or translation** slice with exactly one Query, one Command and one Processor, none in an Integration lane (R2.10), and at least one Event, is laid out by R5.20a instead of the two rules above.
+  - An **automation or translation** slice with exactly one Read Model, one Command and one Processor, none in an Integration lane (R2.10), and at least one Event, is laid out by R5.20a instead of the two rules above.
 
   Following slices move left to close gaps (R5.7, R5.15), so the Chapter shrinks or grows. Nothing else changes; one undo step (R8.1). **Shift+C** with a Cell selected compacts only that Cell's slice the same way (R5a.11); slices after it still close the gap.
 
-- **R5.20a** **Automation layout.** Compaction (R5.20) lays out a matching slice as: the Query at the left margin; the Command in the same lane, to its right with a 20px gap; the Processor centred (on the grid) above both; each Event directly under the Command (several Events in one Cell go side by side, left to right in their current order, from the Command's x). Lanes do not change. Other elements (e.g. an Event in an Integration lane) are left aligned at the margin, after any element already in their lane. Content width as R5.20 (right edge of the right-most element plus its margin).
+- **R5.20a** **Automation layout.** Compaction (R5.20) lays out a matching slice as: the Read Model at the left margin; the Command in the same lane, to its right with a 20px gap; the Processor centred (on the grid) above both; each Event directly under the Command (several Events in one Cell go side by side, left to right in their current order, from the Command's x). Lanes do not change. Other elements (e.g. an Event in an Integration lane) are left aligned at the margin, after any element already in their lane. Content width as R5.20 (right edge of the right-most element plus its margin).
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
@@ -310,9 +310,9 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Shift+I** opens the info of the Cell's slice (R1c.3).
   - **Shift+E** marks or unmarks the Cell's slice as a Flow end (R5.21); one undo step.
   - **Shift+A** copies the Context (R1c.6).
-  - **S, C, R or Q, E, P, N** add a Screen, Command, Query, Event, Processor or Notes element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8). In a Spec lane, which takes no Screen, **S** adds a Scenarios element instead.
+  - **S, C, R or Q, E, P, N** add a Screen, Command, Read Model, Event, Processor or Notes element in the Cell, as the toolbar button does (R5a.10), with its automatic arrows (R4.8). In a Spec lane, which takes no Screen, **S** adds a Scenarios element instead.
   - **+** adds a slice right after the Cell's slice, as the slice's **+** does (R5.2a).
-  - **Enter** opens the editor of a selected Notes element (R3.19), as does **E** (a Notes element only sits in a Spec lane, which takes no Event, so E adds nothing there); **V** and **R** open it in read mode (R3.18; R adds no Query there either); otherwise Enter edits the name of the Cell's left-most element (R3.4a), if any.
+  - **Enter** opens the editor of a selected Notes element (R3.19), as does **E** (a Notes element only sits in a Spec lane, which takes no Event, so E adds nothing there); **V** and **R** open it in read mode (R3.18; R adds no Read Model there either); otherwise Enter edits the name of the Cell's left-most element (R3.4a), if any.
   - **Delete** or **Backspace** deletes the selected elements with their arrows (R3.5), without confirmation. With no element selected and elements in the Cell, it deletes the Cell's elements with their arrows, after confirmation (one undo step, R8.1); in an empty Cell it does nothing. **Shift+Delete** or **Shift+Backspace** deletes the Cell's **slice** with its elements and arrows, after confirmation, whatever is selected (R5.18); a Chapter's last slice cannot be deleted. One press does one thing; a held key does not repeat.
   - **Esc** clears the Cell selection and any element selected with it (R5a.12).
   - **Ctrl+V** pastes a linked copy of the element remembered with **Ctrl+C** (R3.22).
@@ -326,12 +326,12 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5b.1** A slice has a **type**, one of the four Event Modeling patterns, or none. It is **worked out** from the slice's elements and never chosen or stored on the board. It is only written to the export (R6.4). Rules, on the elements of the slice, **ignoring Scenarios and Notes** (a linked copy counts as its original's type, R3.22):
   - **translation** (`TRANSLATION`): has a Processor, a Command and an Event, and at least one element in an Integration lane (R2.10). Checked first;
-  - **automation** (`AUTOMATION`): has a Processor, a Command and an Event, and no element in an Integration lane. Other elements (Query, Screen, Integration events) are allowed;
+  - **automation** (`AUTOMATION`): has a Processor, a Command and an Event, and no element in an Integration lane. Other elements (Read Model, Screen, Integration events) are allowed;
   - **state change** (`STATE_CHANGE`): only Screen, Command and Event, with at least a Command and an Event (the Screen is optional);
-  - **state read** (`STATE_READ`): only Query and Screen, with at least a Query;
+  - **state read** (`STATE_READ`): only Read Model and Screen, with at least a Read Model;
   - **none** (`null`): anything else, also an empty slice.
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
-- **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Query directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Query. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it. The Translation Chain of the `eventmodeling-core-rules` skill is the source of truth.
+- **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Read Model directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Read Model. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it. The Translation Chain of the `eventmodeling-core-rules` skill is the source of truth.
 
 ## 6. Board file
 
@@ -357,7 +357,7 @@ The board file is the single, complete description of a board, written and read 
 - **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `info`, optional `flowEnd`, `type`, `width`, `elements`. `flowEnd` is `true` for a Flow end slice (R5.21), otherwise left out. `type` is the slice type (R5b.1), worked out on export: `"STATE_CHANGE"`, `"STATE_READ"`, `"AUTOMATION"`, `"TRANSLATION"` or `null`. `elements` lists the elements in that slice; an element is listed under exactly one slice (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
   - `id`;
-  - `type`: `SCREEN`, `COMMAND`, `QUERY`, `EVENT`, `PROCESSOR`, `SCENARIOS` or `NOTES`;
+  - `type`: `SCREEN`, `COMMAND`, `READ_MODEL`, `EVENT`, `PROCESSOR`, `SCENARIOS` or `NOTES`;
   - `lane`: the **id** of the element's lane, a lane of the same Chapter (R2.9); never its name;
   - `name`: free text, `""` when not set;
   - `info`: the element's info (R1c.1a). Optional: only when not empty, not for `notes` or `scenarios`;
@@ -365,7 +365,7 @@ The board file is the single, complete description of a board, written and read 
   - `url`: the Screen mockup as a web page address (`http://` or `https://`). Optional: only for a `screen` that has one; a Screen has `html` or `url`, never both (R3.7);
   - `markdown`: the text of a Notes element. Optional: only for a `notes` element with text;
   - `color`: the colour of a Notes element (R3.24): `red`, `green` or `yellow`. Optional: only for a `notes` element not white (white is left out);
-  - `fields`: the fields (R9.6). Optional: only for a `screen`, `command`, `event` or `query` with fields;
+  - `fields`: the fields (R9.6). Optional: only for a `screen`, `command`, `event` or `read_model` with fields;
   - `x`: the horizontal position **relative to the left edge of its slice**, in pixels, stored and restored exactly;
   - `connectsTo`: the ids of the elements this element has an arrow to (R6.7);
   - `scenarios`: the scenarios, in list order (R3.14). Only for a `scenarios` element; each has `id`, `name`, `description`, `given` (list of entries), `when` (an entry or `null`), `then` (list of entries) and `error` (text or `null`). An entry is `{ "element": id of an Event/Command of the same Chapter, "example": the example data }` (R3.16): an object keyed by field name whose values are text, `true`/`false`, a list of values, or a nested object (`{}` when empty). `error` is `null` when `then` is not empty.
@@ -395,7 +395,7 @@ The board file is the single, complete description of a board, written and read 
   - **Structure.** Valid JSON. `format` is `"event-model"`, `version` is `1`. Every field required in R6.2 to R6.5 is present with the right type (optional fields may be missing), and no others. `chapters` may be empty; every Chapter has at least one lane and one slice (R2.5, R5.19), lanes in type order with at least one of each required type (R2.10). `contexts` is not empty (R1b.3).
   - **Ids.** Every id is a non-empty text (not `null`); the R1.14 pattern is not checked, as it applies only to generated ids. Ids are unique across the whole file, whatever the item kind (R1.14).
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter whose type takes the element's type (R2.10). Each `connectsTo` entry is the id of an existing item of the owner's kind (elements for an element, Chapters for a Chapter), not the owner and not repeated; a `scenarios` or `notes` element is neither owner nor target. A `copyOf` is the id of a non-copy element of the same type (not `scenarios` or `notes`). In a scenario, each `element` is the id of a non-copy element of the Scenarios element's Chapter: an `event` in `given` and `then`, a `command` in `when`.
-  - **Values.** `name` of a Context, Chapter, lane or slice, and `name` of a scenario, is not empty. An element `type` is one of the seven types and a lane `type` one of the five (R2.10), written in upper case (a value in lower case is rejected); a lane `color` is one of the twelve colours (R2.6). When present, `html` is a non-empty text on a `screen`, `url` an `http://` or `https://` address on a `screen` without `html`, `markdown` a non-empty text on a `notes` element, `color` (`red`, `green` or `yellow`) only on a `notes` element, `info` a non-empty text (not on `notes` or `scenarios`), `fields` a non-empty list on a `screen`, `command`, `event` or `query` (never on a linked copy), and `flowEnd` is `true`. A slice `type` is `null` or one of the four types; its value is not used (the type is recomputed, R5b.2). A field has exactly the keys of R9.6: `name` non-empty and unique in its list, `type` one of the eight, the booleans true or false, `fields` only (and always) on an `object`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers. A scenario entry's `example` is an object whose values are text, `true`/`false`, or lists and objects of these.
+  - **Values.** `name` of a Context, Chapter, lane or slice, and `name` of a scenario, is not empty. An element `type` is one of the seven types and a lane `type` one of the five (R2.10), written in upper case (a value in lower case is rejected); a lane `color` is one of the twelve colours (R2.6). When present, `html` is a non-empty text on a `screen`, `url` an `http://` or `https://` address on a `screen` without `html`, `markdown` a non-empty text on a `notes` element, `color` (`red`, `green` or `yellow`) only on a `notes` element, `info` a non-empty text (not on `notes` or `scenarios`), `fields` a non-empty list on a `screen`, `command`, `event` or `read_model` (never on a linked copy), and `flowEnd` is `true`. A slice `type` is `null` or one of the four types; its value is not used (the type is recomputed, R5b.2). A field has exactly the keys of R9.6: `name` non-empty and unique in its list, `type` one of the eight, the booleans true or false, `fields` only (and always) on an `object`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers. A scenario entry's `example` is an object whose values are text, `true`/`false`, or lists and objects of these.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios) and every element fits its slice with the margins (R5.16, R5.17): `x` plus element width (160px; 280px for Scenarios) plus margin (40px; 20px for Scenarios) is at most the slice `width`. A Spec lane holds at most one element per slice (R3.21). Nothing is corrected: a file breaking a check is rejected.
 - **R7.5** An accepted file is laid out as a saved board (R5.12). After a pull no Cell is selected, the first Chapter is active, and the pull is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
@@ -413,19 +413,19 @@ The board file is the single, complete description of a board, written and read 
 
 ## 9. Fields
 
-- **R9.1** A Screen, Command, Event and Query element can have **fields**: the data it carries. Processor, Scenarios and Notes have none. Fields are part of the element, saved and exported (R9.6).
+- **R9.1** A Screen, Command, Event and Read Model element can have **fields**: the data it carries. Processor, Scenarios and Notes have none. Fields are part of the element, saved and exported (R9.6).
 - **R9.2** The element toolbar (R1c.1a) has a **Fields** button (tooltip "Edit fields (F)") that opens the fields popup (R9.3), as does the key **F** while one such element is selected (ignored while typing, with modifiers or while a popup is open); filled when the element has fields. A linked copy has none (R3.22).
 - **R9.3** **Fields popup** (modal, R1.17, Esc closes). One row per field: name, type, **List**, the five attributes (R9.7), a **Propagate** checkbox (R9.4, only for fields created in this popup) and a remove **×**. **+ Field** adds a row. A field of type `object` holds its own fields, in a nested list with its own **+ Field**, to any depth. A list of values is the **List** checkbox, so a field is a primitive, an object, a list of primitives or a list of objects.
   - **Types:** `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object`.
   - A name is not empty and unique within its list; Save is refused with a message otherwise.
   - **Get from parent** copies the fields of the parents (R9.4) into the popup, replacing fields of the same name; the rest stay. Disabled when no parent has fields. Nothing changes until **Save**.
   - **Save** (first) and **Cancel** (second). **Save** and **Ctrl+S** (Cmd+S) apply everything as one undo step (R8.1) and close; **Cancel**, Esc and a click outside discard.
-- **R9.4** **Inheritance.** Fields are copied along the arrows of R4.7, never linked; no trace of the source is kept. A parent is an element with an arrow to this one. A Processor holds no fields but passes them on: Query → Processor → Command copies the Query's fields to the Command.
+- **R9.4** **Inheritance.** Fields are copied along the arrows of R4.7, never linked; no trace of the source is kept. A parent is an element with an arrow to this one. A Processor holds no fields but passes them on: Read Model → Processor → Command copies the Read Model's fields to the Command.
   - When an arrow is added, by hand or automatically (R4.8), all fields of its source are copied to its target, replacing fields of the same name. Only that hop; nothing further is copied.
   - **Propagate:** a field created in the popup has a checkbox, checked by default. On Save, a checked new top-level field is also copied to **all** elements downstream, following arrows through the whole chain (around loops too), replacing fields of the same name. The setting is not stored. Fields later edited or removed are not propagated.
   - **Get from parent** (R9.3): several parents are applied in the order of their arrows; a later parent replaces same-named fields of an earlier one.
   - A linked copy is never a target; as a source it gives its original's fields.
-- **R9.5** The body of a Command, Event and Query lists its field names, compact, nested fields indented. No type or attribute is shown there (they are in the popup). A Screen shows its mockup (R3.8), not its fields.
+- **R9.5** The body of a Command, Event and Read Model lists its field names, compact, nested fields indented. No type or attribute is shown there (they are in the popup). A Screen shows its mockup (R3.8), not its fields.
 - **R9.6** **Export.** `fields` is a list; each field has exactly these keys in order: `name`, `type`, `list`, `id`, `optional`, `generated`, `pii`, `technical` (all booleans written), and for `object` also `fields` (the nested list). Import checks as in R7.4.
 - **R9.7** **Attributes** (each true/false, a checkbox with a tooltip):
   - **ID**: identifies the object;
@@ -434,7 +434,7 @@ The board file is the single, complete description of a board, written and read 
   - **PII**: personally identifiable information;
   - **Technical**: an implementation detail.
 
-**Learning (implementation).** Copying is one hop (R9.4): fields reach an element only when an arrow to it is added. Building a chain through the server (SERVER.md S4.16 to S4.18) therefore depends on order: connect the upstream arrows first (Query → Processor → Command), then add the Event below the Command, or it gets none of those fields. A `PATCH` of `fields` (S4.17) replaces the list and copies nothing.
+**Learning (implementation).** Copying is one hop (R9.4): fields reach an element only when an arrow to it is added. Building a chain through the server (SERVER.md S4.16 to S4.18) therefore depends on order: connect the upstream arrows first (Read Model → Processor → Command), then add the Event below the Command, or it gets none of those fields. A `PATCH` of `fields` (S4.17) replaces the list and copies nothing.
 
 ## 10. Server storage
 

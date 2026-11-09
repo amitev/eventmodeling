@@ -21,7 +21,7 @@ While storming, **one slice per discovered Event**, in a Chapter named for the p
 
 - the slice has the **same name as its Event** (`Order Placed`);
 - slices run left to right in **time order**;
-- the Chapter's other lanes stay empty until hand-over (Commands, Screens, Queries come later).
+- the Chapter's other lanes stay empty until hand-over (Commands, Screens, Read Models come later).
 
 Such a slice has no type yet (the board works the type out from the elements). That is expected: do not run `model-check` during a storm.
 
@@ -107,7 +107,7 @@ When the user says the storm is done, or asks to detail it, enrich the Event sli
 1. For each Event slice, work out from the conversation **what triggers it**: a person on a Screen (then a Command), a system (a Processor), an external party (a translation slice, the Event in an Integration lane of that system: ask for the system's name and how it reaches us, add the lane as `chapter-setup` says (one lane per system, named after it, `info` with the details; core rules, "External systems"), then move the Event with `PATCH` `{ slice, lane }`). Fill gaps by **asking** the user: who does it, what do they enter, what rule applies. Never invent.
 2. Build the missing parts **inside the existing slice** with the recipes of `slice-modeler` (do not create a new slice): the Command in the Interaction lane and the Screen or Processor in the Actor lane. The Event already exists, so connect the Command to it with `POST /connections` `{ from: <command>, to: <event> }` (the Screen → Command arrow is automatic when the Screen exists first); fields copy along the arrows (`element-fields`, `connections`).
 3. **Rename the slice to its Command** (`Place Order`), as the core rules and `model-check` expect. The Event keeps its name.
-4. Queries the Events feed (what a user needs to see) are **new slices** after the slice that produces the Event: `slice-modeler`, state read recipe.
+4. Read Models the Events feed (what a user needs to see) are **new slices** after the slice that produces the Event: `slice-modeler`, state read recipe.
 5. Mockups with `html-screen`; scenarios from the rules the user gave with `scenarios`.
 6. Then run `model-check` for the Chapter and report the findings; the open hot spots stay as red Notes until the user answers them.
 

@@ -1,6 +1,6 @@
 ---
 name: pii-audit
-description: Read-only audit of personal data in the model — a bundled script lists every field flagged `pii`, shows which Screens, Commands, Events and Queries carry it, and flags fields that look personal (name, email, address, birth date, ...) but are not flagged, flags that differ between elements, and personal data in Events. Use for "where does personal data go", "GDPR review", "check the PII flags", "which fields are personal". It reports and never changes flags unasked.
+description: Read-only audit of personal data in the model — a bundled script lists every field flagged `pii`, shows which Screens, Commands, Events and Read Models carry it, and flags fields that look personal (name, email, address, birth date, ...) but are not flagged, flags that differ between elements, and personal data in Events. Use for "where does personal data go", "GDPR review", "check the PII flags", "which fields are personal". It reports and never changes flags unasked.
 ---
 
 # PII Audit
@@ -42,7 +42,7 @@ A name-based guess has false positives (`name` of a product) and misses (`ref` t
 
 ## After the run
 
-1. Report: the counts, the PII map (which personal fields reach which Screens, Queries and Events), then the findings, gaps first. Keep it short; with no findings, say so.
+1. Report: the counts, the PII map (which personal fields reach which Screens, Read Models and Events), then the findings, gaps first. Keep it short; with no findings, say so.
 2. Do not change flags on your own. Offer the fix: flags through `element-fields` (the change is not propagated downstream by the server: use its Propagate steps), names through `edit-and-delete`.
 3. After a fix, run the audit again for that Chapter (`--chapter`) to confirm it is gone.
 4. A script error (`GET ... -> status`) names the failed request: a wrong `--base` or a stopped server is the usual cause.

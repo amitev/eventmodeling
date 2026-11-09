@@ -1,6 +1,6 @@
 ---
 name: summarize
-description: Turn a document (PDF, Word, Markdown, text, URL) or an image into a structured event model on the board — analyzes the source, splits it into chapters, models events/commands/queries/processors, renders HTML screens, writes GWT scenarios for the business rules, and writes a summary (known facts, rules, deadlines, open questions) into a Summary-lane note in each chapter's first slice, detailed enough to serve as a blueprint for specification and implementation. Typical use - a tender/RFP (Ausschreibung) a company must bid on and needs a fast, reliable overview of.
+description: Turn a document (PDF, Word, Markdown, text, URL) or an image into a structured event model on the board — analyzes the source, splits it into chapters, models events/commands/read models/processors, renders HTML screens, writes GWT scenarios for the business rules, and writes a summary (known facts, rules, deadlines, open questions) into a Summary-lane note in each chapter's first slice, detailed enough to serve as a blueprint for specification and implementation. Typical use - a tender/RFP (Ausschreibung) a company must bid on and needs a fast, reliable overview of.
 ---
 
 # Summarize a source into an event model
@@ -114,7 +114,7 @@ Work **one Chapter at a time**, in order, with the skills below. Do not skip ste
 |---|---|---|
 | Create or find the Context and Chapter | `chapter-setup` | creates the Chapter (or finds the one to extend), then adds the **Summary** Spec lane and, if the Chapter has no other Spec lane, a second Spec lane for the Scenarios. In a Chapter that already exists, ask the user before adding a lane |
 | Order the events of the Chapter | core rules (Flow & Causality) | list the Chapter's events in time order first, then build the slices around them |
-| Build each slice | `slice-modeler` | state change (Screen → Command → Event), state read (Query → Screen), automation, translation for external parties: one atomic batch per slice |
+| Build each slice | `slice-modeler` | state change (Screen → Command → Event), state read (Read Model → Screen), automation, translation for external parties: one atomic batch per slice |
 | Fields | `element-fields` | the `data` facts become fields; fields without a source are `generated` or a question |
 | Arrows between slices | `connections` | the arrows `slice-modeler` cannot add by itself. **Never across Chapters**: a fact of an earlier Chapter reaches this one through a linked copy placed in this Chapter (`connections`, "Across Chapters") |
 | Names | `naming` | every element, slice and Chapter |
@@ -126,13 +126,13 @@ Work **one Chapter at a time**, in order, with the skills below. Do not skip ste
 |---|---|
 | `event`, `deadline` that passes | EVENT (past tense, business language) |
 | `process` step a human performs | SCREEN → COMMAND → EVENT |
-| `rule` | a COMMAND precondition (→ a scenario with an `error`), or a QUERY condition, or a stand-alone decision step |
-| `requirement` | a QUERY (checklist or tracker, list-shaped) and/or a field on the COMMAND that provides the proof |
-| `data` | the fields of a COMMAND/EVENT/QUERY/SCREEN |
+| `rule` | a COMMAND precondition (→ a scenario with an `error`), or a READ_MODEL condition, or a stand-alone decision step |
+| `requirement` | a READ_MODEL (checklist or tracker, list-shaped) and/or a field on the COMMAND that provides the proof |
+| `data` | the fields of a COMMAND/EVENT/READ_MODEL/SCREEN |
 | `actor` | the name of an Actor lane, or a Processor for a system |
 | `unknown` | a red Notes element and a row in the summary note (Step 7) |
 
-Apply `eventmodeling-core-rules` as written — in particular: events are facts, never computed values; every Command has exactly one issuer; no stand-alone Queries. Quote any threshold or date verbatim wherever it is named on the board (a scenario example, a field, a Screen mockup). Where a fact is `assumed`, say so in the summary note, not in `info`.
+Apply `eventmodeling-core-rules` as written — in particular: events are facts, never computed values; every Command has exactly one issuer; no stand-alone Read Models. Quote any threshold or date verbatim wherever it is named on the board (a scenario example, a field, a Screen mockup). Where a fact is `assumed`, say so in the summary note, not in `info`.
 
 **Traceability:** as soon as an element is built for a fact, write its `modeled in` entry in `facts.md`. Every `event`, `deadline`, `rule` and `requirement` fact ends up with a `modeled in` entry or `not modeled: <reason>`.
 
@@ -159,7 +159,7 @@ Use `scenarios` for every Command. This skill only says **where the scenarios co
 
 - **Every `rule` fact yields at least one scenario** — a happy path and, where the rule can be violated, an error case (a scenario with an `error` and no Then Events). Example: *"Angebote nach Ablauf der Abgabefrist werden nicht berücksichtigt"* → `Submit Bid` is rejected when `Given: Submission Deadline Reached`.
 - Weights, thresholds and limits go into the scenario data **as concrete numbers** (as text, `"2000000"`) — an eligibility rule with a 2 Mio. € threshold gets one scenario just above and one just below it.
-- A scenario can only use Events and Commands. A Query with a real lifecycle (the requirements tracker, the eligibility checklist, the clarification log, the evaluation scorecard) is covered by the scenarios of the Commands and Events that change it; say in the summary note which ones.
+- A scenario can only use Events and Commands. A Read Model with a real lifecycle (the requirements tracker, the eligibility checklist, the clarification log, the evaluation scorecard) is covered by the scenarios of the Commands and Events that change it; say in the summary note which ones.
 - A scenario's name says what the *rule* is in business words (`Late bid is rejected`), not what the machinery does.
 - If a rule's outcome depends on something the document doesn't define, write the scenario for the stated part and record the gap as an `unknown` (Step 7) — never invent the missing rule.
 - Each scenario's name or description names the `F…` fact id it implements, so the rule stays traceable (the description is the scenario's, not an element's `info`).
@@ -203,7 +203,7 @@ Mandatory vs. optional (Muss/Kann), each with the board element that tracks it.
 Forms/documents exchanged and their fields, where known.
 
 ## Elements
-Counts and names of the key events, commands, queries, processors, screens, and the slice list (state change / state read / automation / translation), each by name and slice. Note external parties and their translated events.
+Counts and names of the key events, commands, read models, processors, screens, and the slice list (state change / state read / automation / translation), each by name and slice. Note external parties and their translated events.
 
 ## Open questions & risks
 | Question / risk | Source(s) | Why it matters |
@@ -234,7 +234,7 @@ Eligibility (Eignung), exclusion (Ausschluss), mandatory proofs — each with ex
 Criteria, weights, scoring method, how price is weighed — as a table.
 
 ## Chapters on this board
-| Chapter | Purpose | Key events / commands / queries |
+| Chapter | Purpose | Key events / commands / read models |
 
 ## Implementation notes
 Suggested build order and what a first thin vertical slice would be.
@@ -248,7 +248,7 @@ Every number, date and threshold in any note is copied from the source with its 
 
 ## Step 9 — Report to the user
 
-Keep it short: the Chapters created and where each summary note sits (Chapter → Summary lane, first slice), with counts of events, commands, queries, screens and scenarios; what the coverage check found; and the open questions that need a human answer — those first, because they're the only things the user must act on. State every assumption you made on `perspective` and on gaps. Say where `facts.md` is and that it is not committed.
+Keep it short: the Chapters created and where each summary note sits (Chapter → Summary lane, first slice), with counts of events, commands, read models, screens and scenarios; what the coverage check found; and the open questions that need a human answer — those first, because they're the only things the user must act on. State every assumption you made on `perspective` and on gaps. Say where `facts.md` is and that it is not committed.
 
 Offer, don't do: `wdyt` for a business-analyst pass, `scenarios` to enrich example data, `element-fields` to propagate a renamed field, `model-check` to re-run the structural check.
 

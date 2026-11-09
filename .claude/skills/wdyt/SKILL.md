@@ -31,12 +31,12 @@ Then get Chapter information using the endpoint defined in ../api.md
 NEVER read the model files directly (not even `contexts.yaml`); always use the API.
 Use the `model-navigation` skill for cheap reads (outline first, then only the content you need).
 
-Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `QUERY`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Queries have `fields`, and a `SCENARIOS` element holds the scenarios.
+Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Read Models have `fields`, and a `SCENARIOS` element holds the scenarios.
 
 Keep track of:
 - All slice titles and their element types
 - Which slices have a `SCENARIOS` element with Given/When/Then scenarios and which don't
-- The names of all EVENTs, COMMANDs, QUERYs, and SCREENs
+- The names of all EVENTs, COMMANDs, READ_MODELs, and SCREENs
 - Edges/relationships between elements
 
 ---
@@ -66,8 +66,8 @@ Every question and every summary theme must be written in plain business languag
 - Are there **states** in which this command should be **rejected**? (e.g. "cancel order" — can you cancel an already-shipped order?)
 - Is there a **lifecycle** implied by the events (created → active → suspended → deleted) that isn't explicitly modelled?
 
-### Category D: Missing queries / screens
-- Only flag missing screens or queries if the current slice clearly implies one is needed but it's absent — e.g. a command with no screen wired to it at all, or a query that feeds nothing.
+### Category D: Missing read models / screens
+- Only flag missing screens or read models if the current slice clearly implies one is needed but it's absent — e.g. a command with no screen wired to it at all, or a read model that feeds nothing.
 - **Do not assume** that a confirmation screen, list view, or success state is missing just because it isn't in this slice. The model may simply not have reached that slice yet. Only ask if the gap is visible within this slice's own element graph.
 
 ### Category E: Missing GWT scenarios
@@ -86,7 +86,7 @@ Every question and every summary theme must be written in plain business languag
 - Are there **scheduled / recurring** events implied but not modelled?
 
 ### Category H: Data completeness
-- Only flag missing data if a **downstream element within this model** clearly needs it and it isn't there — e.g. a screen that displays a field the query doesn't carry.
+- Only flag missing data if a **downstream element within this model** clearly needs it and it isn't there — e.g. a screen that displays a field the read model doesn't carry.
 - **Do not flag technical/infrastructure fields** (IDs, timestamps, correlation IDs, version numbers) as missing — these are implementation decisions, not business gaps.
 - **Do not assume** notifications (welcome email, verification, webhook) are missing just because they aren't modelled. They may belong to a different slice or context not yet built. Only ask if the model explicitly implies a notification is needed but nothing wires to it.
 

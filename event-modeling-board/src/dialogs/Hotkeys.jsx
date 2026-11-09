@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 
 // Keys that add an element of that type to the selected Cell (R5a.11).
-export const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'query', q: 'query', e: 'event', p: 'processor', n: 'notes' };
+export const CELL_ADD_KEYS = { s: 'screen', c: 'command', r: 'read_model', q: 'read_model', e: 'event', p: 'processor', n: 'notes' };
 // S adds a Scenarios element instead of a Screen in a Spec lane, which takes no Screen.
 export const kindOfKey = (key, laneType) => (key === 's' && laneType === 'spec' ? 'scenarios' : CELL_ADD_KEYS[key]);
 export const hotkeyOf = (kind) =>
@@ -44,7 +44,7 @@ const HOTKEYS = [
       ['Shift+E', 'Mark / unmark the slice as the end of a flow'],
       ['S', 'Add a Screen in the Cell (a Scenarios element in a Spec lane)'],
       ['C', 'Add a Command in the Cell'],
-      ['R / Q', 'Add a Query in the Cell'],
+      ['R / Q', 'Add a Read Model in the Cell'],
       ['E', 'Add an Event in the Cell'],
       ['P', 'Add a Processor in the Cell'],
       ['N', 'Add a Notes element in the Cell'],
@@ -60,7 +60,7 @@ const HOTKEYS = [
     group: 'Selected element',
     keys: [
       ['I', 'Open the info of the element (not for Notes, Scenarios or a linked copy)'],
-      ['F', 'Open the fields of a Screen, Command, Event or Query (not a linked copy)'],
+      ['F', 'Open the fields of a Screen, Command, Event or Read Model (not a linked copy)'],
       ['E', 'Edit the HTML mockup of a Screen'],
       ['V', 'View the HTML mockup of a Screen, or of the original of a linked copy (see also Scenarios, Notes)'],
       ['G', 'Select the original of a linked copy and go to it'],

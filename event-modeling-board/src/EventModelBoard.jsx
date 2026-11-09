@@ -713,7 +713,7 @@ function Board() {
 
   // Each slice shrinks (or grows) to its elements plus the minimal margins; empty slices get
   // the default width. Elements are left aligned, not centred. An automation or translation slice
-  // (one Query, Command and Processor, an Event) gets its own layout (R5.20a). Otherwise, if every Cell of the slice holds
+  // (one Read Model, Command and Processor, an Event) gets its own layout (R5.20a). Otherwise, if every Cell of the slice holds
   // at most one element, each starts at the left margin; otherwise all elements keep their layout
   // and move together so that the left-most starts at the left margin.
   // Later slices move left. With `onlySliceId` only that slice is compacted.

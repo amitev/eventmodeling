@@ -1,7 +1,7 @@
 :root {
   --screen: #e2e2e2;
   --command: #7cc3f2;
-  --query: #8fd694;
+  --read_model: #8fd694;
   --event: #ffb366;
   --processor: #d9c2f0;
   --scenarios: #2f6fdb;
@@ -19,7 +19,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .toolbar .context-filter { padding: 4px 6px; border: 1px solid #999; border-radius: 4px; background: #fff; max-width: 180px; }
 .chip.screen { background: var(--screen) !important; }
 .chip.command { background: var(--command) !important; }
-.chip.query { background: var(--query) !important; }
+.chip.read_model { background: var(--read_model) !important; }
 .chip.event { background: var(--event) !important; }
 .spacer { flex: 1; }
 .canvas { flex: 1; min-height: 0; }
@@ -74,7 +74,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky-header .copy-mark:disabled { cursor: default; }
 .sticky.screen { --kind-color: var(--screen); }
 .sticky.command { --kind-color: var(--command); }
-.sticky.query { --kind-color: var(--query); }
+.sticky.read_model { --kind-color: var(--read_model); }
 .sticky.event { --kind-color: var(--event); }
 .sticky .sticky-header {
   display: flex; align-items: center; gap: 6px; min-height: 26px; box-sizing: border-box;
@@ -153,9 +153,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .screen-frame-box { position: relative; width: 100%; height: 118px; overflow: hidden; background: #fff; box-sizing: border-box; }
 /* Every Screen is as tall as one with a mockup: 26px header + 118px body (a 4:3 preview of the 158px body width) + borders. */
 .sticky.screen { min-height: 146px; }
-/* Command, Query and Event are exactly as tall as a Screen; the fields scroll in the body (R3.6c). */
-.sticky:is(.command, .query, .event) { height: 146px; }
-.sticky:is(.command, .query, .event) .sticky-body { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+/* Command, Read Model and Event are exactly as tall as a Screen; the fields scroll in the body (R3.6c). */
+.sticky:is(.command, .read_model, .event) { height: 146px; }
+.sticky:is(.command, .read_model, .event) .sticky-body { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 /* A Screen with a mockup grows 2.5x after the mouse stayed on it for 300ms (R3.10a; the `grown` class is set
    by StickyNode): only drawn so, the layout stays. Not while dragged. Its node is raised above the others. */
 .sticky.screen.zoomable { transition: transform 0.15s ease-out; transform-origin: center; }

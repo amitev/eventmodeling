@@ -85,14 +85,14 @@ export function autoConnections(nodes, node) {
     if (command) pairs.push([command.id, node.id]);
   }
   if (kind === 'screen') {
-    const query = below('query');
-    if (query) pairs.push([query.id, node.id]);
+    const readModel = below('read_model');
+    if (readModel) pairs.push([readModel.id, node.id]);
   }
   if (kind === 'processor') {
-    const query = nearest(others.filter((n) => n.data.kind === 'query'));
-    if (query) pairs.push([query.id, node.id]);
+    const readModel = nearest(others.filter((n) => n.data.kind === 'read_model'));
+    if (readModel) pairs.push([readModel.id, node.id]);
   }
-  if (kind === 'query') {
+  if (kind === 'read_model') {
     const screen = above('screen');
     if (screen) pairs.push([node.id, screen.id]);
     const chapterSlices = slices(nodes, node.parentId);
@@ -111,23 +111,23 @@ export function autoConnections(nodes, node) {
   return pairs;
 }
 
-// The compact layout of an automation or translation slice: the Query first, the Command (the
+// The compact layout of an automation or translation slice: the Read Model first, the Command (the
 // action) next to it in the same lane, the Processor centred above both, the Event(s) under the
 // Command; the other elements (an Integration Event, ...) left aligned. `els` are the slice's
 // elements, `left` its left edge, `isIntegration(n)` tells an element in an Integration lane.
 // Returns { xs: Map of element id to x, width: the content width }, or null when the slice has no
-// single Query, Command and Processor outside Integration lanes, or no Event.
+// single Read Model, Command and Processor outside Integration lanes, or no Event.
 export function automationLayout(els, laneIdOf, isIntegration, left) {
   const core = els.filter((n) => !isIntegration(n));
   const only = (kind) => {
     const list = core.filter((n) => n.data.kind === kind);
     return list.length === 1 ? list[0] : null;
   };
-  const query = only('query');
+  const readModel = only('read_model');
   const command = only('command');
   const processor = only('processor');
   const events = core.filter((n) => n.data.kind === 'event');
-  if (!query || !command || !processor || !events.length) return null;
+  if (!readModel || !command || !processor || !events.length) return null;
 
   const w = stickyW;
   const xs = new Map();
@@ -145,11 +145,11 @@ export function automationLayout(els, laneIdOf, isIntegration, left) {
     }
   };
 
-  const queryX = left + padOf('query');
-  const commandX = queryX + w(query) + GRID;
-  put(query, queryX);
+  const readModelX = left + padOf('read_model');
+  const commandX = readModelX + w(readModel) + GRID;
+  put(readModel, readModelX);
   put(command, commandX);
-  put(processor, snap((queryX + commandX + w(command)) / 2 - w(processor) / 2));
+  put(processor, snap((readModelX + commandX + w(command)) / 2 - w(processor) / 2));
   row(events, () => commandX);
   row(els.filter((n) => !xs.has(n.id)), (n) => left + padOf(n.data.kind));
 

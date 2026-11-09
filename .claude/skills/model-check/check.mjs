@@ -12,7 +12,7 @@ const get = async (path) => {
   return r.json();
 };
 
-const HOLDERS = ['SCREEN', 'COMMAND', 'EVENT', 'QUERY'];
+const HOLDERS = ['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL'];
 const findings = [];
 const add = (kind, ctx, msg) => findings.push({ kind, chapter: ctx.chapter.name, slice: ctx.slice?.name, el: ctx.el, msg });
 
@@ -66,12 +66,12 @@ for (const ch of chapters.filter(wanted)) {
     if (!real.length) add('GAP', { chapter: ch, slice }, 'slice is empty');
     else if (slice.type === null) add('GAP', { chapter: ch, slice }, 'slice has no type: elements or arrows are missing for any of the four slice types');
     const ofType = (t) => real.filter((e) => e.type === t);
-    const [cmds, qrys, procs] = [ofType('COMMAND'), ofType('QUERY'), ofType('PROCESSOR')];
+    const [cmds, qrys, procs] = [ofType('COMMAND'), ofType('READ_MODEL'), ofType('PROCESSOR')];
     const list = (xs) => xs.map(nameOf).join(', ');
     if (cmds.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${cmds.length} Commands (${list(cmds)}): a slice has one; propose a split`);
     if (procs.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${procs.length} Processors (${list(procs)}): a slice has one; propose a split`);
-    if (cmds.length && qrys.length && !procs.length) add('RULE', { chapter: ch, slice }, `slice mixes a Command (${list(cmds)}) and a Query (${list(qrys)}) without a Processor: a slice has one Command or one Query; propose a split`);
-    if (!procs.length && !cmds.length && qrys.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${qrys.length} Queries (${list(qrys)}): a slice has one; propose a split`);
+    if (cmds.length && qrys.length && !procs.length) add('RULE', { chapter: ch, slice }, `slice mixes a Command (${list(cmds)}) and a Read Model (${list(qrys)}) without a Processor: a slice has one Command or one Read Model; propose a split`);
+    if (!procs.length && !cmds.length && qrys.length > 1) add('RULE', { chapter: ch, slice }, `slice has ${qrys.length} Read Models (${list(qrys)}): a slice has one; propose a split`);
     const main = procs.length === 1 ? [procs[0], ...cmds] : cmds.length === 1 && !qrys.length ? [cmds[0]] : qrys.length === 1 && !cmds.length ? [qrys[0]] : null;
     const key = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
     if (main && slice.name !== 'New Slice' && !main.some((m) => key(nameOf(m)) === key(slice.name))) {
@@ -119,9 +119,9 @@ for (const ch of chapters.filter(wanted)) {
       if (el.type === 'EVENT' && !isCopy) {
         if (!ps.some((p) => p.type === 'COMMAND') && info.lane?.type !== 'INTEGRATION') add('GAP', ctx, 'no Command produces this Event');
       }
-      if (el.type === 'QUERY' && !isCopy) {
+      if (el.type === 'READ_MODEL' && !isCopy) {
         const evs = ps.filter((p) => p.type === 'EVENT');
-        if (!evs.length) add('GAP', ctx, 'no Event feeds this Query');
+        if (!evs.length) add('GAP', ctx, 'no Event feeds this Read Model');
         if (evs.length > 3) add('CANDIDATE', ctx, `built from ${evs.length} Events: one picture, or several questions bundled?`);
         if (!cs.length) add('GAP', ctx, 'feeds nothing (no Screen or Processor)');
       }
@@ -132,11 +132,11 @@ for (const ch of chapters.filter(wanted)) {
         if (s && !s.hasHtml && !s.hasUrl) add('GAP', ctx, 'no mockup (empty placeholder)');
       }
       if (el.type === 'PROCESSOR') {
-        if (!ps.some((p) => p.type === 'QUERY')) add('GAP', ctx, 'no todo-list Query feeds this Processor');
+        if (!ps.some((p) => p.type === 'READ_MODEL')) add('GAP', ctx, 'no todo-list Read Model feeds this Processor');
         if (!cs.some((c) => c.type === 'COMMAND')) add('GAP', ctx, 'issues no Command');
       }
 
-      if (['COMMAND', 'EVENT', 'QUERY'].includes(el.type) && !isCopy && ps.length) {
+      if (['COMMAND', 'EVENT', 'READ_MODEL'].includes(el.type) && !isCopy && ps.length) {
         const names = (fs) => (fs ?? []).flatMap((f) => [f.name, ...(f.type === 'object' ? names(f.fields) : [])]);
         const leafFields = (fs) => (fs ?? []).flatMap((f) => (f.type === 'object' ? leafFields(f.fields) : [f]));
         const upstream = new Set(sourcesOf(el).flatMap((s) => names(s.fields)));
@@ -189,7 +189,7 @@ for (const f of findings) {
   console.log(`[${f.kind}] ${where}:${who} - ${f.msg}`);
 }
 
-// Slices depend on each other only through Events: a Query reads Events of another slice (arrows), a Command
+// Slices depend on each other only through Events: a Read Model reads Events of another slice (arrows), a Command
 // is checked against Events that its scenarios give (Given).
 if ('dependencies' in args) {
   const whenScenarios = new Map();
@@ -208,7 +208,7 @@ if ('dependencies' in args) {
             if (home && home.slice !== slice) consumed.add(`${nameOf(home.el)} (${label(home)})`);
           }
         }
-        if (el.type === 'QUERY') {
+        if (el.type === 'READ_MODEL') {
           for (const p of parentsOf(el).filter((x) => x.type === 'EVENT')) {
             const home = byId.get(original(p).id);
             if (home && home.slice !== slice) consumed.add(`${nameOf(home.el)} (${label(home)})`);

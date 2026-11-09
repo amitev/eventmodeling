@@ -1,6 +1,6 @@
 ---
 name: naming
-description: Quick reference for naming things in the model — Events, Commands, Queries, Screens, Processors, scenarios, slices, lanes, Chapters and Contexts — with valid and invalid examples and the file-safe name rules. Use whenever you are about to name or rename something, or to check a name.
+description: Quick reference for naming things in the model — Events, Commands, Read Models, Screens, Processors, scenarios, slices, lanes, Chapters and Contexts — with valid and invalid examples and the file-safe name rules. Use whenever you are about to name or rename something, or to check a name.
 ---
 
 # Naming
@@ -12,8 +12,8 @@ Short reference. The definitions behind the element rules are in `eventmodeling-
 | Type | Form | Valid | Invalid |
 |---|---|---|---|
 | `EVENT` | Past tense, a business fact | `OrderPlaced`, `PaymentAuthorized`, `UserRegistered` | `SidebarOpened`, `RequestCompleted`, `ApiCalled` (machinery or UI state) |
-| `COMMAND` | Imperative, business intent | `PlaceOrder`, `ConfirmPayment`, `CancelSubscription` | `LoadOrders`, `FetchData`, `OpenDialog` (queries or UI actions) |
-| `QUERY` | Noun phrase, named for the data | `OrderSummary`, `InvoiceList` | `OrderSummaryProjector`, `InvoiceListRepository` (implementation) |
+| `COMMAND` | Imperative, business intent | `PlaceOrder`, `ConfirmPayment`, `CancelSubscription` | `LoadOrders`, `FetchData`, `OpenDialog` (read models or UI actions) |
+| `READ_MODEL` | Noun phrase, named for the data | `OrderSummary`, `InvoiceList` | `OrderSummaryProjector`, `InvoiceListRepository` (implementation) |
 | `SCREEN` | What a user would call it | `Dashboard`, `OrderOverviewPage` | `OrderOverviewComponent`, `ProjectorView` |
 | `PROCESSOR` | What it does, as a business actor | `BillingScheduler`, `InventoryReserver` | `OrderServiceHandler` |
 
@@ -22,13 +22,13 @@ Short reference. The definitions behind the element rules are in `eventmodeling-
 - A linked copy has no name of its own: it shows its original's. Rename the original.
 - An element name may be empty on the board, but an unnamed element is a gap: name every element you create.
 - Do not model UI events (`ButtonClicked`) or technical events unless the business cares.
-- An Event that holds a computed value is a Query.
+- An Event that holds a computed value is a Read Model.
 
 ## Everything else
 
 | Thing | Rule |
 |---|---|
-| Slice | Named **exactly like its Command, Query or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing. An automation slice may carry the Processor's name or its Command's. Never left as "New Slice" |
+| Slice | Named **exactly like its Command, Read Model or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing. An automation slice may carry the Processor's name or its Command's. Never left as "New Slice" |
 | Scenario | A short business sentence for one case: "Place order with a valid payment", "Reject order when stock is empty". Not empty. The reason goes in the description |
 | Lane | By role or system actor on an Actor lane (Customer, Seller, Payment Gateway), never a generic "User"; other lanes keep their type name unless the user wants one |
 | Chapter | By the business process it covers ("Orders", "Registration"); ask when unclear. Not left as "Chapter 1" |

@@ -15,7 +15,7 @@ Read `eventmodeling-core-rules` first. To look things up in the model, use the `
 |---|---|
 | Change | `PATCH /elements/:id` `{ name?, info?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`. `null` removes an optional property. Unknown properties get 400. |
 | Type | Never changes: there is no `type` in a `PATCH`. See "Changing the type". |
-| Screen content | Setting `html` removes `url` and the reverse. `html` and `url` only on a Screen; `markdown` and `color` only on Notes; `fields` only on Screen, Command, Event, Query. |
+| Screen content | Setting `html` removes `url` and the reverse. `html` and `url` only on a Screen; `markdown` and `color` only on Notes; `fields` only on Screen, Command, Event, Read Model. |
 | Linked copy | Accepts only `slice`, `lane` and `x`. Any other change gets 409 naming the original: change the original. |
 | Move | `slice` and `lane` come **together**. The lane must take the element's type. Without `x` the element is placed like the board does; with `x` as given. Its arrows stay and none are added. `x` alone moves it inside its Cell. |
 | Move to another Chapter | Allowed (also for linked copies). Scenarios that use the element are **deleted**. Its arrows stay, so those to elements of the old Chapter now cross Chapters: report them and offer to replace each with a linked copy (`connections`, "Across Chapters"). A Scenarios element cannot change Chapter (409). |
@@ -57,6 +57,6 @@ The type cannot be changed. To turn, say, an Event into a Command, **replace** t
 
 ## After a change
 
-- A removed arrow or element can leave a Command without an issuer, an Event no Command produces, or a Query nothing feeds: run `model-check` on the Chapter and report what it finds.
+- A removed arrow or element can leave a Command without an issuer, an Event no Command produces, or a Read Model nothing feeds: run `model-check` on the Chapter and report what it finds.
 - Report: what changed (names and ids, Chapter), what the delete removed (`removed.elements`, `removed.scenarios`), what could not be carried over, and that the open board shows the change by itself (it pulls the server model and replaces any changes not yet pushed).
 - Errors: 400 (invalid body or value, a lane that does not take the type), 404 unknown id, 409 (a linked copy's content, a Scenarios element changing Chapter). Read `error`, fix the cause, retry.

@@ -1,9 +1,9 @@
-// Fields of Screen, Command, Event and Query elements (R9): the data they carry. Fields are
+// Fields of Screen, Command, Event and Read Model elements (R9): the data they carry. Fields are
 // copied along the arrows, never linked. This file holds the field model and the copy rules
 // (no UI). A field is { name, type, list, id, optional, generated, pii, technical } plus
 // `fields` (its own fields) when its type is 'object'.
 
-export const FIELD_KINDS = ['screen', 'command', 'event', 'query'];
+export const FIELD_KINDS = ['screen', 'command', 'event', 'read_model'];
 export const hasFields = (kind) => FIELD_KINDS.includes(kind);
 
 export const OBJECT = 'object';

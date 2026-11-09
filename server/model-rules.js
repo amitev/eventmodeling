@@ -13,9 +13,9 @@ export const snapUp = (v) => Math.ceil(v / GRID) * GRID;
 // Lane types in their fixed top-to-bottom order, with the element types each takes (R2.10).
 export const LANE_TYPES = {
   ACTOR: { label: 'Actor', takes: ['SCREEN', 'PROCESSOR'] },
-  INTERACTION: { label: 'Interaction', takes: ['COMMAND', 'QUERY'] },
+  INTERACTION: { label: 'Interaction', takes: ['COMMAND', 'READ_MODEL'] },
   EVENT: { label: 'Event', takes: ['EVENT'] },
-  INTEGRATION: { label: 'Integration', takes: ['EVENT', 'QUERY'] },
+  INTEGRATION: { label: 'Integration', takes: ['EVENT', 'READ_MODEL'] },
   SPEC: { label: 'Spec', takes: ['SCENARIOS', 'NOTES'] },
 };
 export const LANE_ORDER = Object.keys(LANE_TYPES);
@@ -27,7 +27,7 @@ export const NOTE_COLORS = ['red', 'green', 'yellow'];
 export const KINDS = {
   SCREEN: { w: 160, pad: SLICE_PADDING },
   COMMAND: { w: 160, pad: SLICE_PADDING },
-  QUERY: { w: 160, pad: SLICE_PADDING },
+  READ_MODEL: { w: 160, pad: SLICE_PADDING },
   EVENT: { w: 160, pad: SLICE_PADDING },
   PROCESSOR: { w: 160, pad: SLICE_PADDING },
   SCENARIOS: { w: 280, pad: SLICE_PADDING / 2 },
@@ -35,15 +35,15 @@ export const KINDS = {
 };
 export const ELEMENT_TYPES = Object.keys(KINDS);
 export const UNCONNECTABLE = ['SCENARIOS', 'NOTES'];
-export const FIELD_HOLDERS = ['SCREEN', 'COMMAND', 'EVENT', 'QUERY'];
+export const FIELD_HOLDERS = ['SCREEN', 'COMMAND', 'EVENT', 'READ_MODEL'];
 
 // Element types an element of each type can point to (R4.7).
 export const FLOWS_TO = {
   SCREEN: ['COMMAND'],
   PROCESSOR: ['COMMAND'],
   COMMAND: ['EVENT'],
-  EVENT: ['QUERY'],
-  QUERY: ['SCREEN', 'PROCESSOR'],
+  EVENT: ['READ_MODEL'],
+  READ_MODEL: ['SCREEN', 'PROCESSOR'],
 };
 
 export const FIELD_TYPES = ['string', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'uuid', 'object'];
@@ -84,7 +84,7 @@ export function sliceType(elements) {
   if (types.size && !types.has('PROCESSOR') && only(['SCREEN', 'COMMAND', 'EVENT']) && types.has('COMMAND') && types.has('EVENT')) {
     return 'STATE_CHANGE';
   }
-  if (types.has('QUERY') && only(['QUERY', 'SCREEN'])) return 'STATE_READ';
+  if (types.has('READ_MODEL') && only(['READ_MODEL', 'SCREEN'])) return 'STATE_READ';
   return null;
 }
 

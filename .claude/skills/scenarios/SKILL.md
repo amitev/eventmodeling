@@ -48,7 +48,7 @@ Use the existing `SCENARIOS` element of the slice. If there is none:
 - **When** the Command of the slice. Exactly one, never an Event.
 - **Then** the Events the Command records, each with its example; or **error** text, with `then: []`. Never both.
 - You only choose existing elements: if a needed Event or Command is missing, say so, do not make it up.
-- The board has no Query results in a scenario (only Events and Commands): a state-read slice has nothing to put in one.
+- The board has no Read Model results in a scenario (only Events and Commands): a state-read slice has nothing to put in one.
 
 ### Example data
 

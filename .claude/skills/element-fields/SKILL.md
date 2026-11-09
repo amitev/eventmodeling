@@ -1,6 +1,6 @@
 ---
 name: element-fields
-description: Create, change or remove the fields (data) of a Screen, Command, Event or Query element through the server API, and carry them along the arrows exactly as the board does (inheritance on a new arrow, Propagate downstream, Get from parent). Use for "add field X to Y", "define the fields of this command/event/query", "propagate this field", "make the fields consistent along the flow", "get the fields from the parent".
+description: Create, change or remove the fields (data) of a Screen, Command, Event or Read Model element through the server API, and carry them along the arrows exactly as the board does (inheritance on a new arrow, Propagate downstream, Get from parent). Use for "add field X to Y", "define the fields of this command/event/read model", "propagate this field", "make the fields consistent along the flow", "get the fields from the parent".
 ---
 
 # Element Fields
@@ -15,15 +15,15 @@ Read `eventmodeling-core-rules` first (what each element is, field lineage). End
 
 | | Rule |
 |---|---|
-| Holders | Only `SCREEN`, `COMMAND`, `EVENT`, `QUERY` have `fields`. `PROCESSOR`, `SCENARIOS`, `NOTES` have none. |
+| Holders | Only `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL` have `fields`. `PROCESSOR`, `SCENARIOS`, `NOTES` have none. |
 | Field | `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`. `type` default `string`; one of `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (list: `GET /api/model/rules` → `fieldTypes`). Only `object` has `fields` (nested, any depth). Flags (`list`, `id`, `optional`, `generated`, `pii`, `technical`) default `false`. A list of values is `list: true`. |
 | Names | Not empty, unique within their list. |
 | Flags | `id` identifies the object; `optional` may be missing; `generated` is created by the system (an id, the current date, the acting user); `pii` is personal data; `technical` is an implementation detail. |
-| Flow | Arrows: Screen → Command, Processor → Command, Command → Event, Event → Query, Query → Screen, Query → Processor. See the `connections` skill. |
+| Flow | Arrows: Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor. See the `connections` skill. |
 | Copy | Fields are **copied**, never linked. A copied field **replaces** the same-named field of the target as a whole (nested `fields` included, no deep merge), in place; new names are appended. |
-| Processor | Holds no fields but passes them on: Query → Processor → Command copies the Query's fields to the Command. |
+| Processor | Holds no fields but passes them on: Read Model → Processor → Command copies the Read Model's fields to the Command. |
 | Linked copy | An element with `copyOf` is **never a target** (it shows its original's fields; change the original, a `PATCH` on it gets 409). As a **source** it gives its original's fields. |
-| New arrow | The source's fields are all copied to the target; one hop only. Done by the server on `POST /connections` and on the automatic arrows of `POST /elements` (Screen → Command, Command → Event, Query → Screen, Event → Query). |
+| New arrow | The source's fields are all copied to the target; one hop only. Done by the server on `POST /connections` and on the automatic arrows of `POST /elements` (Screen → Command, Command → Event, Read Model → Screen, Event → Read Model). |
 | Propagate | A newly created **top-level** field is also copied to **all** elements downstream, through the whole chain, around loops too, replacing same-named fields. Edited or removed fields are never propagated. |
 | Get from parent | Copy the fields of all parents (elements with an arrow to this one, through Processors) into the element, replacing same-named fields; several parents in the order of their arrows, a later one replacing an earlier one. |
 
@@ -38,10 +38,10 @@ Read `eventmodeling-core-rules` first (what each element is, field lineage). End
 ## Step 2 — Decide the content (do not invent data)
 
 - **Follow the lineage.** Every field has a source: a same-named field upstream, or `generated: true` where the information starts. A field with no source is a gap: report it, do not hide it.
-- **Screen**: what the mockup shows or lets the user enter. Shown from a Query: it comes from the Query. Session values and display-only calculations: `generated: true`.
+- **Screen**: what the mockup shows or lets the user enter. Shown from a Read Model: it comes from the Read Model. Session values and display-only calculations: `generated: true`.
 - **Command**: everything its decision needs (also the current time, the acting user, the tenant: `generated: true` where the Screen does not supply them). Business language, names matching the Screen's input fields.
 - **Event**: only captured facts, no computed values.
-- **Query**: the data shaped for the Screen that reads it; one `list: true` `object` field when it returns rows.
+- **Read Model**: the data shaped for the Screen that reads it; one `list: true` `object` field when it returns rows.
 - Mark `pii` for personal data, `id` for identifiers.
 - Unsure about a name, type or flag, or whether to propagate: ask the user (use the ask tool), with a recommended default.
 
@@ -66,7 +66,7 @@ Do what the board does (breadth-first, each element once, the source itself neve
 
 1. From the outline, start at the source element and follow `connectsTo` transitively. Mark each element reached as visited (loops end there).
 2. For each reached element:
-   - type `SCREEN`, `COMMAND`, `EVENT` or `QUERY` and **no** `copyOf`: it gets the fields. Read its current `fields`, replace the same-named ones with the new ones (same position), append the others.
+   - type `SCREEN`, `COMMAND`, `EVENT` or `READ_MODEL` and **no** `copyOf`: it gets the fields. Read its current `fields`, replace the same-named ones with the new ones (same position), append the others.
    - a `PROCESSOR` or a linked copy: change nothing, but **keep following** its `connectsTo`.
    - `SCENARIOS` and `NOTES` have no arrows.
 3. One `PATCH /elements/:id` per changed element, all in one `POST /ops` (include the source's own `PATCH` first).

@@ -232,14 +232,14 @@ function autoPairs(chapter, slice, el) {
     if (command) pairs.push([command, el]);
   }
   if (el.type === 'SCREEN') {
-    const query = below('QUERY');
-    if (query) pairs.push([query, el]);
+    const readModel = below('READ_MODEL');
+    if (readModel) pairs.push([readModel, el]);
   }
   if (el.type === 'PROCESSOR') {
-    const query = nearest(others.filter((e) => e.type === 'QUERY'));
-    if (query) pairs.push([query, el]);
+    const readModel = nearest(others.filter((e) => e.type === 'READ_MODEL'));
+    if (readModel) pairs.push([readModel, el]);
   }
-  if (el.type === 'QUERY') {
+  if (el.type === 'READ_MODEL') {
     const screen = above('SCREEN');
     if (screen) pairs.push([el, screen]);
     const previous = chapter.slices[chapter.slices.indexOf(slice) - 1];

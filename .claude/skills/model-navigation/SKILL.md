@@ -38,7 +38,7 @@ An element is `{ id, type, name, lane, x, copyOf?, connectsTo }`. Everything els
 - **Lane of an element:** its `lane` is a lane id of the same Chapter; the lane's `type` is in the Chapter's `lanes`.
 - **Children (arrows out):** `connectsTo` lists the ids an element has an arrow **to**.
 - **Parents (arrows in):** all elements whose `connectsTo` contains the id. Build a map once (target id → source ids) when you need more than one.
-- **Downstream / upstream:** follow `connectsTo` (or the parent map) repeatedly; keep a visited set, the flow can loop (Query → Screen → Command → Event → Query). A `PROCESSOR` only passes things on.
+- **Downstream / upstream:** follow `connectsTo` (or the parent map) repeatedly; keep a visited set, the flow can loop (Read Model → Screen → Command → Event → Read Model). A `PROCESSOR` only passes things on.
 - **Linked copies:** `copyOf` is the original's id; the copy's `name` is the original's. Its content (fields, mockup) is the original's: read the original. Arrows stay within a Chapter, so a fact of another Chapter reaches an element through its copy: to follow a dependency across Chapters, go from the copy to its original (`copyOf`).
 - **Scenarios elements:** type `SCENARIOS`, in a Spec lane; their scenarios are only in `GET /elements/:id`.
 - **Chapter arrows:** `connectsTo` of a Chapter lists Chapter ids.
@@ -50,7 +50,7 @@ An element is `{ id, type, name, lane, x, copyOf?, connectsTo }`. Everything els
 |---|---|
 | Which Chapter and slice is element X in? | `search` gives `chapterId` and `sliceId`; names come from the outline |
 | What does a slice contain, and what is its type? | outline: the slice's `type` and `elements` |
-| What feeds this Screen / Command / Query? | its parents (see above), through any `PROCESSOR` |
+| What feeds this Screen / Command / Read Model? | its parents (see above), through any `PROCESSOR` |
 | What does this Event reach? | downstream from its `connectsTo` |
 | Which Commands and Events can a scenario use? | non-copy `COMMAND`/`EVENT` elements of the same Chapter, from the outline |
 | What are the fields of all Commands in a Chapter? | `GET /chapters/:id?screenContent=false`, filter to `COMMAND` elements and print `name` and `fields` |

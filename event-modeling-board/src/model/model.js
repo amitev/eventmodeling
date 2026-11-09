@@ -12,9 +12,9 @@ export const LABEL_ZONE = 48; // reserved strip at the left of each lane; slices
 // and the letter on the header button that adds a lane of that type.
 export const LANE_TYPES = {
   actor: { label: 'Actor', letter: 'A', kinds: ['screen', 'processor'] },
-  interaction: { label: 'Interaction', letter: 'I', kinds: ['command', 'query'] },
+  interaction: { label: 'Interaction', letter: 'I', kinds: ['command', 'read_model'] },
   event: { label: 'Event', letter: 'E', kinds: ['event'] },
-  integration: { label: 'Integration', letter: '🔗', kinds: ['event', 'query'] }, // external integrations
+  integration: { label: 'Integration', letter: '🔗', kinds: ['event', 'read_model'] }, // external integrations
   spec: { label: 'Spec', letter: 'S', kinds: ['scenarios', 'notes'] },
 };
 export const LANE_TYPE_ORDER = Object.keys(LANE_TYPES);
@@ -45,7 +45,7 @@ export const SLICE_MIN_WIDTH = 120;
 export const KINDS = {
   screen: { label: 'Screen', lane: 0, color: '#e2e2e2', h: 146 }, // as tall as one with a mockup (R3.6b)
   command: { label: 'Command', lane: 1, color: '#7cc3f2', h: 146 }, // fixed as tall as a Screen; fields scroll (R3.6c)
-  query: { label: 'Query', lane: 1, color: '#8fd694', h: 146 },
+  read_model: { label: 'Read Model', lane: 1, color: '#8fd694', h: 146 },
   event: { label: 'Event', lane: 2, color: '#ffb366', h: 146 },
   processor: { label: 'Processor', lane: 1, color: '#d9c2f0', icon: '⚙️', h: 114 }, // a cogwheel under its name (R3.6)
   // Not part of the flow: it connects to nothing (R4.7).
@@ -64,8 +64,8 @@ export const FLOWS_TO = {
   screen: ['command'],
   processor: ['command'],
   command: ['event'],
-  event: ['query', 'processor'],
-  query: ['screen', 'processor'],
+  event: ['read_model', 'processor'],
+  read_model: ['screen', 'processor'],
 };
 
 export const snap = (v) => Math.round(v / GRID) * GRID;
@@ -85,7 +85,7 @@ export function sliceType(elements) {
   if (kinds.size && !kinds.has('processor') && only(['screen', 'command', 'event']) && kinds.has('command') && kinds.has('event')) {
     return 'STATE_CHANGE';
   }
-  if (kinds.has('query') && only(['query', 'screen'])) return 'STATE_READ';
+  if (kinds.has('read_model') && only(['read_model', 'screen'])) return 'STATE_READ';
   return null;
 }
 
@@ -456,7 +456,7 @@ export const edgeDefaults = {
 export const OVERVIEW_EDGE_COLORS = {
   screen: '#8a8a8a',
   command: '#6f93b3',
-  query: '#7aa64f',
+  read_model: '#7aa64f',
   event: '#e08a3c',
   processor: '#9b7cc4',
 };

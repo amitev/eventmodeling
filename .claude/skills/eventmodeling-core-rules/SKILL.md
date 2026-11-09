@@ -1,6 +1,6 @@
 ---
 name: eventmodeling-core-rules
-description: Shared, foundational rules for event modeling on the board — what a SCREEN/COMMAND/EVENT/QUERY/PROCESSOR is, how each is named, how slices and arrows follow the flow, and the anti-patterns to reject. Not a task of its own — referenced upfront by the other skills (element-fields, scenarios, connections, wdyt, ...) instead of each restating its own copy. Do not use standalone.
+description: Shared, foundational rules for event modeling on the board — what a SCREEN/COMMAND/EVENT/READ_MODEL/PROCESSOR is, how each is named, how slices and arrows follow the flow, and the anti-patterns to reject. Not a task of its own — referenced upfront by the other skills (element-fields, scenarios, connections, wdyt, ...) instead of each restating its own copy. Do not use standalone.
 ---
 
 # Event Modeling — Core Rules
@@ -25,9 +25,9 @@ Every Chapter has lanes of these types, always in this top-to-bottom order (seve
 | Lane type | Elements allowed | What it represents |
 |---|---|---|
 | `ACTOR` | SCREEN, PROCESSOR | Who or what initiates — a human via a screen, or a system via a processor |
-| `INTERACTION` | COMMAND, QUERY | The business intent going in (COMMAND), or the query result coming out (QUERY) |
+| `INTERACTION` | COMMAND, READ_MODEL | The business intent going in (COMMAND), or the read model result coming out (READ_MODEL) |
 | `EVENT` | EVENT | The business fact recorded — which system/entity's own story this event belongs to |
-| `INTEGRATION` | EVENT, QUERY | Optional. Facts and views of external systems |
+| `INTEGRATION` | EVENT, READ_MODEL | Optional. Facts and views of external systems |
 | `SPEC` | SCENARIOS, NOTES | The Given/When/Then scenarios and notes of the slice. At most one element per Cell |
 
 The lane types and what they take are also in `GET /api/model/rules`. This table is only "what belongs where," not how to place it.
@@ -36,28 +36,28 @@ The lane types and what they take are also in `GET /api/model/rules`. This table
 
 An external system is modeled in an **Integration lane**: one lane per external system, **named after the system** (e.g. "Payment Provider", never just "Integration" once there is a second system).
 - **Lane `info`:** what the system is and how it reaches this one: delivery (webhook, queue, polling, file), format, ordering, retention, authentication, limits. Implementation details only (the slice's Notes may add more).
-- **Its Events and Queries** carry the system's own names and fields (its language, as it sends them), not this domain's. Per-element details (endpoint, payload source, example) go in the element's `info`.
+- **Its Events and Read Models** carry the system's own names and fields (its language, as it sends them), not this domain's. Per-element details (endpoint, payload source, example) go in the element's `info`.
 - Details the user has not given are **asked, never invented**; leave `info` empty until known.
 - The external Event never feeds a read model; it is relayed by a translation slice into an internal Event (Translation Chain).
 
 ## Slices
 
-A **slice** is a vertical band across all lanes that groups the elements of one piece of behaviour: the thinnest possible cut — one COMMAND's behaviour, or one QUERY's view, never combined. Slices communicate with each other only via events.
+A **slice** is a vertical band across all lanes that groups the elements of one piece of behaviour: the thinnest possible cut — one COMMAND's behaviour, or one READ_MODEL's view, never combined. Slices communicate with each other only via events.
 
 The board works out a slice's **type** from its elements, ignoring SCENARIOS and NOTES (a linked copy counts as its original's type). You never choose it:
 
 ```
 state change = SCREEN? → COMMAND → EVENT(s)                    only Screen, Command and Event, at least a Command and an Event
-state read   = QUERY → SCREEN (fed by EVENTs of earlier slices)  only Query and Screen, at least a Query
-automation   = EVENT(s) → QUERY → PROCESSOR → COMMAND → EVENT  a Processor, a Command and an Event, no element in an Integration lane
+state read   = READ_MODEL → SCREEN (fed by EVENTs of earlier slices)  only Read Model and Screen, at least a Read Model
+automation   = EVENT(s) → READ_MODEL → PROCESSOR → COMMAND → EVENT  a Processor, a Command and an Event, no element in an Integration lane
 translation  = as automation, with at least one element in an Integration lane
 ```
 
 Anything else (and an empty slice) has no type.
 
-**Automation layout** (also translation): the Processor in the Actor lane on top, the QUERY first and the COMMAND (the action) **next to it, to its right, in the same Interaction lane**, the EVENT in the Event lane **directly under the COMMAND**. Build it as the Automation recipe of `slice-modeler` says. A slice never mixes a COMMAND and a QUERY outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
+**Automation layout** (also translation): the Processor in the Actor lane on top, the READ_MODEL first and the COMMAND (the action) **next to it, to its right, in the same Interaction lane**, the EVENT in the Event lane **directly under the COMMAND**. Build it as the Automation recipe of `slice-modeler` says. A slice never mixes a COMMAND and a READ_MODEL outside an automation or translation: those are two different slice types (`state change` and `state read`), even when they belong to the same feature.
 
-**A slice is named exactly like its Command, Query or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing, never a broader "feature" name. An automation or translation slice may carry the Processor's name or its Command's. Never leave the default "New Slice".
+**A slice is named exactly like its Command, Read Model or Processor** (`Place Order`, `Order Summary`): the same text, case and spacing, never a broader "feature" name. An automation or translation slice may carry the Processor's name or its Command's. Never leave the default "New Slice".
 
 ## Elements
 
@@ -67,7 +67,7 @@ Anything else (and an empty slice) has no type.
   - Valid: `OrderPlaced`, `PaymentAuthorized`, `UserRegistered`
   - Invalid: `SidebarOpened`, `RequestCompleted`, `ApiCalled` — these describe machinery or UI state, not business facts
 - Immutable — never modify or delete an event once created; a correction is a new event, not an edit.
-- Contains only captured facts. No computed or derived values — those belong in a QUERY.
+- Contains only captured facts. No computed or derived values — those belong in a READ_MODEL.
 
 ### COMMAND
 - Represents business intent — what an actor wants to do.
@@ -75,18 +75,18 @@ Anything else (and an empty slice) has no type.
 - Carries every piece of information its validation needs that isn't in the stream's prior events. That includes context such as the current time or date, the acting user and the tenant (fields marked `generated`). The decision never reads a clock or a session on its own.
 - Naming: imperative, business language.
   - Valid: `PlaceOrder`, `ConfirmPayment`, `CancelSubscription`
-  - Invalid: `LoadOrders`, `FetchData`, `OpenDialog` — these are queries or UI-only actions, not business intent
+  - Invalid: `LoadOrders`, `FetchData`, `OpenDialog` — these are read models or UI-only actions, not business intent
 - Issued by exactly one SCREEN or PROCESSOR — never two: one inbound arrow, from a Screen or a Processor.
 - Produces one or more EVENTs on success, or is rejected with no event.
 
-### QUERY
+### READ_MODEL
 - A projection built from events, shaped for a specific query.
 - Naming: noun phrase, business language, named for the data — not the machinery that produces it.
   - Valid: `OrderSummary`, `InvoiceList`
   - Invalid: `OrderSummaryProjector`, `InvoiceListRepository` — implementation detail leaking into the model
-- Optional — nothing requires a QUERY to exist for a COMMAND or a downstream consumer.
-- Never drives COMMAND validation directly — a COMMAND is checked against its own documented preconditions, not a query.
-- **List-shaped queries**: when the QUERY returns multiple rows (each row shaped by its fields), not a single projected record, give it one `list: true` field of type `object` holding the row's fields — a field's `list` flag, not a flag of the element. Every todo-list query (see Translation Chain below) is list-shaped; so is any other QUERY that naturally returns a set of rows (e.g. `ProductList`, `InvoiceList`).
+- Optional — nothing requires a READ_MODEL to exist for a COMMAND or a downstream consumer.
+- Never drives COMMAND validation directly — a COMMAND is checked against its own documented preconditions, not a read model.
+- **List-shaped read models**: when the READ_MODEL returns multiple rows (each row shaped by its fields), not a single projected record, give it one `list: true` field of type `object` holding the row's fields — a field's `list` flag, not a flag of the element. Every todo-list read model (see Translation Chain below) is list-shaped; so is any other READ_MODEL that naturally returns a set of rows (e.g. `ProductList`, `InvoiceList`).
 
 ### SCREEN
 - Represents what a user sees and can act on.
@@ -96,7 +96,7 @@ Anything else (and an empty slice) has no type.
 
 ### PROCESSOR
 - Represents an automated actor — a processor, scheduler, or system reacting to events.
-- Has no fields of its own: it passes on the fields of the Query that feeds it (Query → Processor → Command).
+- Has no fields of its own: it passes on the fields of the Read Model that feeds it (READ_MODEL → Processor → Command).
 - Naming: what it does, in business language.
   - Valid: `BillingScheduler`, `InventoryReserver`
   - Invalid: `OrderServiceHandler` — implementation-flavored, not a business actor's name
@@ -105,14 +105,14 @@ Anything else (and an empty slice) has no type.
 
 - Every EVENT traces to the COMMAND that produced it.
 - Every COMMAND traces to the SCREEN or PROCESSOR that issued it — exactly one.
-- A process starts with a read (QUERY + SCREEN) or a PROCESSOR reacting to an existing EVENT — never with an unmotivated COMMAND.
+- A process starts with a read (READ_MODEL + SCREEN) or a PROCESSOR reacting to an existing EVENT — never with an unmotivated COMMAND.
 
 ## Roles
 
 - Name Actor lanes (and the Screens and Processors in them) for a specific **human role** (Customer, Seller, Admin...) or **system actor** (Payment Gateway, Scheduler...) in domain language. No COMMAND may be attributed to a generic "User".
 - Every COMMAND is issued by exactly one role/actor (the single-issuer rule above, from the roles' side).
 - **Lane order (preferred):** when a Chapter has several Actor lanes, put the **system actors** (the lanes with PROCESSORs) on the **top** lanes and the human roles (the lanes with SCREENs) below them, closest to the Interaction lane. Place new Actor lanes accordingly; do not reorder existing lanes unasked.
-- A human role needs at least one COMMAND and one QUERY — a role that never acts and never sees anything is decorative, not modeled.
+- A human role needs at least one COMMAND and one READ_MODEL — a role that never acts and never sees anything is decorative, not modeled.
 
 ## Field Lineage (Information Completeness)
 
@@ -120,15 +120,15 @@ Every field on every element has a known source: a same-named field on a connect
 
 ## Connections Read Forward
 
-Within a slice an arrow goes vertically between lanes (Screen → Command → Event, Query → Screen). Between slices it goes **forward to a later slice** — never backward (right-to-left). This is why elements that belong together — a SCREEN and the QUERY it shows, a SCREEN/PROCESSOR and the COMMAND it issues, a COMMAND and the EVENT it produces — should share a slice whenever possible: the moment they don't, a backward arrow becomes a real risk.
+Within a slice an arrow goes vertically between lanes (Screen → Command → Event, Read Model → Screen). Between slices it goes **forward to a later slice** — never backward (right-to-left). This is why elements that belong together — a SCREEN and the READ_MODEL it shows, a SCREEN/PROCESSOR and the COMMAND it issues, a COMMAND and the EVENT it produces — should share a slice whenever possible: the moment they don't, a backward arrow becomes a real risk.
 
 When an element's natural slice is already occupied by something else, add a new slice immediately before or after (whichever keeps every connection forward) rather than wiring across the gap. The allowed arrows and how to create them are in the `connections` skill.
 
-## Updating a Query That Already Feeds a Screen
+## Updating a Read Model That Already Feeds a Screen
 
-A later EVENT sometimes needs to change data an earlier QUERY already shows on a SCREEN — e.g. a cancellation affecting an "active items" view placed several slices earlier. Wiring that later EVENT straight back into the existing QUERY is never the fix: it's a backward arrow (see Connections Read Forward).
+A later EVENT sometimes needs to change data an earlier READ_MODEL already shows on a SCREEN — e.g. a cancellation affecting an "active items" view placed several slices earlier. Wiring that later EVENT straight back into the existing READ_MODEL is never the fix: it's a backward arrow (see Connections Read Forward).
 
-Instead, add a **new QUERY** in a slice **immediately after** the later EVENT's slice, with a matching SCREEN there (same name as the earlier one, showing the updated data). Connect the later EVENT forward into the new QUERY: the arrow copies the Event's fields into it, and the rest of the QUERY's fields are the ones the view needs. It is a normal QUERY, not a linked copy: a linked copy shows its original unchanged and cannot be edited, so use one only where the later point shows the same data unchanged. The new SCREEN is a normal Screen with its own mockup. Leave the earlier QUERY and SCREEN exactly as they are — they're still what that earlier point in the timeline correctly showed. Never delete them.
+Instead, add a **new READ_MODEL** in a slice **immediately after** the later EVENT's slice, with a matching SCREEN there (same name as the earlier one, showing the updated data). Connect the later EVENT forward into the new READ_MODEL: the arrow copies the Event's fields into it, and the rest of the READ_MODEL's fields are the ones the view needs. It is a normal READ_MODEL, not a linked copy: a linked copy shows its original unchanged and cannot be edited, so use one only where the later point shows the same data unchanged. The new SCREEN is a normal Screen with its own mockup. Leave the earlier READ_MODEL and SCREEN exactly as they are — they're still what that earlier point in the timeline correctly showed. Never delete them.
 
 ## Linked Copies
 
@@ -136,7 +136,7 @@ A **linked copy** (`copyOf` the id of its original) is an element of the same ty
 
 To make one: `POST /elements` with `{ slice, lane, copyOf }` (the lane must take the original's type), then connect it to its own neighbors normally (the `connections` skill).
 
-A linked copy shows its original's type and content (name, fields, mockup) **live** and **cannot be changed**: only `slice`, `lane` and `x`; any other change is refused (409) and must be made on the original. It gets no fields from arrows, but its original's fields pass on along its arrows. So a copy never diverges from its original: a view that must show changed data is a new element (see Updating a Query That Already Feeds a Screen).
+A linked copy shows its original's type and content (name, fields, mockup) **live** and **cannot be changed**: only `slice`, `lane` and `x`; any other change is refused (409) and must be made on the original. It gets no fields from arrows, but its original's fields pass on along its arrows. So a copy never diverges from its original: a view that must show changed data is a new element (see Updating a Read Model That Already Feeds a Screen).
 
 **Scenarios are always added to the original, never to a copy.** A scenario can only choose an Event or Command that is not a copy and sits in the same Chapter as its Scenarios element. The `scenarios` skill carries the step-by-step.
 
@@ -147,14 +147,14 @@ Deleting the original deletes all its copies, its arrows and the scenarios that 
 A PROCESSOR reacting to an event from another system — external (a webhook/API, an element in an Integration lane) or another team's own timeline — needs a two-stage shape, never a direct reaction:
 
 ```
-external EVENT → todo-list QUERY → translation PROCESSOR → COMMAND → internal EVENT → worker PROCESSOR's own todo-list QUERY
+external EVENT → todo-list READ_MODEL → translation PROCESSOR → COMMAND → internal EVENT → worker PROCESSOR's own todo-list READ_MODEL
 ```
 
 - The external/other-team EVENT feeds only a *translation* processor's todo list — never a *worker* processor's todo list directly.
 - A translation processor's own todo list is opened by that external event and is never closed — it doesn't track "done," it only relays.
 - Its resulting COMMAND produces the internal EVENT the domain actually works with — that's the moment external data becomes a business fact in this domain's own language, ready for a worker processor (or anything else) to react to. Decide explicitly how the external payload's raw fields map to the internal EVENT's domain fields (correlation, idempotency, duplicate handling).
 
-Every PROCESSOR, translation or worker, needs its own todo-list QUERY (opened by triggering events, closed by completion events: EVENT → QUERY arrows) — no "pure relay" exemption. A todo-list QUERY is list-shaped (see QUERY above). A slice with a PROCESSOR, a COMMAND, an EVENT and an element in an Integration lane is a `translation` slice (see Slices).
+Every PROCESSOR, translation or worker, needs its own todo-list READ_MODEL (opened by triggering events, closed by completion events: EVENT → READ_MODEL arrows) — no "pure relay" exemption. A todo-list READ_MODEL is list-shaped (see READ_MODEL above). A slice with a PROCESSOR, a COMMAND, an EVENT and an element in an Integration lane is a `translation` slice (see Slices).
 
 ## Open Questions vs. Decided Failures
 
@@ -189,10 +189,10 @@ Example (a template-driven health record system):
 
 ## Anti-Patterns
 
-- **Data-loading commands**: `LoadOrders`/`FetchData` are queries, not business intent — model as a QUERY, not a COMMAND.
+- **Data-loading commands**: `LoadOrders`/`FetchData` are read models, not business intent — model as a READ_MODEL, not a COMMAND.
 - **UI-interaction events**: `SidebarOpened`/`ButtonClicked` are UI state, not business facts — don't model them unless the business genuinely cares.
 - **Technical events**: `ApiCalled`/`ResponseReceived` describe machinery, not an outcome — find the business fact underneath.
-- **Calculated events**: an event whose value is recomputed as source data changes (a running total, an average) is a QUERY, not an EVENT.
+- **Calculated events**: an event whose value is recomputed as source data changes (a running total, an average) is a READ_MODEL, not an EVENT.
 
 ## Structural Shapes
 
@@ -200,14 +200,14 @@ Beyond the local anti-patterns above, four recurring **connection shapes** are w
 
 - **The bed (real anti-pattern — always flag)** — one SCREEN wired to more than one COMMAND. A screen is where the user has already committed to one decision, so it should trigger exactly one command; wiring several to it means the choice is being made somewhere invisible to the model.
 - **The left chair (candidate)** — one COMMAND resulting in more than two EVENTs. May mean the command is doing more than one job, or it may be a single business outcome that legitimately fans out. Check whether the outcomes always happen together or could happen independently before treating it as a concern.
-- **The right chair (candidate)** — one QUERY built from more than three EVENTs. May mean the view is answering more than one question at once, or it may be one coherent picture that genuinely needs that many sources. Check whether the fields shown belong to a single thing the user is checking before treating it as a concern.
+- **The right chair (candidate)** — one READ_MODEL built from more than three EVENTs. May mean the view is answering more than one question at once, or it may be one coherent picture that genuinely needs that many sources. Check whether the fields shown belong to a single thing the user is checking before treating it as a concern.
 - **The shelf (candidate)** — one slice with noticeably more scenarios than the others in the Chapter (a rough outlier, not a fixed threshold — compare against the typical count for that Chapter). May mean the step is quietly covering ground that belongs to a separate step, or it may just be genuinely more complex. Check what the extra scenarios actually cover before treating it as a concern.
 
 ## Flow & Causality
 
 Model causality, not strict sequence:
 
-- A Chapter starts with a **state read** slice (a QUERY feeding a SCREEN) or an **automation** reacting to an EVENT already on the board — never with an unmotivated COMMAND.
+- A Chapter starts with a **state read** slice (a READ_MODEL feeding a SCREEN) or an **automation** reacting to an EVENT already on the board — never with an unmotivated COMMAND.
 - Every COMMAND must be traceable to a trigger: a SCREEN (a user decision) or a PROCESSOR (a system reaction).
 - A `state change` slice must not follow another `state change` slice without a trigger in between (a new SCREEN or PROCESSOR) — two COMMANDs in a row with nothing issuing the second one is a gap, not a shortcut.
 
@@ -224,8 +224,8 @@ Before treating a model as done, verify:
 
 - [ ] Every EVENT is past tense and describes a business fact, not machinery or UI state
 - [ ] Every COMMAND is imperative business intent, not a data-loading query
-- [ ] Every QUERY is named for its data, not its implementation
-- [ ] No EVENT holds a computed/aggregated value — that belongs in a QUERY
+- [ ] Every READ_MODEL is named for its data, not its implementation
+- [ ] No EVENT holds a computed/aggregated value — that belongs in a READ_MODEL
 - [ ] Every COMMAND has exactly one issuer (one inbound arrow from a SCREEN or PROCESSOR)
 - [ ] Every COMMAND traces back to a SCREEN (user decision) or PROCESSOR (system reaction)
 - [ ] The Chapter starts with a state read or an automation reacting to an event — not a bare COMMAND
