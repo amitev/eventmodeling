@@ -817,12 +817,14 @@ function Board() {
   const contextInfo = contexts.find((c) => c.id === contextInfoId);
 
   // The Default (first) Context cannot be deleted; its Chapters' Contexts move to it.
+  // Deleting the filtered Context clears the filter.
   const removeContext = (contextId) => {
     const fallback = contexts[0];
-    if (contextId === fallback.id) return;
+    if (!contextId || contextId === fallback.id) return;
     const used = chapters.filter((c) => c.data.context === contextId).length;
     if (!window.confirm(`Delete this context? ${used} chapter(s) move to "${fallback.name}".`)) return;
     setContexts((cs) => cs.filter((c) => c.id !== contextId));
+    if (filterId === contextId) setContextFilter('');
     setNodes((ns) =>
       ns.map((n) =>
         n.type === 'chapter' && n.data.context === contextId
@@ -845,7 +847,6 @@ function Board() {
       contexts,
       setChapterContext,
       addContext,
-      removeContext,
       activate: setActiveId,
       openInfo: (id) => {
         if (overview) return;
@@ -1507,6 +1508,21 @@ function Board() {
             <circle cx="8" cy="8" r="6.5" />
             <path d="M8 7.2V11.5" />
             <circle cx="8" cy="4.8" r="0.4" />
+          </svg>
+        </button>
+        <button
+          className="hotkeys-btn search-btn"
+          onClick={() => removeContext(filterId)}
+          disabled={!filterId || filterId === contexts[0]?.id}
+          title={
+            filterId && filterId !== contexts[0]?.id
+              ? 'Delete the selected context (its Chapters move to the Default)'
+              : 'Delete the selected context (choose a context other than the Default first)'
+          }
+          aria-label="Delete context"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" />
           </svg>
         </button>
         <span className="target" title="New slices are added to this Chapter">

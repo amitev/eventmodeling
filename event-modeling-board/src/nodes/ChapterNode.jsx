@@ -13,7 +13,7 @@ const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdo
 export function ChapterNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeChapter, compactChapter, openMovie, activeId, overview } = useContext(BoardActions);
-  const { contexts, setChapterContext, addContext, removeContext } =
+  const { contexts, setChapterContext, addContext } =
     useContext(BoardActions);
   const screenCount = useStore((s) => {
     let count = 0;
@@ -95,18 +95,6 @@ export function ChapterNode({ id, data }) {
           ))}
           <option value={NEW_CONTEXT}>+ New context...</option>
         </select>
-        {contextId !== contexts[0]?.id && (
-          <button
-            className="chapter-compact nodrag"
-            title="Delete this context"
-            aria-label="Delete this context"
-            onClick={() => removeContext(contextId)}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <path d="M1.5 2.5H8.5M4 2.5V1H6V2.5M2.5 2.5L3 9H7L7.5 2.5" />
-            </svg>
-          </button>
-        )}
         <CopyContextButton chapterId={id} className="chapter-compact" />
         <button
           className="chapter-compact nodrag"

@@ -19,7 +19,6 @@ export const BoardActions = createContext({
   contexts: [],
   setChapterContext: () => {},
   addContext: () => {},
-  removeContext: () => {},
   activate: () => {},
   clearCell: () => {},
   addSliceAfter: () => {},
