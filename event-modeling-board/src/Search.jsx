@@ -14,10 +14,19 @@ export function SearchBox({ items, focusTick, onPick, onClose }) {
     input.current?.select();
   }, [focusTick]);
 
-  // Nothing is listed until something is typed; then every match.
+  // Nothing is listed until something is typed; then names starting with it, then the others containing it
+  // (each group keeps the order of `items`).
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? items.filter((i) => i.name.toLowerCase().includes(q)) : [];
+    if (!q) return [];
+    const starts = [];
+    const contains = [];
+    for (const i of items) {
+      const at = i.name.toLowerCase().indexOf(q);
+      if (at === 0) starts.push(i);
+      else if (at > 0) contains.push(i);
+    }
+    return [...starts, ...contains];
   }, [items, query]);
   const current = Math.min(active, results.length - 1);
 
