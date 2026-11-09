@@ -7,7 +7,7 @@ description: Interview the user to find out which technologies slices are to be 
 
 **Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Every skill this builder generates states this rule.
 
-Builds the three slice-implementation skills for one technology: **state change**, **state read** and **automation** (automation and translation share one skill). The technology-neutral knowledge of what each slice type means and how to read it from the server lives in this skill's `reference/` folder; the builder adds the technology. Read `eventmodeling-core-rules` first. Endpoints: [../api.md](../api.md).
+Builds the three slice-implementation skills for one technology: **state change**, **state read** and **automation** (automation and translation share one skill). The generated skills are **backend only**: they never build UI (no Screen, view, form or HTML mockup code). The technology-neutral knowledge of what each slice type means and how to read it from the server lives in this skill's `reference/` folder; the builder adds the technology. Read `eventmodeling-core-rules` first. Endpoints: [../api.md](../api.md).
 
 | File | Holds |
 |---|---|
@@ -35,21 +35,20 @@ Cover every topic. Ask what is needed to write instructions an agent can follow 
 
 | # | Topic | Find out |
 |---|---|---|
-| 1 | **Scope** | Technology name for the skills; one stack for all three slice types, or different ones; backend only, or also UI |
+| 1 | **Scope** | Technology name for the skills; one stack for all three slice types, or different ones (always backend only, no UI: do not ask) |
 | 2 | **Language and runtime** | Language, version, runtime, package manager, build tool |
 | 3 | **Frameworks** | Web/application framework, dependency injection, serialization, any framework the user wants or forbids |
 | 4 | **Event store** | Which store or library; how events are named, serialized and versioned; stream per what (id of what); optimistic concurrency; how Events of the model map to event types |
 | 5 | **Command handling** | Style (e.g. function, aggregate, decider, handler class); how a Command arrives (HTTP, message, other); validation; error/refusal representation (maps to the `error` scenarios); idempotency; how `generated` fields (time, acting user, ids) are produced |
 | 6 | **Read models** | Where they are stored; how projections run (inline, async, catch-up/rebuild); how a Query is exposed; keys and `list` fields |
 | 7 | **Automation and translation** | How Processors are triggered (subscription, polling, schedule, message bus); retry and idempotency; how the todo list is kept; for translation: how external Events arrive (webhook, queue, polling, other) and where the mapping to internal Events lives |
-| 8 | **Screens / UI** | Whether the skills build UI at all; technology; how the Screen mockup (`html`) is used (reference, converted, ignored) |
-| 9 | **Project layout** | Existing project or new; root folder; one folder per slice or layers; file names and casing; how model names map to code names (casing, suffixes); where shared code goes |
-| 10 | **Field types** | For each model field type and flag (`list`, `generated`, `pii`, `object`, ...) the exact type or handling in this stack; how `pii` fields are treated |
-| 11 | **Tests** | Framework; how a Given/When/Then scenario becomes a test; test levels (unit, integration); where tests live; example data from the scenario |
-| 12 | **Commands to run** | Exact build, test, lint and run commands the skills must execute to verify their work (or: none) |
-| 13 | **Cross-cutting** | Logging, configuration, authentication/authorisation, time source, anything else every slice must follow |
-| 14 | **Existing code** (only if there is a project) | Path; permission to read it; which parts are the convention to follow (the user confirms what you found) |
-| 15 | **Output** | Names of the three skills (suggest `implement-state-change-<tech>`, `implement-state-read-<tech>`, `implement-automation-<tech>`, but the user chooses), where they are written (suggest `.claude/skills/`), whether an existing skill of the same name is replaced, and whether the shared decisions go into one file next to them (suggest `.claude/skills/stack-<tech>.md`, referenced as `../stack-<tech>.md`) |
+| 8 | **Project layout** | Existing project or new; root folder; folder structure (suggest, as the default: `<context name>/<chapter name>/<slice name>/`, one folder per slice, Context and Chapter folders from the model names; the user confirms or changes it); file names and casing; how model names map to code names (casing, suffixes); where shared code goes |
+| 9 | **Field types** | For each model field type and flag (`list`, `generated`, `pii`, `object`, ...) the exact type or handling in this stack; how `pii` fields are treated |
+| 10 | **Tests** | Framework; how a Given/When/Then scenario becomes a test; test levels (unit, integration); where tests live; example data from the scenario |
+| 11 | **Commands to run** | Exact build, test, lint and run commands the skills must execute to verify their work (or: none) |
+| 12 | **Cross-cutting** | Logging, configuration, authentication/authorisation, time source, anything else every slice must follow |
+| 13 | **Existing code** (only if there is a project) | Path; permission to read it; which parts are the convention to follow (the user confirms what you found) |
+| 14 | **Output** | Names of the three skills (suggest `implement-state-change-<tech>`, `implement-state-read-<tech>`, `implement-automation-<tech>`, but the user chooses), where they are written (suggest `.claude/skills/`), whether an existing skill of the same name is replaced, and whether the shared decisions go into one file next to them (suggest `.claude/skills/stack-<tech>.md`, referenced as `../stack-<tech>.md`) |
 
 When an answer opens a new question (e.g. a chosen library needs a database), add that topic and ask it. Order may change; coverage may not.
 
@@ -72,6 +71,7 @@ Write the skills (and the shared decisions file if chosen) from the `reference/`
 - Every technology statement traces to a confirmed answer or to documentation the user confirmed. No invented API, option or command. Where something is still unknown at implementation time, the skill says to ask the user.
 - Keep the rule of the type files that business rules come only from the scenarios and the model; the stack decides how, never what.
 - Examples use the user's naming rules and a neutral business example (e.g. Place Order), never real project data.
+- No UI: a generated skill builds no Screen, view, form or page, and does not use a Screen's `html`/`url`. It uses a Screen only to read the fields that arrive at a Command or leave a Query.
 - Keep each skill short; shared facts go in the decisions file once, referenced from each skill.
 
 ## Step 6 — Verify and report

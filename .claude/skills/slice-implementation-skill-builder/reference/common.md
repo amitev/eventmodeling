@@ -4,9 +4,11 @@ Technology-neutral base. The generated skill's Steps 1, 2 and 5 come from here; 
 
 ## Frontmatter of a generated skill
 
-- `name`: as the user chose (builder topic 15). `description`: what it implements, from the type file's "Description seed", plus the technology; "Use for ..." phrases; "Not for ..." naming the sibling skills by their chosen names.
+- `name`: as the user chose (builder topic 14). `description`: what it implements, from the type file's "Description seed", plus the technology; "Use for ..." phrases; "Not for ..." naming the sibling skills by their chosen names.
 - First line of the body: `Read eventmodeling-core-rules first. Endpoints: [../api.md](../api.md) (base URL http://localhost:3300). Reads only: this skill never changes the model.` Then, if a shared decisions file exists, a link to it.
 - Second line: `**Model access:** the model is read only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.`
+
+Generated skills are **backend only**: no UI code, no Screen mockup use.
 
 ## Step 1 — Which slice (ask, do not assume)
 
@@ -22,7 +24,7 @@ Invoke-RestMethod "http://localhost:3300/api/model/chapters/<chapterId>?slice=<s
 
 Result: the Chapter as stored (name, `info`, lanes) with **only this slice** in `slices` (S4.21). Print a projection, not the whole response (`model-navigation`).
 
-- Use `screenContent=true` only when the Screen's HTML is to be built too.
+- Always call with `screenContent=false` (never `true`): the skills are backend only and never use the Screen's HTML.
 - Linked copies (`copyOf`) hold no content: read the original with `GET /api/model/elements/<copyOf>`.
 - Chapter, lane and element `info`, and the `NOTES` elements of the slice (Spec lane; they may hold implementation details, among other things): implementation details (formats, limits, integrations). Read them all; they bind the code. A red Note is an open question, not a requirement: ask about it, do not guess.
 
