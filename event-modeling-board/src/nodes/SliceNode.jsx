@@ -198,7 +198,7 @@ export function SliceNode({ id, data }) {
           <CopyContextButton sliceId={id} className="slice-add" />
           <button
             className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}
-            title={data.flowEnd ? 'Flow end: remove the mark (Shift+E)' : 'Flow end: mark this slice as the end of a flow (Shift+E)'}
+            title={data.flowEnd ? 'Flow end: remove the mark (Shift+E)' : 'Flow end: mark this slice as the end of a flow, e.g. to separate use cases in one Chapter without a new Chapter (Shift+E)'}
             aria-label="Flow end"
             aria-pressed={!!data.flowEnd}
             onDoubleClick={(e) => e.stopPropagation()}
