@@ -11,6 +11,9 @@ import {
   layoutSlices,
   settleStickies,
   centerStickies,
+  membersOf,
+  sliceType,
+  stickyH,
 } from '../model/model.js';
 import { cleanName, filterNameInput } from '../model/names.js';
 import { HistoryContext } from '../state/history.js';
@@ -62,6 +65,33 @@ export function SliceNode({ id, data }) {
         return { ...n, data: flowEnd ? rest : { ...rest, flowEnd: true } };
       })
     );
+
+  const nameFromElements = () => {
+    const ns = getNodes();
+    const me = ns.find((n) => n.id === id);
+    if (!me) return;
+    const laneList = lanesOf(ns, me.parentId);
+    const elements = membersOf(ns).get(id) ?? [];
+    const type = sliceType(
+      elements.map((n) => {
+        const mid = n.position.y + stickyH(n) / 2;
+        const lane = laneList.find(
+          (l) => mid >= l.position.y && mid < l.position.y + l.data.height
+        );
+        return { kind: n.data.kind, lane: lane?.data.type };
+      })
+    );
+    const sourceKind = {
+      STATE_CHANGE: 'command',
+      STATE_READ: 'read_model',
+      AUTOMATION: 'processor',
+      TRANSLATION: 'processor',
+    }[type];
+    if (!sourceKind) return;
+    const sources = elements.filter((n) => n.data.kind === sourceKind);
+    if (sources.length !== 1 || !sources[0].data.name || sources[0].data.name === data.name) return;
+    update({ name: sources[0].data.name });
+  };
 
   // Dragging a slice header moves the whole Chapter (R1.10); a slice is reordered with the grip
   // at the right end of its header, live (R5.8): the others shift as it passes them, with their
@@ -187,6 +217,17 @@ export function SliceNode({ id, data }) {
           )}
         </div>
         <div className="slice-actions">
+          <button
+            className="slice-add slice-auto-name nodrag"
+            title="Name from slice elements"
+            aria-label="Name from slice elements"
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={nameFromElements}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <path d="M1.5 8.5L7.2 2.8M6.3 1.7L7.4 2.8M7.7 1.1L8.9 2.3M7.8 3.2L8.9 4.3" />
+            </svg>
+          </button>
           <CopyContextButton sliceId={id} className="slice-add" />
           <button
             className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}

@@ -1655,7 +1655,9 @@ function Board() {
           <MiniMap
             pannable
             zoomable
-            nodeColor={(n) => (n.type === 'chapter' ? 'rgba(0, 0, 0, 0.06)' : KINDS[n.data?.kind]?.color ?? '#eee')}
+            nodeColor={(n) => (n.type === 'chapter' ? '#ccc' : 'transparent')}
+            nodeStrokeColor={(n) => (n.type === 'chapter' ? '#ccc' : 'transparent')}
+            nodeBorderRadius={0}
           />
         </ReactFlow>
         </BoardActions.Provider>

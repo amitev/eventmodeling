@@ -7,9 +7,9 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 - **R1.1** The board is a single page with an event-modeling canvas; time flows left to right. It holds Chapters (section 1a).
 - **R1.1a** A **Chapter** is one modelled area: its lanes, slices and their elements.
-- **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid. The board opens fitted, as with Fit view (R1.20), once its Chapters are measured (minimum zoom 20%).
+- **R1.2** The canvas has pan, zoom, a minimap, zoom controls and a dotted background grid. The minimap shows each Chapter as a solid light-gray block; it hides all content inside Chapters. The board opens fitted, as with Fit view (R1.20), once its Chapters are measured (minimum zoom 20%).
 - **R1.3** Items snap to a 20px grid.
-- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, **Copy Context**, **Flow end**, **+**, **×**, **Grip**) and the Chapter handle (**i**, **Copy Context**, **↔**, **×**, movie strip, context delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
+- **R1.3a** The small buttons on lane labels (**×**, **+**, colour, **i**), slice headers (**i**, auto-name, **Copy Context**, **Flow end**, **+**, **×**, **Grip**) and the Chapter handle (**i**, **Copy Context**, **↔**, **×**, movie strip, context delete) look alike: 18px squares, 3px radius, drawn icons (10px, 1.6px stroke, not text characters) exactly centred.
 - **R1.4** The board starts with one empty Chapter, "Chapter 1", in the Default Context: lanes Actor, Interaction, Event (R2.10), one "New Slice" (220px wide), no elements.
 - **R1.6** The board is saved automatically in the browser and restored on reload. The saved data is exactly the export file's information (R6.10), same ids. A missing or unreadable saved board gives the starting board (R1.4). The server model replaces it as soon as the server answers (R10.2).
 
@@ -153,7 +153,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
   | Event | orange |
   | Processor | lavender cogwheel (R3.6a1), ⚙️ on its toolbar button |
   | Scenarios | blue, a card instead of a sticky (R3.11) |
-  | Notes | white card (yellow on its toolbar button and the minimap), a card instead of a sticky (R3.18) |
+  | Notes | white card (yellow on its toolbar button), a card instead of a sticky (R3.18); hidden in the minimap (R1.2) |
 
 - **R3.2** An element has no default lane: it goes in the lane of the Cell it is added to (R3.3), only if that lane's type takes it (R2.10); otherwise nothing is added. Toolbar buttons of types the selected Cell's lane does not take look dimmed; their tooltips name the lane types that take them. An element can be dragged freely but always ends up inside a Cell (R5.14).
 - **R3.3** Elements are added by clicking a toolbar button or dragging it onto the board. A click puts the element in the selected Cell (R5a.10); with none selected it does nothing. A button released over a Cell adds the element there, at the release position kept inside the slice margins (R5.14), or centred if the Cell is empty (R5a.10); released elsewhere it adds nothing.
@@ -255,7 +255,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.1** Each slice has an id (R1.14), a name and a width, and sits in the Chapter above the lanes.
 - **R5.2** **+ Slice** appends a slice named "New Slice" after the last slice of the active Chapter (R1a.4). The new slice's top Cell is selected (R5a.5).
-- **R5.2a** Every slice has a **+** button at the right end of its header (shown on mouse-over, R5.22). It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The new slice's top Cell is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. Next to it is the **×** delete button (R5.4).
+- **R5.2a** Every slice has a **+** button at the right end of its header (shown on mouse-over, R5.22). It adds a 220px "New Slice" right after that slice; later slices and their elements move right (R5.7, R5.15). The new slice's top Cell is selected (R5a.5). The button neither starts a Chapter drag nor triggers renaming. The **×** delete button follows it (R5.4).
 - **R5.3** Double-clicking a slice header renames it; an empty name is ignored (previous kept), as for lanes (R2.4a).
 - **R5.4** A slice cannot be selected, only its Cells (section 5a). A plain click on a slice header (not a drag, nor on its buttons or while renaming) selects its **top Cell** (R5a.5). A slice is deleted with the **×** in its header (R5.11, R5.18, R5.19), or **Shift+Delete** / **Shift+Backspace** while one of its Cells is selected, after confirmation (R5a.11).
 - **R5.5** A slice's height always covers all lanes, also after lane add/remove.
@@ -292,8 +292,9 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
-- **R5.22** **Slice header buttons.** To keep the header compact, only the **i** button (R1c.2) is always visible. **Copy Context** (R1c.6, first), **Flow end** (R5.21), **+** (R5.2a), **×** (R5.4) and the **grip** (R5.8) show only while the mouse is over the header (or a button in it has the keyboard focus), at its right end; the name takes the room otherwise. They keep their hotkeys and tooltips.
+- **R5.22** **Slice header buttons.** To keep the header compact, only the **i** button (R1c.2) is always visible. Auto-name (R5.24), **Copy Context** (R1c.6), **Flow end** (R5.21), **+** (R5.2a), **×** (R5.4) and the **grip** (R5.8) show only while the mouse is over the header (or a button in it has the keyboard focus), in that order at its right end; the name takes the room otherwise. They keep their hotkeys and tooltips.
 - **R5.23** The slice body has a 15% white background tint, so lane backgrounds and borders remain visible.
+- **R5.24** **Auto-name.** The first button on the right of a slice header is a wand with a golden icon. It sets the slice name from its elements: the Command for a state-change slice, the Read Model for a state-read slice, and the Processor for an automation or translation slice. It changes the name only when exactly one matching element has a non-empty name; otherwise it does nothing. One undo step (R8.1). Tooltip and accessible name: "Name from slice elements".
 
 ## 5a. Cells
 

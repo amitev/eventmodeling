@@ -133,6 +133,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   cursor: pointer; color: #fff; background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px;
 }
+.slice-add.slice-auto-name svg { color: #ffd54f; }
 .slice-add:hover { background: rgba(255, 255, 255, 0.25); }
 .slice-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slice-header input { min-width: 0; flex: 1; font: inherit; font-weight: 700; }
