@@ -1,5 +1,5 @@
 // Pieces shared by the node components.
-import { useContext, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { snap } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';
@@ -182,6 +182,20 @@ export function CopyContextButton({ elementId, sliceId, chapterId, className = '
 export function ScreenPreview({ html, url, title }) {
   const box = useRef(null);
   const [scale, setScale] = useState(0.14);
+  // The mockup loads when its box first comes near the view, and then stays loaded.
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        setNear(true);
+        observer.disconnect();
+      },
+      { rootMargin: '300px' }
+    );
+    observer.observe(box.current);
+    return () => observer.disconnect();
+  }, []);
   useLayoutEffect(() => {
     const el = box.current;
     const update = () => el.clientWidth && setScale(el.clientWidth / MOCKUP_W);
@@ -192,15 +206,17 @@ export function ScreenPreview({ html, url, title }) {
   }, []);
   return (
     <div ref={box} className="screen-frame-box">
-      <iframe
-        key={url ?? 'code'}
-        className="screen-frame"
-        title={title}
-        sandbox={url ? URL_SANDBOX : HTML_SANDBOX}
-        scrolling="no"
-        {...(url ? { src: url } : { srcDoc: html })}
-        style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
-      />
+      {near && (
+        <iframe
+          key={url ?? 'code'}
+          className="screen-frame"
+          title={title}
+          sandbox={url ? URL_SANDBOX : HTML_SANDBOX}
+          scrolling="no"
+          {...(url ? { src: url } : { srcDoc: html })}
+          style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
+        />
+      )}
     </div>
   );
 }
