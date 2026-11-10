@@ -41,6 +41,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
   Import and a saved board are not checked (R7.4); the server refuses such names on push (SERVER.md S3.4).
 - **R1.20** **Fit view.** **Shift+F** does what the Fit view button of the zoom controls does: it zooms and pans so the whole board fits the window, **including 100px above each Chapter** (its handle fully, its title partly, R1a.3) (with 4% padding). The Fit view button of the zoom controls does the same, as does changing the Context filter (R1b.7). Ignored while typing in a field or while a popup is open. The button's tooltip is "Fit view (Shift+F)" (R1d.2). Not an undo step.
 - **R1.21** **Large boards stay responsive.** During a drag or resize (R8.4) the board is not saved (R1.6) and not checked for deleted scenarios (R3.17) or copies (R3.22) and Chapter arrows (R1b.8); this happens once when it ends. **Learning (implementation):**
+  - The board renders only the nodes and arrows in view (`onlyRenderVisibleElements`). A node outside the view has no DOM and keeps its saved data; its Screen mockup reloads when it comes into view.
   - A `useStore` selector runs on every store change, pan and zoom included. It reads a Chapter's nodes through the store's `parentLookup` (`childrenOf`), never by scanning `nodeLookup`.
   - The `BoardActions` value must not depend on `nodes`: it calls the actions that read the board through a ref to their newest version. A changing value re-renders every node on every drag frame.
 

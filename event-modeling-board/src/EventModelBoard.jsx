@@ -1597,6 +1597,7 @@ function Board() {
           nodes={displayNodes}
           edges={displayEdges}
           nodeTypes={nodeTypes}
+          onlyRenderVisibleElements
           onNodesChange={handleNodesChange}
           onNodeClick={(e, node) => {
             // Lanes cover the whole Cell area, so a click on the empty part of a Cell is
