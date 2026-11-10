@@ -1,7 +1,7 @@
 // Pieces shared by the node components.
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
+import { chapterMetadata, snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';
 import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 import { BoardActions } from '../state/BoardActions.js';
@@ -9,6 +9,17 @@ import { BoardActions } from '../state/BoardActions.js';
 // The nodes inside one parent (a Chapter), straight from the store's parent index. Use it in
 // `useStore` selectors instead of scanning `nodeLookup`: selectors run on every store change, pan and zoom included.
 export const childrenOf = (s, parentId) => s.parentLookup.get(parentId)?.values() ?? [];
+
+const metadataByState = new WeakMap();
+export function chapterMetadataOf(state, chapterId) {
+  let chapters = metadataByState.get(state);
+  if (!chapters) {
+    chapters = new Map();
+    metadataByState.set(state, chapters);
+  }
+  if (!chapters.has(chapterId)) chapters.set(chapterId, chapterMetadata(childrenOf(state, chapterId)));
+  return chapters.get(chapterId);
+}
 
 const widthsByState = new WeakMap();
 const widthsByStore = new WeakMap();

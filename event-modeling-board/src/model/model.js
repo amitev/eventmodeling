@@ -143,6 +143,34 @@ export const lanesOf = (nodes, chapterId) =>
     .sort((a, b) => a.position.y - b.position.y);
 export const chaptersOf = (nodes) => nodes.filter((n) => n.type === 'chapter');
 
+export function chapterMetadata(nodes) {
+  const laneCounts = new Map();
+  let laneTop = Infinity;
+  let laneBottom = -Infinity;
+  let lanesHeight = 0;
+  let width = 0;
+  let sliceCount = 0;
+  let lastSliceX = -Infinity;
+  let firstSlice;
+  let screenCount = 0;
+  for (const n of nodes) {
+    if (n.type === 'lane') {
+      laneCounts.set(n.data.type, (laneCounts.get(n.data.type) ?? 0) + 1);
+      laneTop = Math.min(laneTop, n.position.y);
+      laneBottom = Math.max(laneBottom, n.position.y);
+      lanesHeight += n.data.height;
+      width = Math.max(width, n.data.width ?? LANE_WIDTH);
+    } else if (n.type === 'slice') {
+      sliceCount++;
+      lastSliceX = Math.max(lastSliceX, n.position.x);
+      if (!firstSlice || n.position.x < firstSlice.position.x) firstSlice = n;
+    } else if (n.type === 'sticky' && n.data.kind === 'screen') {
+      screenCount++;
+    }
+  }
+  return { laneCounts, laneTop, laneBottom, lanesHeight, width: width || 1, sliceCount, lastSliceX, firstSliceWidth: firstSlice?.data.width ?? 0, screenCount };
+}
+
 export const setSliceWidth = (nodes, id, width) =>
   nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, width } } : n));
 

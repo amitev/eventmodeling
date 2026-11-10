@@ -47,6 +47,8 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - The `BoardActions` value must not depend on `nodes`: it calls the actions that read the board through a ref to their newest version. A changing value re-renders every node on every drag frame.
   - Slice insertion lays out only its Chapter. Other Chapters keep their positions and widths.
   - Notes and Scenarios share Cell counts and stretch widths per Chapter. Reuse widths until Chapter geometry or element kinds change.
+  - Chapter, lane and slice selectors share lane counts, bounds, height, first/last slice and Screen count per Chapter and store update. Select primitive values to avoid unrelated re-renders.
+  - Development insertion profiles show React/React Flow rendering, JSX checks and garbage collection can dominate. Measure production click-to-paint before attributing remaining delay to model calculations.
   - Saving and sync reuse unchanged Chapters' serialized content and JSON. Check all Chapters for changes; resolve arrows in global file order. Include measured sizes used for membership.
   - Selection-only changes do not rewrite browser storage. Save timing stays unchanged. Undo keys reuse unchanged node data JSON.
 

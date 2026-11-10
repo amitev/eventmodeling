@@ -3,36 +3,25 @@ import { createPortal } from 'react-dom';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { childrenOf, InfoButton, useChapterDrag } from './parts.jsx';
+import { chapterMetadataOf, InfoButton, useChapterDrag } from './parts.jsx';
 
 export function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeLane, addLaneAfter, overview } = useContext(BoardActions);
   // The last lane of a required type (Actor, Interaction, Event) of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
-    let count = 0;
-    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) if (n.type === 'lane' && n.data.type === data.type) count++;
+    const count = chapterMetadataOf(s, s.nodeLookup.get(id)?.parentId).laneCounts.get(data.type) ?? 0;
     return !REQUIRED_LANE_TYPES.includes(data.type) || count > 1;
   });
   // Width of the Chapter's first slice, which the lane type is centred in.
-  const firstSliceWidth = useStore((s) => {
-    let first;
-    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) {
-      if (n.type === 'slice' && (!first || n.position.x < first.position.x)) first = n;
-    }
-    return first?.data.width ?? 0;
-  });
+  const firstSliceWidth = useStore((s) => chapterMetadataOf(s, s.nodeLookup.get(id)?.parentId).firstSliceWidth);
   // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
   const edges = useStore((s) => {
     const me = s.nodeLookup.get(id);
     if (!me) return '';
-    let first = true;
-    let last = true;
-    for (const n of childrenOf(s, me.parentId)) {
-      if (n.type !== 'lane' || n.id === id) continue;
-      if (n.position.y < me.position.y) first = false;
-      if (n.position.y > me.position.y) last = false;
-    }
+    const meta = chapterMetadataOf(s, me.parentId);
+    const first = me.position.y <= meta.laneTop;
+    const last = me.position.y >= meta.laneBottom;
     return `${first ? ' first' : ''}${last ? ' last' : ''}`;
   });
   const [editing, setEditing] = useState(false);

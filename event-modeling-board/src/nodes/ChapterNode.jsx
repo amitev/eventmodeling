@@ -1,9 +1,8 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
-import { LANE_WIDTH } from '../model/model.js';
 import { cleanName, filterNameInput } from '../model/names.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { childrenOf, CopyContextButton, InfoButton } from './parts.jsx';
+import { chapterMetadataOf, CopyContextButton, InfoButton } from './parts.jsx';
 
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 
@@ -15,25 +14,13 @@ export function ChapterNode({ id, data }) {
   const { removeChapter, compactChapter, openMovie, activeId, overview } = useContext(BoardActions);
   const { contexts, setChapterContext, addContext } =
     useContext(BoardActions);
-  const screenCount = useStore((s) => {
-    let count = 0;
-    for (const n of childrenOf(s, id)) if (n.type === 'sticky' && n.data.kind === 'screen') count++;
-    return count;
-  });
+  const screenCount = useStore((s) => chapterMetadataOf(s, id).screenCount);
   // A Chapter whose Context is missing shows the Default (first) one.
   const contextId = contexts.some((c) => c.id === data.context) ? data.context : contexts[0]?.id;
   const [editing, setEditing] = useState(false);
   const ref = useRef(null);
-  const width = useStore((s) => {
-    let w = 0;
-    for (const n of childrenOf(s, id)) if (n.type === 'lane') w = Math.max(w, n.data.width ?? LANE_WIDTH);
-    return w || 1;
-  });
-  const height = useStore((s) => {
-    let h = 0;
-    for (const n of childrenOf(s, id)) if (n.type === 'lane') h += n.data.height;
-    return h || 1;
-  });
+  const width = useStore((s) => chapterMetadataOf(s, id).width);
+  const height = useStore((s) => chapterMetadataOf(s, id).lanesHeight || 1);
 
   useEffect(() => {
     if (editing) ref.current?.select();
