@@ -27,9 +27,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .lane {
   position: relative; box-sizing: border-box; pointer-events: none;
   background: rgba(255, 255, 255, 0.55);
-  /* The Chapter outline: left and right on every lane, top on the first, bottom on the last. */
+  /* The Chapter outline: left on every lane, top on the first, bottom on the last. */
   border: 0 solid var(--chapter-border);
-  border-left-width: 2px; border-right-width: 2px; border-top: 1px solid #d6d6e0;
+  border-left-width: 2px; border-top: 1px solid #d6d6e0;
 }
 .lane.first { border-top: 2px solid var(--chapter-border); }
 .lane.last { border-bottom: 2px solid var(--chapter-border); }
@@ -38,6 +38,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .lane.last { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
 .lane.first .lane-header { border-top-left-radius: 2px; }
 .lane.last .lane-header { border-bottom-left-radius: 2px; }
+.chapter-right-border {
+  position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; width: 2px;
+  border-radius: 0 3px 3px 0; background: var(--chapter-border); pointer-events: none;
+}
 /* Lane colours: a light, transparent tint over the base; `none` leaves it as is. */
 .lane.color-orange, .swatch.color-orange { --lane-rgb: 255, 159, 64; }
 .lane.color-red, .swatch.color-red { --lane-rgb: 239, 83, 80; }

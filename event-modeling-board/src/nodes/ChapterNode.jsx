@@ -50,6 +50,7 @@ export function ChapterNode({ id, data }) {
 
   return (
     <div style={{ width, height }}>
+      <div className="chapter-right-border" />
       <Handle type="target" position={Position.Left} className="chapter-port" />
       <Handle type="source" position={Position.Right} className="chapter-port" />
       <div className="chapter-title">

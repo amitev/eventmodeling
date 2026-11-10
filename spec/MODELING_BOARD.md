@@ -16,6 +16,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ### Chapter width
 
 - **R1.7** The Chapter has one width for all lanes.
+- **R1.7a** The Chapter's right border is continuous across all lanes, including when zoomed out.
 - **R1.8** The Chapter is exactly as wide as its slices: from the lanes' left edge to the end of the last slice. It has no resize handle.
 - **R1.9** It grows and shrinks automatically as slices change. It always has a slice (R5.19), so it is never narrower than the label zone plus that slice.
 
