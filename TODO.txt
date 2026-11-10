@@ -62,6 +62,14 @@ Other features to add
 
 Agentic
 - Run the agent from the CLI?
+- Ralph loop? - Agents should be like elves in a fairy tale. When you wake up - work is done. It sounds weird, but it matches pretty well.
+Not pushing work to agents, they pull it.
+- Invisible agents - What if an Agent gets notified what I´m doing? Why should I tell it to add examples? It should know. If an agent knows, I just added an Event to an Event Model - why wouldn´t it just add the examples? Silently.
+If I add an empty HTML-Screen, in a slice called "Register Customer", why wouldn´t it provide a first sketch automatically - styling based on the previous screens already there?
+If I add a new field - why wouldn´t it just add it throughout the whole chain without me asking for it?
+Why can´t I just zoom in on a part of the model and the agent knows what I´m looking at?
+https://www.linkedin.com/posts/martindilger_eventmodeling-emstudio-share-7506952380597297152-lpeU/
+
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 - Build slices - skills for building the slice types. Agent should also read the chapter and lane docs.
 - Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.
