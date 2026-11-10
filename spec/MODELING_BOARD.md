@@ -294,7 +294,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5.22** **Slice header buttons.** To keep the header compact, only the **i** button (R1c.2) is always visible. Auto-name (R5.24), **Copy Context** (R1c.6), **Flow end** (R5.21), **+** (R5.2a), **×** (R5.4) and the **grip** (R5.8) show only while the mouse is over the header (or a button in it has the keyboard focus), in that order at its right end; the name takes the room otherwise. They keep their hotkeys and tooltips.
 - **R5.23** The slice body has a 15% white background tint, so lane backgrounds and borders remain visible.
-- **R5.24** **Auto-name.** The first button on the right of a slice header is a wand with a golden icon. It sets the slice name from its elements: the Command for a state-change slice, the Read Model for a state-read slice, and the Processor for an automation or translation slice. It changes the name only when exactly one matching element has a non-empty name; otherwise it does nothing. One undo step (R8.1). Tooltip and accessible name: "Name from slice elements".
+- **R5.24** **Auto-name.** The first button on the right of a slice header is a wand with a golden icon. It sets the slice name from its elements: the Command for a state-change slice, the Read Model for a state-read slice, and the Processor for an automation or translation slice. A linked copy uses its original's name (R3.22). It changes the name only when exactly one matching element has a non-empty name; otherwise it does nothing. One undo step (R8.1). Tooltip and accessible name: "Name from slice elements".
 
 ## 5a. Cells
 

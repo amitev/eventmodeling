@@ -89,8 +89,13 @@ export function SliceNode({ id, data }) {
     }[type];
     if (!sourceKind) return;
     const sources = elements.filter((n) => n.data.kind === sourceKind);
-    if (sources.length !== 1 || !sources[0].data.name || sources[0].data.name === data.name) return;
-    update({ name: sources[0].data.name });
+    if (sources.length !== 1) return;
+    const source = sources[0];
+    const sourceName = source.data.copyOf
+      ? ns.find((n) => n.id === source.data.copyOf)?.data.name
+      : source.data.name;
+    if (!sourceName || sourceName === data.name) return;
+    update({ name: sourceName });
   };
 
   // Dragging a slice header moves the whole Chapter (R1.10); a slice is reordered with the grip
