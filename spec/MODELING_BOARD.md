@@ -293,6 +293,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 **Learning (implementation).** At rest, an element's slice is the one holding its left edge (it stays at least 40px inside its slice), not the one holding its centre.
 
 - **R5.22** **Slice header buttons.** To keep the header compact, only the **i** button (R1c.2) is always visible. **Copy Context** (R1c.6, first), **Flow end** (R5.21), **+** (R5.2a), **×** (R5.4) and the **grip** (R5.8) show only while the mouse is over the header (or a button in it has the keyboard focus), at its right end; the name takes the room otherwise. They keep their hotkeys and tooltips.
+- **R5.23** The slice body has a 15% white background tint, so lane backgrounds and borders remain visible.
 
 ## 5a. Cells
 
