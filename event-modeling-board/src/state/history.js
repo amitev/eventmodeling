@@ -17,7 +17,9 @@ export const keyOf = (nodes, edges, contexts) =>
 // Undo/redo of the board (in memory only). `restore(snapshot)` puts a snapshot back on the
 // board; `blocked.current` turns the Ctrl+Z / Ctrl+Y hotkeys off (e.g. while a popup is open).
 // Returns the button state `hist`, `undo`, `redo`, the gesture `api` for HistoryContext, and
-// `markSilent()`: a change made right after it is folded into the user's operation.
+// `markSilent()`: a change made right after it is folded into the user's operation. `gesture` is
+// the ref that is >0 during a drag/resize, and `settled` counts the gesture ends: work that
+// is skipped during a gesture re-runs when `settled` changes.
 export function useHistory({ nodes, edges, contexts, restore, blocked }) {
   const past = useRef([]);
   const future = useRef([]);
@@ -101,5 +103,5 @@ export function useHistory({ nodes, edges, contexts, restore, blocked }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo, blocked]);
 
-  return { hist, undo, redo, api, markSilent };
+  return { hist, undo, redo, api, markSilent, gesture, settled: tick };
 }

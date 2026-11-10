@@ -6,6 +6,10 @@ import { HistoryContext } from '../state/history.js';
 import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 import { BoardActions } from '../state/BoardActions.js';
 
+// The nodes inside one parent (a Chapter), straight from the store's parent index. Use it in
+// `useStore` selectors instead of scanning `nodeLookup`: selectors run on every store change, pan and zoom included.
+export const childrenOf = (s, parentId) => s.parentLookup.get(parentId)?.values() ?? [];
+
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 export function useHorizontalDrag() {
   const zoom = useStore((s) => s.transform[2]);

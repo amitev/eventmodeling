@@ -3,27 +3,23 @@ import { createPortal } from 'react-dom';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { InfoButton, useChapterDrag } from './parts.jsx';
+import { childrenOf, InfoButton, useChapterDrag } from './parts.jsx';
 
 export function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
   const { removeLane, addLaneAfter, overview } = useContext(BoardActions);
   // The last lane of a required type (Actor, Interaction, Event) of a Chapter cannot be removed.
   const canRemove = useStore((s) => {
-    const parent = s.nodeLookup.get(id)?.parentId;
     let count = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'lane' && n.parentId === parent && n.data.type === data.type) count++;
-    });
+    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) if (n.type === 'lane' && n.data.type === data.type) count++;
     return !REQUIRED_LANE_TYPES.includes(data.type) || count > 1;
   });
   // Width of the Chapter's first slice, which the lane type is centred in.
   const firstSliceWidth = useStore((s) => {
-    const parent = s.nodeLookup.get(id)?.parentId;
     let first;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'slice' && n.parentId === parent && (!first || n.position.x < first.position.x)) first = n;
-    });
+    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) {
+      if (n.type === 'slice' && (!first || n.position.x < first.position.x)) first = n;
+    }
     return first?.data.width ?? 0;
   });
   // Outline classes: only the top lane draws the Chapter's top edge, the bottom lane its bottom edge.
@@ -32,11 +28,11 @@ export function LaneNode({ id, data }) {
     if (!me) return '';
     let first = true;
     let last = true;
-    s.nodeLookup.forEach((n) => {
-      if (n.type !== 'lane' || n.parentId !== me.parentId || n.id === id) return;
+    for (const n of childrenOf(s, me.parentId)) {
+      if (n.type !== 'lane' || n.id === id) continue;
       if (n.position.y < me.position.y) first = false;
       if (n.position.y > me.position.y) last = false;
-    });
+    }
     return `${first ? ' first' : ''}${last ? ' last' : ''}`;
   });
   const [editing, setEditing] = useState(false);

@@ -3,7 +3,7 @@ import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
 import { LANE_WIDTH } from '../model/model.js';
 import { cleanName, filterNameInput } from '../model/names.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { CopyContextButton, InfoButton } from './parts.jsx';
+import { childrenOf, CopyContextButton, InfoButton } from './parts.jsx';
 
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 
@@ -17,9 +17,7 @@ export function ChapterNode({ id, data }) {
     useContext(BoardActions);
   const screenCount = useStore((s) => {
     let count = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'sticky' && n.parentId === id && n.data.kind === 'screen') count++;
-    });
+    for (const n of childrenOf(s, id)) if (n.type === 'sticky' && n.data.kind === 'screen') count++;
     return count;
   });
   // A Chapter whose Context is missing shows the Default (first) one.
@@ -28,16 +26,12 @@ export function ChapterNode({ id, data }) {
   const ref = useRef(null);
   const width = useStore((s) => {
     let w = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'lane' && n.parentId === id) w = Math.max(w, n.data.width ?? LANE_WIDTH);
-    });
+    for (const n of childrenOf(s, id)) if (n.type === 'lane') w = Math.max(w, n.data.width ?? LANE_WIDTH);
     return w || 1;
   });
   const height = useStore((s) => {
     let h = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'lane' && n.parentId === id) h += n.data.height;
-    });
+    for (const n of childrenOf(s, id)) if (n.type === 'lane') h += n.data.height;
     return h || 1;
   });
 

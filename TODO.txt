@@ -8,7 +8,6 @@ SKILLs
 You can do this at any point, even much later. In an EVL (L=legacy) codebase, it might be crucial after some PR reviews. It’s the same process every time.
 
 - Map the code
-- think in slices
 - review the spec
 - build
 - check for drift (continuously)
@@ -18,6 +17,9 @@ You can do this at any point, even much later. In an EVL (L=legacy) codebase, it
 
 Lanes
 - Fix name editing
+
+Chapters
+- The chapters can be connected by a dot under each slice - this is used to show alternative paths
 
 Slices
 - Slice states (from Q&A1 1:16:00)
@@ -32,7 +34,6 @@ Elements
 - Agentic - suggest automatic slice and element names
 
 Screens
-- Enlarge screens on hovering
 - Blurring/highlighting parts of the screen (overlay?)
 
 Specs
@@ -52,16 +53,15 @@ Local undo/red
 - See what to do with it. Can it become too heavy?
 
 Server
-- Server pushes only changed chapters/contexts.
 
 CLI
-- Install skills
 
 Other features to add
 - https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 
 
 Agentic
+- Run the agent from the CLI?
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 - Build slices - skills for building the slice types. Agent should also read the chapter and lane docs.
 - Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.

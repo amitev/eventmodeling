@@ -15,7 +15,7 @@ import {
 import { cleanName, filterNameInput } from '../model/names.js';
 import { HistoryContext } from '../state/history.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { CopyContextButton, InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
+import { childrenOf, CopyContextButton, InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
 
 // A slice is a vertical band across all lanes: one end-to-end piece of behavior. It is not
 // selectable; clicking its header selects the top Cell of the slice.
@@ -27,28 +27,20 @@ export function SliceNode({ id, data }) {
   const press = useRef(null);
   // The last slice of a Chapter cannot be deleted.
   const canRemove = useStore((s) => {
-    const parent = s.nodeLookup.get(id)?.parentId;
     let count = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'slice' && n.parentId === parent) count++;
-    });
+    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) if (n.type === 'slice') count++;
     return count > 1;
   });
   // The last slice of a Chapter has no right border: the Chapter outline is there.
   const isLast = useStore((s) => {
     const me = s.nodeLookup.get(id);
     let last = true;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'slice' && n.parentId === me?.parentId && n.position.x > me.position.x) last = false;
-    });
+    for (const n of childrenOf(s, me?.parentId)) if (n.type === 'slice' && n.position.x > me.position.x) last = false;
     return last;
   });
   const lanesHeight = useStore((s) => {
-    const parent = s.nodeLookup.get(id)?.parentId;
     let sum = 0;
-    s.nodeLookup.forEach((n) => {
-      if (n.type === 'lane' && n.parentId === parent) sum += n.data.height;
-    });
+    for (const n of childrenOf(s, s.nodeLookup.get(id)?.parentId)) if (n.type === 'lane') sum += n.data.height;
     return sum;
   });
 

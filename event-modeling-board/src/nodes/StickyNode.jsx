@@ -5,7 +5,7 @@ import { hasFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions } from '../state/BoardActions.js';
-import { CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
+import { childrenOf, CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 
 // A cogwheel with 8 teeth and a centre hole, as one path in a 100x100 box.
 const COG_PATH = (() => {
@@ -46,7 +46,7 @@ export function StickyNode({ id, data, selected }) {
   // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
   const width = useStore((s) => {
     const me = s.nodeLookup.get(id);
-    return me ? stretchWidth(Array.from(s.nodeLookup.values()), me) : kindW(data.kind);
+    return me && KINDS[data.kind]?.stretch ? stretchWidth(Array.from(childrenOf(s, me.parentId)), me) : kindW(data.kind);
   });
   const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview } = useContext(BoardActions);
 

@@ -417,14 +417,6 @@ function Board() {
     );
   };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, boardText(nodes, edges, contexts));
-    } catch {
-      // ignore unavailable storage
-    }
-  }, [nodes, edges, contexts]);
-
   // ---- Undo / redo (in memory only) ----
   const restore = useCallback(
     (snap) => {
@@ -437,7 +429,7 @@ function Board() {
   );
   const historyBlocked = useRef(false); // no undo or redo behind a popup or in the overview
   historyBlocked.current = scenarioOpen.current || overview;
-  const { hist, undo, redo, api: historyApi, markSilent } = useHistory({
+  const { hist, undo, redo, api: historyApi, markSilent, gesture, settled } = useHistory({
     nodes,
     edges,
     contexts,
@@ -445,9 +437,20 @@ function Board() {
     blocked: historyBlocked,
   });
 
+  // The board is saved and checked (below) when a drag or resize ends, not on every frame of it.
+  useEffect(() => {
+    if (gesture.current > 0) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, boardText(nodes, edges, contexts));
+    } catch {
+      // ignore unavailable storage
+    }
+  }, [nodes, edges, contexts, gesture, settled]);
+
   // Scenarios whose Events/Commands were deleted (or left the Chapter) are deleted too. The
   // change is folded into the user's operation (see markSilent).
   useEffect(() => {
+    if (gesture.current > 0) return;
     const pruned = pruneScenarios(nodes);
     if (!pruned) return;
     markSilent();
@@ -457,7 +460,7 @@ function Board() {
         .map((t) => `"${t}"`)
         .join(', ')}: an element used in ${pruned.removed.length === 1 ? 'it' : 'them'} was deleted or left the Chapter.`
     );
-  }, [nodes, setNodes, markSilent]);
+  }, [nodes, setNodes, markSilent, gesture, settled]);
 
   useEffect(() => {
     if (!notice) return;
@@ -467,22 +470,24 @@ function Board() {
 
   // Linked copies are deleted with their original, in the same undo step (R3.22).
   useEffect(() => {
+    if (gesture.current > 0) return;
     const pruned = pruneCopies(nodes);
     if (!pruned) return;
     markSilent();
     setNodes(pruned.nodes);
     setEdges((es) => es.filter((e) => !pruned.gone.has(e.source) && !pruned.gone.has(e.target)));
-  }, [nodes, setNodes, setEdges, markSilent]);
+  }, [nodes, setNodes, setEdges, markSilent, gesture, settled]);
 
   // Chapter arrows only join Chapters of one Context (R1b.8): those that no longer do (a Context
   // changed or deleted, a loaded or pulled board) are removed, as part of the user's operation.
   useEffect(() => {
+    if (gesture.current > 0) return;
     const context = new Map(nodes.filter((n) => n.type === 'chapter').map((n) => [n.id, n.data.context]));
     const crossing = (e) => context.has(e.source) && context.has(e.target) && context.get(e.source) !== context.get(e.target);
     if (!edges.some(crossing)) return;
     markSilent();
     setEdges((es) => es.filter((e) => !crossing(e)));
-  }, [nodes, edges, setEdges, markSilent]);
+  }, [nodes, edges, setEdges, markSilent, gesture, settled]);
 
   // The original of the linked copies made with Ctrl+C / Ctrl+V; memory only.
   const clipboard = useRef(null);
@@ -523,17 +528,21 @@ function Board() {
   const handleNodesChange = useCallback(
     (changes) => {
       const current = getNodes();
-      const isSliceId = (id) => current.find((n) => n.id === id)?.type === 'slice';
-      const isHiddenId = (id) => !!current.find((n) => n.id === id)?.hidden;
+      let byId; // built only when a change needs the lookup
+      const find = (id) => (byId ??= new Map(current.map((n) => [n.id, n]))).get(id);
+      const isSliceId = (id) => find(id)?.type === 'slice';
+      const isHiddenId = (id) => !!find(id)?.hidden;
       const kept = changes.filter(
         (c) => !(c.type === 'position' && isSliceId(c.id)) && !(c.type === 'select' && c.selected && isHiddenId(c.id))
       );
       onNodesChange(kept);
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
-      const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
-      if (kept.some((c) => c.type === 'dimensions' && stickyIds.has(c.id))) {
-        markSilent();
-        setNodes((ns) => centerStickies(settleStickies(ns)));
+      if (kept.some((c) => c.type === 'dimensions')) {
+        const stickyIds = new Set(getNodes().filter((n) => n.type === 'sticky').map((n) => n.id));
+        if (kept.some((c) => c.type === 'dimensions' && stickyIds.has(c.id))) {
+          markSilent();
+          setNodes((ns) => centerStickies(settleStickies(ns)));
+        }
       }
     },
     [onNodesChange, getNodes, setNodes, markSilent]
@@ -834,19 +843,34 @@ function Board() {
     );
   };
 
+  // The context hands out these actions through `latest`, so its value does not change with every
+  // change of the nodes (which would re-render every node); each call still runs the newest version.
+  const latest = useRef({});
+  latest.current = {
+    goToOriginal,
+    newIds,
+    setChapterContext,
+    addContext,
+    addSliceAfter,
+    removeSlice,
+    chooseCell,
+    addLaneAfter,
+    removeLane,
+    removeChapter,
+  };
   const boardActions = useMemo(
     () => ({
       overview,
       // The overview is read-only: the actions that edit do nothing there; the views still open.
       editScenario: (nodeId, scenarioId) => !overview && setScenarioEdit({ nodeId, scenarioId }),
       viewScenarios: setScenariosViewId,
-      goToOriginal,
-      newScenarioId: () => newIds()[0],
+      goToOriginal: (...args) => latest.current.goToOriginal(...args),
+      newScenarioId: () => latest.current.newIds()[0],
       rememberCopy,
       copyContext,
       contexts,
-      setChapterContext,
-      addContext,
+      setChapterContext: (...args) => latest.current.setChapterContext(...args),
+      addContext: (...args) => latest.current.addContext(...args),
       activate: setActiveId,
       openInfo: (id) => {
         if (overview) return;
@@ -871,34 +895,19 @@ function Board() {
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
       clearCell: () => setSelectedCell(null),
-      addSliceAfter,
-      removeSlice,
+      addSliceAfter: (...args) => latest.current.addSliceAfter(...args),
+      removeSlice: (...args) => latest.current.removeSlice(...args),
       selectCell: (cell) => {
-        chooseCell(cell);
+        latest.current.chooseCell(cell);
         setActiveId(cell.chapterId);
       },
-      addLaneAfter,
-      removeLane,
-      removeChapter,
+      addLaneAfter: (...args) => latest.current.addLaneAfter(...args),
+      removeLane: (...args) => latest.current.removeLane(...args),
+      removeChapter: (...args) => latest.current.removeChapter(...args),
       compactChapter,
       activeId: activeChapterId,
     }),
-    [
-      removeLane,
-      removeChapter,
-      compactChapter,
-      addSliceAfter,
-      removeSlice,
-      addLaneAfter,
-      activeChapterId,
-      chapters.length,
-      contexts,
-      nodes,
-      rememberCopy,
-      copyContext,
-      titleEditId,
-      overview,
-    ]
+    [compactChapter, activeChapterId, contexts, rememberCopy, copyContext, titleEditId, overview]
   );
 
   const scenariosViewNode = scenariosViewId && nodes.find((n) => n.id === scenariosViewId);
