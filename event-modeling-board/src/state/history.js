@@ -7,12 +7,15 @@ export const MAX_HISTORY = 10;
 
 // What counts as the board's content: selection, measured sizes and drag flags
 // are deliberately left out, so they never create history entries.
+const dataTexts = new WeakMap();
 export const keyOf = (nodes, edges, contexts) =>
-  JSON.stringify([
-    nodes.map((n) => [n.id, n.type, n.parentId, n.position.x, n.position.y, n.data]),
-    edges.map((e) => [e.id, e.source, e.target]),
-    contexts,
-  ]);
+  `[[${
+    nodes.map((n) => {
+      if (!dataTexts.has(n.data)) dataTexts.set(n.data, JSON.stringify(n.data));
+      const location = JSON.stringify([n.id, n.type, n.parentId, n.position.x, n.position.y]);
+      return `${location.slice(0, -1)},${dataTexts.get(n.data)}]`;
+    }).join(',')
+  }],${JSON.stringify(edges.map((e) => [e.id, e.source, e.target]))},${JSON.stringify(contexts)}]`;
 
 // Undo/redo of the board (in memory only). `restore(snapshot)` puts a snapshot back on the
 // board; `blocked.current` turns the Ctrl+Z / Ctrl+Y hotkeys off (e.g. while a popup is open).

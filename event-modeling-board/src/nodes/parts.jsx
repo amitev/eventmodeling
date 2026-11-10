@@ -1,7 +1,7 @@
 // Pieces shared by the node components.
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { snap } from '../model/model.js';
+import { snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';
 import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 import { BoardActions } from '../state/BoardActions.js';
@@ -9,6 +9,38 @@ import { BoardActions } from '../state/BoardActions.js';
 // The nodes inside one parent (a Chapter), straight from the store's parent index. Use it in
 // `useStore` selectors instead of scanning `nodeLookup`: selectors run on every store change, pan and zoom included.
 export const childrenOf = (s, parentId) => s.parentLookup.get(parentId)?.values() ?? [];
+
+const widthsByState = new WeakMap();
+const widthsByStore = new WeakMap();
+export function chapterStretchWidths(state, chapterId) {
+  let chapters = widthsByState.get(state);
+  if (!chapters) {
+    chapters = new Map();
+    widthsByState.set(state, chapters);
+  }
+  if (!chapters.has(chapterId)) {
+    let cache = widthsByStore.get(state.nodeLookup);
+    if (!cache) {
+      cache = new Map();
+      widthsByStore.set(state.nodeLookup, cache);
+    }
+    for (const id of cache.keys()) if (!state.parentLookup.has(id)) cache.delete(id);
+    const nodes = Array.from(childrenOf(state, chapterId));
+    const geometry = nodes.flatMap((n) => [
+      n.id, n.type, n.position.x, n.position.y,
+      n.type === 'sticky' ? n.data.kind : undefined,
+      n.type === 'sticky' ? stickyW(n) : n.data.width,
+      n.type === 'sticky' ? stickyH(n) : n.data.height,
+    ]);
+    let cached = cache.get(chapterId);
+    if (!cached || geometry.length !== cached.geometry.length || geometry.some((value, i) => value !== cached.geometry[i])) {
+      cached = { geometry, widths: stretchWidths(nodes) };
+      cache.set(chapterId, cached);
+    }
+    chapters.set(chapterId, cached.widths);
+  }
+  return chapters.get(chapterId);
+}
 
 // Starts a horizontal pointer drag; onMove receives the total delta in flow units.
 export function useHorizontalDrag() {

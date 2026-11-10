@@ -438,10 +438,14 @@ function Board() {
   });
 
   // The board is saved and checked (below) when a drag or resize ends, not on every frame of it.
+  const savedText = useRef(null);
   useEffect(() => {
     if (gesture.current > 0) return;
     try {
-      localStorage.setItem(STORAGE_KEY, boardText(nodes, edges, contexts));
+      const text = boardText(nodes, edges, contexts);
+      if (text === savedText.current) return;
+      localStorage.setItem(STORAGE_KEY, text);
+      savedText.current = text;
     } catch {
       // ignore unavailable storage
     }
@@ -587,7 +591,9 @@ function Board() {
         SLICE_MIN_X
       );
       return layoutSlices(
-        layered([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId)])
+        layered([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId)]),
+        ns,
+        activeChapterId
       );
     });
     selectTopCellOf(activeChapterId, id);
@@ -608,7 +614,7 @@ function Board() {
         'New Slice',
         cur.parentId
       );
-      return layoutSlices(layered([...ns, added]), ns);
+      return layoutSlices(layered([...ns, added]), ns, cur.parentId);
     });
     setActiveId(nodes.find((n) => n.id === sliceId)?.parentId ?? null);
     const chapterId = nodes.find((n) => n.id === sliceId)?.parentId;

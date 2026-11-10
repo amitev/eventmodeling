@@ -1,4 +1,4 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, NOTE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, NOTE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyW, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
 import { isExampleValue } from '../model/examples.js';
@@ -21,6 +21,10 @@ export const serializeScenario = (s) => {
   };
 };
 
+const serializedChapters = new Map();
+const chapterTexts = new WeakMap();
+const sameInputs = (a, b) => a.length === b.length && a.every((value, i) => value === b[i]);
+
 // The export file (section 6): the one complete description of the board. Values that follow
 // from the layout rules are left out. Field order is fixed so the same board always gives
 // the same text.
@@ -35,16 +39,29 @@ export function serialize(nodes, edges, contexts) {
     targetsOf.get(e.source).add(e.target);
   }
 
-  const ss = slices(nodes);
+  const children = new Map();
+  for (const n of nodes) {
+    if (!children.has(n.parentId)) children.set(n.parentId, []);
+    children.get(n.parentId).push(n);
+  }
+  const chapterIds = new Set(chaptersOf(nodes).map((ch) => ch.id));
+  for (const id of serializedChapters.keys()) if (!chapterIds.has(id)) serializedChapters.delete(id);
   const order = new Map(); // id -> position in the file, which orders every connectsTo
-  const items = []; // [owner id, its connectsTo array] to fill once `order` is complete
-  const chapters = chaptersOf(nodes)
+  const bases = chaptersOf(nodes)
     .sort(
       (a, b) => a.position.x - b.position.x || a.position.y - b.position.y || compareIds(a.id, b.id)
     )
     .map((ch) => {
-      order.set(ch.id, order.size);
-      const lanes = lanesOf(nodes, ch.id);
+      const local = children.get(ch.id) ?? [];
+      const context = contexts.some((c) => c.id === ch.data.context) ? ch.data.context : contexts[0].id;
+      // Ignore UI bookkeeping, but retain measured sizes used for slice and lane membership.
+      const inputs = [context, ...[ch, ...local].flatMap((n) => [
+        n.id, n.type, n.parentId, n.position.x, n.position.y, n.data,
+        n.type === 'sticky' ? stickyH(n) : 0, n.type === 'sticky' ? stickyW(n) : 0,
+      ])];
+      const cached = serializedChapters.get(ch.id);
+      if (cached && sameInputs(cached.inputs, inputs)) return cached.base;
+      const lanes = lanesOf(local, ch.id);
       const laneIndex = new Map(lanes.map((l, i) => [l.id, i]));
       const laneOf = (n) => {
         const cy = n.position.y + stickyH(n) / 2;
@@ -52,23 +69,21 @@ export function serialize(nodes, edges, contexts) {
         for (const l of lanes) if (cy >= l.position.y) found = l;
         return found;
       };
-      const chapterSlices = slices(nodes, ch.id);
+      const chapterSlices = slices(local, ch.id);
       const bySlice = new Map(chapterSlices.map((s) => [s.id, []]));
-      for (const n of nodes) {
+      for (const n of local) {
         if (n.type !== 'sticky' || n.parentId !== ch.id) continue;
-        const sl = sliceOf(ss, n);
+        const sl = sliceOf(chapterSlices, n);
         if (sl) bySlice.get(sl.id).push({ n, lane: laneOf(n) });
       }
-      const connectsTo = [];
-      items.push([ch.id, connectsTo]);
-      return {
+      const base = {
         id: ch.id,
         name: ch.data.name,
         ...(ch.data.info ? { info: ch.data.info } : {}),
-        context: contexts.some((c) => c.id === ch.data.context) ? ch.data.context : contexts[0].id,
+        context,
         x: ch.position.x,
         y: ch.position.y,
-        connectsTo,
+        connectsTo: [],
         lanes: lanes.map((l) => ({
           id: l.id,
           name: l.data.label,
@@ -92,9 +107,7 @@ export function serialize(nodes, edges, contexts) {
                 compareIds(a.n.id, b.n.id)
             )
             .map(({ n, lane }) => {
-              order.set(n.id, order.size);
               const links = [];
-              items.push([n.id, links]);
               // A linked copy has no content of its own: it names its original (R3.22).
               if (n.data.copyOf) {
                 return {
@@ -124,12 +137,36 @@ export function serialize(nodes, edges, contexts) {
             }),
         })),
       };
+      serializedChapters.set(ch.id, { inputs, base });
+      return base;
     });
 
-  for (const [id, list] of items) {
-    const targets = [...(targetsOf.get(id) ?? [])].filter((t) => order.has(t));
-    list.push(...targets.sort((a, b) => order.get(a) - order.get(b)));
+  const elementsOf = (chapter) => chapter.slices.flatMap((sl) => sl.elements);
+  for (const ch of bases) {
+    order.set(ch.id, order.size);
+    for (const el of elementsOf(ch)) order.set(el.id, order.size);
   }
+  const chapters = bases.map((ch) => {
+    const links = new Map([ch, ...elementsOf(ch)].map(({ id }) => [
+      id,
+      [...(targetsOf.get(id) ?? [])]
+        .filter((t) => order.has(t))
+        .sort((a, b) => order.get(a) - order.get(b)),
+    ]));
+    const linkKey = JSON.stringify([...links.values()]);
+    const cached = serializedChapters.get(ch.id);
+    if (cached.linkKey === linkKey) return cached.linked;
+    cached.linkKey = linkKey;
+    cached.linked = {
+      ...ch,
+      connectsTo: links.get(ch.id),
+      slices: ch.slices.map((sl) => ({
+        ...sl,
+        elements: sl.elements.map((el) => ({ ...el, connectsTo: links.get(el.id) })),
+      })),
+    };
+    return cached.linked;
+  });
   return {
     format: 'event-model',
     version: 1,
@@ -138,8 +175,14 @@ export function serialize(nodes, edges, contexts) {
   };
 }
 
-export const boardText = (nodes, edges, contexts) =>
-  JSON.stringify(serialize(nodes, edges, contexts));
+export function boardText(nodes, edges, contexts) {
+  const { chapters, ...header } = serialize(nodes, edges, contexts);
+  const texts = chapters.map((ch) => {
+    if (!chapterTexts.has(ch)) chapterTexts.set(ch, JSON.stringify(ch));
+    return chapterTexts.get(ch);
+  });
+  return `${JSON.stringify(header).slice(0, -1)},"chapters":[${texts.join(',')}]}`;
+}
 
 export const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);

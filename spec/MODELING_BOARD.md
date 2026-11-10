@@ -45,6 +45,10 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - A Screen's mockup (R3.8) loads when the Screen first comes near the view (300px margin) and then stays loaded, also when it leaves the view again. A Screen never in view stays unloaded.
   - A `useStore` selector runs on every store change, pan and zoom included. It reads a Chapter's nodes through the store's `parentLookup` (`childrenOf`), never by scanning `nodeLookup`.
   - The `BoardActions` value must not depend on `nodes`: it calls the actions that read the board through a ref to their newest version. A changing value re-renders every node on every drag frame.
+  - Slice insertion lays out only its Chapter. Other Chapters keep their positions and widths.
+  - Notes and Scenarios share Cell counts and stretch widths per Chapter. Reuse widths until Chapter geometry or element kinds change.
+  - Saving and sync reuse unchanged Chapters' serialized content and JSON. Check all Chapters for changes; resolve arrows in global file order. Include measured sizes used for membership.
+  - Selection-only changes do not rewrite browser storage. Save timing stays unchanged. Undo keys reuse unchanged node data JSON.
 
 ## 1a. Multiple Chapters
 

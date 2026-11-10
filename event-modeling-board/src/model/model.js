@@ -197,21 +197,23 @@ export function membersOf(nodes) {
 // where the last slice ends (and has room for one default slice when empty).
 // `ref` is the board before any width change, so membership is not skewed by a
 // slice that is mid-resize. Returns the same array when nothing changes.
-export function layoutSlices(nodes, ref = nodes) {
+export function layoutSlices(nodes, ref = nodes, chapterId) {
+  const local = chapterId === undefined ? nodes : nodes.filter((n) => n.id === chapterId || n.parentId === chapterId);
+  const reference = chapterId === undefined ? ref : ref.filter((n) => n.id === chapterId || n.parentId === chapterId);
   const newX = new Map();
   const widths = new Map(); // chapter id -> width
-  for (const c of chaptersOf(nodes)) {
+  for (const c of chaptersOf(local)) {
     let cursor = SLICE_MIN_X;
-    const ordered = slices(nodes, c.id);
+    const ordered = slices(local, c.id);
     for (const n of ordered) {
       newX.set(n.id, cursor);
       cursor += n.data.width;
     }
     widths.set(c.id, ordered.length ? cursor : SLICE_MIN_X + DEFAULT_SLICE_WIDTH);
   }
-  const refX = new Map(slices(ref).map((n) => [n.id, n.position.x]));
+  const refX = new Map(slices(reference).map((n) => [n.id, n.position.x]));
   const shift = new Map();
-  for (const [sid, els] of membersOf(ref)) {
+  for (const [sid, els] of membersOf(reference)) {
     const d = (newX.get(sid) ?? refX.get(sid)) - refX.get(sid);
     if (d) els.forEach((el) => shift.set(el.id, d));
   }
@@ -238,19 +240,43 @@ export function layoutSlices(nodes, ref = nodes) {
 // margins, within its minimum and maximum width, when it is alone in its Cell; otherwise it keeps
 // its minimum width.
 export function stretchWidth(nodes, node) {
-  const kind = node.data.kind;
-  const min = kindW(kind);
-  if (!KINDS[kind]?.stretch) return min;
-  const slice = sliceOf(slices(nodes), node);
-  if (!slice) return min;
-  const lanes = lanesOf(nodes, node.parentId);
-  const laneIdOf = (n) => {
+  return stretchWidths(nodes).get(node.id) ?? kindW(node.data.kind);
+}
+
+export function stretchWidths(nodes) {
+  const ss = slices(nodes);
+  const lanes = new Map();
+  for (const n of nodes) {
+    if (n.type !== 'lane') continue;
+    if (!lanes.has(n.parentId)) lanes.set(n.parentId, []);
+    lanes.get(n.parentId).push(n);
+  }
+  for (const list of lanes.values()) list.sort((a, b) => a.position.y - b.position.y);
+  const cells = new Map();
+  const locations = new Map();
+  for (const n of nodes) {
+    if (n.type !== 'sticky') continue;
+    const slice = sliceOf(ss, n);
+    if (!slice) continue;
     const mid = n.position.y + stickyH(n) / 2;
-    return lanes.find((l) => mid >= l.position.y && mid < l.position.y + l.data.height)?.id;
-  };
-  const mine = laneIdOf(node);
-  const sameCell = (membersOf(nodes).get(slice.id) ?? []).filter((n) => laneIdOf(n) === mine);
-  return sameCell.length === 1
+    const lane = lanes.get(n.parentId)?.find((l) => mid >= l.position.y && mid < l.position.y + l.data.height);
+    if (!cells.has(slice.id)) cells.set(slice.id, new Map());
+    const counts = cells.get(slice.id);
+    counts.set(lane?.id, (counts.get(lane?.id) ?? 0) + 1);
+    locations.set(n.id, { slice, laneId: lane?.id });
+  }
+  const widths = new Map();
+  for (const node of nodes) {
+    if (node.type !== 'sticky' || !KINDS[node.data.kind]?.stretch) continue;
+    const location = locations.get(node.id);
+    widths.set(node.id, stretchedWidth(node.data.kind, location?.slice, location && cells.get(location.slice.id).get(location.laneId)));
+  }
+  return widths;
+}
+
+function stretchedWidth(kind, slice, count) {
+  const min = kindW(kind);
+  return slice && count === 1
     ? Math.min(KINDS[kind].maxW ?? Infinity, Math.max(min, slice.data.width - 2 * padOf(kind)))
     : min;
 }
