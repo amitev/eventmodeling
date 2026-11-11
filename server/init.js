@@ -5,7 +5,7 @@ import { DATA_DIR } from './model-store.js';
 
 export const SKILLS_DIR = fileURLToPath(new URL('../.claude/skills', import.meta.url));
 export const DEFAULT_TARGET = path.join('.claude', 'skills');
-export const MANIFEST = '.event-modeling-cli.json';
+export const MANIFEST = '.em-cli.json';
 
 const VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 

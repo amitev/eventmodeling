@@ -14,10 +14,31 @@ npm run build
 
 The board is built into `server/public/`.
 
+## Build and install the CLI
+
+To install the CLI from this checkout for local use:
+
+```sh
+npm install
+npm run build
+npm link
+```
+
+`em-cli` is then available globally and runs the board from the current directory.
+
+To create and install a package tarball:
+
+```sh
+npm pack
+npm install -g ./em-cli-1.0.0.tgz
+```
+
+`npm pack` runs the build automatically. The tarball name includes the package version.
+
 ## Run
 
 ```sh
-npx event-modeling-cli
+npx em-cli
 ```
 
 Or, from the repository: `npm start`.
@@ -33,12 +54,12 @@ Opens at `http://localhost:3300`.
 | `--target <dir>` | `.claude/skills` | With `--init`: skills folder |
 | `-h`, `--help` | | Show usage |
 
-Example: `npx event-modeling-cli --port 8080 --host 0.0.0.0`
+Example: `npx em-cli --port 8080 --host 0.0.0.0`
 
 ## Skills
 
 ```sh
-npx event-modeling-cli@latest --init
+npx em-cli@latest --init
 ```
 
 Creates `.event-modeling/` and copies the packaged skills and `api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.

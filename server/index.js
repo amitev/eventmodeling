@@ -6,7 +6,7 @@ import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
 
-const HELP = `Usage: event-modeling-cli [options]
+const HELP = `Usage: em-cli [options]
 
 Options:
       --init           Install (or update) the skills in the current directory, then exit

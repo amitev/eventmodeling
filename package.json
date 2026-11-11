@@ -1,10 +1,10 @@
 {
-  "name": "event-modeling-cli",
+  "name": "em-cli",
   "version": "1.0.0",
   "description": "Event Modeling board served over HTTP",
   "type": "module",
   "bin": {
-    "event-modeling-cli": "server/index.js"
+    "em-cli": "server/index.js"
   },
   "files": [
     "server/index.js",

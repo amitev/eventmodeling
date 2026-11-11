@@ -40,7 +40,7 @@ When a skill refers to another skill, use its name in backticks (e.g. `element-f
 ## Code layout
 
 - `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `server/public/`.
-- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx event-modeling-cli`). `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.event-modeling/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
+- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx em-cli`). `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.event-modeling/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
 
 Board code, all in `event-modeling-board/src/`:
 
