@@ -16,7 +16,7 @@ Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused 
 1. **Chapter/place:** `GET /outline`; ask Chapter and insertion point (after which slice, or end). Select one lane per needed type; multiple choices: ask. Missing type: ask, then add via `chapter-setup`. Processors use system-actor lanes, Screens human-role lanes; prefer system lanes above human lanes when adding.
 2. **Behavior/type:** user's words for who acts, recorded facts and displayed data; choose recipe below. Unclear: ask.
 3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
-4. **Fields:** names/types/flags from user or upstream elements. Never invent data; no source → `generated: true` or ask.
+4. **Fields:** use names/types/flags from the user or parents; never invent. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
 5. **Reuse:** find existing dependencies (e.g. earlier Event feeding Read Model) by outline name; multiple matches: ask.
 
 ## How the server wires things
@@ -87,7 +87,7 @@ Check each `results[]` status/body.
 ## Step 3 — Finish and verify
 
 1. `GET /outline?context=<id>`: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION`, correct lanes and recipe arrows. `null`: fix missing element/arrow.
-2. `GET /elements/:id` for arrow-affected fields; adjust via `element-fields` PATCH (whole-list replacement, no propagation).
+2. `GET /elements/:id` for arrow-affected fields; apply the core completeness rule and report gaps. Adjust via `element-fields` PATCH (whole-list replacement, no propagation).
 3. New Screen is placeholder: **offer `html-screen`, never skip silently**; offer `scenarios` for Command.
 4. Report slice (id/name/type/Chapter), elements (id/type/name/lane), automatic/explicit arrows, inherited fields, gaps (no field source, unfed Read Model, uncertain arrow), automatic board updates (pull behavior: API reference).
 5. Error names op: read `error`, fix cause, retry **whole batch**; failed batch wrote nothing.

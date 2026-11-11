@@ -36,6 +36,7 @@ We're still in alpha version. Forget about backwards compatibility when making c
 Skills are in `.claude/skills/`. Read `spec/*` only to write or update a skill; never refer to it from a skill: no file names (`spec/...`) and no rule numbers (R9.4, S4.19, ...). State the rule itself in the skill instead.
 
 When a skill refers to another skill, use its name in backticks (e.g. `element-fields`), not the path of its `SKILL.md`.
+IMPORTANT: Keep skills concise and LLM-token efficient while retaining their full intent.
 
 ## Code layout
 

@@ -37,6 +37,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 ## Step 2 — Decide the content (do not invent data)
 
 - **Lineage:** same-named upstream source, or `generated: true` where information starts. No source = gap to report, never hide.
+- **Information completeness:** apply the core rule to each edited element; report unmatched non-generated top-level fields. Mark fields generated only when system-created.
 - **Screen:** shown/entered mockup data; displayed Read Model data comes from it. Session/display-only calculations: `generated: true`.
 - **Command:** all decision inputs, including time, acting user, tenant (`generated: true` if not Screen-supplied); business names matching Screen inputs.
 - **Event:** captured facts only, no computed values.

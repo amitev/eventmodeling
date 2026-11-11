@@ -111,6 +111,8 @@ Anything else, including empty slice: no type.
 
 Every field needs same-named connected upstream source or `generated: true` where information starts. Check every addition/rename (`element-fields`). **No source = gap, never deferred detail.**
 
+For a non-copy SCREEN/COMMAND/EVENT/READ_MODEL with incoming arrows, each non-generated top-level field must match a field from a parent (trace through PROCESSORs; names only, any type/flags). Otherwise all incoming arrows turn red/thick; report the gap. Mark fields generated only when system-created.
+
 ## Connections Read Forward
 
 Within slice: vertical between lanes (Screen → Command → Event, Read Model → Screen). Across slices: **forward to later slice, never right-to-left**. Keep related Screen/Read Model, issuer/Command and Command/Event in same slice when possible to avoid backward arrows.

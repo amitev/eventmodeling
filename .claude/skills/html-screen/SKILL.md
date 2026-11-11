@@ -86,6 +86,7 @@ Field: `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fiel
 - User input → Command: `generated: false`.
 - Session/display-only calculations (current user, today, totals): `generated: true`.
 - Personal data: `pii: true`; identifiers: `id: true`.
+- Apply the core completeness rule to Screens with incoming arrows; report gaps. Never mark user data generated to bypass it.
 
 **For a brand-new screen**
 1. Outline: find intended feeding Read Model (`connectsTo` will target Screen), usually same/previous slice; `GET /elements/:readModelId` for fields.
