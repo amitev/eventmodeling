@@ -43,6 +43,6 @@ Name matching has false positives (product `name`) and misses (`ref` holding ema
 ## After the run
 
 1. Briefly report counts, PII map (fields reaching Screens, Read Models, Events), then findings, gaps first; explicitly say when none.
-2. **Never change flags unasked.** Offer `element-fields` for flags (server does not propagate changes; use its Propagate steps), `edit-and-delete` for names.
+2. **Never change flags unasked.** Offer `element-fields` for explicit flag PATCHes on approved elements (not Propagate), `edit-and-delete` for names.
 3. After approved fix, rerun with `--chapter`; confirm finding gone.
 4. Script error `GET ... -> status` names failed request; check `--base` and server availability.

@@ -95,7 +95,7 @@ Field: `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fiel
 **For an existing screen**
 1. Read current fields, including inherited Read Model fields.
 2. **PATCH replaces whole list:** keep every existing field unless removal requested; send full list with additions.
-3. Added fields **do not copy to connected Command**; report so user can update it.
+3. For new top-level fields, apply `element-fields` Propagate unless user opts out. Existing-field changes stay local; downstream edits need separate approval.
 
 ## Step 6 — Report back
 

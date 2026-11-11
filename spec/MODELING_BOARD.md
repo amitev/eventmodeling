@@ -441,6 +441,7 @@ The board file is the single, complete description of a board, written and read 
   - **Propagate:** a field created in the popup has a checkbox, checked by default. On Save, a checked new top-level field is also copied to **all** elements downstream, following arrows through the whole chain (around loops too), replacing fields of the same name. The setting is not stored. Fields later edited or removed are not propagated.
   - **Get from parent** (R9.3): several parents are applied in the order of their arrows; a later parent replaces same-named fields of an earlier one.
   - A linked copy is never a target; as a source it gives its original's fields.
+  - **Learning (skills/API):** follow Propagate's default through S4.17/S4.20. Existing-field edits, renames and removals need separate approval for downstream changes.
 - **R9.5** The body of a Command, Event and Read Model lists its field names, compact, nested fields indented. No type or attribute is shown there (they are in the popup). A Screen shows its mockup (R3.8), not its fields.
 - **R9.6** **Export.** `fields` is a list; each field has exactly these keys in order: `name`, `type`, `list`, `id`, `optional`, `generated`, `pii`, `technical` (all booleans written), and for `object` also `fields` (the nested list). Import checks as in R7.4.
 - **R9.7** **Attributes** (each true/false, a checkbox with a tooltip):

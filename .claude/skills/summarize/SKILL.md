@@ -230,7 +230,7 @@ Cross-Chapter evaluation/go-no-go/dates: **once in overview**; Chapter notes ref
 
 Brief report: **human-decision questions first**; Chapters/note locations (Summary lane, first slice); Event/Command/Read Model/Screen/scenario counts; coverage findings; **all perspective/gap assumptions**; `facts.md` path and uncommitted status.
 
-Offer only: `wdyt` business pass, `scenarios` example enrichment, `element-fields` renamed-field propagation, `model-check` structural recheck.
+Offer only: `wdyt` business pass, `scenarios` example enrichment, `element-fields` field renames (downstream edits only after approval), `model-check` structural recheck.
 
 ## Guardrails
 

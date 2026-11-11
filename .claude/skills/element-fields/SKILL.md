@@ -23,7 +23,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 | Processor | No fields; passes Read Model's fields through to Command |
 | Linked copy | Never a field-write target: shows original; PATCH fields gets 409. As source supplies original's fields |
 | New arrow | `POST /connections` or automatic `POST /elements` arrow copies all source fields **one hop only** (Screen → Command, Command → Event, Read Model → Screen, Event → Read Model) |
-| Propagate | Only **new top-level fields**, when requested; copy through entire downstream chain, including loops, replacing same-named fields. Never propagate edits/removals |
+| Propagate | Only **new top-level fields**, enabled by default unless user opts out; copy through entire downstream chain, including loops, replacing same-named fields. Never propagate existing-field edits (including flags), renames or removals |
 | Get from parent | Copy all parents' fields through Processors; later parent wins same-name conflicts. Arrow order governs; API-order handling below |
 
 ## Step 1 — Find the elements
@@ -57,7 +57,7 @@ Multiple elements: one atomic `POST /ops`, one revision. Body `{"ops":[{"method"
 1. Read current `fields`.
 2. Keep every field unless removal requested; add/edit wanted fields. Send full nested lists too.
 3. `PATCH /elements/:id` `{ fields: [...] }`; `fields: null` removes all.
-4. User wants new **top-level** fields carried onward: Propagate (C), only those fields. Never edits/removals.
+4. Propagate (C) new **top-level** fields unless user opts out. Existing-field changes stay local; downstream edits need separate approval.
 
 ### C. Propagate new top-level fields downstream
 
@@ -72,11 +72,11 @@ Multiple elements: one atomic `POST /ops`, one revision. Body `{"ops":[{"method"
 1. Find parents from `connectsTo`; recursively replace Processor parents with their parents. Copy parents supply original's fields (`copyOf`).
 2. API exposes no arrow order: use outline order; conflicting definitions of same name: **ask which wins**.
 3. Merge parents (later wins), then into target's own fields (same-name replaced, others retained); PATCH target.
-4. No further copying. Propagate (C) only if requested.
+4. No further copying; inherited fields are not newly created fields for Propagate.
 
 ### E. New arrow between existing elements
 
-Use `connections`: `POST /connections` `{ from, to }` copies one hop only. Propagate (C) only if requested.
+Use `connections`: `POST /connections` `{ from, to }` copies one hop only. Separately created fields follow B–C.
 
 ### F. Remove or rename a field
 

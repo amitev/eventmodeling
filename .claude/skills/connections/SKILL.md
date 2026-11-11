@@ -87,7 +87,7 @@ Existing cross-Chapter arrows are not errors. Report and offer replacement: crea
 ## Step 4 — Report
 
 - Added/removed arrows: source → target names and Chapters.
-- Fields copied per arrow; no further propagation unless requested (`element-fields`). On removal, copied fields remain.
+- New arrows copy fields one hop only; separately created fields follow `element-fields`. On removal, copied fields remain.
 - Skipped existing arrows; rejected pairs and reasons.
 - Automatic board updates (pull behavior: API reference).
 - Errors: 400 invalid/repeated/self pair or Scenarios/Notes; 404 unknown id/missing connection. Read `error`, fix cause, retry.
