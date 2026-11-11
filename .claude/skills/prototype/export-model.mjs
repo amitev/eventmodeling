@@ -26,6 +26,11 @@ if (ctx.length !== 1) {
   process.exit(1);
 }
 const context = ctx[0];
+const translationProcessors = new Set(contexts.flatMap((c) => c.chapters.flatMap((ch) =>
+  ch.slices.filter((s) => s.type === 'TRANSLATION').flatMap((s) =>
+    s.elements.filter((e) => e.type === 'PROCESSOR' && !e.copyOf).map((e) => e.id)
+  )
+)));
 
 // All Chapters are read: linked copies point to originals in other Chapters (and older models may have arrows across Chapters).
 const els = new Map();
@@ -69,9 +74,9 @@ for (const e0 of mine) {
   }
 }
 
-// An Event closes a todo-list item of a Read Model when one of its Processors' Commands produces it.
+// Translation feeds never close; only worker Commands supply closing Events.
 for (const q of model.readModels) {
-  const cmds = q.processorIds.flatMap((p) => model.processors.find((x) => x.id === p)?.commandIds ?? []);
+  const cmds = q.processorIds.filter((p) => !translationProcessors.has(p)).flatMap((p) => model.processors.find((x) => x.id === p)?.commandIds ?? []);
   q.closingEventIds = uniq(cmds.flatMap((c) => model.commands.find((x) => x.id === c)?.eventIds ?? []));
   q.openingEventIds = q.eventIds.filter((id) => !q.closingEventIds.includes(id));
 }

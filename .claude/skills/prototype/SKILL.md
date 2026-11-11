@@ -26,7 +26,7 @@ Reads all Chapters via API to resolve cross-Chapter copies/older arrows; folds c
 | `screens[]` | `id, name, chapter, slice, html, url, fields, commandIds, readModelIds` (triggered Commands, displayed Read Models) |
 | `commands[]` | `id, name, fields, screenIds, processorIds, eventIds` |
 | `events[]` | `id, name, fields` |
-| `readModels[]` | `id, name, fields, eventIds, openingEventIds, closingEventIds, processorIds, screenIds`; todo list opens on feeding Events, closes on Processor's Command output Events |
+| `readModels[]` | `id, name, fields, eventIds, openingEventIds, closingEventIds, processorIds, screenIds`; worker todo closes on its Command's output Events; translation feed never closes |
 | `processors[]` | `id, name, readModelIds, commandIds` |
 | `scenarios[]` | `id, name, description, chapter, given, when, then, error`; entries `{ element, example }`, Event/Command id |
 
@@ -64,10 +64,11 @@ Header: Screen tabs, **Automations** only if `MODEL.processors` nonempty, **Scen
 5. Otherwise append one Event per `then`, in order. Each data field's precedence: **nonempty same-name Command value → matching Given Event's same-name value → generated value if marked (`uuid`: new UUID; `date`/`datetime`: now) → Then example → empty**.
 6. No match: refuse **"No scenario covers this case"**, naming missing Given Events or mismatched field. Model gap; never invent behavior.
 
-**Read Models** `project(readModel, store)`: fold entries with id in `readModel.eventIds`, in store order. **Only Events with feeding arrows count**; completion without arrow never closes item (export warns).
+**Read Models** `project(readModel, store)`: fold entries with id in `readModel.eventIds`, in store order. **Only Events with feeding arrows count**; worker completion without arrow never closes item (export warns).
 - Key: Read Model `id: true` fields also present on Event. No key: append-only rows; warn to mark id field.
 - One `list: true` `object` field → row list using nested fields; otherwise single record.
 - `closingEventIds`: remove same-key row. Others: add/upsert same-key row, replacing same-named fields.
+- Translation feeds retain rows after translation; exporter excludes translation Processors' output Events from `closingEventIds` and missing-closing-arrow warnings. Uses outline's derived `TRANSLATION` type, not names; copies use original Processor's slice. Never add closing arrows or hide processed rows to simulate a queue.
 - Plain Read Model removal Events: **ask**, never infer from Deleted/Removed/Cancelled/Closed names. Record answer as `const REMOVING = [Event ids]` atop page script; treat like `closingEventIds`.
 
 **Screen data:** for each `readModelIds` entry, match normalized element id/class to normalized field name. Set `textContent` (`value` for inputs). List template = first repeated sibling with same tag/class containing matching elements; clone/fill once per row, remove template. Empty list: one **"No items"** line.
@@ -78,7 +79,7 @@ Header: Screen tabs, **Automations** only if `MODEL.processors` nonempty, **Scen
 - One Command: **every button** runs it; repeated-row buttons also supply row's same-named values. Several Commands: **ask button mapping**, never guess. None: buttons only show **"No command on this Screen"**.
 - Every action: toast recorded Events/refusal, then re-render **all tabs**.
 
-**Automations tab:** each Processor's name, projected `readModelIds[0]` todo rows, **Run** per row executing `commandIds[0]` with same-named row values. Completion Event closes via `closingEventIds`. Several Read Models/Commands: **ask**. Missing either: list Processor with warning.
+**Automations tab:** each Processor's name, projected `readModelIds[0]` todo rows, **Run** per row executing `commandIds[0]` with same-named row values. Worker completion closes via `closingEventIds`; translation rows remain runnable (duplicate handling comes from model/scenarios, never inferred). Several Read Models/Commands: **ask**. Missing either: list Processor with warning.
 
 **Scenarios tab:** run each on **fresh in-memory store, never user's store**. Preload Given entries (Event name from `MODEL`, data = example); execute Command using `when.example` (absent = empty/`false`).
 - Error scenario passes only on refusal with that error text.

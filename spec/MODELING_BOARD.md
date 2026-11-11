@@ -348,6 +348,8 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **none** (`null`): anything else, also an empty slice.
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
 - **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Read Model directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Read Model. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it. The Translation Chain of the `eventmodeling-core-rules` skill is the source of truth.
+- **R5b.4** Translation todo lists are permanent feeds: recording an internal Event never closes their rows.
+  - **Learning (implementation):** prototype export excludes translation Processors' outputs from closing Events and missing-closing-arrow warnings. Use derived slice type (R5b.1); linked Processors use original's slice.
 
 ## 6. Board file
 
