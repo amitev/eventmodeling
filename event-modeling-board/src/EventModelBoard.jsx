@@ -1053,10 +1053,10 @@ function Board() {
     (c) => {
       const o = orient(getNodes(), c);
       if (!o || !isValidConnection(c)) return;
-      const fromChapter = getNodes().find((n) => n.id === o[0])?.type === 'chapter';
-      const edge = makeEdge(o[0], o[1], fromChapter);
+      const chapterLevel = getNodes().find((n) => n.id === o[1])?.type === 'chapter';
+      const edge = makeEdge(o[0], o[1], chapterLevel);
       setEdges((es) => [...es, edge]);
-      if (!fromChapter) setNodes((ns) => inheritOnConnect(ns, [...getEdges(), edge], [o]));
+      if (!chapterLevel) setNodes((ns) => inheritOnConnect(ns, [...getEdges(), edge], [o]));
     },
     [setEdges, setNodes, getNodes, getEdges, isValidConnection]
   );

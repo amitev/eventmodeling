@@ -87,6 +87,7 @@ Types are upper case. Start with `GET /rules` and `GET /outline`. Names of items
 | `POST /chapters/:id/slices` | `{ name?, after?, width? }` | Default name "New Slice", after the last slice, width 220 (multiple of 20, ≥ 120) |
 | `PATCH /slices/:id` | `{ name?, info?, flowEnd?, width?, index? }` | `index`: 0-based place in the Chapter. Width not below its elements |
 | `DELETE /slices/:id` | | 409 for the last slice. Deletes its elements |
+| `PUT` / `DELETE /slices/:id/connections/:targetId` | | Arrow from slice bottom centre to another Chapter in the same Context; never its own Chapter. Stored in slice `connectsTo`; no fields copied |
 | `POST /elements` | see below | |
 | `PATCH /elements/:id` | see below | |
 | `DELETE /elements/:id` | | Also deletes its linked copies, its arrows and the scenarios that use it: `{ removed: { elements, scenarios } }` |

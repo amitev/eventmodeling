@@ -19,7 +19,7 @@ Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Reads neve
 | I want | Call | Returns |
 |---|---|---|
 | Has the model changed since my last read? | `GET /api/model/revision` | `{ revision }` (also the `ETag`). Same text as before = nothing changed |
-| The structure: Contexts, Chapters, lanes, slices, elements, arrows | `GET /api/model/outline` (`?context=<id>` for one Context; an unknown id is 404) | a list of Contexts, each with its `chapters`: ids, names, types, `lane`, `x`, `copyOf?`, `connectsTo`; slices with `type` and `width`; no content |
+| The structure: Contexts, Chapters, lanes, slices, elements, arrows | `GET /api/model/outline` (`?context=<id>` for one Context; an unknown id is 404) | a list of Contexts, each with its `chapters`: ids, names, types, `lane`, `x`, `copyOf?`, `connectsTo`; slices with `type`, `width` and `connectsTo` (target Chapter ids); no content |
 | An element by (part of) its name | `GET /api/model/search?q=<text>&type=<TYPE>&context=<id>` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q` is a case-insensitive part of the name; `type` is upper case |
 | One element with its content | `GET /api/model/elements/:id` | the element as stored: `fields`, `info`, `html` or `url`, `markdown`, `scenarios`, `connectsTo`, `copyOf` |
 | The content of one whole Chapter | `GET /api/model/chapters/:id?screenContent=false` | the Chapter as stored; `screenContent=false` leaves out the (large) Screen `html` |

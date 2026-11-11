@@ -46,6 +46,7 @@ Read `eventmodeling-core-rules` first (lane types, slices, slice types). Endpoin
 | Change | `PATCH /chapters/:id` `{ "name"?, "info"?, "context"?, "x"?, "y"? }` (`info` is Markdown, `null` removes it) |
 | Delete | `DELETE /chapters/:id` → `{ removed: { elements, scenarios } }` |
 | Connect | `PUT /chapters/:id/connections/:targetId` adds a Chapter → Chapter arrow, `DELETE` removes it. Chapters connect only to Chapters; not to themselves. |
+| Connect from a slice | `PUT /slices/:id/connections/:targetId` adds an arrow from that slice's bottom centre to another Chapter in the same Context; `DELETE` removes it. Never to its own Chapter. Stored in the slice's `connectsTo`. |
 
 **Position:** Chapters are laid out independently and the server does not stop overlaps. Put a new Chapter to the right of the others: `x` = (right edge of the rightmost Chapter) + 100, `y` = that Chapter's `y`, where the right edge is its `x` + 48 (the lane label zone) + the sum of its slice widths. Round to a multiple of 20. The user can drag it away on the board.
 

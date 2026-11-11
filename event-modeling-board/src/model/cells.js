@@ -244,6 +244,10 @@ export const orient = (nodes, c) => {
   const b = nodes.find((n) => n.id === c.target);
   if (!a || !b || a.id === b.id) return null;
   if (a.type === 'chapter' && b.type === 'chapter') return a.data.context === b.data.context ? [a.id, b.id] : null;
+  if (a.type === 'slice' && b.type === 'chapter') {
+    const chapter = nodes.find((n) => n.id === a.parentId);
+    return chapter && chapter.id !== b.id && chapter.data.context === b.data.context ? [a.id, b.id] : null;
+  }
   if (a.type !== 'sticky' || b.type !== 'sticky') return null;
   if (FLOWS_TO[a.data.kind]?.includes(b.data.kind)) return [a.id, b.id];
   if (FLOWS_TO[b.data.kind]?.includes(a.data.kind)) return [b.id, a.id];

@@ -84,6 +84,8 @@ Arrows that already cross Chapters (older models) are not an error: report them 
 
 Chapters have arrows too, Chapter → Chapter: `PUT /chapters/:id/connections/:targetId` adds one and `DELETE` removes it. They copy no fields.
 
+An arrow may instead leave a particular slice's bottom centre: `PUT /slices/:id/connections/:targetId` adds it, `DELETE` removes it. `targetId` is another Chapter in the same Context, never the slice's own Chapter. Targets are stored in the slice's `connectsTo`; no fields are copied. Different slices and the Chapter end may each connect to the same Chapter. Deleting a slice removes its arrows; deleting the target Chapter removes incoming arrows.
+
 ## Step 4 — Report
 
 Tell the user:

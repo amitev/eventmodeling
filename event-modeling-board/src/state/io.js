@@ -33,8 +33,10 @@ export function serialize(nodes, edges, contexts) {
   const targetsOf = new Map();
   for (const e of edges) {
     const kind = kindOf.get(e.source);
-    if (e.source === e.target || kind !== kindOf.get(e.target)) continue;
-    if (kind !== 'chapter' && kind !== 'sticky') continue;
+    const targetKind = kindOf.get(e.target);
+    if (e.source === e.target) continue;
+    if (kind === 'slice' ? targetKind !== 'chapter' : kind !== targetKind) continue;
+    if (kind !== 'chapter' && kind !== 'slice' && kind !== 'sticky') continue;
     if (!targetsOf.has(e.source)) targetsOf.set(e.source, new Set());
     targetsOf.get(e.source).add(e.target);
   }
@@ -98,6 +100,7 @@ export function serialize(nodes, edges, contexts) {
           ...(sl.data.flowEnd ? { flowEnd: true } : {}),
           type: sliceType(bySlice.get(sl.id).map(({ n, lane }) => ({ kind: n.data.kind, lane: lane.data.type }))),
           width: sl.data.width,
+          connectsTo: [],
           elements: bySlice
             .get(sl.id)
             .sort(
@@ -147,7 +150,7 @@ export function serialize(nodes, edges, contexts) {
     for (const el of elementsOf(ch)) order.set(el.id, order.size);
   }
   const chapters = bases.map((ch) => {
-    const links = new Map([ch, ...elementsOf(ch)].map(({ id }) => [
+    const links = new Map([ch, ...ch.slices, ...elementsOf(ch)].map(({ id }) => [
       id,
       [...(targetsOf.get(id) ?? [])]
         .filter((t) => order.has(t))
@@ -162,6 +165,7 @@ export function serialize(nodes, edges, contexts) {
       connectsTo: links.get(ch.id),
       slices: ch.slices.map((sl) => ({
         ...sl,
+        connectsTo: links.get(sl.id),
         elements: sl.elements.map((el) => ({ ...el, connectsTo: links.get(el.id) })),
       })),
     };
@@ -373,7 +377,7 @@ export function parseBoard(text) {
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
       const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'type', 'width', 'elements'], sp, ['info', 'flowEnd']);
+      object(sl, ['id', 'name', 'type', 'width', 'connectsTo', 'elements'], sp, ['info', 'flowEnd']);
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
       // The type is worked out from the elements (R5b): the stored value is only checked to be valid.
@@ -386,6 +390,8 @@ export function parseBoard(text) {
       }
       number(sl.width, at(sp, 'width'));
       if (sl.width < SLICE_MIN_WIDTH) fail(at(sp, 'width'), `must be at least ${SLICE_MIN_WIDTH}`);
+      list(sl.connectsTo, at(sp, 'connectsTo'));
+      links.push({ owner: sl.id, chapter: c.id, kind: 'chapter', path: at(sp, 'connectsTo'), ids: sl.connectsTo });
       list(sl.elements, at(sp, 'elements'));
       const width = sl.width;
       nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info, sl.flowEnd));
@@ -506,12 +512,13 @@ export function parseBoard(text) {
   }
 
   const edges = [];
-  for (const { owner, kind, path, ids } of links) {
+  for (const { owner, chapter, kind, path, ids } of links) {
     const seen = new Set();
     ids.forEach((t, i) => {
       const p = `${path}[${i}]`;
       string(t, p);
       if (t === owner) fail(p, 'an item cannot connect to itself');
+      if (t === chapter) fail(p, 'a slice cannot connect to its own chapter');
       if (!kindOf.has(t)) fail(p, `no item with id "${t}"`);
       if (kindOf.get(t) !== kind) {
         fail(p, `"${t}" must be the id of ${kind === 'chapter' ? 'a chapter' : 'an element'}`);

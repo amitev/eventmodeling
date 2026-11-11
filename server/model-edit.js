@@ -344,6 +344,7 @@ function outline(model, { query }) {
             type: s.type,
             ...(s.flowEnd ? { flowEnd: true } : {}),
             width: s.width,
+            connectsTo: s.connectsTo,
             elements: s.elements.map((e) => ({
               id: e.id,
               type: e.type,
@@ -442,7 +443,7 @@ function createChapter(model, { body: b }) {
     y: grid(y, 'y'),
     connectsTo: [],
     lanes: ['ACTOR', 'INTERACTION', 'EVENT'].map((type) => ({ id: newId(ix), name: LANE_TYPES[type].label, type, color: 'none' })),
-    slices: [{ id: newId(ix), name: 'New Slice', width: DEFAULT_SLICE_WIDTH, elements: [] }],
+    slices: [{ id: newId(ix), name: 'New Slice', width: DEFAULT_SLICE_WIDTH, connectsTo: [], elements: [] }],
   };
   model.chapters.push(chapter);
   return lookup('chapters', chapter.id);
@@ -467,7 +468,10 @@ function deleteChapter(model, { params }) {
   const chapter = found(index(model).chapters, params.id, 'chapter');
   const removed = removeElements(model, chapter.slices.flatMap((s) => s.elements.map((e) => e.id)));
   model.chapters = model.chapters.filter((c) => c !== chapter);
-  for (const c of model.chapters) c.connectsTo = c.connectsTo.filter((t) => t !== chapter.id);
+  for (const c of model.chapters) {
+    c.connectsTo = c.connectsTo.filter((t) => t !== chapter.id);
+    for (const s of c.slices) s.connectsTo = s.connectsTo.filter((t) => t !== chapter.id);
+  }
   return { removed };
 }
 
@@ -556,7 +560,7 @@ function createSlice(model, { params, body: b }) {
     at = chapter.slices.findIndex((s) => s.id === after);
     if (at < 0) throw bad('after must be the id of a slice of this Chapter');
   }
-  const slice = { id: newId(ix), name: text(name, 'name'), width: sliceWidth(width), elements: [] };
+  const slice = { id: newId(ix), name: text(name, 'name'), width: sliceWidth(width), connectsTo: [], elements: [] };
   chapter.slices.splice(at + 1, 0, slice);
   return lookup('slices', slice.id);
 }
@@ -592,6 +596,26 @@ function deleteSlice(model, { params }) {
   const removed = removeElements(model, slice.elements.map((e) => e.id));
   chapter.slices = chapter.slices.filter((s) => s !== slice);
   return { removed };
+}
+
+function connectSliceToChapter(model, { params }) {
+  const ix = index(model);
+  const { chapter, slice } = found(ix.slices, params.id, 'slice');
+  const to = found(ix.chapters, params.targetId, 'chapter');
+  if (chapter === to) throw bad('A slice cannot connect to its own Chapter');
+  if (chapter.context !== to.context) throw bad('Chapters must be in the same Context');
+  if (slice.connectsTo.includes(to.id)) throw bad('The slice is already connected to this Chapter');
+  slice.connectsTo.push(to.id);
+  return { from: slice.id, to: to.id };
+}
+
+function disconnectSliceFromChapter(model, { params }) {
+  const ix = index(model);
+  const { slice } = found(ix.slices, params.id, 'slice');
+  found(ix.chapters, params.targetId, 'chapter');
+  if (!slice.connectsTo.includes(params.targetId)) throw new HttpError(404, 'The slice is not connected to this Chapter');
+  slice.connectsTo = slice.connectsTo.filter((t) => t !== params.targetId);
+  return { from: slice.id, to: params.targetId };
 }
 
 // ---------- Elements ----------
@@ -896,6 +920,8 @@ export const ROUTES = [
   R('POST', '/chapters/:id/slices', createSlice, created),
   R('PATCH', '/slices/:id', patchSlice),
   R('DELETE', '/slices/:id', deleteSlice),
+  R('PUT', '/slices/:id/connections/:targetId', connectSliceToChapter),
+  R('DELETE', '/slices/:id/connections/:targetId', disconnectSliceFromChapter),
   R('POST', '/elements', createElement, created),
   R('PATCH', '/elements/:id', patchElement),
   R('DELETE', '/elements/:id', deleteElement),

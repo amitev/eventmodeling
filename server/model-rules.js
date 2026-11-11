@@ -97,7 +97,7 @@ export const byPosition = (a, b) => {
 const KEYS = {
   chapter: ['id', 'name', 'info', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'],
   lane: ['id', 'name', 'type', 'info', 'color'],
-  slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'elements'],
+  slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
   element: ['id', 'type', 'lane', 'name', 'info', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
   copy: ['id', 'type', 'lane', 'copyOf', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
@@ -152,7 +152,10 @@ export function canonical(model) {
   const byOrder = (a, b) => order.get(a) - order.get(b);
   for (const c of model.chapters) {
     c.connectsTo = [...c.connectsTo].sort(byOrder);
-    for (const s of c.slices) for (const e of s.elements) e.connectsTo = [...e.connectsTo].sort(byOrder);
+    for (const s of c.slices) {
+      s.connectsTo = [...s.connectsTo].sort(byOrder);
+      for (const e of s.elements) e.connectsTo = [...e.connectsTo].sort(byOrder);
+    }
   }
   return model;
 }
@@ -236,6 +239,8 @@ export function validateModel({ contexts, chapters }) {
       if (s.info !== undefined && !isText(s.info)) fail(`${sp}.info`, 'must be left out when empty');
       if (s.flowEnd !== undefined && s.flowEnd !== true) fail(`${sp}.flowEnd`, 'must be true, or left out');
       if (!isNumber(s.width) || s.width < SLICE_MIN_WIDTH) fail(`${sp}.width`, `must be at least ${SLICE_MIN_WIDTH}`);
+      if (!Array.isArray(s.connectsTo)) fail(`${sp}.connectsTo`, 'must be a list');
+      links.push({ owner: s.id, chapter: c.id, kind: 'chapter', path: `${sp}.connectsTo`, ids: s.connectsTo });
       if (!Array.isArray(s.elements)) fail(`${sp}.elements`, 'must be a list');
       const specCells = new Set();
       s.elements.forEach((e, ei) => {
@@ -322,11 +327,12 @@ export function validateModel({ contexts, chapters }) {
     if (original.copy) fail(path, `"${id}" is itself a copy`);
     if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
   }
-  for (const { owner, kind, path, ids } of links) {
+  for (const { owner, chapter, kind, path, ids } of links) {
     const seen = new Set();
     ids.forEach((t, i) => {
       const p = `${path}[${i}]`;
       if (t === owner) fail(p, 'an item cannot connect to itself');
+      if (t === chapter) fail(p, 'a slice cannot connect to its own chapter');
       if (used.get(t) !== kind) fail(p, `no ${kind} with id "${t}"`);
       if (kind === 'element' && (UNCONNECTABLE.includes(elements.get(owner).type) || UNCONNECTABLE.includes(elements.get(t).type))) {
         fail(p, 'a scenarios or notes element cannot be connected');

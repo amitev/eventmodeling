@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { useReactFlow, useStore } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
 import {
   SLICE_HEADER,
   SLICE_MIN_X,
@@ -180,6 +180,12 @@ export function SliceNode({ id, data }) {
       className={`slice${isLast ? ' last' : ''}${data.flowEnd ? ' flow-end' : ''}${lift !== null ? ' dragging' : ''}`}
       style={{ width: data.width, height: SLICE_HEADER + lanesHeight, ...(lift !== null ? { transform: `translateX(${lift}px)` } : {}) }}
     >
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="chapter-port slice-port"
+        title="Connect this slice to another Chapter"
+      />
       <div
         className="slice-header nodrag nopan"
         title={data.name}

@@ -480,8 +480,9 @@ export const makeSlice = (id, x, width, name, chapterId, info, flowEnd) => ({
   parentId: chapterId,
   draggable: false,
   selectable: false,
+  connectable: true,
   zIndex: -1,
-  // Only the header takes pointer events, so notes under the band stay usable.
+  // Only the header and port take pointer events, so notes under the band stay usable.
   style: { pointerEvents: 'none' },
 });
 
