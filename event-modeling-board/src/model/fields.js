@@ -106,6 +106,14 @@ export function parentFields(nodes, edges, id) {
   return result;
 }
 
+// A field holder is incomplete when it has a non-generated top-level field no parent supplies.
+export function hasUninheritedFields(nodes, edges, id) {
+  const target = nodes.find((n) => n.id === id);
+  if (!isHolder(target) || target.data.copyOf) return false;
+  const inherited = new Set(parentFields(nodes, edges, id).map((field) => field.name));
+  return (target.data.fields ?? []).some((field) => !field.generated && !inherited.has(field.name));
+}
+
 // Copies `fields` to every element downstream of `fromId` (transitively, around loops too).
 export function propagateFields(nodes, edges, fromId, fields) {
   if (!fields.length) return nodes;

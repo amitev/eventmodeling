@@ -16,6 +16,7 @@ import {
   sliceOf,
   membersOf,
 } from './model.js';
+import { hasUninheritedFields } from './fields.js';
 
 // Cache presentation, not endpoint positions: React Flow tracks geometry itself.
 export function createEdgeDisplay() {
@@ -23,6 +24,10 @@ export function createEdgeDisplay() {
   let previous = [];
   return (nodes, edges, hiddenChapters, overview) => {
     const byId = new Map(nodes.map((n) => [n.id, n]));
+    const incompleteTargets = new Set();
+    for (const id of new Set(edges.map((edge) => edge.target))) {
+      if (hasUninheritedFields(nodes, edges, id)) incompleteTargets.add(id);
+    }
     const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
     const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
     const nextCache = new Map();
@@ -33,9 +38,10 @@ export function createEdgeDisplay() {
       const element = source?.type === 'sticky' && target?.type === 'sticky';
       const down = element ? centreY(target) >= centreY(source) : undefined;
       const color = element && overview ? OVERVIEW_EDGE_COLORS[source.data?.kind] : undefined;
+      const incomplete = element && incompleteTargets.has(edge.target);
       const cached = cache.get(edge.id);
       if (cached && cached.edge === edge && cached.hidden === hidden && cached.element === element &&
-          cached.down === down && cached.color === color) {
+          cached.down === down && cached.color === color && cached.incomplete === incomplete) {
         nextCache.set(edge.id, cached);
         return cached.shown;
       }
@@ -47,13 +53,17 @@ export function createEdgeDisplay() {
             selected,
             sourceHandle: down ? 'bottom-out' : 'top-out',
             targetHandle: down ? 'top-in' : 'bottom-in',
-            ...(color ? {
-              style: { ...edge.style, stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' },
-              markerEnd: { ...edge.markerEnd, color },
+            ...(color || incomplete ? {
+              style: {
+                ...edge.style,
+                ...(color ? { stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' } : {}),
+                ...(incomplete ? { stroke: '#ff0000', strokeWidth: 7 } : {}),
+              },
+              markerEnd: { ...edge.markerEnd, color: incomplete ? '#ff0000' : color },
             } : {}),
           }
         : hidden === !!edge.hidden && !(hidden && edge.selected) ? edge : { ...edge, hidden, selected };
-      nextCache.set(edge.id, { edge, hidden, element, down, color, shown });
+      nextCache.set(edge.id, { edge, hidden, element, down, color, incomplete, shown });
       return shown;
     });
     cache = nextCache;
