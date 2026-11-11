@@ -1,98 +1,89 @@
 ---
 name: element-fields
-description: Create, change or remove the fields (data) of a Screen, Command, Event or Read Model element through the server API, and carry them along the arrows exactly as the board does (inheritance on a new arrow, Propagate downstream, Get from parent). Use for "add field X to Y", "define the fields of this command/event/read model", "propagate this field", "make the fields consistent along the flow", "get the fields from the parent".
+description: Create, edit or remove Screen/Command/Event/Read Model fields through the API; inherit, Propagate and Get from parent as the board does. Use for "add field X to Y", "define the fields of this command/event/read model", "propagate this field", "make the fields consistent along the flow", "get the fields from the parent".
 ---
 
 # Element Fields
 
-**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` first (what each element is, field lineage). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads).
+Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation` for lookups. Do not guess rules.
 
-> **The server does less than the board.** It copies fields only when an arrow is added. `PATCH` with `fields` **replaces the whole list** and copies **nothing** downstream. *Propagate* and *Get from parent* are done by you, with the steps below.
+> **PATCH `fields` replaces the whole list and copies nothing downstream.** Server copies only on new arrows. You perform *Propagate* and *Get from parent* below.
 
 ## Rules to know
 
 | | Rule |
 |---|---|
-| Holders | Only `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL` have `fields`. `PROCESSOR`, `SCENARIOS`, `NOTES` have none. |
-| Field | `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`. `type` default `string`; one of `string`, `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (list: `GET /api/model/rules` → `fieldTypes`). Only `object` has `fields` (nested, any depth). Flags (`list`, `id`, `optional`, `generated`, `pii`, `technical`) default `false`. A list of values is `list: true`. |
-| Names | Not empty, unique within their list. |
-| Flags | `id` identifies the object; `optional` may be missing; `generated` is created by the system (an id, the current date, the acting user); `pii` is personal data; `technical` is an implementation detail. |
-| Flow | Arrows: Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor. See the `connections` skill. |
-| Copy | Fields are **copied**, never linked. A copied field **replaces** the same-named field of the target as a whole (nested `fields` included, no deep merge), in place; new names are appended. |
-| Processor | Holds no fields but passes them on: Read Model → Processor → Command copies the Read Model's fields to the Command. |
-| Linked copy | An element with `copyOf` is **never a target** (it shows its original's fields; change the original, a `PATCH` on it gets 409). As a **source** it gives its original's fields. |
-| New arrow | The source's fields are all copied to the target; one hop only. Done by the server on `POST /connections` and on the automatic arrows of `POST /elements` (Screen → Command, Command → Event, Read Model → Screen, Event → Read Model). |
-| Propagate | A newly created **top-level** field is also copied to **all** elements downstream, through the whole chain, around loops too, replacing same-named fields. Edited or removed fields are never propagated. |
-| Get from parent | Copy the fields of all parents (elements with an arrow to this one, through Processors) into the element, replacing same-named fields; several parents in the order of their arrows, a later one replacing an earlier one. |
+| Holders | Only `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`; no fields on `PROCESSOR`, `SCENARIOS`, `NOTES` |
+| Field | `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`; types: `string` (default), `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (`GET /rules`: `fieldTypes`). Only `object` has nested `fields`, any depth |
+| Names / flags | Names nonempty, unique per list. Flags default `false`; `list: true` = list; `id` = identifier; `optional` = may be absent; `generated` = system-created (id, current date, acting user); `pii` = personal data; `technical` = implementation detail |
+| Flow | Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor (`connections`) |
+| Copy | **Copied, not linked.** Replace same-named target field in place, whole object including nested fields; **no deep merge**. Append new names |
+| Processor | No fields; passes Read Model's fields through to Command |
+| Linked copy | Never a field-write target: shows original; PATCH fields gets 409. As source supplies original's fields |
+| New arrow | `POST /connections` or automatic `POST /elements` arrow copies all source fields **one hop only** (Screen → Command, Command → Event, Read Model → Screen, Event → Read Model) |
+| Propagate | Only **new top-level fields**, when requested; copy through entire downstream chain, including loops, replacing same-named fields. Never propagate edits/removals |
+| Get from parent | Copy all parents' fields through Processors; later parent wins same-name conflicts. Arrow order governs; API-order handling below |
 
 ## Step 1 — Find the elements
 
-1. `GET /api/model/rules` once (field types and flags).
-2. Name given: `GET /api/model/search?q=<name>&type=<TYPE>`; keep results whose `name` equals it. Several: ask the user which (name the Chapters), never guess. None: ask; do not create an element unless asked.
-3. `GET /api/model/outline` gives for every element `{ id, type, name, lane, copyOf?, connectsTo }` and the slices in order. This is the arrow graph: `connectsTo` lists the **targets** of an element. Parents of `X` are the elements that have `X` in their `connectsTo`.
-4. `GET /api/model/elements/:id` (or `GET /api/model/chapters/:id?screenContent=false` for a whole Chapter) gives the current `fields`.
-5. A linked copy cannot be changed: use its original's id.
+1. `GET /rules` once: field types/flags.
+2. `GET /search?q=<name>&type=<TYPE>`; retain exact-name matches. Several: ask which, naming Chapters. None: ask, never create unless requested.
+3. `GET /outline`: ordered slices + `{ id, type, name, lane, copyOf?, connectsTo }`. `connectsTo` = targets; parents of X list X there.
+4. Read current fields: `GET /elements/:id`, or `GET /chapters/:id?screenContent=false` for whole Chapter.
+5. For linked-copy changes, use original id.
 
 ## Step 2 — Decide the content (do not invent data)
 
-- **Follow the lineage.** Every field has a source: a same-named field upstream, or `generated: true` where the information starts. A field with no source is a gap: report it, do not hide it.
-- **Screen**: what the mockup shows or lets the user enter. Shown from a Read Model: it comes from the Read Model. Session values and display-only calculations: `generated: true`.
-- **Command**: everything its decision needs (also the current time, the acting user, the tenant: `generated: true` where the Screen does not supply them). Business language, names matching the Screen's input fields.
-- **Event**: only captured facts, no computed values.
-- **Read Model**: the data shaped for the Screen that reads it; one `list: true` `object` field when it returns rows.
-- Mark `pii` for personal data, `id` for identifiers.
-- Unsure about a name, type or flag, or whether to propagate: ask the user (use the ask tool), with a recommended default.
+- **Lineage:** same-named upstream source, or `generated: true` where information starts. No source = gap to report, never hide.
+- **Screen:** shown/entered mockup data; displayed Read Model data comes from it. Session/display-only calculations: `generated: true`.
+- **Command:** all decision inputs, including time, acting user, tenant (`generated: true` if not Screen-supplied); business names matching Screen inputs.
+- **Event:** captured facts only, no computed values.
+- **Read Model:** shaped for consuming Screen; rows = one `list: true` `object` field.
+- Personal data: `pii`; identifiers: `id`.
+- Unclear name/type/flag/propagation: ask user with ask tool and recommended default.
 
 ## Step 3 — Write
 
-Use `POST /api/model/ops` when more than one element changes, so all changes are one atomic write and one revision. Body `{ "ops": [{ "method": "PATCH", "path": "/elements/<id>", "body": { "fields": [...] } }] }`; read `results[].status`. The body is JSON: build it with `ConvertTo-Json -Depth 10` or `JSON.stringify`.
+Multiple elements: one atomic `POST /ops`, one revision. Body `{"ops":[{"method":"PATCH","path":"/elements/<id>","body":{"fields":[...]}}]}`; check `results[].status`. Build JSON with `ConvertTo-Json -Depth 10` or `JSON.stringify`.
 
 ### A. New element (with fields)
 
-`POST /elements` with `fields`. `autoConnect` (default `true`) adds the automatic arrows and each arrow **copies the source's fields over yours**: a same-named field from the parent replaces yours. So define the element's own fields, but expect the parent's version of shared names to win. Read the stored element back (`GET /elements/:id`) and report the final fields.
+`POST /elements` with own `fields`. `autoConnect=true` by default; automatic arrows **replace same-named fields with parent's version**. Read stored element back (`GET /elements/:id`); report final fields.
 
 ### B. Add or change fields of an existing element
 
-1. `GET /elements/:id` → current `fields`.
-2. Build the new list: keep every existing field unless the user asked to remove it; add or edit the wanted ones (nested objects: send the full nested list).
-3. `PATCH /elements/:id` `{ "fields": [...] }` (`null` removes all fields).
-4. If the change adds **new top-level fields** and the user wants them carried on: do **Propagate** (C) for those fields only. Not for edits or removals.
+1. Read current `fields`.
+2. Keep every field unless removal requested; add/edit wanted fields. Send full nested lists too.
+3. `PATCH /elements/:id` `{ fields: [...] }`; `fields: null` removes all.
+4. User wants new **top-level** fields carried onward: Propagate (C), only those fields. Never edits/removals.
 
 ### C. Propagate new top-level fields downstream
 
-Do what the board does (breadth-first, each element once, the source itself never changed):
-
-1. From the outline, start at the source element and follow `connectsTo` transitively. Mark each element reached as visited (loops end there).
-2. For each reached element:
-   - type `SCREEN`, `COMMAND`, `EVENT` or `READ_MODEL` and **no** `copyOf`: it gets the fields. Read its current `fields`, replace the same-named ones with the new ones (same position), append the others.
-   - a `PROCESSOR` or a linked copy: change nothing, but **keep following** its `connectsTo`.
-   - `SCENARIOS` and `NOTES` have no arrows.
-3. One `PATCH /elements/:id` per changed element, all in one `POST /ops` (include the source's own `PATCH` first).
-4. Elements are in other slices too: follow the arrows there; read their fields with `GET /chapters/:id?screenContent=false`. Arrows normally stay within one Chapter (a fact of another Chapter reaches this one through a linked copy, which shows its original's fields live), so nothing is copied across Chapters. An older arrow that does cross a Chapter is followed like any other: read the other Chapter the same way.
-5. Copy the new field objects exactly (same type, flags, nested fields) so the copies are identical.
+1. Traverse outline `connectsTo` **breadth-first**, each element once, visited set for loops. **Never change source during traversal.**
+2. Reached non-copy `SCREEN`/`COMMAND`/`EVENT`/`READ_MODEL`: read fields, replace same-named fields in place, append new names. Copy objects **exactly**, including types, flags, nested fields.
+3. Processor/linked copy: no write, but **continue traversal**. Scenarios/Notes have no arrows.
+4. Follow across slices; use Chapter reads with `screenContent=false`. Normally cross-Chapter dependencies use local copies showing original's live fields, not cross-Chapter propagation. Follow existing direct cross-Chapter arrows too; read other Chapters as needed.
+5. One PATCH per changed element, one `POST /ops`; source's own add-field PATCH comes first.
 
 ### D. Get from parent (pull fields into an element)
 
-1. Parents: elements whose `connectsTo` includes the target; for a `PROCESSOR` parent, use its own parents instead (recursively). A linked copy parent gives its original's fields (`copyOf`). The API gives no arrow order: use the order of the outline, and ask the user which wins if several parents share a field name with different definitions.
-2. Merge the parents' fields into one list (a later parent replaces same-named fields of an earlier one), then merge that into the element's own list (same-named replaced, others stay).
-3. `PATCH /elements/:id` with the result. Nothing is copied further: add Propagate (C) only if the user asks.
+1. Find parents from `connectsTo`; recursively replace Processor parents with their parents. Copy parents supply original's fields (`copyOf`).
+2. API exposes no arrow order: use outline order; conflicting definitions of same name: **ask which wins**.
+3. Merge parents (later wins), then into target's own fields (same-name replaced, others retained); PATCH target.
+4. No further copying. Propagate (C) only if requested.
 
 ### E. New arrow between existing elements
 
-Create it as the `connections` skill says (`POST /connections` `{ from, to }`). It copies the source's fields to the target, one hop, and nothing else: no Propagate. Add Propagate (C) only if the user asks.
+Use `connections`: `POST /connections` `{ from, to }` copies one hop only. Propagate (C) only if requested.
 
 ### F. Remove or rename a field
 
-Never propagated. `PATCH` the element, and say in the report which downstream elements still hold the old field (list them by name and Chapter) so the user decides. Do not change them unasked.
+Never propagate. PATCH element; list downstream elements retaining old field (name, Chapter) for user decision. Never change them unasked.
 
 ## Step 4 — Verify and report
 
-1. `GET /elements/:id` for each changed element when it matters (new element with `autoConnect`, or a conflict with a parent's same-named field).
-2. Tell the user:
-   - the ids and names of the elements changed, and the Chapter of each;
-   - the fields each now has (mark `generated`, `pii`, `id`), and which were propagated or inherited from where;
-   - fields with no upstream source (gaps), and elements left untouched on purpose (linked copies, edits/removals not propagated);
-   - that the open board shows the change by itself (it pulls the server model and replaces any changes not yet pushed);
-   - any error (400 invalid body or board rule, 404 unknown id, 409 linked copy, 422 stored model invalid): read `error`, fix the cause, retry.
+1. Read changed elements when needed: new `autoConnect` element or parent same-name conflict.
+2. Report names/ids/Chapters; final fields (`generated`, `pii`, `id`); propagation/inheritance sources; lineage gaps; intentional nonchanges (copies, edits/removals not propagated); automatic board updates (pull behavior: API reference).
+3. Errors: 400 invalid body/board rule; 404 unknown id; 409 linked copy; 422 invalid stored model. Read `error`, fix cause, retry.
