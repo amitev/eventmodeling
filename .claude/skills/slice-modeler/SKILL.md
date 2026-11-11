@@ -1,72 +1,75 @@
 ---
 name: slice-modeler
-description: Build a whole slice in one atomic call — the slice, its elements in the right lanes, the arrows and the fields — for the four slice types (state change, state read, automation, translation). Use for "add a slice for X", "model the Place Order step", "create a screen, command and event for Y", "add a view for Z", "add an automation that reacts to E".
+description: Build a state-change, state-read, automation or translation slice in one atomic call, including elements, lanes, arrows and fields. Use for "add a slice for X", "model the Place Order step", "create a screen, command and event for Y", "add a view for Z", "add an automation that reacts to E".
 ---
 
 # Slice Modeler
 
-**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` first (element types, lanes, slice types, naming, causality). Endpoints: [../api.md](../api.md) (base URL `http://localhost:3300`). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The details live in other skills: `chapter-setup` (slices, lanes), `connections` (arrows), `element-fields` (fields), `html-screen` (mockup), `scenarios` (Given/When/Then).
+Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 
-A slice is built with **one `POST /api/model/ops`**: atomic (all or none), one revision, one write. A refused op changes nothing and its message starts `ops[<index>]: `.
+Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused op changes nothing; error prefixed `ops[<index>]: `.
 
 ## Step 1 — Gather (ask, do not assume)
 
-1. **Chapter and place.** `GET /api/model/outline`. Ask which Chapter, and after which slice the new one goes (or at the end). The Chapter needs lanes for the types below: one lane per needed type. Several lanes of one type: ask which. A missing type: ask, then add it as `chapter-setup` says. Several Actor lanes: Processors go in a system-actor lane, Screens in a human-role lane; prefer system-actor lanes on top of the human ones when adding a lane.
-2. **Type of slice and the business behaviour**, in the user's words: who does what, which facts are recorded, what is shown. Pick the recipe below. Not clear which one: ask.
-3. **Names** in business language, as the core rules and `naming` say: the slice named exactly like its Command, Read Model or Processor; Screen as a user calls it; Command imperative; Event past tense; Read Model a noun phrase. Unsure: ask.
-4. **Fields** (names, types, flags) of each element: from the user or from the upstream elements (they copy along the arrows). Do not invent data: a field with no source is `generated: true` or a question to the user.
-5. Existing elements the slice must reuse (an Event of an earlier slice feeding a Read Model): find them in the outline by name; several matches: ask.
+1. **Chapter/place:** `GET /outline`; ask Chapter and insertion point (after which slice, or end). Select one lane per needed type; multiple choices: ask. Missing type: ask, then add via `chapter-setup`. Processors use system-actor lanes, Screens human-role lanes; prefer system lanes above human lanes when adding.
+2. **Behavior/type:** user's words for who acts, recorded facts and displayed data; choose recipe below. Unclear: ask.
+3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
+4. **Fields:** names/types/flags from user or upstream elements. Never invent data; no source → `generated: true` or ask.
+5. **Reuse:** find existing dependencies (e.g. earlier Event feeding Read Model) by outline name; multiple matches: ask.
 
 ## How the server wires things
 
-- Elements are placed in the lane you name, with `x` left out (placed like the board does; the slice widens as needed). Only the lane decides the row. The one case where you give `x` is the automation layout (see Automation).
-- With `autoConnect` (default `true`) a new element gets arrows **within its slice** at once, using the elements that exist at that moment: Command with a Screen above ← Screen; Event with a Command above ← Command; Screen with a Read Model below ← Read Model; Read Model with a Screen above → Screen; a Read Model also ← the right-most Event of the **previous slice**; Command with a Processor in the slice ← Processor (nearest); Processor with a Read Model in the slice ← Read Model (nearest). Create elements in the order of the recipe so these arrows appear.
-- An arrow copies all the source's fields to the target, replacing same-named fields. An element's own `fields` in the same `POST` are kept, then the parent's fields are merged in: give each element only the fields it adds, the rest arrives by itself.
-- Every arrow not listed above is created with `POST /connections`.
-- The right-most Event of the previous slice is only a guess. When the Read Model should be fed by other Events (or by several), create it with `"autoConnect": false` and connect the right ones explicitly.
-- Do not use `info` on the elements you create for notes, source citations or summaries: it is reserved mainly for implementation details (formats, limits, integrations, technical constraints). Notes and summaries go in Notes elements, which may also carry implementation details (one Notes element per Spec Cell).
+- Lane alone determines row. Omit `x` for board placement/automatic widening, **except automation/translation layout below**.
+- `autoConnect=true` by default, using elements already present. Same-slice arrows: Screen above → new Command; Command above → new Event; Read Model below → new Screen; new Read Model → Screen above; nearest Processor → new Command; nearest Read Model → new Processor. New Read Model also receives previous slice's **right-most Event**. **Follow recipe creation order.**
+- Each arrow copies all source fields, replacing same-named target fields. POST keeps own fields, then merges parent's; supply only added fields.
+- Other arrows: `POST /connections`. Previous right-most Event is only a guess: for other/multiple feeding Events use `autoConnect: false`, then connect explicitly.
+- `info`: mainly implementation details (formats, limits, integrations, technical constraints), never notes/citations/summaries. Put those in Notes, which may also hold implementation details; one Notes element per Spec Cell.
 
 ## Recipes
 
-Lane = lane of that type in the Chapter. Ids written `<...>` come from the outline; `$name` refers to the id created by an earlier op (`"as": "name"`, in a path segment or a body value).
+Lanes belong to target Chapter. `<...>` ids come from outline; `$name` resolves earlier op's `as: "name"` in path segments/body values.
 
 ### State change — Screen → Command → Event
 
 1. `POST /chapters/<chapter>/slices` `{ name, after }`, `as: "s"`
-2. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (the data the user enters or sees), `as: "screen"`
-3. `POST /elements` Command: `{ slice: "$s", lane: <Interaction lane>, type: "COMMAND", name, fields }` (extra fields only, e.g. `generated` context such as the acting user and the time), `as: "cmd"` → arrow Screen → Command, fields copied
-4. `POST /elements` Event per resulting fact: `{ slice: "$s", lane: <Event lane>, type: "EVENT", name, fields }` → arrow Command → Event, fields copied (an Event holds only captured facts: remove computed or display-only fields afterwards with `PATCH`).
+2. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (entered/shown data), `as: "screen"`
+3. `POST /elements` Command: `{ slice: "$s", lane: <Interaction lane>, type: "COMMAND", name, fields }` (extras only, e.g. `generated` acting user/time), `as: "cmd"` → Screen → Command, fields copied
+4. `POST /elements` per resulting fact: `{ slice: "$s", lane: <Event lane>, type: "EVENT", name, fields }` → Command → Event, fields copied. **Captured facts only:** PATCH away computed/display-only fields afterwards.
 
-Without a Screen (the trigger is not a person) it is not this recipe: use Automation.
+Nonhuman trigger/no Screen: use Automation.
 
 ### State read — Read Model → Screen
 
 1. Slice as above.
-2. `POST /elements` Read Model: `{ slice: "$s", lane: <Interaction lane>, type: "READ_MODEL", name, fields }`; fed by the Events that build it (an automatic arrow from the previous slice's right-most Event, or `autoConnect: false` and then `POST /connections` per Event, `{ from: <event>, to: "$q" }`). A Read Model that returns rows has a `list: true` `object` field. **Order matters:** each Event arrow copies the Event's fields into the Read Model as flat fields, and every later arrow out of the Read Model copies the Read Model's fields at that moment. So connect the Events first, then `PATCH` the Read Model to its final fields (the list field), and only then create the Screen (step 3) or connect the Read Model onward; otherwise the Screen gets the Event's flat fields.
-3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (what is entered or calculated on top of the Read Model's fields) → arrow Read Model → Screen, the Read Model's fields copied.
+2. `POST /elements` Read Model: `{ slice: "$s", lane: <Interaction lane>, type: "READ_MODEL", name, fields }`, `as: "q"`. Previous right-most Event auto-feeds it; alternatively `autoConnect: false`, then `POST /connections` per feeding Event `{ from: <event>, to: "$q" }`. Rows require a `list: true` `object` field. **Connect Events → PATCH final Read Model fields (including list shape) → only then create Screen/connect onward.** Incoming arrows copy flat Event fields; outgoing arrows copy current fields, so wrong order gives Screen flat fields.
+3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (entered/calculated extras) → Read Model → Screen, fields copied.
 
-Events from another Chapter are not connected directly (the recommendation in `connections`, "Across Chapters"): place a linked copy of the Event in **this** Chapter (`POST /elements` `{ slice, lane, copyOf, "autoConnect": false }`, never into the state read slice itself) and connect the copy to the Read Model with `POST /connections`.
+Other Chapter's Event: **local linked copy, never direct arrow** (`connections`, Across Chapters). `POST /elements` `{ slice, lane, copyOf, autoConnect: false }` **outside state-read slice**, then connect copy → Read Model.
 
 ### Automation — Event → Read Model → Processor → Command → Event
 
-**Layout:** the Read Model comes first and the Command (the action) sits **next to it, to its right, in the same Interaction lane**; the Processor is in the Actor lane above them; the Event is in the Event lane **directly under the Command** (same `x`). Give these `x` (relative to the slice, 160px wide elements, 20px gap, 40px margin): Read Model `40`, Command `220`, Processor `140` (centred over both, snapped to the 20px grid like the board's compaction, R5.20a), Event `220`. Never leave the Event's `x` out: the server would centre it, not put it under the Command.
+**Layout (also translation):** Read Model left, Command right **in same Interaction lane**; Processor above in Actor lane; Event **directly under Command** in Event lane. Slice-relative `x`: Read Model `40`, Command `220`, Processor `140` (centred over both, snapped to board's 20px grid), Event `220`. Elements 160px wide, gap 20px, margin 40px. **Never omit Event `x`: server would centre it instead.**
 
 1. Slice as above.
-2. Read Model (the **todo list**, list-shaped): `{ type: "READ_MODEL", lane: <Interaction lane>, x: 40 }`, `autoConnect: false`. Connect the Events that **open** it (`POST /connections`, one per Event), then `PATCH` the Read Model to its final fields (the list field: arrows copy the Events' flat fields into it) **before** any arrow leaves it (step 3).
-3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, x: 140, name }` (no fields) → arrow Read Model → Processor is automatic.
-4. Command: `{ type: "COMMAND", lane: <Interaction lane>, x: 220, name, fields }` → arrow Processor → Command is automatic: the Processor passes the Read Model's fields on to the Command. (If the arrows did not appear, e.g. with `autoConnect: false`, add them with `POST /connections` `{ from: "$q", to: "$p" }` and `{ from: "$p", to: "$cmd" }`.)
-5. **Only now** the Event(s): `{ type: "EVENT", lane: <Event lane>, x: 220, name }` → arrow Command → Event is automatic. Fields copy one hop only, so an Event created before step 4 gets none of the Read Model's fields through the Command. With several Events, put the first at `x: 220` and place the others beside it in the Event lane.
-6. The Events that **close** the todo list are these Events (the Command's): connect each to the Read Model (`POST /connections` `{ from: <event>, to: "$q" }`), then `PATCH` the Read Model's fields once more (the arrow copies the Event's flat fields into it). Without this arrow an item never closes.
+2. List-shaped **todo Read Model**: `{ type: "READ_MODEL", lane: <Interaction lane>, x: 40, autoConnect: false }`, `as: "q"`. Connect opening Events individually; **PATCH final list-shaped fields before any outgoing arrow** (incoming arrows add flat fields).
+3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, x: 140, name }`, `as: "p"`; no fields → automatic Read Model → Processor.
+4. Command: `{ type: "COMMAND", lane: <Interaction lane>, x: 220, name, fields }`, `as: "cmd"` → automatic Processor → Command, passing Read Model fields through. Missing arrows (e.g. `autoConnect: false`): `POST /connections` `{ from: "$q", to: "$p" }`, `{ from: "$p", to: "$cmd" }`.
+5. **Only now** Event(s): `{ type: "EVENT", lane: <Event lane>, x: 220, name }` → automatic Command → Event. One-hop copying means earlier Event creation misses Read Model fields. Multiple Events: first at `220`, others beside it in Event lane.
+6. Command's Events **close** todo items: connect each → Read Model `{ from: <event>, to: "$q" }`, then **PATCH final Read Model fields again** (arrows add flat fields). Without closing arrow, items never close.
 
 ### Translation — external Event → Read Model → Processor → Command → internal Event
 
-As Automation (same layout: Read Model first, Command next to it, Event under the Command), plus at least one element in an **Integration** lane (an Event or Read Model of the external system there), which is what makes the slice a translation. Ask the user which external system it is, where its Event comes from and which Integration lane to use (one lane per system, named after it, its `info` saying how the system reaches us: core rules, "External systems"; none yet: ask for the name and details, then add it as `chapter-setup` says). Create the external Event **first** (it opens the todo list): `POST /elements` `{ slice: "$s", lane: <Integration lane>, type: "EVENT", name: <as the system names it>, fields: <its payload> }`, or reuse an existing one (find it in the outline); then create the Read Model with `autoConnect: false` and connect the external Event to it with `POST /connections`. The Read Model is the todo list (never closed). The Command's Event is the internal fact in this domain's language. **Never connect the external Event to any other Read Model** (a read model): it is stored as an internal Event first, and only that Event feeds read models. On replay the internal Event is at the same point in the event store, which two separate sources cannot guarantee; external streams also keep events only for a limited time.
+Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integration** lane; this makes type translation.
+- Ask system name, Event source and Integration lane. One lane per system, named after it; `info` describes delivery (`eventmodeling-core-rules`, External systems). Missing lane: ask name/details, add via `chapter-setup`.
+- Create external Event **first**, or reuse from outline: `POST /elements` `{ slice: "$s", lane: <Integration lane>, type: "EVENT", name: <system's name>, fields: <payload> }`.
+- Then create todo Read Model with `autoConnect: false`; connect external Event → todo list. **Translation todo list never closes.**
+- Command records internal Event in domain language. **External Event feeds no other Read Model**; only internal Event feeds read models. This preserves replay position in event store; separate sources cannot guarantee order and external retention is limited.
 
 ## Step 2 — Write
 
-`POST /api/model/ops` `{ "ops": [ … ] }`; `body` as JSON, built with `ConvertTo-Json -Depth 20` or `JSON.stringify`. Example (state change, one Event):
+`POST /ops` `{ ops: [...] }`; build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change example:
 
 ```json
 { "ops": [
@@ -79,16 +82,12 @@ As Automation (same layout: Read Model first, Command next to it, Event under th
 ] }
 ```
 
-Read `results[]` (status and body of each op).
+Check each `results[]` status/body.
 
 ## Step 3 — Finish and verify
 
-1. `GET /api/model/outline?context=<id>`: the new slice's `type` must be the expected one (`STATE_CHANGE`, `STATE_READ`, `AUTOMATION`, `TRANSLATION`), every element in the right lane, `connectsTo` as in the recipe. A slice of type `null` means an element or arrow is missing: fix it.
-2. Check the fields of the elements that changed through arrows (`GET /elements/:id`): adjust with `PATCH` as `element-fields` says (it replaces the list and propagates nothing).
-3. A new Screen has no mockup yet: it is an empty placeholder. Offer `html-screen` (do not skip it silently), and offer `scenarios` for the Command.
-4. Report:
-   - the slice (id, name, type, Chapter) and each element created (id, type, name, lane);
-   - the arrows (automatic and added) and the fields each element got by copying;
-   - gaps: fields with no source, a Read Model without an Event feeding it, an arrow to confirm;
-   - that the open board shows the change by itself (it pulls the server model and replaces any changes not yet pushed);
-   - any error: read `error` (it names the op), fix the cause, retry the whole batch (nothing was written).
+1. `GET /outline?context=<id>`: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION`, correct lanes and recipe arrows. `null`: fix missing element/arrow.
+2. `GET /elements/:id` for arrow-affected fields; adjust via `element-fields` PATCH (whole-list replacement, no propagation).
+3. New Screen is placeholder: **offer `html-screen`, never skip silently**; offer `scenarios` for Command.
+4. Report slice (id/name/type/Chapter), elements (id/type/name/lane), automatic/explicit arrows, inherited fields, gaps (no field source, unfed Read Model, uncertain arrow), automatic board updates (pull behavior: API reference).
+5. Error names op: read `error`, fix cause, retry **whole batch**; failed batch wrote nothing.
