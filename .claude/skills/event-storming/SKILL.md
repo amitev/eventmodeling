@@ -15,6 +15,8 @@ Read `eventmodeling-core-rules` once/session first (Events, causality). Use `nam
 
 ## How a discovered Event is shown
 
+Here, **Event** means the board element (model definition), not a recorded Event Sourcing instance. Renaming, moving or deleting it changes the model, not event-store history.
+
 Process-named Chapter; **one slice per Event**, Event alone in Event lane, slice name = Event (`Order Placed`). Left-to-right **time order**; other lanes empty until hand-over. Untyped slices expected; **never run `model-check` during storm**.
 
 ## Step 0 — Start

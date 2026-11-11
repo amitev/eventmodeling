@@ -62,7 +62,8 @@ Anything else, including empty slice: no type.
 - Past business fact; past-tense business name.
   - Valid: `OrderPlaced`, `PaymentAuthorized`, `UserRegistered`
   - Invalid: `SidebarOpened`, `RequestCompleted`, `ApiCalled` (machinery/UI state)
-- **Immutable:** never modify/delete created event; correction = new event.
+- **Immutable in Event Sourcing:** never modify/delete a recorded Event instance; correction = new Event.
+- **Board Event element:** editable model definition, not a recorded instance. Its edits/deletes change the model, not event-store history; follow the task's confirmation rules.
 - Captured facts only; computed/derived values belong in READ_MODEL.
 
 ### COMMAND
