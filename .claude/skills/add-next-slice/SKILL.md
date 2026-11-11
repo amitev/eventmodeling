@@ -1,88 +1,76 @@
 ---
 name: add-next-slice
-description: Decide on and create a genuinely new slice from scratch when the model does not yet suggest an obvious next capability — the story on the board has no slice for what naturally comes next. Use for "add the next slice", "what comes next", "continue the model", "add another step". Do not use for - building a slice the user has fully specified (use `slice-modeler`), or changing, moving or deleting existing slices and elements (use `chapter-setup`, `edit-and-delete`).
+description: Choose and create a genuinely new next capability when the board has no slice for it. Use for "add the next slice", "what comes next", "continue the model", "add another step". Fully specified slice uses `slice-modeler`; existing structure/elements use `chapter-setup` / `edit-and-delete`.
 ---
 
 # Add Next Slice
 
-**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-**Purpose**: Given a Chapter whose story has no slice yet for what naturally comes next, decide on a plausible next capability and create it as a brand-new slice — Screen, Read Model or Command, and Event — all at once, with a real mockup that matches the Chapter's existing look.
+**Purpose:** choose plausible next capability, create brand-new slice with recipe's elements and real mockup matching Chapter's look.
 
-Read `eventmodeling-core-rules` first (slices, lanes, naming, causality). Do not guess the rules below. To look things up in the model, use the `model-navigation` skill (cheap reads). The slice itself is built with `slice-modeler`; this skill decides **what** to build and finishes the Screen.
-
----
+Read `eventmodeling-core-rules` first; lookups: `model-navigation`. Never guess rules. `slice-modeler` builds slice; this skill chooses **what** and finishes Screen.
 
 ## Core concept: a slice is one Command, one Read Model, or one Processor
 
-A slice is one Command, one Read Model, or one Processor, with the Event(s), Read Model and Command around it (the four slice types and their shapes are in the core rules and in `slice-modeler`). The slice you create must obey them like any other. If the capability you decide on needs both a Command and a Read Model (for example "place an order" needs a `Place Order` Command and an `Order Details` Read Model), that is **two slices**: create them one at a time, each its own batch.
-
----
+Follow four slice shapes in core rules/`slice-modeler`: one Command, one Read Model, or one Processor with surrounding elements. Capability needing Command **and** Read Model (e.g. `Place Order` + `Order Details`) needs **two slices**, one at a time, separate batches.
 
 ## This is not a case where you stop and ask
 
-"I don't know what the next capability is" is not the same as "any guess risks doing the wrong thing." A plausible next slice — the next lifecycle stage, an unaddressed affordance on an existing Screen, a natural create/update/notification gap — always exists for a working domain, and a wrong guess costs nothing: it is one more slice, easy to rename or delete later.
+A working domain has plausible lifecycle, Screen-affordance or create/update/notification gaps; a new slice is easy to rename/delete.
 
-**Ending the turn with a question and no new slice is not an acceptable outcome of this skill.** For the choice of the next capability this skill overrides the general rule to ask before assuming: make the assumption, state it (Step 4), and create the slice in the same turn. The only things you may still ask about are the ones you cannot decide at all (Step 0).
-
----
+**Must create new slice this turn, not end with a question.** Choosing capability overrides ask-before-assuming: choose, state assumption in Step 4, create. Ask only undecidable location/process questions in Step 0.
 
 ## Step 0 — Where
 
-- The Chapter: named in the request. Not named and the Context has exactly one Chapter: use it. Several Chapters: ask which.
-- The place in the Chapter: after the last slice, unless the request names a slice to follow (`chapter-setup`, "Add between").
-- An **empty** Chapter in an empty model and a request that names nothing: there is no story to continue. Ask what the process is. This is the only case where you ask what the capability is.
+- Use requested Chapter; absent + exactly one in Context: use it; several: ask.
+- Append after last slice unless request names predecessor (`chapter-setup`, Add between).
+- **Empty Chapter in empty model, request names nothing:** ask process; only case allowing capability question.
 
 ## Step 1 — Decide on the next capability
 
-**If the request gives no specific instruction about the next slice** (a bare "add the next slice"), do not ask for one: read the story already on the Chapter and derive the next step yourself.
+Bare "add the next slice": derive from Chapter, **never ask for capability**.
 
-1. Read the Chapter's slices in order (`model-navigation`: the outline for names and order, `GET /chapters/:id?screenContent=false` for the elements' fields). Titles and field names are enough; do not read mockups yet.
-2. The Commands, Events, Read Models and Screens, left to right, tell a story (for example Reserve Table → Cancel Reservation → Check In → …). Identify what is missing next:
-   - the natural following **lifecycle stage** (placed → paid → shipped → …);
-   - an **unaddressed affordance** on an existing Screen: a button or link with nothing behind it. Only for this, read the mockup of the last one or two Screens (`GET /api/model/elements/:id`, `html`; filter it, do not print it all);
-   - a **gap** the existing entity clearly has: created but never updated, cancelled or shown in detail; an action with no confirmation or overview; an Event that no Read Model reads;
-   - open **red Notes** in the Chapter (open questions) that name a missing step;
-   - an **external party's reaction**: the story, a Note or the request names an external system whose fact this Chapter must take in (a payment confirmed, a delivery reported). Only then is a translation slice a candidate; never invent an external system.
-3. Prefer the option that most directly **continues the existing narrative** over one that starts an unrelated thread: the goal is the slice that makes the most sense as *next*, not just any plausible one.
-4. `model-check` (for this Chapter) lists unfinished work: slices with no type, Screens with no mockup, Events nothing reads. Use it as input, and name unfinished slices in the report; creating the new slice is still the task.
+1. Read ordered slices: outline names/order; `GET /chapters/:id?screenContent=false` for fields (`model-navigation`). Titles/field names suffice; no mockups yet.
+2. Read left-to-right story (e.g. Reserve Table → Cancel Reservation → Check In); find:
+   - next **lifecycle stage** (placed → paid → shipped);
+   - **unaddressed Screen button/link**: only here read last one/two mockups (`GET /elements/:id`, filtered HTML, never whole output);
+   - **entity gap**: created but never updated/cancelled/detailed; action without confirmation/overview; Event no Read Model reads;
+   - **red Notes** naming missing step;
+   - **external reaction** only if story/Note/request names system/fact (payment confirmed, delivery reported). Never invent system.
+3. Prefer **direct narrative continuation**, not unrelated thread.
+4. Run Chapter `model-check`; use unfinished slices (untyped, missing mockup, unread Events) as input and report them. Still create **new slice**, not just repairs.
 
-**If the request names the capability** (or points to a Note or discussion that does), use that instead of inferring one.
+Request/Note/discussion names capability: use it, don't infer another.
 
-If several next steps are equally reasonable, pick the one that best continues the story, record the alternative in the report, and create the slice. Never stop at the question.
+Tied options: choose best continuation, report alternatives, create; **never stop at question**.
 
-**Naming and content** of what you decide: business language as `naming` says. Field names and types come from the story: the next Command carries the identifiers the earlier Events recorded; a Read Model shows what earlier Events captured. Do not invent business rules; a field with no source in the story is `generated` or left out (`element-fields`).
+Business names: `naming`. Fields/types from story: reuse recorded identifiers in Command, captured facts in Read Model. **Never invent business rules**; sourceless field is `generated` or omitted (`element-fields`).
 
 ## Step 2 — Create the slice
 
-Build it with `slice-modeler`: gather nothing from the user (Step 1 decided it), pick the recipe for the slice type, and write one atomic batch.
-
-- **Type:** state change for a new Command (Screen → Command → Event), state read for a new Read Model (Read Model → Screen), automation for a new Processor, and translation when an external system's fact comes in. A translation needs the system's name, its Event and how it reaches us (Integration lane named after it, `info`; core rules, "External systems"): take them from the story, a Note or the request. Not named there: do not infer them; choose another next step and record the translation in the report as needing the user's input. Per the core concept above, one Command, Read Model or Processor per slice.
-- **Name the slice after its element** (the Command, Read Model or Processor name), never leave "New Slice".
-- **Lanes:** the lane of the needed type. If the Chapter has more than one lane of a type (for example several Actor lanes for different roles), use the one the story's earlier slices use for that role; when nothing points to one, use the first of that type, and say which in the report. A Processor goes in a system-actor lane; system-actor lanes are preferably the top Actor lanes, above the human roles.
-- **Place** it after the last slice (or where Step 0 said).
-- **Arrows and fields** as the recipe says: a Read Model is fed by the previous slice's Events (automatic arrow from the previous slice's right-most Event; connect other Events explicitly), and the Screen inherits the fields.
-- Do not use `info` for anything but implementation details (`slice-modeler`).
+Use `slice-modeler` recipe, **no further gathering**, one atomic batch.
+- **Type:** new Command → state change (Screen → Command → Event); Read Model → state read (Read Model → Screen); Processor → automation; external fact → translation. Translation requires known system name/Event/delivery from story/Note/request; named Integration lane + `info` (`eventmodeling-core-rules`, External systems). Missing details: **choose other capability**, report translation needing input; never infer.
+- **Name:** exact Command/Read Model/Processor name; never "New Slice".
+- **Lane:** needed type; reuse earlier slice's lane for role. No evidence: first of type, report choice. Processor in system-actor lane, preferably above human lanes.
+- **Position:** Step 0.
+- **Arrows/fields:** recipe; Read Model fed by previous Events (right-most automatic, others explicit), Screen inherits fields.
+- `info`: implementation details only (`slice-modeler`).
 
 ## Step 3 — Replace the placeholder Screen, matching the Chapter's style
 
-For a state change or state read slice, the Screen created in Step 2 has **no mockup**: it is an empty placeholder. Never leave it like that.
+State-change/state-read Screen starts empty. **Never leave placeholder.**
 
-1. Choose the **style reference**: the Screen with a mockup in the closest earlier slice of the Chapter. None there: the nearest Screen with a mockup anywhere in the Chapter, then in the Context. None at all: no reference; design it fresh and say so.
-2. Use `html-screen` to write the mockup into the Screen you created (an update, so its fields stay), naming the chosen Screen as the style reference (its Step 2a: take the look, not the content or the width). Tell it what the Screen contains: the fields of the new Command or Read Model, with realistic values from the story.
-3. Always `html-screen`: never a wireframe sketch unless the user explicitly asks for one.
+1. **Style reference priority:** mockup in closest earlier slice → nearest mockup elsewhere in Chapter → Context → none (design fresh, report).
+2. `html-screen` updates created Screen, **keeping fields**. Name reference; Step 2a takes look, not content/width. Use new Command/Read Model fields, realistic story values.
+3. Always `html-screen`; wireframes only on explicit request.
 
-An automation slice has no Screen: skip this step.
+Automation has no Screen: skip.
 
 ## Step 4 — Verify and report
 
-1. Read the outline for the Chapter once: the new slice's `type` must be the expected one (`STATE_CHANGE`, `STATE_READ`, `AUTOMATION`, `TRANSLATION`), with the arrows of the recipe. `null` means something is missing: fix it.
-2. Report:
-   - the **capability** you decided on and why (what in the story pointed to it), and the alternatives you passed over;
-   - the **assumptions** you made (the lane, the style reference, a field with no source);
-   - the slice type, its name and each element created (name, type, lane, id);
-   - whether the Screen got a real mockup and which Screen it matches (or that none existed);
-   - findings of `model-check` that matter (unfinished slices).
-3. Offer, don't do: `scenarios` for the new Command, `element-fields` if a field should flow further, `wdyt` for a business review.
+1. One Chapter outline read: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION` and recipe arrows; `null`: fix missing part.
+2. Report capability/reason/alternatives; assumptions (lane/style/sourceless field); slice type/name; elements (name/type/lane/id); actual mockup/reference or none; relevant unfinished-work findings.
+3. Offer only: `scenarios`, further field flow via `element-fields`, business review via `wdyt`.
 
-When an assumption is large (a new capability that changes the story's direction) and the Chapter already has a Spec lane with a free Cell in the new slice, you may add a yellow Notes element there with the assumption in one sentence. Do not add a lane for it.
+Large directional assumption: optional **yellow Notes**, one sentence, only if existing Spec lane has free new-slice Cell. **Never add lane for it.**

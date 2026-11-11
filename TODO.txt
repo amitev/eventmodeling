@@ -59,6 +59,9 @@ CLI
 Other features to add
 - https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 
+JIRA integration
+- Create JIRA ticket from slices
+- Update JIRA status?
 
 Agentic
 - Run the agent from the CLI?

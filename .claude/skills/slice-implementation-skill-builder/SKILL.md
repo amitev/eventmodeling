@@ -1,82 +1,80 @@
 ---
 name: slice-implementation-skill-builder
-description: Interview the user to find out which technologies slices are to be implemented with, then build the three slice-implementation skills (state change, state read, automation + translation) for exactly that technology. Never assumes anything and asks for confirmation of every answer and before every write. Use for "set up slice implementation for <technology>", "build the implement skills for Kotlin / .NET / TypeScript ...", "make the implement skills concrete", "change the stack of the implement skills". Not for implementing a slice (use the skills this one builds).
+description: Interview and confirm every technology decision, then generate state-change, state-read and automation/translation implementation skills. Never assume; confirm every answer and before every write. Use for "set up slice implementation for <technology>", "build the implement skills for Kotlin / .NET / TypeScript ...", "make the implement skills concrete", "change the stack of the implement skills". Not for implementing slices; use generated skills.
 ---
 
 # Slice Implementation Skill Builder
 
-**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Every skill this builder generates states this rule.
+**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. **Every generated skill must state this rule.**
 
-Builds the three slice-implementation skills for one technology: **state change**, **state read** and **automation** (automation and translation share one skill). The generated skills are **backend only**: they never build UI (no Screen, view, form or HTML mockup code). The technology-neutral knowledge of what each slice type means and how to read it from the server lives in this skill's `reference/` folder; the builder adds the technology. Read `eventmodeling-core-rules` first. Endpoints: [../api.md](../api.md).
+Generate **three backend-only skills**: state change, state read, automation (includes translation). **No UI/Screen/view/form/mockup code.** `reference/` defines technology-neutral slice meaning/API reads; add confirmed technology. Read `eventmodeling-core-rules` first.
 
 | File | Holds |
 |---|---|
-| [reference/common.md](reference/common.md) | frontmatter rules, find the slice, fetch it (`GET /chapters/:id?slice=`, S4.21), report |
+| [reference/common.md](reference/common.md) | frontmatter, find/fetch slice (`GET /chapters/:id?slice=`), report |
 | [reference/state-change.md](reference/state-change.md) | Screen → Command → Event: what to read, what to implement |
 | [reference/state-read.md](reference/state-read.md) | Event(s) → Read Model → Screen: what to read, what to implement |
 | [reference/automation.md](reference/automation.md) | Event → Read Model → Processor → Command → Event, and translation: what to read, what to implement |
 
 ## Rules (no exceptions)
 
-1. **Never assume.** Not a technology, version, library, folder, name, command or convention. Not "the usual choice", not what the user said earlier about another topic, not what you find in the code. If it is not an answer the user gave and confirmed, it is a question.
-2. **Confirm everything.** After each answer, repeat it in one line and ask the user to confirm or correct it (yes / no / change). Only a confirmed answer goes into the decision record. A silent, empty or declined reply is not a confirmation: ask again or mark the topic open.
-3. **One topic at a time**, short questions, with the options you know as suggestions marked as suggestions. Use the ask tool when available, otherwise plain questions. "I don't know" is an answer: offer the options with their consequences, the user decides; do not pick for them.
-4. **Keep interviewing until every topic below is confirmed or explicitly marked "not needed" by the user.** Do not stop at "enough to start".
-5. **Facts from outside need the user's eye.** Library APIs and commands: read the official documentation (fetch it), show what you will rely on, and have the user confirm it. Existing code: ask permission to read it, show what you found, have the user confirm it is the convention to follow.
-6. **Write nothing until the user has confirmed the final plan** (Step 4). Never overwrite a file without asking.
+1. **Never assume** technology/version/library/folder/name/command/convention—not usual choices, unrelated prior answers or discovered code. Not user-confirmed → ask.
+2. **Confirm every answer:** repeat one line, ask yes/no/change; record only confirmed decisions. Silence/empty/declined reply is **not confirmation**; ask again or leave open.
+3. **One topic at a time**, short questions, options labelled suggestions. Use ask tool if available, otherwise plain questions. "I don't know": explain options/consequences; **user chooses**.
+4. Continue until **every topic confirmed or explicitly "not needed"**; never stop at enough to start.
+5. **Confirm outside facts:** fetch official API/command docs, show relied-on facts, ask confirmation. Existing code: **ask reading permission**, show findings, confirm convention.
+6. **No writes before final-plan approval** (Step 4). **Ask before overwriting any file.**
 
 ## Step 1 — Read the base
 
-Read the four files in `reference/`. Also `GET /api/model/rules` (`fieldTypes`, `fieldFlags`) for the field mapping topic. Check whether skills for a technology already exist in `.claude/skills/` (names `implement-*`, `stack-*.md`): if so show the user what they say and ask whether they are to be replaced, extended or kept. Do not change anything yet.
+Read all four `reference/` files; `GET /api/model/rules` for `fieldTypes`/`fieldFlags`. Look for existing `.claude/skills/implement-*`, `stack-*.md`; show contents and ask replace/extend/keep. **Change nothing yet.**
 
 ## Step 2 — Interview
 
-Cover every topic. Ask what is needed to write instructions an agent can follow without guessing. Follow up until the answer is concrete (names, versions, commands, paths).
+Cover **every topic**, following up to concrete names/versions/commands/paths; instructions must need no guessing.
 
 | # | Topic | Find out |
 |---|---|---|
-| 1 | **Scope** | Technology name for the skills; one stack for all three slice types, or different ones (always backend only, no UI: do not ask) |
+| 1 | **Scope** | Technology name; one stack or different stacks per slice type. **Backend only/no UI is fixed; do not ask** |
 | 2 | **Language and runtime** | Language, version, runtime, package manager, build tool |
-| 3 | **Frameworks** | Web/application framework, dependency injection, serialization, any framework the user wants or forbids |
-| 4 | **Event store** | Which store or library; how events are named, serialized and versioned; stream per what (id of what); optimistic concurrency; how Events of the model map to event types |
-| 5 | **Command handling** | Style (e.g. function, aggregate, decider, handler class); how a Command arrives (HTTP, message, other); validation; error/refusal representation (maps to the `error` scenarios); idempotency; how `generated` fields (time, acting user, ids) are produced |
-| 6 | **Read models** | Where they are stored; how projections run (inline, async, catch-up/rebuild); how a Read Model is exposed; keys and `list` fields |
-| 7 | **Automation and translation** | How Processors are triggered (subscription, polling, schedule, message bus); retry and idempotency; how the todo list is kept; for translation: how external Events arrive (webhook, queue, polling, other) and where the mapping to internal Events lives |
-| 8 | **Project layout** | Existing project or new; root folder; folder structure (suggest, as the default: `<context name>/<chapter name>/<slice name>/`, one folder per slice, Context and Chapter folders from the model names; the user confirms or changes it); file names and casing; how model names map to code names (casing, suffixes); where shared code goes |
-| 9 | **Field types** | For each model field type and flag (`list`, `generated`, `pii`, `object`, ...) the exact type or handling in this stack; how `pii` fields are treated |
-| 10 | **Tests** | Framework; how a Given/When/Then scenario becomes a test; test levels (unit, integration); where tests live; example data from the scenario |
-| 11 | **Commands to run** | Exact build, test, lint and run commands the skills must execute to verify their work (or: none) |
-| 12 | **Cross-cutting** | Logging, configuration, authentication/authorisation, time source, anything else every slice must follow |
-| 13 | **Existing code** (only if there is a project) | Path; permission to read it; which parts are the convention to follow (the user confirms what you found) |
-| 14 | **Output** | Names of the three skills (suggest `implement-state-change-<tech>`, `implement-state-read-<tech>`, `implement-automation-<tech>`, but the user chooses), where they are written (suggest `.claude/skills/`), whether an existing skill of the same name is replaced, and whether the shared decisions go into one file next to them (suggest `.claude/skills/stack-<tech>.md`, referenced as `../stack-<tech>.md`) |
+| 3 | **Frameworks** | Web/application framework, DI, serialization, wanted/forbidden frameworks |
+| 4 | **Event store** | Store/library; Event names/serialization/versioning; stream identity; optimistic concurrency; model Event → code type mapping |
+| 5 | **Command handling** | Style (function/aggregate/decider/handler); entry (HTTP/message/other); validation; refusal format mapping to `error` scenarios; idempotency; generated time/user/ids |
+| 6 | **Read models** | Storage; inline/async/catch-up/rebuild projections; exposure; keys; `list` fields |
+| 7 | **Automation and translation** | Processor trigger (subscription/polling/schedule/bus); retry/idempotency; todo-list storage; external arrival (webhook/queue/polling/other); external → internal mapping location |
+| 8 | **Project layout** | Existing/new project, root; suggest `<context name>/<chapter name>/<slice name>/`, one folder/slice, model-named Context/Chapter folders; **user confirms/changes**. File names/casing, model → code names/suffixes, shared-code location |
+| 9 | **Field types** | Exact stack mapping/handling for **every** model type/flag (`list`, `generated`, `pii`, `object`, ...), including PII treatment |
+| 10 | **Tests** | Framework, GWT → test mapping, unit/integration levels, location, scenario example data |
+| 11 | **Commands to run** | Exact build/test/lint/run verification commands, or none |
+| 12 | **Cross-cutting** | Logging, configuration, authn/authz, time source, other shared rules |
+| 13 | **Existing code** (existing project only) | Path, read permission, conventions to follow (**user confirms findings**) |
+| 14 | **Output** | **User chooses** skill names (suggest `implement-state-change-<tech>`, `implement-state-read-<tech>`, `implement-automation-<tech>`), location (suggest `.claude/skills/`), replacements, shared decisions file or not (suggest `.claude/skills/stack-<tech>.md`, link `../stack-<tech>.md`) |
 
-When an answer opens a new question (e.g. a chosen library needs a database), add that topic and ask it. Order may change; coverage may not.
+Answer opens dependency (e.g. library needs database): add topic, ask. **Order flexible, coverage mandatory.**
 
 ## Step 3 — Decision record
 
-Show all confirmed answers, grouped by topic, as one list, with the topics the user marked "not needed" and any still open. Ask the user to confirm the whole record or name what to change. Repeat until confirmed. An open topic blocks Step 4.
+Show confirmed answers by topic, "not needed" and open topics. Ask approval/corrections of **whole record**; repeat until confirmed. **Any open topic blocks Step 4.**
 
 ## Step 4 — Plan and confirm
 
-Each generated skill has five steps. Say, per skill, what it will contain, then ask for confirmation before writing:
-
-- the files to be created or replaced (full paths);
-- Steps 1, 2, 3 and 5 (which slice, fetch it, read it, report) come from `reference/common.md` and the type file, adjusted only where the stack changes what is reported; Step 1.3 names the confirmed stack;
-- Step 4 "Implement" is the type file's neutral part made concrete: files to create and where, names, what each file contains (as a short template or example built only from confirmed decisions), the commands to run.
+Each generated skill has **five steps**. Present per-skill plan, **confirm before writing**:
+- Full paths of files created/replaced.
+- Steps 1/2/3/5 (identify/fetch/read/report) from `reference/common.md` + type file; adjust only stack-dependent reporting; **Step 1.3 names confirmed stack**.
+- Step 4 "Implement": concrete files/locations/names/contents, short templates/examples from confirmed decisions only, commands.
 
 ## Step 5 — Write
 
-Write the skills (and the shared decisions file if chosen) from the `reference/` files, following the frontmatter rules in `reference/common.md` (`name` equal to the folder, a `description` with "Use for ..." and "Not for ..."). A generated skill never links to this builder's `reference/` files: copy what it needs. Rules for the content:
-
-- Every technology statement traces to a confirmed answer or to documentation the user confirmed. No invented API, option or command. Where something is still unknown at implementation time, the skill says to ask the user.
-- Keep the rule of the type files that business rules come only from the scenarios and the model; the stack decides how, never what.
-- Examples use the user's naming rules and a neutral business example (e.g. Place Order), never real project data.
-- No UI: a generated skill builds no Screen, view, form or page, and does not use a Screen's `html`/`url`. It uses a Screen only to read the fields that arrive at a Command or leave a Read Model.
-- Keep each skill short; shared facts go in the decisions file once, referenced from each skill.
+Generate skills/shared decisions if chosen from `reference/`; follow `reference/common.md` frontmatter: `name` = folder, description includes "Use for ..." / "Not for ...". **Copy needed content; never link generated skill to builder's references.**
+- Technology statements trace to confirmed answers/docs; no invented API/option/command. Unknown at implementation time → skill says ask.
+- Business rules **only from model/scenarios**; stack decides how, never what.
+- Neutral examples (Place Order), user's naming, **never real project data**.
+- **No UI or Screen HTML/URL use**; Screen only supplies fields entering Command/leaving Read Model.
+- Short skills; shared facts once in decisions file, referenced by each.
 
 ## Step 6 — Verify and report
 
-1. Re-read each written file: frontmatter valid, links resolve, no placeholder left, no statement without a confirmed source.
-2. Show the user a list of every technology decision used and the skill it appears in; ask whether anything is wrong.
-3. Offer (do not start) a trial run: implement one existing slice with the new skill. If accepted, use the slice-fetch step of the new skill and keep the user in the loop.
-4. Report: files written, decisions recorded, topics marked "not needed", open questions.
+1. Re-read files: valid frontmatter/resolving links, no placeholders/unsourced statements.
+2. Show **every technology decision + skill using it**; ask corrections.
+3. **Offer only** trial implementation of existing slice. If accepted, use generated skill's fetch step; keep user informed.
+4. Report files, decisions, "not needed" topics, open questions.

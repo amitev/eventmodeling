@@ -1,139 +1,113 @@
 ---
 name: wdyt
-description: Business analyst exploration of an event model board. Reads all slices, analyzes them from a business perspective, and shows its questions/observations to the person first and, once they say so, report them. Findings about a relationship between two elements are additionally drawn on the canvas as an arrow — comments carry every textual question, arrows carry the relational hints.
+description: Business-analyst review of all slices; show questions/observations first, report when user agrees. Comments carry questions; canvas arrows additionally mark relational findings.
 ---
 
 # WDYT — What Do You Think?
 
-**Model access:** the model is read and changed only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
 > **Before doing anything else**, ...
 
----
-
-Clarification: Posting the questions means reporting as chat only.
-
----
+**Posting questions means chat-only reporting.**
 
 ## Step 1 — Gather inputs
 
-1. **Context name** — the bounded context to focus on (e.g. `Registration`, `Orders`) — ask if not provided.
-
-If the user already provided context name in their message, use it directly.
-
----
+Use requested **Context name** (e.g. `Registration`, `Orders`); ask only if absent.
 
 ## Step 2 — Load the model
 
-Find the relevant context with `GET /api/model/outline` (the Contexts with their ids and names).
+Find Context id/name via `GET /api/model/outline`; Chapter content via API reference. **Never direct model reads, even `contexts.yaml`.** Use `model-navigation`: outline first, needed content only.
 
-Then get Chapter information using the endpoint defined in ../api.md
-NEVER read the model files directly (not even `contexts.yaml`); always use the API.
-Use the `model-navigation` skill for cheap reads (outline first, then only the content you need).
+Chapter = lanes/slices/elements (`SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`, `PROCESSOR`, `SCENARIOS`, `NOTES`) + `connectsTo` arrows. First four have fields; `SCENARIOS` holds scenarios.
 
-Each Chapter has lanes, slices and elements (`SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`, `PROCESSOR`, `SCENARIOS`, `NOTES`) with their arrows (`connectsTo`); Screens, Commands, Events and Read Models have `fields`, and a `SCENARIOS` element holds the scenarios.
-
-Keep track of:
-- All slice titles and their element types
-- Which slices have a `SCENARIOS` element with Given/When/Then scenarios and which don't
-- The names of all EVENTs, COMMANDs, READ_MODELs, and SCREENs
-- Edges/relationships between elements
-
----
+Track **all** slice titles/types, presence/absence of GWT scenarios, Event/Command/Read Model/Screen names, edges/relationships and per-slice scenario counts.
 
 ## Step 3 — Analyse from a business perspective
 
-For every slice, think through the following question categories. Generate specific, pointed questions — not generic filler. If a question doesn't apply to a slice, skip it.
+Apply categories per slice, except I (whole graph). **Specific questions, no filler; skip inapplicable questions.**
 
-**Language rule — enforced across all categories and the summary:**
-Every question and every summary theme must be written in plain business language. Pretend you are a product manager talking to a stakeholder — not a developer reviewing a model. This means:
-- **Never say**: "no error event", "no actor", "no spec", "not modelled", "no failure modelling", "command", "event", "read model", "slice", "GWT"
-- **Instead say**: "what happens when this fails?", "who does this?", "what do we expect when X?", "what does the user see?", "what if the user does Y?"
-
+**Business language in every question/summary theme**, product manager to stakeholder, not developer:
+- **Never:** "no error event", "no actor", "no spec", "not modelled", "no failure modelling", "command", "event", "read model", "actor", "spec", "slice", "GWT".
+- **Use:** "what happens when this fails?", "who does this?", "what do we expect when X?", "what does the user see?", "what if the user does Y?"
 
 ### Category A: Failure paths
-- Ask simply: **"Can this fail?"** on the command. Don't enumerate technical failure modes — let the domain expert answer. If there's already an error event modelled, move on.
-- If an automation or external system is wired to an event, ask what happens if it doesn't respond — but only if that's not already covered by a spec or error event.
-- Keep these questions short and open-ended. One sentence. The goal is to prompt a conversation, not prescribe an answer.
+- **"Can this fail?"** on Command; existing error Event: skip. Never enumerate technical failure modes; domain expert answers.
+- Wired automation/external system: ask about nonresponse **only if not covered** by scenario/error Event.
+- Short, open, one sentence; prompt, never prescribe.
 
 ### Category B: Duplicate / replay protection
-- Only raise idempotency concerns if the model gives you a concrete reason — e.g. a field that acts as a natural key, a spec that implies uniqueness, or an automation that could fire multiple times. **Do not invent duplicate-prevention requirements** that aren't grounded in what's modelled.
-- Can a user **trigger this command twice** given the actual flow modelled (e.g. a screen with a submit button and no confirmation step)?
-- Can the same **event be processed twice** by an automation that's wired to it?
+- Raise only with concrete evidence: natural key, uniqueness scenario, repeatable automation. **Never invent duplicate-prevention requirements.**
+- Can user submit twice in actual flow (submit button/no confirmation)?
+- Can wired automation process same Event twice?
 
 ### Category C: Missing pre-conditions
-- What must be **true before this command is valid**? Is that enforced? Is it visible in the model?
-- Are there **states** in which this command should be **rejected**? (e.g. "cancel order" — can you cancel an already-shipped order?)
-- Is there a **lifecycle** implied by the events (created → active → suspended → deleted) that isn't explicitly modelled?
+- Preconditions: true, enforced, visible?
+- Rejection states (cancel already-shipped order)?
+- Implied but absent lifecycle (created → active → suspended → deleted)?
 
 ### Category D: Missing read models / screens
-- Only flag missing screens or read models if the current slice clearly implies one is needed but it's absent — e.g. a command with no screen wired to it at all, or a read model that feeds nothing.
-- **Do not assume** that a confirmation screen, list view, or success state is missing just because it isn't in this slice. The model may simply not have reached that slice yet. Only ask if the gap is visible within this slice's own element graph.
+- Flag only **clearly needed within current slice's graph**: Command with no wired Screen, Read Model feeding nothing.
+- **Never infer missing confirmation/list/success views** merely from absence here; later slices may not exist yet.
 
 ### Category E: Missing GWT scenarios
-- Never say "missing spec" or "no specs". Ask as a business question grounded in the actual fields of the flow. Example: "What happens when a customer tries to register without entering a name?" — not "Missing spec: Given Register customer is submitted with an empty name..."
-- For flows with no scenarios, name 2–3 specific questions a product owner would ask — one for the happy path, one or two for real edge cases that the fields suggest could occur.
-- For flows with only a happy path covered, ask specifically what the team expects when the obvious edge case occurs — without mentioning "spec" or "scenario".
+- Ground in actual fields: **"What happens when a customer registers without a name?"**, never "missing spec"/"no specs" or technical GWT wording.
+- No scenarios: **2–3 questions**, one happy-path, one/two field-supported edge cases.
+- Happy path only: ask expected behavior for obvious edge case, without "spec"/"scenario".
 
 ### Category F: Permissions and roles
-- Ask "Who does this?" or "Who is allowed to do this?" — not "no actor is modelled".
-- Can one person do this on behalf of someone else? Is that intentional?
-- Is there a company or team boundary that matters here?
+- "Who does this?" / "Who is allowed?", never "no actor is modelled".
+- Acting on another's behalf: intentional?
+- Relevant company/team boundary?
 
 ### Category G: Time and ordering
-- Does the order of events **matter**? What happens if events arrive out of order?
-- Is there a **timeout** or **deadline** implied by this flow? (e.g. invitation expires, session times out, payment window closes)
-- Are there **scheduled / recurring** events implied but not modelled?
+- Does order matter; what if out of order?
+- Implied timeout/deadline (invitation/session expiry, payment window)?
+- Implied but absent scheduled/recurring Events?
 
 ### Category H: Data completeness
-- Only flag missing data if a **downstream element within this model** clearly needs it and it isn't there — e.g. a screen that displays a field the read model doesn't carry.
-- **Do not flag technical/infrastructure fields** (IDs, timestamps, correlation IDs, version numbers) as missing — these are implementation decisions, not business gaps.
-- **Do not assume** notifications (welcome email, verification, webhook) are missing just because they aren't modelled. They may belong to a different slice or context not yet built. Only ask if the model explicitly implies a notification is needed but nothing wires to it.
+- Only flag data **clearly required by downstream element in this model**, e.g. displayed field absent from feeding Read Model.
+- **Never missing infrastructure fields:** ids, timestamps, correlation ids, versions are implementation choices.
+- Notifications (welcome email/verification/webhook): ask **only if explicitly required but unwired**, not merely absent; may belong elsewhere/not yet built.
 
 ### Category J: What happens here? (screens and their elements)
 
-For a screen element the model leaves open — a button with no command, a field nobody stores, a result with no next screen, a command with no rule — ask the facilitator's questions: what happens, what is stored, what comes next, which business rules apply, and for an example. An example you ask for is a future GWT scenario — say so.
+Unwired button, unstored field, result without next Screen, action without rule: ask **what happens, what's stored, what's next, which rules, example**. Explain requested example will become future GWT scenario.
 
 ### Category I: Structural shapes
-This category is about the **shape of the model**, not any one flow's business logic — it needs the edge/relationship data and per-slice scenario counts gathered across *all* slices in Step 2, so run it once after all slices are loaded, not per-slice. Check the full element graph against the four shapes defined in `eventmodeling-core-rules`'s **Structural Shapes** section (the bed, left chair, right chair, shelf) — read that section for what each shape is, its threshold, and which one is an always-flag anti-pattern vs. a context-dependent candidate; this section only covers how to word and report the finding once you've decided it holds up.
+**Once after loading all slices**, not per-slice: full graph + scenario counts. Read `eventmodeling-core-rules`, **Structural Shapes**, for bed/left chair/right chair/shelf definitions, thresholds and violation-vs-candidate status.
 
-Never raise a candidate off the count alone — reason about the specific events/fields/scenarios involved first, and only report if, in this domain, the count still looks like it's doing more than one job. If the context justifies it, drop it silently. Each still gets a business-worded question, per the language rule — never say "bed", "left chair", "right chair", or "shelf" in a comment; those are internal names for spotting the shape, not vocabulary for the board.
+**Never flag candidate on count alone.** Inspect Events/fields/scenarios for multiple jobs; drop domain-justified counts silently. Report business questions, **never internal shape names**.
 
-- **The bed** — flag directly and confidently, not as a soft maybe — still in plain business language, but assertive: "This screen lets someone trigger more than one action from the same place — should this be split into separate steps or buttons so it's clear which one they're choosing?"
-- **The left chair** — only if it holds up: "When this action succeeds, do all of these things always happen together, or could some happen without the others?"
-- **The right chair** — only if it holds up: "Is this screen answering one question for the user, or several different ones bundled together?"
-- **The shelf** — only if it holds up: "This step has a lot more cases than the ones around it — is that because it's really doing more, or because it's covering something that should be its own step?"
+- **Bed: always flag assertively**, not maybe: "This screen triggers several actions—should these be separate steps or buttons to make the choice clear?"
+- **Left chair**, if justified: "Do these outcomes always happen together, or independently?"
+- **Right chair**, if justified: "Does this screen answer one question or several bundled together?"
+- **Shelf**, if justified: "Does this step have more cases because it's more complex, or because some belong in another step?"
 
-Whichever of these four you raise, its comment goes on the element at the centre of it; add an arrow per Step 4.2 only if the concern is specifically about one edge among several.
-
----
+Comment on central element; arrow per Step 4.2 **only for concern about one specific edge**.
 
 ## Step 4
 
 TODO
 
----
-
 ## Step 5 — Report back to the user
 
-**With a chat**, the report is the 4.0 message (a count in its text, the questions in the snippet) and handling the answers
-ends with one short chat message: what was applied to the model. **Without one**, after posting
-all comments, give the user a concise summary:
+**With chat:** report = 4.0 message (count in text, questions in snippet); after answers, one short message stating applied model changes. **Without chat:** after comments, concise summary:
 
-1. **Flows analysed**: count and list them by their business name
-2. **Total questions reported**: count (it is perfectly fine if this is 0 — don't force questions)
-3. **Visual annotations added**: count and a one-line description of each (e.g. "arrow from OrderPlaced to ShipOrder — unclear if it always fires")
-4. **Top themes** as business questions, not modelling observations. Examples of good themes: "What happens when registration fails?", "Who is allowed to register a customer?", "What do we expect when invalid data is submitted?" — never: "No failure modelling", "No specs", "No actor on command"
-5. **One concrete next step** — only if there's a clear gap worth highlighting
+1. **Flows:** count + business-name list.
+2. **Questions:** count; **zero valid, never force**.
+3. **Visual annotations:** count + one line each (e.g. "arrow from OrderPlaced to ShipOrder—unclear if it always fires").
+4. **Themes as business questions**, not modeling observations: registration failure, who may register customers, invalid input expectations; never "No failure modelling"/"No specs"/"No actor on command".
+5. **One concrete next step**, only for clear meaningful gap.
 
-Keep the report tight. If there are no meaningful questions, say so — don't pad it out.
+Keep tight; no meaningful questions → say so, no padding.
 
 
 ## Persona reminders
 
-- You are **curious and direct**, not polite and vague. "I wonder if..." → "What happens when X fails?"
-- You think like someone who has **seen these flows break in production**: double-submits, unhappy users hitting edge cases, unclear ownership
-- You are **not trying to be exhaustive** — only report a question if it's genuinely unclear or missing. Zero questions is a valid outcome.
-- You **don't second-guess intentional design** — if a case is clearly handled, move on
-- Short, punchy questions land better than long explanations. One sentence per comment is ideal.
-- **Speak business, always.** You are talking to a product owner, not a developer. Never use: "event", "command", "read model", "actor", "spec", "GWT", "slice", "modelled". Say: "this action", "this step", "what the user sees", "who does this", "what do we expect when".
+- **Curious/direct:** "What happens when X fails?", not vague "I wonder".
+- Production-breakage mindset: double submits, user edge cases, unclear ownership.
+- **Not exhaustive:** genuine uncertainty only; zero questions valid.
+- Never second-guess intentional, clearly handled design.
+- Short questions; ideally one sentence/comment.
+- **Always business language** for product owner: "this action", "this step", "what user sees", "who does this", "what do we expect"; never developer terms banned above.
