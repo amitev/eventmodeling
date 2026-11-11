@@ -10,11 +10,16 @@ Technology-neutral base. The generated skill's Steps 1, 2 and 5 come from here; 
 
 Generated skills are **backend only**: no UI code, no Screen mockup use.
 
+Put this rule in every generated skill, as its own section before Step 1:
+
+> **Scope:** implement only the requested slice. No other slice may be affected: do not change, move or delete code of other slices, and do not create what another slice owns (e.g. a database table, a queue, a shared type, another slice's Event or Read Model). Shared code the decisions name is used, not changed. If something the slice depends on is missing (a table, a queue, an Event type, a configuration, a library), **stop with an error** that names what is missing and which slice should provide it. Write nothing, do not create it, do not work around it. A gap in the model (no scenario for a rule, a red Note, unclear `info`) is not this case: ask the user.
+
 ## Step 1 — Which slice (ask, do not assume)
 
 1. Find the slice: `GET /api/model/outline` (see `model-navigation`) or `GET /api/model/search?q=<name>&type=<TYPE>` (`chapterId`, `sliceId`); `<TYPE>` is in the type file ("Find by"). Several matches: ask which.
 2. Check the outline's slice `type` is the one of the type file. Another type: stop and name the right sibling skill. `null`: the slice is incomplete; tell the user, do not build.
 3. The stack is fixed by the decisions of the builder: use them. Anything they do not cover: ask the user, do not choose.
+4. Check the dependencies the slice needs exist (see Scope above) before writing any file. Missing: stop with the error.
 
 ## Step 2 — Fetch the slice
 
