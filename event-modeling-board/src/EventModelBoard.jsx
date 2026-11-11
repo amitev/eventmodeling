@@ -50,7 +50,6 @@ import {
   makeSlice,
   makeLane,
   makeEdge,
-  OVERVIEW_EDGE_COLORS,
   makeEmptyBoard,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
@@ -75,6 +74,7 @@ import {
   confirmCopies,
   orient,
   automationLayout,
+  createEdgeDisplay,
 } from './model/cells.js';
 import { nodeTypes } from './nodes/index.js';
 
@@ -192,33 +192,11 @@ function Board() {
   // target when the target is below (same height counts as below), and the other way round
   // when the target is above. Chosen on every render, so it follows moving elements. An arrow
   // to a hidden Chapter or element is hidden too.
-  const displayEdges = useMemo(() => {
-    const byId = new Map(nodes.map((n) => [n.id, n]));
-    const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
-    const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
-    return edges.map((e) => {
-      const s = byId.get(e.source);
-      const t = byId.get(e.target);
-      const hidden = hiddenNode(s) || hiddenNode(t);
-      const selected = hidden ? false : e.selected;
-      if (s?.type !== 'sticky' || t?.type !== 'sticky') return hidden === !!e.hidden && !(hidden && e.selected) ? e : { ...e, hidden, selected };
-      const down = centreY(t) >= centreY(s);
-      const color = overview ? OVERVIEW_EDGE_COLORS[s.data?.kind] : undefined;
-      return {
-        ...e,
-        hidden,
-        selected,
-        sourceHandle: down ? 'bottom-out' : 'top-out',
-        targetHandle: down ? 'top-in' : 'bottom-in',
-        ...(color
-          ? {
-              style: { ...e.style, stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' },
-              markerEnd: { ...e.markerEnd, color },
-            }
-          : {}),
-      };
-    });
-  }, [nodes, edges, hiddenChapters, overview]);
+  const projectEdges = useMemo(() => createEdgeDisplay(), []);
+  const displayEdges = useMemo(
+    () => projectEdges(nodes, edges, hiddenChapters, overview),
+    [projectEdges, nodes, edges, hiddenChapters, overview]
+  );
   const visibleChapters = chapters.filter((c) => !hiddenChapters.has(c.id));
   const active = visibleChapters.find((c) => c.id === activeId) ?? visibleChapters[0];
   const activeChapterId = active?.id;

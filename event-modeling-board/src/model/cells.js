@@ -10,11 +10,58 @@ import {
   leftAligned,
   stickyW,
   stickyH,
+  OVERVIEW_EDGE_COLORS,
   slices,
   lanesOf,
   sliceOf,
   membersOf,
 } from './model.js';
+
+// Cache presentation, not endpoint positions: React Flow tracks geometry itself.
+export function createEdgeDisplay() {
+  let cache = new Map();
+  let previous = [];
+  return (nodes, edges, hiddenChapters, overview) => {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
+    const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
+    const nextCache = new Map();
+    const result = edges.map((edge) => {
+      const source = byId.get(edge.source);
+      const target = byId.get(edge.target);
+      const hidden = hiddenNode(source) || hiddenNode(target);
+      const element = source?.type === 'sticky' && target?.type === 'sticky';
+      const down = element ? centreY(target) >= centreY(source) : undefined;
+      const color = element && overview ? OVERVIEW_EDGE_COLORS[source.data?.kind] : undefined;
+      const cached = cache.get(edge.id);
+      if (cached && cached.edge === edge && cached.hidden === hidden && cached.element === element &&
+          cached.down === down && cached.color === color) {
+        nextCache.set(edge.id, cached);
+        return cached.shown;
+      }
+      const selected = hidden ? false : edge.selected;
+      const shown = element
+        ? {
+            ...edge,
+            hidden,
+            selected,
+            sourceHandle: down ? 'bottom-out' : 'top-out',
+            targetHandle: down ? 'top-in' : 'bottom-in',
+            ...(color ? {
+              style: { ...edge.style, stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' },
+              markerEnd: { ...edge.markerEnd, color },
+            } : {}),
+          }
+        : hidden === !!edge.hidden && !(hidden && edge.selected) ? edge : { ...edge, hidden, selected };
+      nextCache.set(edge.id, { edge, hidden, element, down, color, shown });
+      return shown;
+    });
+    cache = nextCache;
+    if (result.length === previous.length && result.every((edge, i) => edge === previous[i])) return previous;
+    previous = result;
+    return result;
+  };
+}
 
 // The lane types that take an element type, e.g. "Interaction / Integration".
 export const acceptingLanes = (kind) =>

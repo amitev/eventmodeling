@@ -51,6 +51,8 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - Development insertion profiles show React/React Flow rendering, JSX checks and garbage collection can dominate. Measure production click-to-paint before attributing remaining delay to model calculations.
   - Saving and sync reuse unchanged Chapters' serialized content and JSON. Check all Chapters for changes; resolve arrows in global file order. Include measured sizes used for membership.
   - Selection-only changes do not rewrite browser storage. Save timing stays unchanged. Undo keys reuse unchanged node data JSON.
+  - Reuse displayed edge objects and array while source edges, visibility, handle direction and overview color stay unchanged. React Flow still tracks endpoint geometry.
+  - Production profiles still show React store-subscription callbacks, per-toolbar selected-node scans, DOM insertion and browser layout/paint costs. Edge identity reuse alone does not establish a click-latency improvement.
 
 ## 1a. Multiple Chapters
 
