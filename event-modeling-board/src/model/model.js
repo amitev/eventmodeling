@@ -54,6 +54,27 @@ export const KINDS = {
   notes: { label: 'Notes', color: '#f5d76e', w: 280, maxW: 560, h: 200, pad: SLICE_PADDING / 2, stretch: true },
 };
 
+export const DEFAULT_PROCESSOR_ICON = 'gear';
+export const PROCESSOR_ICONS = [
+  { name: 'gear', label: 'Gear' },
+  { name: 'envelope', label: 'Envelope' },
+  { name: 'chat', label: 'Chat' },
+  { name: 'bell', label: 'Bell' },
+  { name: 'phone', label: 'Phone' },
+  { name: 'clock', label: 'Clock' },
+  { name: 'calendar', label: 'Calendar' },
+  { name: 'credit-card', label: 'Credit card' },
+  { name: 'file', label: 'Document' },
+  { name: 'pdf', label: 'PDF' },
+  { name: 'table', label: 'Table' },
+  { name: 'printer', label: 'Printer' },
+  { name: 'refresh', label: 'Refresh' },
+  { name: 'diamonds', label: 'Flow' },
+  { name: 'cloud', label: 'Cloud' },
+  { name: 'bolt', label: 'Bolt' },
+  { name: 'truck', label: 'Truck' },
+];
+
 // Size of an element before it is measured, and its minimum gap to the slice borders.
 export const kindW = (kind) => KINDS[kind]?.w ?? STICKY_W;
 export const kindH = (kind) => KINDS[kind]?.h ?? STICKY_H;

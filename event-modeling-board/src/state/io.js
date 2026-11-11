@@ -1,4 +1,4 @@
-import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, kindW, padOf, LANE_COLORS, NOTE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyW, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
+import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS, DEFAULT_PROCESSOR_ICON, PROCESSOR_ICONS, kindW, padOf, LANE_COLORS, NOTE_COLORS, LANE_TYPES, LANE_TYPE_ORDER, REQUIRED_LANE_TYPES, SLICE_MIN_X, stickyW, stickyH, slices, lanesOf, chaptersOf, sliceOf, normalize, makeChapter, makeSlice, makeLane, makeEdge } from '../model/model.js';
 
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
 import { isExampleValue } from '../model/examples.js';
@@ -128,6 +128,7 @@ export function serialize(nodes, edges, contexts) {
                 lane: lane.id,
                 name: n.data.name ?? '',
                 ...(n.data.info && n.data.kind !== 'scenarios' ? { info: n.data.info } : {}),
+                ...(n.data.kind === 'processor' ? { icon: n.data.icon ?? DEFAULT_PROCESSOR_ICON } : {}),
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'notes' && n.data.color ? { color: n.data.color } : {}),
@@ -406,7 +407,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'fields']
+          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'icon', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -432,6 +433,9 @@ export function parseBoard(text) {
         }
         optionalInfo(el, ep);
         if (hasKey(el, 'info') && (el.type === 'notes' || el.type === 'scenarios')) fail(at(ep, 'info'), `a ${el.type} element has no info`);
+        if (hasKey(el, 'icon') && (el.type !== 'processor' || !PROCESSOR_ICONS.some((icon) => icon.name === el.icon))) {
+          fail(at(ep, 'icon'), 'must be a supported icon name for a processor');
+        }
         if (hasKey(el, 'html')) {
           string(el.html, at(ep, 'html'));
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
@@ -487,6 +491,7 @@ export function parseBoard(text) {
             ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(el.color ? { color: el.color } : {}),
             ...(el.info ? { info: el.info } : {}),
+            ...(el.type === 'processor' && !isCopy ? { icon: el.icon ?? DEFAULT_PROCESSOR_ICON } : {}),
             ...(fields ? { fields } : {}),
             ...(scenarios ? { scenarios } : {}),
           },

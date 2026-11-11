@@ -29,11 +29,8 @@ Questions
 
 
 Elements
-- Information completeness check
 - Automatic name from previous element - too hard to do correctly.
 - Agentic - suggest automatic slice and element names
-- Automations - add their own documentation (Markdown editor)
-- Automations should allow changing the icon
 
 Screens
 - Blurring/highlighting parts of the screen (overlay?)

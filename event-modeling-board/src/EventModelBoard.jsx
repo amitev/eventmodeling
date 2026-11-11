@@ -51,6 +51,7 @@ import {
   makeLane,
   makeEdge,
   makeEmptyBoard,
+  DEFAULT_PROCESSOR_ICON,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, StaleError } from './state/sync.js';
@@ -1098,7 +1099,7 @@ function Board() {
             type: 'sticky',
             parentId: slice.parentId,
             position: pos,
-            data: { kind, name: '', ...(copyOf ? { copyOf } : {}), ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
+            data: { kind, name: '', ...(kind === 'processor' && !copyOf ? { icon: DEFAULT_PROCESSOR_ICON } : {}), ...(copyOf ? { copyOf } : {}), ...(kind === 'scenarios' ? { scenarios: [] } : {}) },
           },
         ],
         only

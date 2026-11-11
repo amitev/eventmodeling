@@ -2,6 +2,7 @@ import { compactHtml } from './html-compact.js';
 import { HttpError } from './http-error.js';
 import {
   DEFAULT_SLICE_WIDTH,
+  DEFAULT_PROCESSOR_ICON,
   ELEMENT_TYPES,
   FIELD_FLAGS,
   FIELD_HOLDERS,
@@ -13,6 +14,7 @@ import {
   LANE_ORDER,
   LANE_TYPES,
   NOTE_COLORS,
+  PROCESSOR_ICONS,
   REQUIRED_LANES,
   SLICE_MIN_WIDTH,
   UNCONNECTABLE,
@@ -316,6 +318,7 @@ function rules() {
     connections: Object.entries(FLOWS_TO).flatMap(([from, list]) => list.map((to) => ({ from, to }))),
     laneColors: LANE_COLORS,
     noteColors: NOTE_COLORS,
+    processorIcons: PROCESSOR_ICONS,
     fieldTypes: FIELD_TYPES,
     fieldFlags: FIELD_FLAGS,
   };
@@ -635,6 +638,12 @@ function applyContent(el, p) {
     if (UNCONNECTABLE.includes(type)) throw bad(`A ${type} element has no info`);
     setOptional(el, 'info', p.info);
   }
+  if ('icon' in p) {
+    only('icon', ['PROCESSOR']);
+    if (p.icon === null) delete el.icon;
+    else if (PROCESSOR_ICONS.includes(p.icon)) el.icon = p.icon;
+    else throw bad(`icon must be one of ${PROCESSOR_ICONS.join(', ')}, or null for the default`);
+  }
   if (p.html && p.url) throw bad('A Screen has html or a url, not both (R3.7)');
   if ('html' in p) {
     only('html', ['SCREEN']);
@@ -667,7 +676,7 @@ function applyContent(el, p) {
   }
 }
 
-const CONTENT = ['name', 'info', 'html', 'url', 'markdown', 'color', 'fields'];
+const CONTENT = ['name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields'];
 
 function laneOf(chapter, id, type) {
   const lane = chapter.lanes.find((l) => l.id === id);
@@ -692,7 +701,16 @@ function createElement(model, { body: b }) {
     el = { id: newId(ix), type: original.type, lane: p.lane, copyOf: original.id, x: 0, connectsTo: [] };
   } else {
     if (!ELEMENT_TYPES.includes(p.type)) throw bad(`type must be one of ${ELEMENT_TYPES.join(', ')}`);
-    el = { id: newId(ix), type: p.type, lane: p.lane, name: '', x: 0, connectsTo: [], ...(p.type === 'SCENARIOS' ? { scenarios: [] } : {}) };
+    el = {
+      id: newId(ix),
+      type: p.type,
+      lane: p.lane,
+      name: '',
+      x: 0,
+      connectsTo: [],
+      ...(p.type === 'PROCESSOR' ? { icon: DEFAULT_PROCESSOR_ICON } : {}),
+      ...(p.type === 'SCENARIOS' ? { scenarios: [] } : {}),
+    };
     applyContent(el, p);
   }
   const lane = laneOf(chapter, p.lane, el.type);

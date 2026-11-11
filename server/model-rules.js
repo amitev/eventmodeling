@@ -22,6 +22,8 @@ export const LANE_ORDER = Object.keys(LANE_TYPES);
 export const REQUIRED_LANES = ['ACTOR', 'INTERACTION', 'EVENT'];
 export const LANE_COLORS = ['none', 'red', 'orange', 'yellow', 'lime', 'green', 'turquoise', 'blue', 'purple', 'pink', 'brown', 'gray'];
 export const NOTE_COLORS = ['red', 'green', 'yellow'];
+export const PROCESSOR_ICONS = ['gear', 'envelope', 'chat', 'bell', 'phone', 'clock', 'calendar', 'credit-card', 'file', 'pdf', 'table', 'printer', 'refresh', 'diamonds', 'cloud', 'bolt', 'truck'];
+export const DEFAULT_PROCESSOR_ICON = 'gear';
 
 // Width an element is laid out with and its minimum gap to the slice borders (R5.16, R3.20).
 export const KINDS = {
@@ -98,7 +100,7 @@ const KEYS = {
   chapter: ['id', 'name', 'info', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'],
   lane: ['id', 'name', 'type', 'info', 'color'],
   slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
-  element: ['id', 'type', 'lane', 'name', 'info', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
+  element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
   copy: ['id', 'type', 'lane', 'copyOf', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
   field: ['name', 'type', 'list', ...FIELD_FLAGS, 'fields'],
@@ -259,7 +261,7 @@ export function validateModel({ contexts, chapters }) {
         if (isCopy) {
           if (UNCONNECTABLE.includes(e.type)) fail(`${ep}.copyOf`, `a ${e.type} element cannot be a copy`);
           copies.push({ path: `${ep}.copyOf`, id: e.copyOf, type: e.type });
-          for (const k of ['name', 'info', 'html', 'url', 'markdown', 'color', 'fields']) {
+          for (const k of ['name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields']) {
             if (e[k] !== undefined) fail(`${ep}.${k}`, 'a linked copy has no content of its own');
           }
         } else if (typeof e.name !== 'string') {
@@ -267,6 +269,9 @@ export function validateModel({ contexts, chapters }) {
         }
         if (e.info !== undefined && (!isText(e.info) || UNCONNECTABLE.includes(e.type))) {
           fail(`${ep}.info`, 'must be a non-empty text, not for a scenarios or notes element');
+        }
+        if (e.icon !== undefined && (e.type !== 'PROCESSOR' || !PROCESSOR_ICONS.includes(e.icon))) {
+          fail(`${ep}.icon`, `must be one of ${PROCESSOR_ICONS.join(', ')} for a processor`);
         }
         if (e.html !== undefined && (!isText(e.html) || e.type !== 'SCREEN')) fail(`${ep}.html`, 'only a screen can have html, not empty');
         if (e.url !== undefined) {

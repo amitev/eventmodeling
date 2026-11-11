@@ -1,29 +1,21 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
-import { KINDS, kindW } from '../model/model.js';
+import { DEFAULT_PROCESSOR_ICON, KINDS, PROCESSOR_ICONS, kindW } from '../model/model.js';
 import { hasFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions } from '../state/BoardActions.js';
 import { chapterStretchWidths, CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
-
-// A cogwheel with 8 teeth and a centre hole, as one path in a 100x100 box.
-const COG_PATH = (() => {
-  const teeth = 8, step = (2 * Math.PI) / teeth, outer = 48, root = 38, hole = 15;
-  const pt = (r, a) => `${(50 + r * Math.cos(a)).toFixed(2)} ${(50 + r * Math.sin(a)).toFixed(2)}`;
-  const pts = [];
-  for (let i = 0; i < teeth; i++) {
-    const a = i * step;
-    pts.push(pt(root, a - 0.3 * step), pt(outer, a - 0.17 * step), pt(outer, a + 0.17 * step), pt(root, a + 0.3 * step));
-  }
-  return `M${pts.join('L')}ZM${50 + hole} 50A${hole} ${hole} 0 1 0 ${50 - hole} 50A${hole} ${hole} 0 1 0 ${50 + hole} 50Z`;
-})();
+import { ProcessorIcon } from '../ProcessorIcon.jsx';
 
 const ZOOM_DELAY_MS = 300;
 
 export function StickyNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
+  const [pickingIcon, setPickingIcon] = useState(false);
+  const iconMenuRef = useRef(null);
+  const iconButtonRef = useRef(null);
   // A Screen with a mockup grows only after the mouse stayed over it for ZOOM_DELAY_MS (R3.10a).
   const [grown, setGrown] = useState(false);
   const growTimer = useRef(null);
@@ -49,6 +41,19 @@ export function StickyNode({ id, data, selected }) {
     return me && KINDS[data.kind]?.stretch ? chapterStretchWidths(s, me.parentId).get(id) ?? kindW(data.kind) : kindW(data.kind);
   });
   const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview } = useContext(BoardActions);
+
+  useEffect(() => {
+    if (!selected || overview) setPickingIcon(false);
+  }, [selected, overview]);
+
+  useEffect(() => {
+    if (!pickingIcon) return;
+    const close = (e) => {
+      if (!iconMenuRef.current?.contains(e.target)) setPickingIcon(false);
+    };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [pickingIcon]);
 
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
@@ -118,6 +123,55 @@ export function StickyNode({ id, data, selected }) {
         <>
           <CopyButton id={id} />
           <InfoButton id={id} info={data.info} hotkey="I" />
+          {data.kind === 'processor' && (
+            <div
+              ref={iconMenuRef}
+              className="processor-icon-picker"
+              onKeyDown={(e) => {
+                if (!pickingIcon || e.key !== 'Escape') return;
+                e.preventDefault();
+                e.stopPropagation();
+                setPickingIcon(false);
+                iconButtonRef.current?.focus();
+              }}
+            >
+              <button
+                ref={iconButtonRef}
+                className="info-btn nodrag"
+                title="Change Processor icon"
+                aria-label="Change Processor icon"
+                aria-expanded={pickingIcon}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPickingIcon((v) => !v);
+                }}
+              >
+                <ProcessorIcon name={shown.icon ?? DEFAULT_PROCESSOR_ICON} size={14} className="processor-icon-action" />
+              </button>
+              {pickingIcon && (
+                <div className="processor-icon-grid" role="group" aria-label="Processor icons">
+                  {PROCESSOR_ICONS.map(({ name, label }) => (
+                    <button
+                      key={name}
+                      type="button"
+                      className={`processor-icon-option${(shown.icon ?? DEFAULT_PROCESSOR_ICON) === name ? ' selected' : ''}`}
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={(shown.icon ?? DEFAULT_PROCESSOR_ICON) === name}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if ((shown.icon ?? DEFAULT_PROCESSOR_ICON) !== name) update({ icon: name });
+                        setPickingIcon(false);
+                        iconButtonRef.current?.focus();
+                      }}
+                    >
+                      <ProcessorIcon name={name} size={20} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
           {isScreen && (
             <>
@@ -210,9 +264,7 @@ export function StickyNode({ id, data, selected }) {
       </div>
       {data.kind === 'processor' ? (
         <div className="cogwheel">
-          <svg width="88" height="88" viewBox="0 0 100 100" aria-hidden="true">
-            <path d={COG_PATH} fillRule="evenodd" />
-          </svg>
+          <ProcessorIcon name={shown.icon ?? DEFAULT_PROCESSOR_ICON} />
         </div>
       ) : (
         <div ref={bodyRef} className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}${scrolls && selected ? ' nowheel' : ''}`}>

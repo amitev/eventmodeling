@@ -241,8 +241,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky.processor .sticky-header { background: none; border: 0; justify-content: center; text-align: center; }
 .sticky.processor .sticky-header .title { flex: 0 1 auto; }
 .sticky.processor .sticky-header .title-input { flex: 1; text-align: center; }
-.sticky.processor .cogwheel { display: flex; justify-content: center; height: 88px; }
-.sticky.processor .cogwheel path { fill: var(--processor); stroke: rgba(0, 0, 0, 0.45); stroke-width: 1.5; stroke-linejoin: round; }
+.sticky.processor .cogwheel { display: flex; justify-content: center; height: 88px; color: var(--processor); }
 .react-flow__node:has(> .sticky.processor) > .react-flow__handle-top { top: 26px; }
 
 /* Notes: a fixed 280x200 card showing rendered Markdown; vertical scrolling only. */
@@ -519,6 +518,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .element-toolbar .html-tool {
   width: auto; min-width: calc(24px * var(--s)); padding: 0 calc(5px * var(--s)); font: calc(13px * var(--s)) monospace;
 }
+.element-toolbar .info-btn .processor-icon-action { width: calc(14px * var(--s)); height: calc(14px * var(--s)); }
 
 .info-backdrop {
   position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
@@ -579,6 +579,19 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .scenario-actions button { padding: 6px 18px; font-size: 16px; }
 /* Every popup: the Save button is blue (class "primary"), Cancel and Close are white (R1.17). */
 .info-actions button.primary, .scenario-actions button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.processor-icon-picker { position: relative; }
+.processor-icon-grid {
+  position: absolute; z-index: 6; left: 0; top: calc(100% + 4px);
+  display: grid; grid-template-columns: repeat(6, 32px); gap: 4px; padding: 6px;
+  background: #fff; border: 1px solid #aab; border-radius: 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.processor-icon-option {
+  display: grid; place-items: center; aspect-ratio: 1; padding: 5px;
+  color: #242432; background: #fff; border: 1px solid #d5d8e0; border-radius: 5px; cursor: pointer;
+}
+.processor-icon-option:hover { background: #f2f4f8; }
+.processor-icon-option.selected { color: #1a73e8; border: 2px solid #1a73e8; padding: 4px; }
+.element-toolbar .processor-icon-option svg { width: 20px; height: 20px; }
 .hotkeys-dialog {
   display: flex; flex-direction: column; width: min(560px, 90vw); max-height: 80vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
