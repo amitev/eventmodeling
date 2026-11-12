@@ -26,4 +26,9 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
 - **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `summarize` and `wdyt` are slash-command only; they do not auto-activate.
 
+## 4. Walkthrough
+
+- **A4.1** `walkthrough` gives read-only explain/impact reports, one step per slice; impact sketches never write to the model.
+- **A4.2** Report Context, Chapter and slice names; do not promise canvas deep links.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).
