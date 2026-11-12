@@ -67,7 +67,8 @@ Each generated skill has **five steps**. Present per-skill plan, **confirm befor
 ## Step 5 — Write
 
 Generate skills/shared decisions if chosen from `reference/`; follow `reference/common.md` frontmatter: `name` = folder, description includes "Use for ..." / "Not for ...". **Copy needed content; never link generated skill to builder's references.**
-- Technology statements trace to confirmed answers/docs; no invented API/option/command. Unknown at implementation time → skill says ask.
+- Technology statements trace to confirmed answers/docs; no invented API/option/command. Unknown at implementation time → skill stops with an error naming the missing information; it does not ask the user.
+- Generated skills read and apply `info` on every element type that supports it, not only translation elements.
 - Business rules **only from model/scenarios**; stack decides how, never what.
 - Neutral examples (Place Order), user's naming, **never real project data**.
 - **No UI or Screen HTML/URL use**; Screen only supplies fields entering Command/leaving Read Model.
