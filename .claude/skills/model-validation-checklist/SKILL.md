@@ -40,7 +40,7 @@ For each check, report **PASS**, **FAIL** or **WARNING** (evidence is missing or
 ### Phase 3 — Read Model purpose
 
 6. **Projection, not history:** Each Read Model describes a projection/query result, not an Event or a second event timeline.
-7. **Natural query:** Each Read Model answers a clear query need and has a relevant consumer. Check whether its fields describe one result item; query result count is not a field.
+7. **Natural query:** Each Read Model answers a clear query need and has a relevant consumer. Fields describe one result item; element `isList` hints list results (omitted = `false`, copies use original). Report conflicts with documented query behavior; never encode result count as an outer list field.
 
 ### Phase 4 — Business rules
 

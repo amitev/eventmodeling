@@ -100,7 +100,7 @@ const KEYS = {
   chapter: ['id', 'name', 'info', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'],
   lane: ['id', 'name', 'type', 'info', 'color'],
   slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
-  element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
+  element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'isList', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
   copy: ['id', 'type', 'lane', 'copyOf', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
   field: ['name', 'type', 'list', ...FIELD_FLAGS, 'fields'],
@@ -261,7 +261,7 @@ export function validateModel({ contexts, chapters }) {
         if (isCopy) {
           if (UNCONNECTABLE.includes(e.type)) fail(`${ep}.copyOf`, `a ${e.type} element cannot be a copy`);
           copies.push({ path: `${ep}.copyOf`, id: e.copyOf, type: e.type });
-          for (const k of ['name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields']) {
+          for (const k of ['name', 'info', 'icon', 'isList', 'html', 'url', 'markdown', 'color', 'fields']) {
             if (e[k] !== undefined) fail(`${ep}.${k}`, 'a linked copy has no content of its own');
           }
         } else if (typeof e.name !== 'string') {
@@ -272,6 +272,9 @@ export function validateModel({ contexts, chapters }) {
         }
         if (e.icon !== undefined && (e.type !== 'PROCESSOR' || !PROCESSOR_ICONS.includes(e.icon))) {
           fail(`${ep}.icon`, `must be one of ${PROCESSOR_ICONS.join(', ')} for a processor`);
+        }
+        if (e.isList !== undefined && (e.type !== 'READ_MODEL' || e.isList !== true)) {
+          fail(`${ep}.isList`, 'must be true for a read model, or left out');
         }
         if (e.html !== undefined && (!isText(e.html) || e.type !== 'SCREEN')) fail(`${ep}.html`, 'only a screen can have html, not empty');
         if (e.url !== undefined) {

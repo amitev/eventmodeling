@@ -1,6 +1,6 @@
 ---
 name: edit-and-delete
-description: Rename, edit, move or delete elements through the API; check impact and confirm destructive changes, including type replacement. Use for "rename X", "move this element to another slice/lane/chapter", "delete X", "change this Command into ...", "clean up".
+description: Rename, edit, move or delete elements through the API; check impact and confirm destructive changes, including type replacement. Use for "rename X", "move this element to another slice/lane/chapter", "delete X", "make this Read Model a list", "change this Command into ...", "clean up".
 ---
 
 # Edit and Delete Elements
@@ -13,9 +13,10 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 
 | | Rule |
 |---|---|
-| Change | `PATCH /elements/:id` `{ name?, info?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`; `null` removes optional property; unknown keys: 400 |
+| Change | `PATCH /elements/:id` `{ name?, info?, isList?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`; `null` removes optional property; unknown keys: 400 |
 | Type | Immutable; replace element (below), never PATCH `type` |
 | Content | Screen only: `html`/`url`, setting either removes other. Notes only: `markdown`/`color`. Fields only: Screen, Command, Event, Read Model |
+| Read Model list | `isList`: list-result/code-generation hint; default `false`. `true` stores it; `false`/`null` removes it; other values or element types: 400. Does not change fields or propagate downstream |
 | Linked copy | PATCH only `slice`, `lane`, `x`; other fields: 409 naming original. Edit original for content |
 | Move | `slice` + `lane` together; lane must accept type. Omitted `x`: board placement; supplied: given offset. `x` alone moves within Cell. Keeps arrows, adds none |
 | Cross-Chapter move | Allowed, including copies; **deletes scenarios using element**. Existing arrows may cross Chapters: report, offer local-copy replacements (`connections`, Across Chapters). `SCENARIOS` cannot change Chapter (409) |
@@ -41,6 +42,7 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 |---|---|
 | Rename | `PATCH /elements/:id` `{ name }`; use `naming` |
 | Info / mockup / notes | PATCH `info`, `html`, `url`, `markdown` or `color`; respect content restrictions above. Screen mockup: `html-screen` |
+| List / single Read Model | PATCH `{ isList: true }` / `{ isList: false }`; linked copy: edit original |
 | Move | PATCH `{ slice, lane, x? }`; destination slice/lane may be in another Chapter |
 | Delete | `DELETE /elements/:id` |
 

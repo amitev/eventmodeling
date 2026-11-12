@@ -129,6 +129,7 @@ export function serialize(nodes, edges, contexts) {
                 name: n.data.name ?? '',
                 ...(n.data.info && n.data.kind !== 'scenarios' ? { info: n.data.info } : {}),
                 ...(n.data.kind === 'processor' ? { icon: n.data.icon ?? DEFAULT_PROCESSOR_ICON } : {}),
+                ...(n.data.kind === 'read_model' && n.data.isList ? { isList: true } : {}),
                 ...(n.data.kind === 'scenarios' ? { scenarios: n.data.scenarios.map(serializeScenario) } : {}),
                 ...(n.data.kind === 'notes' && n.data.markdown ? { markdown: n.data.markdown } : {}),
                 ...(n.data.kind === 'notes' && n.data.color ? { color: n.data.color } : {}),
@@ -407,7 +408,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'icon', 'fields']
+          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'icon', 'isList', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -435,6 +436,9 @@ export function parseBoard(text) {
         if (hasKey(el, 'info') && (el.type === 'notes' || el.type === 'scenarios')) fail(at(ep, 'info'), `a ${el.type} element has no info`);
         if (hasKey(el, 'icon') && (el.type !== 'processor' || !PROCESSOR_ICONS.some((icon) => icon.name === el.icon))) {
           fail(at(ep, 'icon'), 'must be a supported icon name for a processor');
+        }
+        if (hasKey(el, 'isList') && (el.type !== 'read_model' || el.isList !== true)) {
+          fail(at(ep, 'isList'), 'must be true for a read model, or left out');
         }
         if (hasKey(el, 'html')) {
           string(el.html, at(ep, 'html'));
@@ -492,6 +496,7 @@ export function parseBoard(text) {
             ...(el.color ? { color: el.color } : {}),
             ...(el.info ? { info: el.info } : {}),
             ...(el.type === 'processor' && !isCopy ? { icon: el.icon ?? DEFAULT_PROCESSOR_ICON } : {}),
+            ...(el.isList ? { isList: true } : {}),
             ...(fields ? { fields } : {}),
             ...(scenarios ? { scenarios } : {}),
           },

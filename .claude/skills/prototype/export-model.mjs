@@ -66,7 +66,7 @@ for (const e0 of mine) {
   } else if (e.type === 'EVENT') {
     model.events.push({ ...base, fields: e.fields ?? [] });
   } else if (e.type === 'READ_MODEL') {
-    model.readModels.push({ ...base, fields: e.fields ?? [], eventIds: ids(pars.filter((p) => p.type === 'EVENT')), processorIds: ids(kids.filter((k) => k.type === 'PROCESSOR')), screenIds: ids(kids.filter((k) => k.type === 'SCREEN')) });
+    model.readModels.push({ ...base, isList: e.isList === true, fields: e.fields ?? [], eventIds: ids(pars.filter((p) => p.type === 'EVENT')), processorIds: ids(kids.filter((k) => k.type === 'PROCESSOR')), screenIds: ids(kids.filter((k) => k.type === 'SCREEN')) });
   } else if (e.type === 'PROCESSOR') {
     model.processors.push({ ...base, readModelIds: ids(pars.filter((p) => p.type === 'READ_MODEL')), commandIds: ids(kids.filter((k) => k.type === 'COMMAND')) });
   } else if (e.type === 'SCENARIOS') {

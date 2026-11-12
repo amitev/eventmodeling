@@ -42,7 +42,7 @@ A slice is one Command, one Read Model, or one Processor with its Events, Read M
 
 - No naming-quality judgment (tense, business language, implementation names); check manually against core rules.
 - No scenario-value validation (only example **keys** against fields), mockup-content check or flow-start trigger check.
-- No check that Read Model fields describe one result item rather than encoding result cardinality; verify this manually against `eventmodeling-core-rules`.
+- No check of Read Model `isList` against query behavior or outer-list field wrappers; inspect element/Chapter content (original for copies) and verify manually against `eventmodeling-core-rules`. Report conflicts; never silently change flags.
 - Field sources matched by name only: top-level + list row fields. Existing cross-Chapter arrows are followed for this check despite candidate status.
 - Source checks cover only Command/Event/Read Model. Flow-start fields (e.g. Screen input) may legitimately lack upstream source; mark system-created fields `generated`.
 

@@ -56,7 +56,7 @@ external Event -> translation todo Read Model -> Processor -> Command -> interna
 
 1. Reuse/create one named Integration lane per system via `chapter-setup`; lane `info` holds known delivery details. External Event keeps source name/fields; its `info` identifies payload source and sanitized example.
 2. Reuse existing source Event identity; cross-Chapter dependencies use a local linked copy via `connections`. Ensure the translation slice contains an Integration-lane element.
-3. Build the translation slice atomically with `POST /ops`, following recipe layout/creation order. Each Processor has its own todo Read Model; fields describe one item, query returns items. External Event feeds translation todo only.
+3. Build the translation slice atomically with `POST /ops`, following recipe layout/creation order. Each Processor has its own todo Read Model with `isList: true`; fields describe one item, query returns items. External Event feeds translation todo only.
 4. Translation todo never closes; **omit the Automation recipe's closing arrow**. Internal Event is a new domain fact, not a linked copy. Only it may feed downstream worker todo lists/views.
 5. Apply the contract via `element-fields`. Incoming arrows copy raw fields; PATCH final Read Model fields **before** wiring onward, then keep Command/Event schemas consistent. Retain agreed technical context only where needed.
 6. API arrows copy fields; they do not execute mapping or correlation. Document transformations in `info`/Notes. Every non-generated field needs a same-named upstream source; never mark it `generated` just to hide a renamed/missing source. Explain genuine system-created values; report unresolved lineage gaps.

@@ -21,7 +21,7 @@ description: Read the model cheaply through the API — endpoint choice, outline
 | Changes since last read | `/revision` | `{ revision }` + `ETag`; unchanged text = unchanged model |
 | Structure and arrows | `/outline?context=<id>` | Context list with Chapters, lanes, slices, elements; ids, names, types, positions, `copyOf?`, `connectsTo`, slice `width`. No `html`, `fields`, `info`, scenarios. Omit filter for all; unknown Context: 404 |
 | Element by name | `/search?q=<text>&type=<TYPE>&context=<id>` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q`: case-insensitive substring; `type`: uppercase |
-| Element content | `/elements/:id` | Stored element: `fields`, `info`, `html` or `url`, `markdown`, `scenarios`, `connectsTo`, `copyOf` |
+| Element content | `/elements/:id` | Stored element: `fields`, `info`, `isList?`, `html` or `url`, `markdown`, `scenarios`, `connectsTo`, `copyOf` |
 | Chapter content | `/chapters/:id?screenContent=false` | Stored Chapter without Screen `html` |
 | Context content | `/contexts/:id?screenContent=false` | Multi-document YAML, one document per Chapter |
 | Screens | `/contexts/:id/screens` | `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`; no `html`. Filters: `?name=`, `?contains=true`, `?chapter=` |
@@ -48,6 +48,7 @@ Element: `{ id, type, name, lane, x, copyOf?, connectsTo }`.
 | Element location | Search's `chapterId`, `sliceId`; names from outline |
 | Slice content/type | Outline's `elements`, `type` |
 | What feeds a Screen/Command/Read Model? | Parents, through Processors |
+| Is a Read Model a list? | Element/Chapter content, not outline/search; `isList: true` means list, omitted means `false`. Linked copy: read original |
 | What does an Event reach? | Traverse `connectsTo` downstream |
 | Scenario choices | Outline's same-Chapter, non-copy `COMMAND`/`EVENT` elements |
 | All Command fields in a Chapter | Chapter read; filter `COMMAND`, print `name`, `fields` |

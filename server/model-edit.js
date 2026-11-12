@@ -644,6 +644,12 @@ function applyContent(el, p) {
     else if (PROCESSOR_ICONS.includes(p.icon)) el.icon = p.icon;
     else throw bad(`icon must be one of ${PROCESSOR_ICONS.join(', ')}, or null for the default`);
   }
+  if ('isList' in p) {
+    only('isList', ['READ_MODEL']);
+    if (p.isList === true) el.isList = true;
+    else if (p.isList === false || p.isList === null) delete el.isList;
+    else throw bad('isList must be true, false or null');
+  }
   if (p.html && p.url) throw bad('A Screen has html or a url, not both (R3.7)');
   if ('html' in p) {
     only('html', ['SCREEN']);
@@ -676,7 +682,7 @@ function applyContent(el, p) {
   }
 }
 
-const CONTENT = ['name', 'info', 'icon', 'html', 'url', 'markdown', 'color', 'fields'];
+const CONTENT = ['name', 'info', 'icon', 'isList', 'html', 'url', 'markdown', 'color', 'fields'];
 
 function laneOf(chapter, id, type) {
   const lane = chapter.lanes.find((l) => l.id === id);

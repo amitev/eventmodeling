@@ -41,7 +41,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 - **Screen:** shown/entered mockup data; displayed Read Model data comes from it. Session/display-only calculations: `generated: true`.
 - **Command:** all decision inputs, including time, acting user, tenant (`generated: true` if not Screen-supplied); business names matching Screen inputs.
 - **Event:** captured facts only, no computed values.
-- **Read Model:** fields describe one result item, shaped for the consuming Screen. A query may return multiple items; do not encode that with an outer `list: true` field. Use `list: true` only for a collection-valued attribute within one item.
+- **Read Model:** fields describe one result item, shaped for the consuming Screen. Element `isList` hints list results (default `false`), never an outer `list: true` field. Field `list` is only for a collection-valued attribute within one item. Preserve `isList` during field edits; change it only when requested via `edit-and-delete`. Never propagate it with fields.
 - Personal data: `pii`; identifiers: `id`.
 - Unclear name/type/flag/propagation: ask user with ask tool and recommended default.
 

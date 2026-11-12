@@ -81,7 +81,8 @@ Anything else, including empty slice: no type.
   - Invalid: `OrderSummaryProjector`, `InvoiceListRepository` (implementation)
 - Optional: Command/downstream consumer does not require one.
 - **Never directly validates Command**; Command uses documented preconditions.
-- **Result shape:** fields describe one result item. A query may return one or many items; do not represent multiple results with an outer `list: true` field. Result cardinality belongs to the query, not the field schema. Use `list: true` only for a collection-valued attribute within one item.
+- **Result shape:** fields describe one result item. Set element `isList: true` for list results; omitted means `false`. This is primarily a code-generation hint, not a field flag. Never wrap multiple results in an outer `list: true` field; field `list` is only for a collection-valued attribute within one item. Ask when cardinality is unclear; report conflicts with documented query behavior.
+- **Is list toggle:** toolbar `[]` icon, centred horizontally/vertically and filled when on. Tooltip: "Defines whether the ReadModel is a list element. Primarily serves as a hint for code generation." API writes/reads: API reference.
 
 ### SCREEN
 - What user sees/acts on; user-facing name, not internals.
@@ -134,7 +135,7 @@ Add **new normal Read Model + Screen immediately after later Event's slice**, sa
 
 Create: `POST /elements` `{ slice, lane, copyOf }`; lane must accept original type; connect neighbors via `connections`.
 
-Copy mirrors original type/name/fields/mockup **live**, never diverges. Only `slice`, `lane`, `x` editable; other changes: 409, edit original. Receives no arrow fields, passes original's fields onward. Changed view requires new normal element (previous section).
+Copy mirrors original type/name/fields/mockup/`isList` **live**, never diverges. Only `slice`, `lane`, `x` editable; other changes: 409, edit original. Receives no arrow fields, passes original's fields onward. Changed view requires new normal element (previous section).
 
 **Scenarios on originals only:** choose same-Chapter, non-copy Event/Command (`scenarios`).
 
@@ -152,7 +153,7 @@ external EVENT → todo-list READ_MODEL → translation PROCESSOR → COMMAND �
 - Translation todo opens on external Event and **never closes**: relay, not "done" tracker.
 - Translation Command records internal domain-language Event for worker/other consumers. **Explicitly map raw external → internal fields**, including correlation, idempotency, duplicate handling.
 
-**Every Processor needs its own todo Read Model; no pure-relay exemption.** Its fields describe one todo item; its query returns the open items. Trigger Event → Read Model opens an item; completion Event → Read Model closes it (translation never closes, above). Processor + Command + Event + Integration-lane element = translation slice.
+**Every Processor needs its own todo Read Model; no pure-relay exemption.** Set `isList: true`; fields describe one todo item, query returns the open items. Trigger Event → Read Model opens an item; completion Event → Read Model closes it (translation never closes, above). Processor + Command + Event + Integration-lane element = translation slice.
 
 ## Open Questions vs. Decided Failures
 

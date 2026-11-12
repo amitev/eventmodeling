@@ -31,4 +31,11 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A4.1** `walkthrough` gives read-only explain/impact reports, one step per slice; impact sketches never write to the model.
 - **A4.2** Report Context, Chapter and slice names; do not promise canvas deep links.
 
+## 5. Read Model list hints
+
+- **A5.1** Modeling skills set `isList` for list queries, including automation/translation todo lists (R3.25); ask when cardinality is unclear. Field edits preserve it and never propagate it.
+- **A5.2** Navigation, review and implementation skills read `isList` from element/Chapter content, following `copyOf`; outline/search omit it. Report conflicts with documented query behavior; read-only skills never fix flags.
+- **A5.3** Generated implementation skills map `isList` through confirmed stack decisions; item fields stay separate (R9.9). Conflicts block implementation.
+- **A5.4** Prototype export includes each Read Model's original `isList` as a boolean, default `false`.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

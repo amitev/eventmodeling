@@ -60,16 +60,18 @@ Unknown body keys or nonexistent body ids: 400; nonexistent path ids: 404. Resul
 ### Elements
 
 `POST /elements`:
-- New: `{ slice, lane, type, name?, info?, html?, url?, markdown?, color?, fields?, x?, autoConnect? }`.
+- New: `{ slice, lane, type, name?, info?, isList?, html?, url?, markdown?, color?, fields?, x?, autoConnect? }`.
 - Linked copy: `{ slice, lane, copyOf, x?, autoConnect? }`; original cannot be a copy or `SCENARIOS`/`NOTES`.
 - Lane must belong to slice's Chapter and accept type (`/rules`); `SPEC`: one element per slice.
 - `SCREEN` only: `html` or `url`, never both. `NOTES` only: `markdown`, `color` (`red`, `green`, `yellow`). No `info`/`name` on `SCENARIOS`/`NOTES`. `fields` only on `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`.
+- `READ_MODEL` only: `isList` is the list-result/code-generation hint, default `false`. `true` is stored; `false` or `null` removes it; other values: 400. Fields still describe one result item; field `list` describes a collection-valued attribute.
 - `x`: offset from slice left, ≥ 40 (≥ 20 for `SCENARIOS`/`NOTES`); omitted: board placement. Slice grows as needed.
 - `autoConnect=true` by default: Screen→Command, Command→Event, Read Model→Screen, Event→Read Model.
 - `fields`: `[{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }]`; default type `string`, flags `false`; `object` has nested `fields`.
 
-`PATCH /elements/:id`: `{ name?, info?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`.
+`PATCH /elements/:id`: `{ name?, info?, isList?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`.
 - `null` removes optional field; setting `html` removes `url` and vice versa.
+- `isList` follows POST rules. Read it from element/Chapter content, not outline/search. Linked copies use their original's setting.
 - Move with `slice` + `lane` together, including across Chapters; deletes scenarios using element. `SCENARIOS` cannot change Chapter.
 - Linked copies accept only `slice`, `lane`, `x`; otherwise 409 naming original.
 

@@ -173,6 +173,20 @@ export function StickyNode({ id, data, selected }) {
             </div>
           )}
           {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
+          {data.kind === 'read_model' && (
+            <button
+              type="button"
+              className={`info-btn nodrag${data.isList ? ' has-info' : ''}`}
+              title="Defines whether the ReadModel is a list element. Primarily serves as a hint for code generation."
+              aria-label="Is list"
+              aria-pressed={!!data.isList}
+              onClick={() => update({ isList: !data.isList })}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M6 3H3v10h3M10 3h3v10h-3" />
+              </svg>
+            </button>
+          )}
           {isScreen && (
             <>
               <button

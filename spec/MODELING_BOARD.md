@@ -175,6 +175,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 - **R3.6a** Elements are always vertically centred in their lane: when added, dropped or dragged (snapping to the centre of the lane released in), when their size changes (e.g. showing a Screen mockup), and on load or import. One taller than its lane aligns to the lane's top edge.
 - **R3.6b** Every element has a header bar and a body. The header holds the free-text **name** in semi-bold (600), filled with the type's colour (R3.1). The name has **no default**: a new element shows a faint "Name" placeholder (not saved or exported). A long name is cut off with an ellipsis. While edited, the name's input has a white background. The body is white and empty, except the Screen mockup and its editor and the fields (R9.5). The Screen colour is a slightly darker grey (`#e2e2e2`) so its header stands out. Backgrounds are opaque. The body is at least 104px high, so an element is at least 132px tall with its 26px header, growing with its content. A **Screen** is at least **146px** tall (118px body), whether or not it has a mockup, so all Screens match one with a mockup (R3.8). **Command**, **Read Model** and **Event** are exactly **146px** tall (as a Screen), no more, no less: see R3.6c.
 - **R3.6c** The fields of a Command, Read Model or Event (R9.5) scroll vertically in the body when they do not fit. The mouse wheel over the body zooms the board (R1.2), as everywhere; it scrolls the fields only while the element is **selected** (clicked) and its fields overflow. Other types are unchanged (R3.6b).
+- **R3.25** **Read Model list.** A Read Model's toolbar has an **Is list** toggle with a drawn `[]` icon centred horizontally and vertically, filled when on. Default `false`. Tooltip: "Defines whether the ReadModel is a list element. Primarily serves as a hint for code generation." Toggling takes one undo step. Linked copies use their original's setting and cannot edit it (R3.22). Fields still describe one item (R9.9).
 
 ### Screen elements
 
@@ -380,6 +381,7 @@ The board file is the single, complete description of a board, written and read 
   - `name`: free text, `""` when not set;
   - `info`: the element's info (R1c.1a). Optional: only when not empty, not for `notes` or `scenarios`;
   - `icon`: a named Processor icon (R3.6). Optional: only for a Processor; omitted means `gear`;
+  - `isList`: `true` for a list Read Model (R3.25); otherwise omitted;
   - `html`: the Screen mockup as HTML code. Optional: only for a `screen` that has HTML;
   - `url`: the Screen mockup as a web page address (`http://` or `https://`). Optional: only for a `screen` that has one; a Screen has `html` or `url`, never both (R3.7);
   - `markdown`: the text of a Notes element. Optional: only for a `notes` element with text;
@@ -390,7 +392,7 @@ The board file is the single, complete description of a board, written and read 
   - `scenarios`: the scenarios, in list order (R3.14). Only for a `scenarios` element; each has `id`, `name`, `description`, `given` (list of entries), `when` (an entry or `null`), `then` (list of entries) and `error` (text or `null`). An entry is `{ "element": id of an Event/Command of the same Chapter, "example": the example data }` (R3.16): an object keyed by field name whose values are text, `true`/`false`, a list of values, or a nested object (`{}` when empty). `error` is `null` when `then` is not empty.
 
   A **linked copy** (R3.22) has only `id`, `type` (its original's), `lane`, `copyOf`, `x` and `connectsTo`, in this order. `copyOf` is the **id** of its original, an element of the file that is not a copy and has the same type.
-- **R6.6** Every field above is written for every item, except the optional ones (`info`, `icon`, `flowEnd`, `html`, `url`, `markdown`, `color`, `fields`, `scenarios`; R6.3 to R6.5) and a linked copy's omitted fields (R6.5). No other field is left out for being empty or default: an empty name is `""`, an item without connections has `"connectsTo": []`.
+- **R6.6** Every field above is written for every item, except the optional ones (`info`, `icon`, `isList`, `flowEnd`, `html`, `url`, `markdown`, `color`, `fields`, `scenarios`; R6.3 to R6.5) and a linked copy's omitted fields (R6.5). No other field is left out for being empty or default: an empty name is `""`, an item without connections has `"connectsTo": []`.
 - **R6.7** A connection is stored once, on the item it leaves: the source's `connectsTo` lists its target ids. Element connections go element to element; Chapter connections leave a Chapter's right side or slice's bottom centre and enter the target Chapter's left (R1a.8). There is no connection list or id (R1.16).
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
@@ -453,7 +455,7 @@ The board file is the single, complete description of a board, written and read 
   - **PII**: personally identifiable information;
   - **Technical**: an implementation detail.
 - **R9.8** **Information completeness.** A non-copy Screen, Command, Event or Read Model with incoming element arrows fails when it has a non-generated top-level field whose name no parent supplies (through Processors). All incoming arrows turn bright red (`#ff0000`) and become thicker (7px). Same-named fields count as inherited regardless of type or attributes.
-- **R9.9** A Read Model's fields describe one result item. Do not encode multiple query results with an outer `list: true` field; result cardinality belongs to the query. Use `list: true` only for a collection-valued attribute within one result item.
+- **R9.9** A Read Model's fields describe one result item. Use `isList` (R3.25), not an outer `list: true` field, for multiple results. Use `list: true` only for a collection-valued attribute within one result item.
 
 **Learning (implementation).** Copying is one hop (R9.4): fields reach an element only when an arrow to it is added. Building a chain through the server (SERVER.md S4.16 to S4.18) therefore depends on order: connect the upstream arrows first (Read Model → Processor → Command), then add the Event below the Command, or it gets none of those fields. A `PATCH` of `fields` (S4.17) replaces the list and copies nothing.
 
