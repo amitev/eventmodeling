@@ -14,7 +14,7 @@ Both share one shape: a todo list (Read Model) feeds a Processor, which issues a
 | `PROCESSOR` element | the automation's name: it takes todo items and issues the Command. No fields of its own: it passes the Read Model's fields on; its `info` gives implementation constraints |
 | `COMMAND` element (arrow Processor → Command) | the action: `fields` (`generated` ones are filled by the system) and `info` implementation constraints |
 | `EVENT` elements after the Command | the facts recorded; these Events **close** the item they belong to (automation); each Event's `info` gives implementation constraints |
-| `SCENARIOS` element in the Spec lane | examples for the Command (`given`, `when`, `then`, `error`) |
+| `SCENARIOS` element in the Spec lane | Command scenarios: `name`, `description`, `given`, `when`, `then`, `error` and example data; description supplies test requirements too |
 | Translation only: the Integration-lane element | the external Event/Read Model: its fields are the source data; the lane's `info` (the system, how it reaches us: format, delivery, ordering, retention, authentication) and the element's `info` bind the code; if required information is missing, stop and report it |
 
 ## Step 4 — Implement (neutral part)
@@ -23,7 +23,7 @@ Both share one shape: a todo list (Read Model) feeds a Processor, which issues a
 2. **Processor**: for each open item, issues the Command with the item's fields. A repeat or crash must not duplicate the action.
 3. **Command handler**: decides and records the Events as the Scenarios say (as `state-change.md`, Step 4).
 4. **Translation only**: the external Event is **first stored as an internal Event** (the Command's Event, in this domain's language); only that Event feeds read models. Never feed another Read Model from the external Event. The todo list is never closed (as modelled); if required translation information is unclear, stop and report it.
-5. **Tests**: scenarios for the Command; one for the todo list (Events in, items out); one Processor run (item in, Command issued).
+5. **Tests**: scenarios for the Command using the common scenario-test rule; one for the todo list (Events in, items out); one Processor run (item in, Command issued). Apply relevant scenario-description requirements to these checks too.
 
 ## Gaps to report
 

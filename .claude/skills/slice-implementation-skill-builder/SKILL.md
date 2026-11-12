@@ -45,7 +45,7 @@ Cover **every topic**, following up to concrete names/versions/commands/paths; i
 | 7 | **Automation and translation** | Processor trigger (subscription/polling/schedule/bus); retry/idempotency; todo-list storage; external arrival (webhook/queue/polling/other); external → internal mapping location |
 | 8 | **Project layout** | Existing/new project, root; suggest `<context name>/<chapter name>/<slice name>/`, one folder/slice, model-named Context/Chapter folders; **user confirms/changes**. File names/casing, model → code names/suffixes, shared-code location |
 | 9 | **Field types** | Exact stack mapping/handling for **every** model type/flag (`list` for collection-valued attributes, `generated`, `pii`, `object`, ...), including PII treatment |
-| 10 | **Tests** | Framework, GWT → test mapping, unit/integration levels, location, scenario example data |
+| 10 | **Tests** | Framework, scenario description + GWT → test mapping, unit/integration levels, location, scenario example data |
 | 11 | **Commands to run** | Exact build/test/lint/run verification commands, or none |
 | 12 | **Cross-cutting** | Logging, configuration, authn/authz, time source, other shared rules |
 | 13 | **Existing code** (existing project only) | Path, read permission, conventions to follow (**user confirms findings**) |
@@ -69,6 +69,7 @@ Each generated skill has **five steps**. Present per-skill plan, **confirm befor
 Generate skills/shared decisions if chosen from `reference/`; follow `reference/common.md` frontmatter: `name` = folder, description includes "Use for ..." / "Not for ...". **Copy needed content; never link generated skill to builder's references.**
 - Technology statements trace to confirmed answers/docs; no invented API/option/command. Unknown at implementation time → skill stops with an error naming the missing information; it does not ask the user.
 - Generated skills read and apply `info` on every element type that supports it, not only translation elements.
+- Copy the common scenario-test rule into every generated skill: descriptions guide test setup and assertions alongside GWT/example data, not just test names.
 - Business rules **only from model/scenarios**; stack decides how, never what.
 - Neutral examples (Place Order), user's naming, **never real project data**.
 - **No UI or Screen HTML/URL use**; Screen only supplies fields entering Command/leaving Read Model.

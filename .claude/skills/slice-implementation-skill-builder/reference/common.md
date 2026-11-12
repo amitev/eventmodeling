@@ -36,6 +36,10 @@ Result: the Chapter as stored (name, `info`, lanes) with **only this slice** in 
 
 Every field has `name`, `type`, flags (`list`, `generated`, `pii`, ...) and, for `object`, children. Field names are kept exactly. `connectsTo` lists the arrows out of an element; parents are the elements whose `connectsTo` holds its id.
 
+## Scenario-driven tests (copy into every generated skill)
+
+Read each scenario's `name`, `description`, `given`, `when`, `then`, `error` and example data before implementing tests. Apply requirements stated in `description` to test setup, actions and assertions; never use it only as a label/comment or ignore it because GWT has example values. Do not invent unstated requirements. Ambiguous descriptions or conflicts with GWT/example data block implementation: stop and report before code changes, never choose one silently.
+
 ## Step 5 — Report
 
-The slice (id, name, type, Chapter), the files written, the tests and what they cover, the commands run and their result, and any missing information that blocked implementation or `info` that could not be applied. Do not ask follow-up questions.
+The slice (id, name, type, Chapter), the files written, the tests and what they cover (including description requirements), the commands run and their result, and any missing information that blocked implementation or `info` that could not be applied. Do not ask follow-up questions.

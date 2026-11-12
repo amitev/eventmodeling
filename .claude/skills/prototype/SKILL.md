@@ -83,6 +83,7 @@ Header: Screen tabs, **Automations** only if `MODEL.processors` nonempty, **Scen
 **Automations tab:** each Processor's name, projected `readModelIds[0]` todo rows, **Run** per row executing `commandIds[0]` with same-named row values. Worker completion closes via `closingEventIds`; translation rows remain runnable (duplicate handling comes from model/scenarios, never inferred). Several Read Models/Commands: **ask**. Missing either: list Processor with warning.
 
 **Scenarios tab:** run each on **fresh in-memory store, never user's store**. Preload Given entries (Event name from `MODEL`, data = example); execute Command using `when.example` (absent = empty/`false`).
+- When implementing checks, read scenario `description` alongside GWT/example data; apply its stated setup, action and assertion requirements, not just its name. Report ambiguous/conflicting requirements or checks the engine cannot exercise as coverage gaps; a GWT match alone does not prove description coverage.
 - Error scenario passes only on refusal with that error text.
 - Then scenario passes only on same Events in same order.
 - Otherwise fail with reason: **"applies instead: X"**, refusal text or actual recorded Events.
