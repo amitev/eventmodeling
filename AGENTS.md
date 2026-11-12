@@ -19,6 +19,7 @@ All (without any exception) the requirements and learnings during the implementa
 
 - [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).
 - [Server requirements](spec/SERVER.md): contains only requirements related to the HTTP server and CLI (`server/`).
+- [Agent requirements](spec/AGENTIC.md): contains requirements and learnings for skills and agent workflows, not board or server behavior.
 
 When writing the specification use the minimal wording needed that still retains the intent. Avoid long and overbloated sentences. Style:
 

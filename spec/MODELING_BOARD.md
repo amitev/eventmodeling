@@ -347,9 +347,9 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **state read** (`STATE_READ`): only Read Model and Screen, with at least a Read Model;
   - **none** (`null`): anything else, also an empty slice.
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
-- **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Read Model directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Read Model. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it. The Translation Chain of the `eventmodeling-core-rules` skill is the source of truth.
+- **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Read Model directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Read Model. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it.
 - **R5b.4** Translation todo lists are permanent feeds: recording an internal Event never closes their rows.
-  - **Learning (implementation):** prototype export excludes translation Processors' outputs from closing Events and missing-closing-arrow warnings. Use derived slice type (R5b.1); linked Processors use original's slice.
+- **R5b.5** Moved to [Agent requirements, A1.2](./AGENTIC.md#1-external-event-translation).
 
 ## 6. Board file
 
@@ -444,7 +444,6 @@ The board file is the single, complete description of a board, written and read 
   - **Propagate:** a field created in the popup has a checkbox, checked by default. On Save, a checked new top-level field is also copied to **all** elements downstream, following arrows through the whole chain (around loops too), replacing fields of the same name. The setting is not stored. Fields later edited or removed are not propagated.
   - **Get from parent** (R9.3): several parents are applied in the order of their arrows; a later parent replaces same-named fields of an earlier one.
   - A linked copy is never a target; as a source it gives its original's fields.
-  - **Learning (skills/API):** follow Propagate's default through S4.17/S4.20. Existing-field edits, renames and removals need separate approval for downstream changes.
 - **R9.5** The body of a Command, Event and Read Model lists its field names, compact, nested fields indented. No type or attribute is shown there (they are in the popup). A Screen shows its mockup (R3.8), not its fields.
 - **R9.6** **Export.** `fields` is a list; each field has exactly these keys in order: `name`, `type`, `list`, `id`, `optional`, `generated`, `pii`, `technical` (all booleans written), and for `object` also `fields` (the nested list). Import checks as in R7.4.
 - **R9.7** **Attributes** (each true/false, a checkbox with a tooltip):
