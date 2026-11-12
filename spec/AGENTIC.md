@@ -21,4 +21,8 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A2.1** Skills follow Propagate's default (R9.4) through editing API S4.17/S4.20.
 - **A2.2** Existing-field edits, renames and removals need separate approval for downstream changes.
 
+## 3. Model validation
+
+- **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).
