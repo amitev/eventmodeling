@@ -5,7 +5,7 @@ description: Choose and create a genuinely new next capability when the board ha
 
 # Add Next Slice
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
 **Purpose:** choose plausible next capability, create brand-new slice with recipe's elements and real mockup matching Chapter's look.
 

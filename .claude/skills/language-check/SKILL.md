@@ -5,7 +5,7 @@ description: Cross-Chapter/Context language check — script finds duplicate/nea
 
 # Language Check
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
 Read `eventmodeling-core-rules` and `naming` first; lookups: `model-navigation`. Unlike a Chapter-local `model-check` pass, compare **all Chapters and Contexts**. Check changes **nothing**.
 

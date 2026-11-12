@@ -5,8 +5,8 @@ Technology-neutral base. The generated skill's Steps 1, 2 and 5 come from here; 
 ## Frontmatter of a generated skill
 
 - `name`: as the user chose (builder topic 14). `description`: what it implements, from the type file's "Description seed", plus the technology; "Use for ..." phrases; "Not for ..." naming the sibling skills by their chosen names.
-- First line of the body: `Read eventmodeling-core-rules first. Endpoints: [../api.md](../api.md) (base URL http://localhost:3300). Reads only: this skill never changes the model.` Then, if a shared decisions file exists, a link to it.
-- Second line: `**Model access:** the model is read only through the API ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.`
+- First line of the body: `Read eventmodeling-core-rules first. Endpoints: [../em-board-api.md](../em-board-api.md) (base URL http://localhost:3300). Reads only: this skill never changes the model.` Then, if a shared decisions file exists, a link to it.
+- Second line: `**Model access:** the model is read only through the API ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.`
 
 Generated skills are **backend only**: no UI code, no Screen mockup use.
 

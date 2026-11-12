@@ -65,7 +65,7 @@ Example: `npx em-cli board --port 8080 --host 0.0.0.0`
 npx em-cli@latest init
 ```
 
-Creates `.event-modeling/` and copies the packaged skills and `api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
+Creates `.event-modeling/` and copies the packaged skills and `em-board-api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
 
 ## Develop
 

@@ -5,7 +5,7 @@ description: Build a state-change, state-read, automation or translation slice i
 
 # Slice Modeler
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 

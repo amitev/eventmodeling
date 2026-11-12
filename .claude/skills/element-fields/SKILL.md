@@ -5,7 +5,7 @@ description: Create, edit or remove Screen/Command/Event/Read Model fields throu
 
 # Element Fields
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation` for lookups. Do not guess rules.
 

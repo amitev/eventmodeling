@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # WDYT — What Do You Think?
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
 > **Before doing anything else**, ...
 

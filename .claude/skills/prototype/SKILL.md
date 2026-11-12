@@ -4,7 +4,7 @@ description: Build a clickable one-Context prototype in /prototype — board HTM
 disable-model-invocation: true
 ---
 
-**Model access:** API only ([../api.md](../api.md)); board read-only for this skill. Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)); board read-only for this skill. Never read, create, edit or delete files in `.event-modeling/`.
 
 Clarification: Posting the questions means reporting.
 

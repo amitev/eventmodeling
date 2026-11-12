@@ -5,7 +5,7 @@ description: Analyze external webhooks, queues, APIs, polling or device events a
 
 # Translating External Events
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`; use the user's configured server when different. No cloud board ids, tokens or connection skill.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`; use the user's configured server when different. No cloud board ids, tokens or connection skill.
 
 Read `eventmodeling-core-rules` first. Use `model-navigation` for lookups, `slice-modeler` for the translation recipe, `element-fields` for schemas and `scenarios` for GWT. This skill discovers the integration rules and models them; it does **not** implement or run integrations.
 

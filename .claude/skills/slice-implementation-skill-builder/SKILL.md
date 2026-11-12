@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Slice Implementation Skill Builder
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. **Every generated skill must state this rule.**
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. **Every generated skill must state this rule.**
 
 Generate **three backend-only skills**: state change, state read, automation (includes translation). **No UI/Screen/view/form/mockup code.** `reference/` defines technology-neutral slice meaning/API reads; add confirmed technology. Read `eventmodeling-core-rules` first.
 

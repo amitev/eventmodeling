@@ -59,7 +59,7 @@ test('init installs skills in its default or custom target without starting a se
     assert.match(result.stdout, /Installed \d+ skill entries/);
     assert.doesNotMatch(result.stdout, /Event Modeling Board: http/);
     const target = args.length ? 'custom-skills' : path.join('.claude', 'skills');
-    assert.ok(fs.existsSync(path.join(cwd, target, 'api.md')));
+    assert.ok(fs.existsSync(path.join(cwd, target, 'em-board-api.md')));
     assert.ok(fs.existsSync(path.join(cwd, target, '.em-cli.json')));
     assert.ok(fs.existsSync(path.join(cwd, '.event-modeling')));
   }

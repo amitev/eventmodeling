@@ -5,7 +5,7 @@ description: Restyle existing Screens to a user-named base, preserving content, 
 
 # Screen Restyle
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first; lookups: `model-navigation`. Follow `html-screen` mockup rules (one document, 1024×768, no scripts, sanitization, full width) and Step 2a style-transfer rules, here for **many existing Screens**.
 

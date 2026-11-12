@@ -5,7 +5,7 @@ description: Create, rename, move, reorder, resize or delete Contexts, Chapters,
 
 # Chapter Setup (structure)
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `html-screen`, `element-fields`, `connections`, `scenarios`.
 

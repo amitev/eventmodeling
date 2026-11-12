@@ -20,7 +20,7 @@ function readManifest(file) {
   }
 }
 
-// Copies the packaged skills (and api.md) into `target`, replacing what an earlier run installed.
+// Copies the packaged skills (and em-board-api.md) into `target`, replacing what an earlier run installed.
 export function installSkills({ target = DEFAULT_TARGET, cwd = process.cwd(), sourceDir = SKILLS_DIR } = {}) {
   if (!fs.existsSync(sourceDir)) throw new Error('Packaged skills not found.');
   const dir = path.resolve(cwd, target);

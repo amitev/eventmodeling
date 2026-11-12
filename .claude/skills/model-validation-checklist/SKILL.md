@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Model Validation Checklist
 
-**Model access:** API only ([../api.md](../api.md)). Never read or edit files in `.event-modeling/`. Read `eventmodeling-core-rules` once per session. Use `model-navigation` for reads. This is a read-only review: do not change the board or post comments.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read or edit files in `.event-modeling/`. Read `eventmodeling-core-rules` once per session. Use `model-navigation` for reads. This is a read-only review: do not change the board or post comments.
 
 `model-check` provides the technical pass; this checklist judges business meaning and evidence the script cannot. Do not repeat its checks by hand or treat its candidates as automatic failures. For business questions during exploration, use `wdyt`.
 

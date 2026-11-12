@@ -5,7 +5,7 @@ description: Design and render HTML/CSS on a new or existing Screen, optionally 
 
 # HTML Screen Designer
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`. Lookups: `model-navigation`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`. Lookups: `model-navigation`.
 
 > **DEFAULT SCREEN SKILL:** realistic HTML/CSS mockups (forms, tables, page layouts), not wireframes unless explicitly requested.
 

@@ -5,7 +5,7 @@ description: Read-only API-based script check for rules, gaps, candidates, slice
 
 # Model Check
 
-**Model access:** API only ([../api.md](../api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
 Read `eventmodeling-core-rules` first. **Read-only technical pass:** script reads model and prints findings; never re-derive its checks by reading model yourself. Business/product-owner questions: `wdyt`.
 

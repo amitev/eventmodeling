@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Walkthrough
 
-**Model access:** API only ([../api.md](../api.md)). Never read or edit files in `.event-modeling/`. Read `eventmodeling-core-rules` once per session; use `model-navigation` for lookups. Report in chat as Markdown, one step per slice. This board has no shareable slice deep link: give the Context, Chapter and slice names; never invent a URL or promise to zoom the board.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read or edit files in `.event-modeling/`. Read `eventmodeling-core-rules` once per session; use `model-navigation` for lookups. Report in chat as Markdown, one step per slice. This board has no shareable slice deep link: give the Context, Chapter and slice names; never invent a URL or promise to zoom the board.
 
 ## 1. Choose mode and scope
 
