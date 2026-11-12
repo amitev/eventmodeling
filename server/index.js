@@ -6,31 +6,57 @@ import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
 
-const HELP = `Usage: em-cli [options]
+const HELP = `Usage: em-cli <command> [options]
+
+Commands:
+  board              Start the Event Modeling Board
+  init               Install (or update) the skills in the current directory
 
 Options:
-      --init           Install (or update) the skills in the current directory, then exit
-      --target <dir>   With --init: skills folder (default ${DEFAULT_TARGET})
+  -h, --help         Show this help
+
+Run "em-cli <command> --help" for command options.
+`;
+
+const BOARD_HELP = `Usage: em-cli board [options]
+
+Options:
   -p, --port <port>  Port to listen on (default: PORT environment variable, else 3300)
       --host <host>  Host to bind to (default localhost)
       --dev          Serve only /api; the board comes from the Vite dev server
   -h, --help         Show this help
 `;
 
+const INIT_HELP = `Usage: em-cli init [options]
+
+Options:
+      --target <dir> Skills folder (default ${DEFAULT_TARGET})
+  -h, --help         Show this help
+`;
+
+const [command, ...args] = process.argv.slice(2);
+const help = command === 'board' ? BOARD_HELP : command === 'init' ? INIT_HELP : HELP;
+
 function fail(message) {
-  console.error(`${message}\n\n${HELP}`);
+  console.error(`${message}\n\n${help}`);
   process.exit(1);
+}
+
+if (command !== undefined && !['board', 'init', '-h', '--help'].includes(command)) {
+  fail(`Unknown command: ${command}`);
 }
 
 let values;
 try {
   ({ values } = parseArgs({
+    args: command === '-h' || command === '--help' ? process.argv.slice(2) : args,
     options: {
-      port: { type: 'string', short: 'p', default: process.env.PORT || '3300' },
-      host: { type: 'string', default: 'localhost' },
-      dev: { type: 'boolean', default: false },
-      init: { type: 'boolean', default: false },
-      target: { type: 'string' },
+      ...(command === 'board' ? {
+        port: { type: 'string', short: 'p', default: process.env.PORT || '3300' },
+        host: { type: 'string', default: 'localhost' },
+        dev: { type: 'boolean', default: false },
+      } : {}),
+      ...(command === 'init' ? { target: { type: 'string' } } : {}),
       help: { type: 'boolean', short: 'h', default: false },
     },
   }));
@@ -38,14 +64,12 @@ try {
   fail(e.message);
 }
 
-if (values.help) {
-  console.log(HELP);
+if (command === undefined || values.help) {
+  console.log(help);
   process.exit(0);
 }
 
-if (values.target !== undefined && !values.init) fail('--target requires --init');
-
-if (values.init) {
+if (command === 'init') {
   if (values.target === '') fail('--target needs a folder');
   try {
     const { dir, version, installed, removed } = installSkills({ target: values.target });

@@ -1,6 +1,6 @@
 # Event Modeling server API
 
-Base: `http://localhost:3300/api/model` (CLI `npx em-cli`, port option `--port`). Paths below are relative; `/` means base itself. JSON bodies, max 50 MB; no auth. Errors: `{ error: text }` + HTTP status. Shapes use `?` for optional keys.
+Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--port`). Paths below are relative; `/` means base itself. JSON bodies, max 50 MB; no auth. Errors: `{ error: text }` + HTTP status. Shapes use `?` for optional keys.
 
 ## Agent rules and storage
 

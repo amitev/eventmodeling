@@ -24,7 +24,7 @@ npm run build
 npm link
 ```
 
-`em-cli` is then available globally and runs the board from the current directory.
+`em-cli` is then available globally; `em-cli board` runs the board from the current directory.
 
 To create and install a package tarball:
 
@@ -38,28 +38,31 @@ npm install -g ./em-cli-1.0.0.tgz
 ## Run
 
 ```sh
-npx em-cli
+npx em-cli board
 ```
 
 Or, from the repository: `npm start`.
 
-Opens at `http://localhost:3300`.
+Serves at `http://localhost:3300`.
 
-| Option | Default | Description |
-|---|---|---|
-| `-p`, `--port <port>` | `PORT` env, else `3300` | Port to listen on |
-| `--host <host>` | `localhost` | Host to bind to |
-| `--dev` | | API only, no build needed (used by `npm run dev`) |
-| `--init` | | Install the skills into the current directory, then exit |
-| `--target <dir>` | `.claude/skills` | With `--init`: skills folder |
-| `-h`, `--help` | | Show usage |
+Commands: `board` starts the server; `init` installs skills. No command prints help.
+Options belong to their command; the old `--init` and commandless server options are not accepted.
+Use `em-cli --help` for commands or `em-cli <command> --help` for command options.
 
-Example: `npx em-cli --port 8080 --host 0.0.0.0`
+| Command | Option | Default | Description |
+|---|---|---|---|
+| `board` | `-p`, `--port <port>` | `PORT` env, else `3300` | Port to listen on |
+| `board` | `--host <host>` | `localhost` | Host to bind to |
+| `board` | `--dev` | | API only, no build needed (used by `npm run dev`) |
+| `init` | `--target <dir>` | `.claude/skills` | Skills folder |
+| Both | `-h`, `--help` | | Show command usage |
+
+Example: `npx em-cli board --port 8080 --host 0.0.0.0`
 
 ## Skills
 
 ```sh
-npx em-cli@latest --init
+npx em-cli@latest init
 ```
 
 Creates `.event-modeling/` and copies the packaged skills and `api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
