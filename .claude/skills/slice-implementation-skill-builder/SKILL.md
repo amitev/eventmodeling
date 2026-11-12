@@ -1,6 +1,7 @@
 ---
 name: slice-implementation-skill-builder
 description: Interview and confirm every technology decision, then generate state-change, state-read and automation/translation implementation skills. Never assume; confirm every answer and before every write. Use for "set up slice implementation for <technology>", "build the implement skills for Kotlin / .NET / TypeScript ...", "make the implement skills concrete", "change the stack of the implement skills". Not for implementing slices; use generated skills.
+disable-model-invocation: true
 ---
 
 # Slice Implementation Skill Builder

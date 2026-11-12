@@ -1,6 +1,7 @@
 ---
 name: wdyt
 description: Business-analyst review of all slices; show questions/observations first, report when user agrees. Comments carry questions; canvas arrows additionally mark relational findings.
+disable-model-invocation: true
 ---
 
 # WDYT — What Do You Think?

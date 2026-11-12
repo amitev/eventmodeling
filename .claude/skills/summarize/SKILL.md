@@ -1,6 +1,7 @@
 ---
 name: summarize
 description: Turn PDF/Word/Markdown/text/URL/image into a board model — Chapters, elements, HTML Screens, rule-based GWT scenarios and detailed Summary-lane notes in each Chapter's first slice. Capture facts/rules/deadlines/questions as specification/implementation blueprint. Use for document modeling, e.g. tender/RFP (Ausschreibung) bid analysis.
+disable-model-invocation: true
 ---
 
 # Summarize a source into an event model

@@ -1,6 +1,7 @@
 ---
 name: prototype
 description: Build a clickable one-Context prototype in /prototype — board HTML Screens, browser event store, GWT-driven Commands, projected Read Models, Automations/todo lists and scenario checks. Script exports model; board read-only. Use for "build a prototype of X", "make the Registration context clickable", "update the prototype".
+disable-model-invocation: true
 ---
 
 **Model access:** API only ([../api.md](../api.md)); board read-only for this skill. Never read, create, edit or delete files in `.event-modeling/`.
