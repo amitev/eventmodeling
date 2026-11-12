@@ -61,6 +61,8 @@ Other Chapter's Event: **local linked copy, never direct arrow** (`connections`,
 
 ### Translation — external Event → Read Model → Processor → Command → internal Event
 
+Payload mapping, correlation or delivery policies unclear: use `translating-external-events` to discover and confirm them before building.
+
 Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integration** lane; this makes type translation.
 - Ask system name, Event source and Integration lane. One lane per system, named after it; `info` describes delivery (`eventmodeling-core-rules`, External systems). Missing lane: ask name/details, add via `chapter-setup`.
 - Create external Event **first**, or reuse from outline: `POST /elements` `{ slice: "$s", lane: <Integration lane>, type: "EVENT", name: <system's name>, fields: <payload> }`.
