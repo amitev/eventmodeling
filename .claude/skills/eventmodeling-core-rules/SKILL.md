@@ -81,7 +81,7 @@ Anything else, including empty slice: no type.
   - Invalid: `OrderSummaryProjector`, `InvoiceListRepository` (implementation)
 - Optional: Command/downstream consumer does not require one.
 - **Never directly validates Command**; Command uses documented preconditions.
-- **Rows:** one `list: true` `object` field containing row fields; `list` belongs to **field, not element**. All todo lists and other row sets (`ProductList`, `InvoiceList`) use this, unlike single records.
+- **Result shape:** fields describe one result item. A query may return one or many items; do not represent multiple results with an outer `list: true` field. Result cardinality belongs to the query, not the field schema. Use `list: true` only for a collection-valued attribute within one item.
 
 ### SCREEN
 - What user sees/acts on; user-facing name, not internals.
@@ -152,7 +152,7 @@ external EVENT → todo-list READ_MODEL → translation PROCESSOR → COMMAND �
 - Translation todo opens on external Event and **never closes**: relay, not "done" tracker.
 - Translation Command records internal domain-language Event for worker/other consumers. **Explicitly map raw external → internal fields**, including correlation, idempotency, duplicate handling.
 
-**Every Processor needs own list-shaped todo Read Model; no pure-relay exemption.** Trigger Event → Read Model opens; completion Event → Read Model closes (translation never closes, above). Processor + Command + Event + Integration-lane element = translation slice.
+**Every Processor needs its own todo Read Model; no pure-relay exemption.** Its fields describe one todo item; its query returns the open items. Trigger Event → Read Model opens an item; completion Event → Read Model closes it (translation never closes, above). Processor + Command + Event + Integration-lane element = translation slice.
 
 ## Open Questions vs. Decided Failures
 

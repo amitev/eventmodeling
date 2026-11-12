@@ -16,7 +16,7 @@ Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused 
 1. **Chapter/place:** `GET /outline`; ask Chapter and insertion point (after which slice, or end). Select one lane per needed type; multiple choices: ask. Missing type: ask, then add via `chapter-setup`. Processors use system-actor lanes, Screens human-role lanes; prefer system lanes above human lanes when adding.
 2. **Behavior/type:** user's words for who acts, recorded facts and displayed data; choose recipe below. Unclear: ask.
 3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
-4. **Fields:** use names/types/flags from the user or parents; never invent. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
+4. **Fields:** use names/types/flags from the user or parents; never invent. Read Model fields describe one result item; query cardinality is separate. Ask whether a query returns one or many items when unclear. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
 5. **Reuse:** find existing dependencies (e.g. earlier Event feeding Read Model) by outline name; multiple matches: ask.
 
 ## How the server wires things
@@ -43,7 +43,7 @@ Nonhuman trigger/no Screen: use Automation.
 ### State read — Read Model → Screen
 
 1. Slice as above.
-2. `POST /elements` Read Model: `{ slice: "$s", lane: <Interaction lane>, type: "READ_MODEL", name, fields }`, `as: "q"`. Previous right-most Event auto-feeds it; alternatively `autoConnect: false`, then `POST /connections` per feeding Event `{ from: <event>, to: "$q" }`. Rows require a `list: true` `object` field. **Connect Events → PATCH final Read Model fields (including list shape) → only then create Screen/connect onward.** Incoming arrows copy flat Event fields; outgoing arrows copy current fields, so wrong order gives Screen flat fields.
+2. `POST /elements` Read Model: `{ slice: "$s", lane: <Interaction lane>, type: "READ_MODEL", name, fields }`, `as: "q"`. Its fields describe one result item; the query may return one or many items. Do not add an outer `list: true` field for multiple results. Ask if result cardinality is unclear. Previous right-most Event auto-feeds it; alternatively `autoConnect: false`, then `POST /connections` per feeding Event `{ from: <event>, to: "$q" }`. **Connect Events → PATCH final Read Model fields → only then create Screen/connect onward.** Incoming arrows copy flat Event fields; outgoing arrows copy current fields, so wrong order gives Screen flat fields.
 3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (entered/calculated extras) → Read Model → Screen, fields copied.
 
 Other Chapter's Event: **local linked copy, never direct arrow** (`connections`, Across Chapters). `POST /elements` `{ slice, lane, copyOf, autoConnect: false }` **outside state-read slice**, then connect copy → Read Model.
@@ -53,7 +53,7 @@ Other Chapter's Event: **local linked copy, never direct arrow** (`connections`,
 **Layout (also translation):** Read Model left, Command right **in same Interaction lane**; Processor above in Actor lane; Event **directly under Command** in Event lane. Slice-relative `x`: Read Model `40`, Command `220`, Processor `140` (centred over both, snapped to board's 20px grid), Event `220`. Elements 160px wide, gap 20px, margin 40px. **Never omit Event `x`: server would centre it instead.**
 
 1. Slice as above.
-2. List-shaped **todo Read Model**: `{ type: "READ_MODEL", lane: <Interaction lane>, x: 40, autoConnect: false }`, `as: "q"`. Connect opening Events individually; **PATCH final list-shaped fields before any outgoing arrow** (incoming arrows add flat fields).
+2. **Todo Read Model**: `{ type: "READ_MODEL", lane: <Interaction lane>, x: 40, autoConnect: false }`, `as: "q"`. Its fields describe one todo item; its query returns the open items. Do not add an outer list field. Connect opening Events individually; **PATCH final item fields before any outgoing arrow** (incoming arrows add flat fields).
 3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, x: 140, name }`, `as: "p"`; no fields → automatic Read Model → Processor.
 4. Command: `{ type: "COMMAND", lane: <Interaction lane>, x: 220, name, fields }`, `as: "cmd"` → automatic Processor → Command, passing Read Model fields through. Missing arrows (e.g. `autoConnect: false`): `POST /connections` `{ from: "$q", to: "$p" }`, `{ from: "$p", to: "$cmd" }`.
 5. **Only now** Event(s): `{ type: "EVENT", lane: <Event lane>, x: 220, name }` → automatic Command → Event. One-hop copying means earlier Event creation misses Read Model fields. Multiple Events: first at `220`, others beside it in Event lane.
@@ -64,7 +64,7 @@ Other Chapter's Event: **local linked copy, never direct arrow** (`connections`,
 Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integration** lane; this makes type translation.
 - Ask system name, Event source and Integration lane. One lane per system, named after it; `info` describes delivery (`eventmodeling-core-rules`, External systems). Missing lane: ask name/details, add via `chapter-setup`.
 - Create external Event **first**, or reuse from outline: `POST /elements` `{ slice: "$s", lane: <Integration lane>, type: "EVENT", name: <system's name>, fields: <payload> }`.
-- Then create todo Read Model with `autoConnect: false`; connect external Event → todo list. **Translation todo list never closes.**
+- Then create todo Read Model with `autoConnect: false`; connect external Event → todo Read Model. Its fields describe one todo item; the query returns the items, and the translation todo never closes.
 - Command records internal Event in domain language. **External Event feeds no other Read Model**; only internal Event feeds read models. This preserves replay position in event store; separate sources cannot guarantee order and external retention is limited.
 
 ## Step 2 — Write

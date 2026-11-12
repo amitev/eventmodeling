@@ -26,7 +26,7 @@ Reads all Chapters via API to resolve cross-Chapter copies/older arrows; folds c
 | `screens[]` | `id, name, chapter, slice, html, url, fields, commandIds, readModelIds` (triggered Commands, displayed Read Models) |
 | `commands[]` | `id, name, fields, screenIds, processorIds, eventIds` |
 | `events[]` | `id, name, fields` |
-| `readModels[]` | `id, name, fields, eventIds, openingEventIds, closingEventIds, processorIds, screenIds`; worker todo closes on its Command's output Events; translation feed never closes |
+| `readModels[]` | `id, name, fields, eventIds, openingEventIds, closingEventIds, processorIds, screenIds`; `fields` describe one result item, not query cardinality; worker todo closes on its Command's output Events; translation feed never closes |
 | `processors[]` | `id, name, readModelIds, commandIds` |
 | `scenarios[]` | `id, name, description, chapter, given, when, then, error`; entries `{ element, example }`, Event/Command id |
 
@@ -66,12 +66,12 @@ Header: Screen tabs, **Automations** only if `MODEL.processors` nonempty, **Scen
 
 **Read Models** `project(readModel, store)`: fold entries with id in `readModel.eventIds`, in store order. **Only Events with feeding arrows count**; worker completion without arrow never closes item (export warns).
 - Key: Read Model `id: true` fields also present on Event. No key: append-only rows; warn to mark id field.
-- One `list: true` `object` field → row list using nested fields; otherwise single record.
+- Fields describe one result item. Whether the query returns one item or multiple is separate from the fields; ask the user if unclear. Do not use an outer `list: true` field to represent multiple results. `list: true` is only for a collection-valued attribute within one item.
 - `closingEventIds`: remove same-key row. Others: add/upsert same-key row, replacing same-named fields.
 - Translation feeds retain rows after translation; exporter excludes translation Processors' output Events from `closingEventIds` and missing-closing-arrow warnings. Uses outline's derived `TRANSLATION` type, not names; copies use original Processor's slice. Never add closing arrows or hide processed rows to simulate a queue.
 - Plain Read Model removal Events: **ask**, never infer from Deleted/Removed/Cancelled/Closed names. Record answer as `const REMOVING = [Event ids]` atop page script; treat like `closingEventIds`.
 
-**Screen data:** for each `readModelIds` entry, match normalized element id/class to normalized field name. Set `textContent` (`value` for inputs). List template = first repeated sibling with same tag/class containing matching elements; clone/fill once per row, remove template. Empty list: one **"No items"** line.
+**Screen data:** for each `readModelIds` entry, match normalized element id/class to normalized field name. Set `textContent` (`value` for inputs). For a multi-item query, list template = first repeated sibling with same tag/class containing matching elements; clone/fill once per result item, remove template. Empty result: one **"No items"** line.
 
 **Acting on a Screen.**
 - `input`/`select`/`textarea` → Command field by normalized field name matching input id or label text. Label: `label[for]` or wrapping label; neither: nearest preceding element in same container (`previousElementSibling`, else parent's `previousElementSibling`), e.g. div/span/heading.

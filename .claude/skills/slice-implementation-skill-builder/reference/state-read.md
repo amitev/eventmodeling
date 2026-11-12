@@ -7,7 +7,7 @@
 
 | Where | What it gives |
 |---|---|
-| `READ_MODEL` element | the read model's name (noun phrase) and its result shape: `fields` (a `list` `object` field = the rows) |
+| `READ_MODEL` element | the read model's name (noun phrase) and one result item's fields; query cardinality (one or many items) is separate from the field schema |
 | `EVENT` elements with an arrow to the Read Model (also copies) | what the projection listens to; each Event's `fields` are what it can copy into the read model |
 | `SCREEN` element (arrow Read Model → Screen) | context only: who consumes the Read Model. No UI is built |
 
@@ -16,8 +16,8 @@ A copied Event in this slice's Chapter stands for an Event of another Chapter: t
 ## Step 4 — Implement (neutral part)
 
 1. **Projection**: for every feeding Event, how the read model changes (insert, update, remove a row). Where the fields alone do not say it (which Event removes a row, how a key is matched): ask, do not guess.
-2. **Query**: returns the read model in the shape of the Read Model's fields.
-3. **Tests**: feed example Events, check the Query result.
+2. **Query**: returns one or many result items as specified; each item's shape matches the Read Model's fields. Do not use an outer list field to encode multiple results.
+3. **Tests**: feed example Events, check result fields and cardinality.
 
 ## Gaps to report
 

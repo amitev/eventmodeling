@@ -454,6 +454,7 @@ The board file is the single, complete description of a board, written and read 
   - **PII**: personally identifiable information;
   - **Technical**: an implementation detail.
 - **R9.8** **Information completeness.** A non-copy Screen, Command, Event or Read Model with incoming element arrows fails when it has a non-generated top-level field whose name no parent supplies (through Processors). All incoming arrows turn bright red (`#ff0000`) and become thicker (7px). Same-named fields count as inherited regardless of type or attributes.
+- **R9.9** A Read Model's fields describe one result item. Do not encode multiple query results with an outer `list: true` field; result cardinality belongs to the query. Use `list: true` only for a collection-valued attribute within one result item.
 
 **Learning (implementation).** Copying is one hop (R9.4): fields reach an element only when an arrow to it is added. Building a chain through the server (SERVER.md S4.16 to S4.18) therefore depends on order: connect the upstream arrows first (Read Model → Processor → Command), then add the Event below the Command, or it gets none of those fields. A `PATCH` of `fields` (S4.17) replaces the list and copies nothing.
 

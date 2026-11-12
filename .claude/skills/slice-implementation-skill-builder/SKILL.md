@@ -40,10 +40,10 @@ Cover **every topic**, following up to concrete names/versions/commands/paths; i
 | 3 | **Frameworks** | Web/application framework, DI, serialization, wanted/forbidden frameworks |
 | 4 | **Event store** | Store/library; Event names/serialization/versioning; stream identity; optimistic concurrency; model Event → code type mapping |
 | 5 | **Command handling** | Style (function/aggregate/decider/handler); entry (HTTP/message/other); validation; refusal format mapping to `error` scenarios; idempotency; generated time/user/ids |
-| 6 | **Read models** | Storage; inline/async/catch-up/rebuild projections; exposure; keys; `list` fields |
+| 6 | **Read models** | Storage; inline/async/catch-up/rebuild projections; exposure; keys; whether each query returns one or many items (separate from its field schema) |
 | 7 | **Automation and translation** | Processor trigger (subscription/polling/schedule/bus); retry/idempotency; todo-list storage; external arrival (webhook/queue/polling/other); external → internal mapping location |
 | 8 | **Project layout** | Existing/new project, root; suggest `<context name>/<chapter name>/<slice name>/`, one folder/slice, model-named Context/Chapter folders; **user confirms/changes**. File names/casing, model → code names/suffixes, shared-code location |
-| 9 | **Field types** | Exact stack mapping/handling for **every** model type/flag (`list`, `generated`, `pii`, `object`, ...), including PII treatment |
+| 9 | **Field types** | Exact stack mapping/handling for **every** model type/flag (`list` for collection-valued attributes, `generated`, `pii`, `object`, ...), including PII treatment |
 | 10 | **Tests** | Framework, GWT → test mapping, unit/integration levels, location, scenario example data |
 | 11 | **Commands to run** | Exact build/test/lint/run verification commands, or none |
 | 12 | **Cross-cutting** | Logging, configuration, authn/authz, time source, other shared rules |

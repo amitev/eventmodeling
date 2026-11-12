@@ -9,7 +9,7 @@ Both share one shape: a todo list (Read Model) feeds a Processor, which issues a
 
 | Where | What it gives |
 |---|---|
-| `READ_MODEL` element (list-shaped) | the **todo list**: items still to do; its `fields` (the list field) are the item data |
+| `READ_MODEL` element | the **todo query**: items still to do; its `fields` describe one todo item, while the query returns the open items |
 | `EVENT` elements with an arrow to the Read Model | the Events that **open** a todo item (their fields fill it) |
 | `PROCESSOR` element | the automation's name: it takes todo items and issues the Command. No fields of its own: it passes the Read Model's fields on |
 | `COMMAND` element (arrow Processor → Command) | the action: `fields` (`generated` ones are filled by the system) |
@@ -19,7 +19,7 @@ Both share one shape: a todo list (Read Model) feeds a Processor, which issues a
 
 ## Step 4 — Implement (neutral part)
 
-1. **Todo list**: a projection of the opening Events (and, for an automation, the closing ones), shaped as the Read Model's fields. Ask where a rule is unclear (what closes an item, ordering, retries).
+1. **Todo query**: a projection of the opening Events (and, for an automation, the closing ones). Each item's fields match the Read Model's fields; do not encode multiple items with an outer list field. Ask where a rule is unclear (what closes an item, ordering, retries).
 2. **Processor**: for each open item, issues the Command with the item's fields. A repeat or crash must not duplicate the action.
 3. **Command handler**: decides and records the Events as the Scenarios say (as `state-change.md`, Step 4).
 4. **Translation only**: the external Event is **first stored as an internal Event** (the Command's Event, in this domain's language); only that Event feeds read models. Never feed another Read Model from the external Event. The todo list is never closed (as modelled): if unclear, ask.
