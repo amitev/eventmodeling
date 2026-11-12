@@ -135,12 +135,6 @@ export function ScenariosCard({ id, data, selected, width, onEdit, onView, newId
         >
           + Add
         </button>
-        <button className="scenario-btn nodrag">
-          <Icon>
-            <path d="M3 2.5A1.5 1.5 0 0 1 4.5 1H13v11H4.5A1.5 1.5 0 0 0 3 13.5v-11ZM3 13.5A1.5 1.5 0 0 0 4.5 15H13v-3" />
-          </Icon>
-          + Storyline
-        </button>
         <span className="scenario-count">{scenarios.length}</span>
       </div>
     </div>
