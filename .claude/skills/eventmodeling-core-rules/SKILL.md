@@ -124,18 +124,23 @@ Natural slice occupied: add slice immediately before/after, keeping **every arro
 
 Later Event changes earlier view (e.g. cancellation affecting "active items"): **never wire backward into old Read Model**.
 
-Add **new normal Read Model + Screen immediately after later Event's slice**, same Screen name, updated data, own mockup. Connect Event forward; arrow copies Event fields, add remaining fields view needs. **Not linked copies:** copies show original unchanged; use copies only for unchanged data. **Leave old Read Model/Screen untouched; never delete them**: they correctly show earlier timeline state.
+Add a state-read slice immediately after the later Event's slice with **linked copies of the existing Read Model and Screen**. Connect the later Event forward to the Read Model copy, then that copy to the Screen copy. Keep earlier occurrences and their arrows; do not replace them or wire the later Event backward.
+
+**Different result data is not a different view definition.** Creating, updating or deleting appointments changes the rows of `Available Appointments`, not its identity. Define that Read Model and its `Appointments` Screen once; every later appearance of the same view **must use `copyOf`**, including refreshes after changes. Board elements describe definitions, not frozen runtime snapshots.
+
+A new normal Read Model or Screen is justified only by a genuinely different business query, result contract or user interaction, not newer values or a later timeline position. Assess the Read Model and Screen separately: a new interaction may need a new Screen while reusing the Read Model. Read existing fields, `isList`, `info` and mockup before deciding; same names alone do not prove identity. Ask when uncertain.
 
 ## Linked Copies
 
 **Linked copy**: `copyOf` original id; same type, mirrors element in another slice/Chapter. All types except Scenarios/Notes; copy of copy resolves original.
 - **Keep arrows within Chapter** (recommendation, not enforced): cross-Chapter dependency uses local copy, never direct arrow (`connections`, Across Chapters).
 - Never duplicate another lane's recorded fact under unlinked identity: connect forward to original or use copy.
+- Repeated appearances of the same Read Model or Screen, within or across Chapters, **must be linked copies of one canonical original**. Search and resolve existing copies to their original before creating an element; do not create an independent duplicate merely to connect a later Event.
 - **Exception:** translation's internal Event is genuinely new domain fact in local language, **not copy**, even if external Event has same name.
 
 Create: `POST /elements` `{ slice, lane, copyOf }`; lane must accept original type; connect neighbors via `connections`.
 
-Copy mirrors original type/name/fields/mockup/`isList` **live**, never diverges. Only `slice`, `lane`, `x` editable; other changes: 409, edit original. Receives no arrow fields, passes original's fields onward. Changed view requires new normal element (previous section).
+Copy mirrors original type/name/fields/mockup/`isList` **live**, never diverges. Only `slice`, `lane`, `x` editable; other changes: 409, edit original. Receives no arrow fields, passes original's fields onward. Arrows belong to each occurrence; connect each copy explicitly as needed. Changed result values do not require new definitions. For a required shared field change, edit the original via `element-fields` and keep downstream fields consistent; never PATCH a copy's content.
 
 **Scenarios on originals only:** choose same-Chapter, non-copy Event/Command (`scenarios`).
 
@@ -219,6 +224,7 @@ Before done:
 - [ ] EVENTs: past-tense business facts, not machinery/UI
 - [ ] COMMANDs: imperative business intent, not loading queries
 - [ ] READ_MODELs: data names, not implementation names
+- [ ] Repeated Read Model/Screen definitions use `copyOf`; refreshed data alone never justifies independent duplicates
 - [ ] Computed/aggregated values in READ_MODELs, never EVENTs
 - [ ] Exactly one SCREEN/PROCESSOR issuer/inbound arrow per COMMAND
 - [ ] Every COMMAND traces to user decision/system reaction

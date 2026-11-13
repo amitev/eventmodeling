@@ -17,13 +17,13 @@ Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused 
 2. **Behavior/type:** user's words for who acts, recorded facts and displayed data; choose recipe below. Unclear: ask.
 3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
 4. **Fields:** use names/types/flags from the user or parents; never invent. Read Model fields describe one result item; set element `isList: true` for list results, omit for single results. Ask whether a query returns one or many items when unclear. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
-5. **Reuse:** find existing dependencies (e.g. earlier Event feeding Read Model) by outline name; multiple matches: ask.
+5. **Mandatory reuse check:** before creating any Read Model or Screen, search the outline for existing definitions and resolve `copyOf` to the canonical original. Read candidate originals' fields, `isList`, `info` and Screen content. The same business query/view or interaction **must use a linked copy**, even when a later Event changes displayed values. Compare Read Model and Screen separately; a distinct interaction may need a new Screen but the same Read Model. Multiple independent matches or unclear identity: ask. A new original requires a genuinely different definition, never just a refresh. Also find existing dependencies (e.g. earlier Event feeding Read Model).
 
 ## How the server wires things
 
 - Lane alone determines row. Omit `x` for board placement/automatic widening, **except automation/translation layout below**.
 - `autoConnect=true` by default, using elements already present. Same-slice arrows: Screen above → new Command; Command above → new Event; Read Model below → new Screen; new Read Model → Screen above; nearest Processor → new Command; nearest Read Model → new Processor. New Read Model also receives previous slice's **right-most Event**. **Follow recipe creation order.**
-- Each arrow copies all source fields, replacing same-named target fields. POST keeps own fields, then merges parent's; supply only added fields.
+- Each arrow into a non-copy copies all source fields, replacing same-named target fields. POST keeps own fields, then merges parent's; supply only added fields. Linked copies receive no fields and supply their original's fields; incoming Events must not be used to reshape a copy.
 - Other arrows: `POST /connections`. Previous right-most Event is only a guess: for other/multiple feeding Events use `autoConnect: false`, then connect explicitly.
 - `info`: mainly implementation details (formats, limits, integrations, technical constraints), never notes/citations/summaries. Put those in Notes, which may also hold implementation details; one Notes element per Spec Cell.
 
@@ -42,9 +42,19 @@ Nonhuman trigger/no Screen: use Automation.
 
 ### State read — Read Model → Screen
 
+**Choose reuse before the creation recipe below.** If the same Read Model or Screen exists, use the linked-copy recipe for that element, not a new normal element. Changes to appointment rows after create/update/delete are reuse, not new view definitions.
+
 1. Slice as above.
 2. `POST /elements` Read Model: `{ slice: "$s", lane: <Interaction lane>, type: "READ_MODEL", name, fields, isList? }`, `as: "q"`. Set `isList: true` for list results; omit for single results. Fields describe one result item, never an outer `list: true` wrapper for multiple results. Ask if cardinality is unclear. Previous right-most Event auto-feeds it; alternatively `autoConnect: false`, then `POST /connections` per feeding Event `{ from: <event>, to: "$q" }`. **Connect Events → PATCH final Read Model fields → only then create Screen/connect onward.** Incoming arrows copy flat Event fields; outgoing arrows copy current fields, so wrong order gives Screen flat fields.
 3. `POST /elements` Screen: `{ slice: "$s", lane: <Actor lane>, type: "SCREEN", name, fields }` (entered/calculated extras) → Read Model → Screen, fields copied.
+
+**Repeated view — linked-copy recipe** (same atomic batch):
+
+1. Create the later state-read slice immediately after the Event's slice.
+2. `POST /elements` `{ slice: "$s", lane: <Interaction lane>, copyOf: <original Read Model id>, autoConnect: false }`, `as: "q"`.
+3. Explicitly connect the relevant earlier Events to `"$q"` with `POST /connections`. Keep all arrows forward; never connect the later Event backward to the original.
+4. `POST /elements` `{ slice: "$s", lane: <Actor lane>, copyOf: <original Screen id>, autoConnect: false }`, `as: "screen"`, then explicitly connect `"$q"` to `"$screen"`. Copies mirror content, not the original occurrence's arrows.
+5. Do not send `type`, `name`, `fields`, `isList`, `html` or `info` on copy creation, and do not PATCH copy content. If the shared definition needs fields, update the original via `element-fields` before connecting onward. If only one of the two definitions is reused, use a copy for it and the normal recipe for the genuinely new element.
 
 Other Chapter's Event: **local linked copy, never direct arrow** (`connections`, Across Chapters). `POST /elements` `{ slice, lane, copyOf, autoConnect: false }` **outside state-read slice**, then connect copy → Read Model.
 
@@ -89,7 +99,7 @@ Check each `results[]` status/body.
 ## Step 3 — Finish and verify
 
 1. `GET /outline?context=<id>`: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION`, correct lanes and recipe arrows. `null`: fix missing element/arrow.
-2. `GET /elements/:id` for arrow-affected fields; apply the core completeness rule and report gaps. Adjust via `element-fields` PATCH (whole-list replacement, no propagation).
-3. New Screen is placeholder: **offer `html-screen`, never skip silently**; offer `scenarios` for Command.
+2. `GET /elements/:id` for arrow-affected fields; apply the core completeness rule and report gaps. For copies, read the original and verify `copyOf` resolves to the intended definition. Adjust originals only via `element-fields` PATCH (whole-list replacement, no propagation). Confirm repeated views did not become independent originals.
+3. New normal Screen is placeholder: **offer `html-screen`, never skip silently**; a Screen copy reuses the original's mockup, so offer a design only if that original lacks one. Offer `scenarios` for Command.
 4. Report slice (id/name/type/Chapter), elements (id/type/name/lane), automatic/explicit arrows, inherited fields, gaps (no field source, unfed Read Model, uncertain arrow), automatic board updates (pull behavior: API reference).
 5. Error names op: read `error`, fix cause, retry **whole batch**; failed batch wrote nothing.

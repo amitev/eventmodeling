@@ -18,7 +18,7 @@ Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use 
 | Forbidden | Self, repeated pair (400), any arrow on `SCENARIOS`/`NOTES` |
 | Chapters | **Create same-Chapter arrows only.** Use local linked copies for cross-Chapter dependencies (below). Server accepts direct cross-Chapter arrows; this is a recommendation, not enforced |
 | Move | Keeps arrows, even across Chapters; adds none |
-| Linked copies | Connect normally; receive no fields, supply original's fields |
+| Linked copies | Required for repeated definitions; connect each occurrence explicitly. Receive no fields, supply original's fields; content edits target the original |
 | Storage | Source `connectsTo` lists target ids; arrows have no id |
 | Fields | New arrow copies **all** source fields, replacing same-named fields; **one hop, no further propagation**. Processor passes them through: Read Model → Processor → Command |
 | Delete | Element deletion removes its arrows and linked copies |
@@ -49,6 +49,7 @@ Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use 
 2. `GET /outline`: inspect `connectsTo` targets for existing/automatic arrows.
 3. Validate pair first. Invalid: explain and ask; never change types to make it fit.
 4. Different Chapters: follow "Across Chapters", not a direct arrow.
+5. Same Chapter, repeated Read Model/Screen: follow "Repeated views within a Chapter". Do not create an independent definition just to keep arrows forward.
 
 ## Step 2 — Connect
 
@@ -61,6 +62,18 @@ New element + arrows: create element first, then add only nonautomatic arrows in
 ## Step 3 — Remove
 
 `DELETE /connections` `{ from, to }`, either order; 404 if absent. **Copied fields stay on target:** report this; never remove them unasked.
+
+## Repeated views within a Chapter
+
+When a later Event refreshes the same business view, **use linked copies**, not independent Read Model/Screen definitions. Different rows or values do not change a definition. Compare query, fields, `isList`, `info` and Screen content; ask if identity is unclear.
+
+1. Resolve the existing Read Model and Screen to their canonical originals.
+2. Use `chapter-setup` to place a state-read slice immediately after the later Event's slice.
+3. Create the Read Model copy with `POST /elements` `{ slice, lane, copyOf: "<original Read Model id>", autoConnect: false }`.
+4. Connect relevant earlier Events forward to this copy. Do not wire later Events backward to the original or move existing arrows.
+5. Create the Screen copy with the same copy-only body shape in the Actor lane, then explicitly connect Read Model copy → Screen copy. Copies mirror definitions, not the original occurrence's connections.
+6. Incoming arrows do not copy fields into linked copies. If the shared result contract needs an agreed field change, edit the original via `element-fields` before connecting onward; never PATCH copy content.
+7. Assess reuse separately for each element. A genuinely different Screen interaction may be a new original even when its Read Model is reused. Do not automatically convert existing duplicates or delete originals; follow `edit-and-delete` impact and confirmation rules.
 
 ## Across Chapters
 
