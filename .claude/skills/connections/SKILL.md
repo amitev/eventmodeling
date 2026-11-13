@@ -15,6 +15,7 @@ Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use 
 |---|---|
 | Allowed pairs | Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor. No others (including same-type pairs, Screen → Event). `GET /rules`: `connections` |
 | Direction | Pair determines direction; POST accepts **either order** |
+| Back arrows | Same-slice Automation TODO feedback follows `eventmodeling-core-rules`; cross-slice arrows stay forward |
 | Forbidden | Self, repeated pair (400), any arrow on `SCENARIOS`/`NOTES` |
 | Chapters | **Create same-Chapter arrows only.** Use local linked copies for cross-Chapter dependencies (below). Server accepts direct cross-Chapter arrows; this is a recommendation, not enforced |
 | Move | Keeps arrows, even across Chapters; adds none |

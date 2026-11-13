@@ -45,4 +45,8 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A6.2** Generated implementation skills stop before code changes on ambiguous descriptions or conflicts with GWT/example data; never invent requirements or silently choose one source.
 - **A6.3** Report description requirements covered by tests. Prototype checks report requirements they cannot exercise as coverage gaps; GWT matches alone do not prove full coverage.
 
+## 7. Automation feedback
+
+- **A7.1** Skills allow a back arrow within an Automation slice from its Command's output Event to the TODO Read Model used by its Processor. Cross-slice forward-only and Translation TODO rules stay unchanged.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

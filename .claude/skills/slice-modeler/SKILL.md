@@ -70,7 +70,7 @@ Other Chapter's Event: **local linked copy, never direct arrow** (`connections`,
 3. Processor: `{ type: "PROCESSOR", lane: <Actor lane>, x: 140, name }`, `as: "p"`; no fields → automatic Read Model → Processor.
 4. Command: `{ type: "COMMAND", lane: <Interaction lane>, x: 220, name, fields }`, `as: "cmd"` → automatic Processor → Command, passing Read Model fields through. Missing arrows (e.g. `autoConnect: false`): `POST /connections` `{ from: "$q", to: "$p" }`, `{ from: "$p", to: "$cmd" }`.
 5. **Only now** Event(s): `{ type: "EVENT", lane: <Event lane>, x: 220, name }` → automatic Command → Event. One-hop copying means earlier Event creation misses Read Model fields. Multiple Events: first at `220`, others beside it in Event lane.
-6. Command's Events **close** todo items: connect each → Read Model `{ from: <event>, to: "$q" }`, then **PATCH final Read Model fields again** (arrows add flat fields). Without closing arrow, items never close.
+6. Command's Events **close** todo items: connect each → Read Model `{ from: <event>, to: "$q" }`, then **PATCH final Read Model fields again** (arrows add flat fields). This same-slice back arrow is allowed by `eventmodeling-core-rules`. Without closing arrow, items never close.
 
 ### Translation — external Event → Read Model → Processor → Command → internal Event
 

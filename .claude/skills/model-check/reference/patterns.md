@@ -63,7 +63,7 @@ Slice: Reserve Inventory (automation)
   Processor → Command Reserve Inventory → Event Inventory Reserved (closes the item)
 ```
 
-The slice depends on the Events that open its todo list; the Event its own Command produces closes it.
+The slice depends on the Events that open its todo list; the Event its own Command produces closes it. This back arrow to the TODO Read Model used by the Processor is allowed within the same Automation slice (`eventmodeling-core-rules`).
 
 ### 4. External Event → translation
 

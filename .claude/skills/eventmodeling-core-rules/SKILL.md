@@ -118,7 +118,9 @@ For a non-copy SCREEN/COMMAND/EVENT/READ_MODEL with incoming arrows, each non-ge
 
 Within slice: vertical between lanes (Screen → Command → Event, Read Model → Screen). Across slices: **forward to later slice, never right-to-left**. Keep related Screen/Read Model, issuer/Command and Command/Event in same slice when possible to avoid backward arrows.
 
-Natural slice occupied: add slice immediately before/after, keeping **every arrow forward**, not wiring across gap. Allowed arrows/API: `connections`.
+**Automation exception:** within the same Automation slice, an Event produced by its Command may point back to the TODO Read Model used by its Processor, updating the TODO list. This does not permit arrows to previous slices; Translation todo rules stay unchanged.
+
+Natural slice occupied: add slice immediately before/after, keeping **every arrow forward except the Automation feedback above**, not wiring across gap. Allowed arrows/API: `connections`.
 
 ## Updating a Read Model That Already Feeds a Screen
 
