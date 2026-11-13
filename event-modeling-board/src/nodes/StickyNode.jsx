@@ -4,7 +4,7 @@ import { DEFAULT_PROCESSOR_ICON, KINDS, PROCESSOR_ICONS, kindW } from '../model/
 import { hasFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
-import { BoardActions } from '../state/BoardActions.js';
+import { BoardActions, CopySelection } from '../state/BoardActions.js';
 import { chapterStretchWidths, CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 import { ProcessorIcon } from '../ProcessorIcon.jsx';
 
@@ -41,6 +41,8 @@ export function StickyNode({ id, data, selected }) {
     return me && KINDS[data.kind]?.stretch ? chapterStretchWidths(s, me.parentId).get(id) ?? kindW(data.kind) : kindW(data.kind);
   });
   const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview } = useContext(BoardActions);
+  const selectedCopyOriginalIds = useContext(CopySelection);
+  const isOriginalOfSelectedCopy = selectedCopyOriginalIds.has(id);
 
   useEffect(() => {
     if (!selected || overview) setPickingIcon(false);
@@ -233,7 +235,7 @@ export function StickyNode({ id, data, selected }) {
       <Handle id="bottom-out" type="source" position={Position.Bottom} />
       <Handle id="bottom-in" type="target" position={Position.Bottom} />
     <div
-      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
+      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${isOriginalOfSelectedCopy ? ' copy-origin-selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
       onPointerEnter={zoomable ? startGrowing : undefined}
       onPointerLeave={zoomable ? stopGrowing : undefined}
       onPointerDown={zoomable ? stopGrowing : undefined}

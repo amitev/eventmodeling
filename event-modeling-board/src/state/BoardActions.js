@@ -31,3 +31,5 @@ export const BoardActions = createContext({
   overview: false,
   activeId: null,
 });
+
+export const CopySelection = createContext(new Set());

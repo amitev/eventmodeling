@@ -89,6 +89,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.2); font-size: 13px;
 }
 .sticky.selected { outline: 2px solid #1a73e8; }
+.sticky.copy-origin-selected {
+  outline: 4px solid #ff9800; outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(255, 152, 0, 0.28), 2px 3px 5px rgba(0, 0, 0, 0.2);
+}
 .sticky.copy { border-style: dashed; opacity: 0.75; }
 .sticky-header .copy-mark {
   display: flex; flex: none; align-items: center; justify-content: center;

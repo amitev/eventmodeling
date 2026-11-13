@@ -64,7 +64,7 @@ import { CellMenu } from './CellMenu.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
 import { HistoryContext, useHistory } from './state/history.js';
 import { kindOfKey, HotkeysDialog } from './dialogs/Hotkeys.jsx';
-import { BoardActions } from './state/BoardActions.js';
+import { BoardActions, CopySelection } from './state/BoardActions.js';
 import {
   spotInCell,
   autoConnections,
@@ -113,6 +113,7 @@ function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
+  const [selectedCopyOriginalIds, setSelectedCopyOriginalIds] = useState(() => new Set());
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
   // The overview (R1f): a read-only, high-level view without slice borders, titles and buttons.
@@ -548,6 +549,12 @@ function Board() {
     },
     [onNodesChange, getNodes, setNodes, markSilent]
   );
+  const handleSelectionChange = useCallback(({ nodes: selectedNodes }) => {
+    const next = new Set(selectedNodes.flatMap((n) => (n.data.copyOf ? [n.data.copyOf] : [])));
+    setSelectedCopyOriginalIds((current) =>
+      current.size === next.size && [...current].every((id) => next.has(id)) ? current : next
+    );
+  }, []);
 
   // Deleting a slice also deletes its elements (after confirmation) and closes the gap. The
   // last slice of a Chapter cannot be deleted.
@@ -1597,11 +1604,13 @@ function Board() {
       <div className="canvas" ref={canvasRef}>
         <HistoryContext.Provider value={historyApi}>
         <BoardActions.Provider value={boardActions}>
+        <CopySelection.Provider value={selectedCopyOriginalIds}>
         <ReactFlow
           nodes={displayNodes}
           edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
+          onSelectionChange={handleSelectionChange}
           onNodeClick={(e, node) => {
             // Lanes cover the whole Cell area, so a click on the empty part of a Cell is
             // delivered to a lane node, not to the canvas: treat it as a click on the canvas.
@@ -1666,6 +1675,7 @@ function Board() {
             nodeBorderRadius={0}
           />
         </ReactFlow>
+        </CopySelection.Provider>
         </BoardActions.Provider>
         </HistoryContext.Provider>
       </div>
