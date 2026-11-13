@@ -43,7 +43,7 @@ npx em-cli board
 
 Or, from the repository: `npm start`.
 
-Serves at `http://localhost:3300`.
+Serves at `http://localhost:3300` and tries to open the default browser. Uses the selected host and actual port (`localhost` for wildcard hosts). If no browser is available, the server continues without a warning. No browser opens with `--dev`.
 
 Commands: `board` starts the server; `init` installs skills. No command prints help.
 Options belong to their command; the old `--init` and commandless server options are not accepted.

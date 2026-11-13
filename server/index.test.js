@@ -65,11 +65,26 @@ test('init installs skills in its default or custom target without starting a se
   }
 });
 
-for (const dev of [false, true]) {
-  test(`board serves ${dev ? 'API only' : 'the built board'} with command options`, { timeout: 15000 }, async (t) => {
+for (const [dev, host] of [[false, '127.0.0.1'], [true, '127.0.0.1'], [false, '0.0.0.0']]) {
+  test(`board serves ${dev ? 'API only' : 'the built board'} on ${host} despite a missing browser`, { timeout: 15000 }, async (t) => {
     const cwd = tempDir(t);
+    const browserLog = path.join(cwd, 'browser.json');
+    const preload = `data:text/javascript,${encodeURIComponent(`
+      import childProcess from 'node:child_process';
+      import { syncBuiltinESMExports } from 'node:module';
+      import { EventEmitter } from 'node:events';
+      import { writeFileSync } from 'node:fs';
+      childProcess.spawn = (command, args, options) => {
+        writeFileSync(${JSON.stringify(browserLog)}, JSON.stringify({ command, args, options }));
+        const child = new EventEmitter();
+        child.unref = () => {};
+        queueMicrotask(() => child.emit('error', new Error('No browser available')));
+        return child;
+      };
+      syncBuiltinESMExports();
+    `)}`;
     const child = spawn(process.execPath, [
-      cli, 'board', '--host', '127.0.0.1',
+      '--import', preload, cli, 'board', '--host', host,
       ...(dev ? ['--dev'] : ['-p', '0']),
     ], { cwd, env: { ...process.env, PORT: '0' }, stdio: ['ignore', 'pipe', 'pipe'] });
     t.after(async () => {
@@ -79,9 +94,9 @@ for (const dev of [false, true]) {
         await exited;
       }
     });
+    let errors = '';
     const url = await new Promise((resolve, reject) => {
       let output = '';
-      let errors = '';
       const timer = setTimeout(() => reject(new Error(`CLI startup timed out: ${errors}`)), 10000);
       child.once('error', (error) => { clearTimeout(timer); reject(error); });
       child.once('exit', (code) => {
@@ -91,10 +106,10 @@ for (const dev of [false, true]) {
       child.stderr.on('data', (chunk) => { errors += chunk; });
       child.stdout.on('data', (chunk) => {
         output += chunk;
-        const match = output.match(/Event Modeling Board: (http:\/\/127\.0\.0\.1:\d+)/);
+        const match = output.match(/Event Modeling Board: http:\/\/[^:\s]+:(\d+)/);
         if (match) {
           clearTimeout(timer);
-          resolve(match[1]);
+          resolve(`http://127.0.0.1:${match[1]}`);
         }
       });
     });
@@ -104,5 +119,18 @@ for (const dev of [false, true]) {
     const board = await fetch(url);
     assert.equal(board.status, dev ? 404 : 200);
     if (!dev) assert.match(await board.text(), /<html/);
+    assert.equal(errors, '');
+    if (dev) {
+      assert.equal(fs.existsSync(browserLog), false);
+    } else {
+      const browser = JSON.parse(fs.readFileSync(browserLog, 'utf8'));
+      const browserUrl = host === '0.0.0.0' ? url.replace('127.0.0.1', 'localhost') : url;
+      assert.equal(browser.command, process.platform === 'win32' ? 'rundll32.exe'
+        : process.platform === 'darwin' ? 'open' : 'xdg-open');
+      assert.deepEqual(browser.args, process.platform === 'win32'
+        ? ['url.dll,FileProtocolHandler', browserUrl] : [browserUrl]);
+      assert.equal(browser.options.stdio, 'ignore');
+      assert.equal(browser.options.detached, true);
+    }
   });
 }

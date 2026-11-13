@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
@@ -40,6 +41,16 @@ const help = command === 'board' ? BOARD_HELP : command === 'init' ? INIT_HELP :
 function fail(message) {
   console.error(`${message}\n\n${help}`);
   process.exit(1);
+}
+
+function openBrowser(url) {
+  const command = process.platform === 'win32' ? 'rundll32.exe'
+    : process.platform === 'darwin' ? 'open' : 'xdg-open';
+  const args = process.platform === 'win32' ? ['url.dll,FileProtocolHandler', url] : [url];
+  const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
+  // S2.15: a missing browser or launcher must not affect the server.
+  child.on('error', () => {});
+  child.unref();
 }
 
 if (command !== undefined && !['board', 'init', '-h', '--help'].includes(command)) {
@@ -96,6 +107,11 @@ server.on('error', (e) => {
 });
 server.listen(port, values.host, () => {
   const { port: actual } = server.address();
-  console.log(`Event Modeling Board: http://${values.host}:${actual}${values.dev ? ' (API only)' : ''}`);
+  const host = values.host.includes(':') ? `[${values.host}]` : values.host;
+  console.log(`Event Modeling Board: http://${host}:${actual}${values.dev ? ' (API only)' : ''}`);
   console.log(`Model folder: ${path.join(process.cwd(), DATA_DIR, 'model')}`);
+  if (!values.dev) {
+    const browserHost = ['0.0.0.0', '::'].includes(values.host) ? 'localhost' : host;
+    openBrowser(`http://${browserHost}:${actual}`);
+  }
 });
