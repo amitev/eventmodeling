@@ -55,6 +55,11 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - Reuse displayed edge objects and array while source edges, visibility, handle direction and overview color stay unchanged. React Flow still tracks endpoint geometry.
   - Production profiles still show React store-subscription callbacks, per-toolbar selected-node scans, DOM insertion and browser layout/paint costs. Edge identity reuse alone does not establish a click-latency improvement.
 
+- **R1.22** **Global full screen.** The rightmost main-header button toggles the Fullscreen API on `document.documentElement`, including header, board and popup portals. Request hidden browser navigation UI. Match R1.3b; keep visible in overview.
+  - Icon, pressed state and tooltip follow `fullscreenchange`: "Full screen" or "Exit full screen".
+  - Unsupported API: disable with tooltip "Full screen is unavailable in this browser". Failed requests show a notice.
+  - No saved state or undo step. F11 remains browser-controlled; its separate browser mode cannot be triggered or reliably detected by the button.
+
 ## 1a. Multiple Chapters
 
 - **R1a.1** The board holds any number of Chapters, each with its own lanes, slices and elements, laid out independently: changing one never changes another. Sections 2 to 5 apply per Chapter.
@@ -106,7 +111,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1c.7** The Markdown panel's editor and preview text is 16px (line height 1.5).
 ## 1d. Hotkey help
 
-- **R1d.1** A keyboard-icon button at the right end of the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete, search, fit view), Search box, Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name, Scenario editor (R3.15), Info panel, Fields popup, Screen mockup popup, Scenarios view. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
+- **R1d.1** A keyboard-icon button just before Global full screen (R1.22) in the board header opens a modal popup listing the hotkeys, grouped by context: Board (undo, redo, delete, search, fit view), Search box, Selected Cell (R5a.11), Selected Scenarios element (R3.14), Selected Notes element (R3.18), Editing a name, Scenario editor (R3.15), Info panel, Fields popup, Screen mockup popup, Scenarios view. It closes with **Close**, Esc or a click outside it. It must list every hotkey of the app; update it whenever one is added or changed.
 - **R1d.2** Every control with a hotkey names it in its tooltip, in brackets after the description, e.g. "Undo (Ctrl+Z)", "Add a scenario (A)". The label stays unchanged, except where the hotkey is part of its design (scenario popup chips, R3.15). A new hotkey is not done until its tooltip names it.
 - **R1d.3** Tooltips never explain mouse gestures ("double-click to ...", "drag to ...", click or drop hints). An element's tooltip is its **full name** (none when unnamed), so a name cut off by an ellipsis can be read; a slice header's is the slice name, a scenario item's its name (R3.14).
 
@@ -120,7 +125,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ## 1f. High level view
 
 - **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
-- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, High level view, search and hotkey buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
+- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
 - **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Read Model green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
 - **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning, zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
 

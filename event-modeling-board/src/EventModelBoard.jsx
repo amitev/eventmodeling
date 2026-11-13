@@ -295,6 +295,23 @@ function Board() {
       .sort((a, b) => a.at[0] - b.at[0] || a.at[1] - b.at[1]);
   }, [nodes, search.open, hiddenChapters]);
   const [notice, setNotice] = useState(null);
+  const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement);
+  const fullscreenAvailable = !!(document.fullscreenEnabled &&
+    document.documentElement.requestFullscreen && document.exitFullscreen);
+  useEffect(() => {
+    const changed = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', changed);
+    return () => document.removeEventListener('fullscreenchange', changed);
+  }, []);
+  const toggleFullscreen = async () => {
+    const exiting = !!document.fullscreenElement;
+    try {
+      if (exiting) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    } catch (err) {
+      setNotice(`Could not ${exiting ? 'exit' : 'enter'} full screen: ${err.message}`);
+    }
+  };
   const infoNode = nodes.find((n) => n.id === infoId);
   // A Notes element keeps its Markdown in `markdown`; Chapters, lanes and slices in `info`.
   const infoField = infoNode?.data.kind === 'notes' ? 'markdown' : 'info';
@@ -1556,6 +1573,24 @@ function Board() {
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
             <rect x="1" y="3" width="14" height="10" rx="1.5" />
             <path d="M4 6h.01M6.7 6h.01M9.3 6h.01M12 6h.01M4 8.5h.01M6.7 8.5h.01M9.3 8.5h.01M12 8.5h.01M5 11h6" />
+          </svg>
+        </button>
+        <button
+          className={`hotkeys-btn keep${fullscreen ? ' pressed' : ''}`}
+          onClick={toggleFullscreen}
+          disabled={!fullscreenAvailable}
+          title={fullscreenAvailable
+            ? fullscreen ? 'Exit full screen' : 'Full screen'
+            : 'Full screen is unavailable in this browser'}
+          aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+          aria-pressed={fullscreen}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            {fullscreen ? (
+              <path d="M6 1.5V6H1.5M10 1.5V6h4.5M6 14.5V10H1.5M10 14.5V10h4.5" />
+            ) : (
+              <path d="M1.5 6V1.5H6M10 1.5h4.5V6M14.5 10v4.5H10M6 14.5H1.5V10" />
+            )}
           </svg>
         </button>
       </header>
