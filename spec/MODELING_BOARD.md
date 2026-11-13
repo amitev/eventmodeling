@@ -85,6 +85,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - The filter is kept in the browser (localStorage key `event-model-board-context-filter`), not in the board file or on the server, and applies again on reload. If its Context no longer exists (deleted, pull, undo) it is All contexts.
   - **+ Chapter** gives a new Chapter the filter's Context (the Default for All contexts). Changing a shown Chapter's Context to another one hides it. Toolbar buttons that act on the active Chapter only act on shown Chapters; the active Chapter is a shown one. Search (R1e) lists only elements of shown Chapters. A Chapter with an unknown Context counts as the Default's.
 - **R1b.8** **Chapter arrows stay in one Context.** An arrow between Chapters (R1a.7) can only join Chapters of the same Context: dragging one to a Chapter of another Context is refused, as to oneself. When a Chapter's Context changes (R1b.4, or R1b.6 moving it to the Default), its arrows to Chapters of other Contexts are removed at once, with no confirmation, in the same undo step. A saved board (R1.6) or a pull (R10.2) with such an arrow is accepted and the arrow is dropped, not rejected (R7.4 does not check it). Element arrows are unaffected.
+- **R1b.9** The header Context dropdown ends with **+ New context...**. It uses the name prompt of R1b.4, appends an empty Context and selects it in the filter. No Chapter is created or moved. An empty name or cancelling changes nothing.
 
 ## 1c. Info
 

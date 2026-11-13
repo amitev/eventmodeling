@@ -103,6 +103,7 @@ function CellHighlight({ cell }) {
 }
 
 const FILTER_KEY = 'event-model-board-context-filter';
+const NEW_CONTEXT = '__new-context__';
 // How far above a Chapter's box Fit view reaches, in px. The title (top -126px, 44px high) and the
 // handle (top -74px) stand above the box; 100 shows the handle and the lower part of the title.
 const CHAPTER_TITLE_RISE = 100;
@@ -778,13 +779,14 @@ function Board() {
       ns.map((n) => (n.id === chapterId ? { ...n, data: { ...n.data, context: contextId } } : n))
     );
 
-  // Creates a Context and assigns it to the Chapter.
+  // Header creation selects an empty Context; Chapter creation assigns it (R1b.9).
   const addContext = (chapterId) => {
     const name = cleanName(window.prompt('Name of the new context') ?? '');
     if (!name) return;
     const [id] = newIds();
     setContexts((cs) => [...cs, { id, name }]);
-    setChapterContext(chapterId, id);
+    if (chapterId) setChapterContext(chapterId, id);
+    else setContextFilter(id);
   };
 
   // Renames the Context for every Chapter that shares it.
@@ -1469,7 +1471,9 @@ function Board() {
         <select
           className="context-filter keep"
           value={filterId}
-          onChange={(e) => setContextFilter(e.target.value)}
+          onChange={(e) =>
+            e.target.value === NEW_CONTEXT ? addContext() : setContextFilter(e.target.value)
+          }
           title="Show only the Chapters of one Context"
           aria-label="Context filter"
         >
@@ -1479,6 +1483,7 @@ function Board() {
               {c.name}
             </option>
           ))}
+          <option value={NEW_CONTEXT}>+ New context...</option>
         </select>
         <button
           className="hotkeys-btn search-btn"
