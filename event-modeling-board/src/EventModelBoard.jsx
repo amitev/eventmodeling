@@ -20,7 +20,6 @@ import {
   DEFAULT_SLICE_WIDTH,
   SLICE_MIN_WIDTH,
   KINDS,
-  kindW,
   padOf,
   snap,
   pruneCopies,
@@ -64,10 +63,9 @@ import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
 import { HistoryContext, useHistory } from './state/history.js';
-import { kindOfKey, hotkeyOf, HotkeysDialog } from './dialogs/Hotkeys.jsx';
+import { kindOfKey, HotkeysDialog } from './dialogs/Hotkeys.jsx';
 import { BoardActions } from './state/BoardActions.js';
 import {
-  acceptingLanes,
   spotInCell,
   autoConnections,
   cellElements,
@@ -167,8 +165,7 @@ function Board() {
     return Array.from({ length: count }, () => uniqueId(used));
   };
 
-  // Toolbar buttons that add things (elements, slices, lanes) act on the active Chapter:
-  // the one last clicked or dragged, or the first one.
+  // The active Chapter is the one last clicked or dragged, or the first one.
   const [activeId, setActiveId] = useState(null);
   const chapters = nodes.filter((n) => n.type === 'chapter');
   // Chapters of other Contexts than the filter's are hidden with all they hold (R1b.7). A Chapter
@@ -562,24 +559,6 @@ function Board() {
   const selectTopCellOf = (chapterId, sliceId) => {
     const top = lanesOf(getNodes(), chapterId)[0];
     if (top) chooseCell({ chapterId, laneId: top.id, sliceId });
-  };
-
-  const addSlice = () => {
-    if (!activeChapterId) return;
-    const [id] = newIds();
-    setNodes((ns) => {
-      // (end is the right edge of the last slice; layout then widens the Chapter if needed)
-      const end = slices(ns, activeChapterId).reduce(
-        (max, n) => Math.max(max, n.position.x + n.data.width),
-        SLICE_MIN_X
-      );
-      return layoutSlices(
-        layered([...ns, makeSlice(id, end, DEFAULT_SLICE_WIDTH, 'New Slice', activeChapterId)]),
-        ns,
-        activeChapterId
-      );
-    });
-    selectTopCellOf(activeChapterId, id);
   };
 
   // Inserts a slice immediately after `sliceId`. The later slices (and their elements)
@@ -1409,25 +1388,6 @@ function Board() {
     }
   };
 
-  const onDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  // A button released over a Cell adds the element there; anywhere else adds nothing.
-  const onDrop = (e) => {
-    e.preventDefault();
-    if (overview) return;
-    const kind = e.dataTransfer.getData('application/event-model');
-    if (!KINDS[kind]) return;
-    const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    const ns = getNodes();
-    const cell = cellAt(ns, p, hiddenChapters);
-    if (!cell) return;
-    const chapter = ns.find((n) => n.id === cell.chapterId);
-    addSticky(kind, { cell, x: p.x - kindW(kind) / 2 - chapter.position.x });
-  };
-
   // Selects the Cell under the click, or clears the selection when it is outside every Cell.
   const selectCellAt = (e) => {
     const cell = cellAt(getNodes(), screenToFlowPosition({ x: e.clientX, y: e.clientY }), hiddenChapters);
@@ -1479,7 +1439,6 @@ function Board() {
     );
   };
 
-  const selectedLane = selectedCell && nodes.find((n) => n.id === selectedCell.laneId);
   const menuLane = cellMenu && nodes.find((n) => n.id === cellMenu.cell.laneId);
   const menuSlice = cellMenu && nodes.find((n) => n.id === cellMenu.cell.sliceId);
   const menuVisible = !!(cellMenu && menuLane && menuSlice &&
@@ -1496,10 +1455,16 @@ function Board() {
       <header className="toolbar">
         <strong className="keep">Event Modeling Board</strong>
         <button onClick={undo} disabled={!hist.undo} title="Undo (Ctrl+Z)">
-          ↶ Undo
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 3L2 7l4 4M2 7h7a4 4 0 0 1 4 4v2" />
+          </svg>
+          Undo
         </button>
         <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
-          ↷ Redo
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10 3l4 4-4 4M14 7H7a4 4 0 0 0-4 4v2" />
+          </svg>
+          Redo
         </button>
         <select
           className="context-filter keep"
@@ -1557,33 +1522,11 @@ function Board() {
             <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4" />
           </svg>
         </button>
-        <span className="target" title="New slices are added to this Chapter">
-          Add to: <strong>{active?.data.name}</strong>
-        </span>
-        {Object.entries(KINDS).map(([kind, k]) => (
-          <button
-            key={kind}
-            className={`chip ${kind}`}
-            aria-disabled={
-              selectedLane &&
-              (!laneAllows(selectedLane, kind) ||
-                cellIsFull(nodes, selectedLane, nodes.find((n) => n.id === selectedCell.sliceId)))
-                ? true
-                : undefined
-            }
-            draggable
-            onDragStart={(e) => e.dataTransfer.setData('application/event-model', kind)}
-            onClick={() => addSticky(kind)}
-            title={`Add to the selected Cell (${hotkeyOf(kind)}). Only ${acceptingLanes(kind)} lanes take it.`}
-          >
-            + {k.icon && `${k.icon} `}{k.label}
-          </button>
-        ))}
-        <button className="chip slice-btn" onClick={addSlice} title="Add a slice to the Chapter">
-          + Slice
-        </button>
         <button className="chip chapter-btn" onClick={addChapter} title="Add a new Chapter">
-          + Chapter
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M8 3v10M3 8h10" />
+          </svg>
+          Chapter
         </button>
         <span className="spacer keep" />
         <button
@@ -1610,7 +1553,10 @@ function Board() {
           </svg>
         </button>
         <button className="hotkeys-btn keep" onClick={() => setHelpOpen(true)} title="Hotkeys" aria-label="Hotkeys">
-          ⌨️
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+            <rect x="1" y="3" width="14" height="10" rx="1.5" />
+            <path d="M4 6h.01M6.7 6h.01M9.3 6h.01M12 6h.01M4 8.5h.01M6.7 8.5h.01M9.3 8.5h.01M12 8.5h.01M5 11h6" />
+          </svg>
         </button>
       </header>
       <div className="canvas" ref={canvasRef}>
@@ -1661,8 +1607,6 @@ function Board() {
           onEdgesChange={onEdgesChange}
           isValidConnection={isValidConnection}
           onConnect={onConnect}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
           nodesDraggable={!overview}
           nodesConnectable={!overview}
           edgesReconnectable={!overview}
