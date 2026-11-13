@@ -1,6 +1,6 @@
 ---
 name: slice-modeler
-description: Atomically build a fully specified state-change, state-read, automation or translation slice, including elements, lanes, arrows and fields. Use to add/model a slice, view or automation.
+description: Model a slice, workflow or process with atomic structure creation, HTML screen mockups and Given/When/Then scenarios. Supports state-change, state-read, automation and translation slices.
 ---
 
 # Slice Modeler
@@ -9,7 +9,9 @@ description: Atomically build a fully specified state-change, state-read, automa
 
 Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 
-Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused op changes nothing; error prefixed `ops[<index>]: `.
+Build the structure with **one atomic `POST /ops`**, all or none, one revision/write. Refused op changes nothing; error prefixed `ops[<index>]: `. The required HTML and scenario steps below may use subsequent API writes; do not describe the entire workflow as atomic when they do.
+
+**Default deliverable:** modeling a slice, workflow or process includes its structure, fields, **persisted HTML screen mockups and Given/When/Then scenarios**. Invoke `html-screen` and `scenarios` as applicable; merely offering them as follow-up is not completion. Skip either only when the user explicitly excludes it (for example, "structure only"). This applies to elements in the requested scope, not unrelated existing placeholders. Automation/translation without Screens needs no mockup; state-read slices need no GWT scenarios.
 
 ## Step 1 — Gather (ask, do not assume)
 
@@ -18,6 +20,7 @@ Build with **one atomic `POST /ops`**, all or none, one revision/write. Refused 
 3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
 4. **Fields:** use names/types/flags from the user or parents; never invent. Read Model fields describe one result item; set element `isList: true` for list results, omit for single results. Ask whether a query returns one or many items when unclear. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
 5. **Mandatory reuse check:** before creating any Read Model or Screen, search the outline for existing definitions and resolve `copyOf` to the canonical original. Read candidate originals' fields, `isList`, `info` and Screen content. The same business query/view or interaction **must use a linked copy**, even when a later Event changes displayed values. Compare Read Model and Screen separately; a distinct interaction may need a new Screen but the same Read Model. Multiple independent matches or unclear identity: ask. A new original requires a genuinely different definition, never just a refresh. Also find existing dependencies (e.g. earlier Event feeding Read Model).
+6. **Screens and scenario coverage:** gather happy-path behavior and documented rejection rules with the workflow requirements. Do not invent business rules to fill scenarios; synthetic example values are allowed. For Command slices, identify an existing `SPEC` lane and Scenarios container. If a lane is missing, ask permission during this initial clarification, then add it via `chapter-setup`; if a Spec Cell is occupied by Notes, ask rather than replacing it. Record any explicitly named style reference for `html-screen`, but do not select an existing Screen as a reference yourself.
 
 ## How the server wires things
 
@@ -96,10 +99,22 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
 
 Check each `results[]` status/body.
 
-## Step 3 — Finish and verify
+## Step 3 — Create HTML screens and GWT scenarios
+
+These are required execution steps, not optional offers, unless explicitly excluded by the user.
+
+1. **HTML:** invoke `html-screen` for every new original Screen. Pass the known Context, Chapter, slice and Screen ids, fields, confirmed behavior and any explicitly named style reference. Work on those ids rather than asking the user to select already identified elements. Generate real HTML mockups, not new placeholder Screen elements.
+2. Resolve Screen copies to their canonical originals and process each original once. Reuse an existing original's HTML; if it is blank and in scope, invoke `html-screen` on that original. Never write HTML to a copy. Preserve existing designs unless changes are requested; URL-only Screens still require confirmation before replacing the URL with HTML.
+3. **GWT:** invoke `scenarios` for every new original Command, including automation/translation Commands. Pass the known Chapter, slice, Command, output Event, prior Event, approved Spec lane and container ids, plus confirmed rules and fields. Use same-Chapter non-copy Commands/Events, resolving copies first. If an original belongs to another Chapter, report the limitation; never move it to manufacture scenario references.
+4. Persist at least one successful Given/When/Then scenario per Command and a rejection scenario for **each documented precondition failure**. A rejection has `then: []` and an `error`, not a failure Event. Given may be empty when no prior Events are needed. Use synthetic field-based examples with matching ids and Command/Event values; follow `scenarios` scalar encoding. Do not add scenario containers to state-read slices.
+5. Reuse existing containers and scenarios; add only missing behavior coverage, never duplicate scenarios on a rerun or overwrite user scenarios unasked. Missing permissions or genuinely undecided behavior must be asked about or reported as blocked, not silently skipped.
+
+## Step 4 — Finish and verify
 
 1. `GET /outline?context=<id>`: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION`, correct lanes and recipe arrows. `null`: fix missing element/arrow.
 2. `GET /elements/:id` for arrow-affected fields; apply the core completeness rule and report gaps. For copies, read the original and verify `copyOf` resolves to the intended definition. Adjust originals only via `element-fields` PATCH (whole-list replacement, no propagation). Confirm repeated views did not become independent originals.
-3. New normal Screen is placeholder: **offer `html-screen`, never skip silently**; a Screen copy reuses the original's mockup, so offer a design only if that original lacks one. Offer `scenarios` for Command.
-4. Report slice (id/name/type/Chapter), elements (id/type/name/lane), automatic/explicit arrows, inherited fields, gaps (no field source, unfed Read Model, uncertain arrow), automatic board updates (pull behavior: API reference).
-5. Error names op: read `error`, fix cause, retry **whole batch**; failed batch wrote nothing.
+3. Read back each in-scope original Screen and verify nonempty persisted `html`, with shown/entered data matching its fields. Confirm linked Screen copies resolve to those originals. A placeholder is not a completed screen. Preserve explicitly accepted existing URL-only Screens; report any unresolved URL replacement permission as blocked.
+4. Read back each Scenarios container. Verify every in-scope Command has a successful scenario and coverage of each documented rejection, correct element references and example field names, and mutually exclusive Then Events/error. Do not treat a container's existence or scenario count alone as coverage.
+5. Run `model-check` for the target Chapter(s), report findings and verify the HTML/GWT requirements above separately. Missing required HTML or scenarios means the requested modeling work is incomplete, unless explicitly excluded. Retry failed writes or report partial completion and the exact blocker; never report placeholders or planned scenarios as created.
+6. Report slice (id/name/type/Chapter), elements (id/type/name/lane), automatic/explicit arrows, inherited fields, generated/reused HTML originals and copies, scenario names/coverage, explicit exclusions, gaps (no field source, unfed Read Model, uncertain arrow), and automatic board updates (pull behavior: API reference).
+7. Error names op: read `error`, fix cause, retry **whole failed batch**; that failed batch wrote nothing. A failed follow-up HTML/scenario batch does not roll back earlier successful structure writes.
