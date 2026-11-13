@@ -46,6 +46,7 @@ A slice is one Command, one Read Model, or one Processor with its Events, Read M
 - **Naming:** exact Command/Read Model/Processor name; automation: Processor or Command. Checker ignores case/spacing (`Place order` matches `Place Order`), not permission to change spelling.
 - **Split:** propose destination slices, element moves and order; **ask before moving anything**. Approved: `chapter-setup` creates slices with `after`; `edit-and-delete` moves via PATCH `slice` + `lane` (arrows stay, none added; at most one Spec element per Cell). Build missing parts with `slice-modeler`; recheck Chapter.
 - **Dependencies:** only through Events, never direct/shared state. Read Model: other slices' feeding Events (arrows). Command: other slices' Events named in scenario Givens. Report `--dependencies` in chat as "X depends on the Events of Y"; **never write to board**.
+- **Omitted distant-copy arrows:** apply `eventmodeling-core-rules`; an eligible omitted Event → Read Model copy arrow is not a gap by itself. Arrow-based dependency output cannot show omitted dependencies; report this limit, never invent the missing sources.
 - Patterns/template/example: `reference/patterns.md`, `reference/example.md`.
 
 ## Limits (the script does not check)

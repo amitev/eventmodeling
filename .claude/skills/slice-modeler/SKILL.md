@@ -55,7 +55,7 @@ Nonhuman trigger/no Screen: use Automation.
 
 1. Create the later state-read slice immediately after the Event's slice.
 2. `POST /elements` `{ slice: "$s", lane: <Interaction lane>, copyOf: <original Read Model id>, autoConnect: false }`, `as: "q"`.
-3. Explicitly connect the relevant earlier Events to `"$q"` with `POST /connections`. Keep all arrows forward; never connect the later Event backward to the original.
+3. Explicitly connect the relevant earlier Events to `"$q"` with `POST /connections`; eligible distant arrows may be omitted per `eventmodeling-core-rules`. Keep all arrows forward; never connect the later Event backward to the original.
 4. `POST /elements` `{ slice: "$s", lane: <Actor lane>, copyOf: <original Screen id>, autoConnect: false }`, `as: "screen"`, then explicitly connect `"$q"` to `"$screen"`. Copies mirror content, not the original occurrence's arrows.
 5. Do not send `type`, `name`, `fields`, `isList`, `html` or `info` on copy creation, and do not PATCH copy content. If the shared definition needs fields, update the original via `element-fields` before connecting onward. If only one of the two definitions is reused, use a copy for it and the normal recipe for the genuinely new element.
 

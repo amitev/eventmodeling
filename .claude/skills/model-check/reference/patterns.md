@@ -53,7 +53,7 @@ Slice: Place Order (state change)         produces Order Placed
 Slice: Order Details (state read)         projects Order Placed
 ```
 
-The most common dependency: nearly every state read slice depends on the Events of one or more state change slices. The server adds the arrow automatically from the right-most Event of the previous slice; any other Event is connected explicitly.
+The most common dependency: nearly every state read slice depends on the Events of one or more state change slices. The server adds the arrow automatically from the right-most Event of the previous slice; any other Event is connected explicitly, except the optional distant-copy arrow in `eventmodeling-core-rules`. Omitting that arrow does not remove the dependency.
 
 ### 3. Read Model → Processor → Command (automation)
 

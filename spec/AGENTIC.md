@@ -56,4 +56,10 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A8.3** Recorded business failure: Then Event with `error: null`. Precondition rejection: no Event, `then: []` and `error`.
 - **A8.4** An intentional copied-fact-only entry slice may have no derived type; do not add unrelated elements merely to force a type.
 
+## 9. Optional distant-copy arrows
+
+- **A9.1** Event → Read Model arrow may be omitted only for a linked Read Model copy in a later slice of the same Chapter, with at least three slices strictly between endpoints (index difference ≥4; e.g. slices 1 → 5).
+- **A9.2** Omission reduces arrow clutter, not the Event dependency. It never applies to originals, nearer copies or other arrow types; never remove existing arrows unasked.
+- **A9.3** Skills permit eligible omissions. Reviews do not flag omission alone as a gap; arrow-based dependency reports state that omitted dependencies are absent.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

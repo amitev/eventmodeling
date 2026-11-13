@@ -122,6 +122,8 @@ Within slice: vertical between lanes (Screen → Command → Event, Read Model �
 
 Natural slice occupied: add slice immediately before/after, keeping **every arrow forward except the Automation feedback above**, not wiring across gap. Allowed arrows/API: `connections`.
 
+**Optional distant-copy arrow:** an Event → Read Model arrow may be omitted only when the target is a **linked Read Model copy** and at least **three slices lie strictly between** the Event's slice and the copy's later slice in the same Chapter (slice index difference ≥4; e.g. slices 1 → 5). This reduces arrow clutter, not the underlying Event dependency. It never applies to an original Read Model, a nearer copy or another arrow type. Do not remove existing arrows unasked.
+
 ## Updating a Read Model That Already Feeds a Screen
 
 Later Event changes earlier view (e.g. cancellation affecting "active items"): **never wire backward into old Read Model**.

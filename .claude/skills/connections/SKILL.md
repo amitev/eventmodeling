@@ -19,7 +19,7 @@ Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use 
 | Forbidden | Self, repeated pair (400), any arrow on `SCENARIOS`/`NOTES` |
 | Chapters | **Create same-Chapter arrows only.** Use local linked copies for cross-Chapter dependencies (below). Server accepts direct cross-Chapter arrows; this is a recommendation, not enforced |
 | Move | Keeps arrows, even across Chapters; adds none |
-| Linked copies | Required for repeated definitions; connect each occurrence explicitly. Receive no fields, supply original's fields; content edits target the original |
+| Linked copies | Required for repeated definitions; connect each occurrence explicitly, except the optional distant-copy arrow in `eventmodeling-core-rules`. Receive no fields, supply original's fields; content edits target the original |
 | Storage | Source `connectsTo` lists target ids; arrows have no id |
 | Fields | New arrow copies **all** source fields, replacing same-named fields; **one hop, no further propagation**. Processor passes them through: Read Model → Processor → Command |
 | Delete | Element deletion removes its arrows and linked copies |
@@ -42,7 +42,7 @@ Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use 
 - Event → Processor: not automatic; server refuses (board drag only).
 - **External Events** (Integration lane): translate via Processor + Command to internal Event before feeding read models (`slice-modeler`, Translation). Separate sources cannot replay reproducibly; external streams have limited retention.
 - Creation order **Read Model → Processor → Command** is required for their automatic arrows.
-- Add other valid arrows explicitly, including nonadjacent Event → Read Model and other cross-slice pairs. Across Chapters: use linked copies.
+- Add other valid arrows explicitly, including nonadjacent Event → Read Model and other cross-slice pairs; the optional distant-copy arrow follows `eventmodeling-core-rules`. Across Chapters: use linked copies.
 
 ## Step 1 — Find the elements
 
@@ -71,7 +71,7 @@ When a later Event refreshes the same business view, **use linked copies**, not 
 1. Resolve the existing Read Model and Screen to their canonical originals.
 2. Use `chapter-setup` to place a state-read slice immediately after the later Event's slice.
 3. Create the Read Model copy with `POST /elements` `{ slice, lane, copyOf: "<original Read Model id>", autoConnect: false }`.
-4. Connect relevant earlier Events forward to this copy. Do not wire later Events backward to the original or move existing arrows.
+4. Connect relevant earlier Events forward to this copy; eligible distant arrows may be omitted per `eventmodeling-core-rules`. Do not wire later Events backward to the original or move existing arrows.
 5. Create the Screen copy with the same copy-only body shape in the Actor lane, then explicitly connect Read Model copy → Screen copy. Copies mirror definitions, not the original occurrence's connections.
 6. Incoming arrows do not copy fields into linked copies. If the shared result contract needs an agreed field change, edit the original via `element-fields` before connecting onward; never PATCH copy content.
 7. Assess reuse separately for each element. A genuinely different Screen interaction may be a new original even when its Read Model is reused. Do not automatically convert existing duplicates or delete originals; follow `edit-and-delete` impact and confirmation rules.
