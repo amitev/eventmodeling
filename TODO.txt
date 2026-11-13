@@ -72,6 +72,8 @@ If I add a new field - why wouldn´t it just add it throughout the whole chain w
 Why can´t I just zoom in on a part of the model and the agent knows what I´m looking at?
 https://www.linkedin.com/posts/martindilger_eventmodeling-emstudio-share-7506952380597297152-lpeU/
 
+- Guided modeling - https://www.youtube.com/watch?v=GYpmY2hJYy8
+
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 - Build slices - skills for building the slice types. Agent should also read the chapter and lane docs.
 - Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.

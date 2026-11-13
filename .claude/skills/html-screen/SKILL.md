@@ -1,6 +1,6 @@
 ---
 name: html-screen
-description: Design and render HTML/CSS on a new or existing Screen, optionally using a named Screen's style. Default for "design a screen" / "storyboard this"; use wireframes (storyboard-screen) only when explicitly requested.
+description: Design/render HTML/CSS on a new or existing Screen, optionally matching a named Screen. Default for "design a screen" or "storyboard this"; use `storyboard-screen` wireframes only when explicitly requested.
 ---
 
 # HTML Screen Designer

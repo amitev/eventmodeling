@@ -1,6 +1,6 @@
 ---
 name: model-navigation
-description: Read the model cheaply through the API — endpoint choice, outline navigation, arrows, copies, filtered output and read reuse. Use before model lookups ("find X", "what feeds this", "which slices are in this chapter", "what fields does Y have", "list the screens") and large reads.
+description: Efficiently read the model via API: choose endpoints, navigate outlines, inspect arrows/copies, filter results and reuse reads. Use for model lookups ("find X", "what feeds this", "which slices/fields/screens") and large reads.
 ---
 
 # Model Navigation (cheap reads)

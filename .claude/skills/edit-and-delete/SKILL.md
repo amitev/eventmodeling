@@ -1,6 +1,6 @@
 ---
 name: edit-and-delete
-description: Rename, edit, move or delete elements through the API; check impact and confirm destructive changes, including type replacement. Use for "rename X", "move this element to another slice/lane/chapter", "delete X", "make this Read Model a list", "change this Command into ...", "clean up".
+description: Rename, edit, move or delete elements via API; check impact and confirm destructive edits, including type changes. Use for renames, moves, deletes, Read Model list changes, Command type changes or cleanup.
 ---
 
 # Edit and Delete Elements

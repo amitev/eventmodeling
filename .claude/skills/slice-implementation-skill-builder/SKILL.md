@@ -1,6 +1,6 @@
 ---
 name: slice-implementation-skill-builder
-description: Interview and confirm every technology decision, then generate state-change, state-read and automation/translation implementation skills. Never assume; confirm every answer and before every write. Use for "set up slice implementation for <technology>", "build the implement skills for Kotlin / .NET / TypeScript ...", "make the implement skills concrete", "change the stack of the implement skills". Not for implementing slices; use generated skills.
+description: Interview and confirm every technology decision; generate state-change, state-read and automation/translation implementation skills. Never assume; confirm each answer and every write. Use to set up/revise stack-specific skills, not to implement slices; use generated skills.
 disable-model-invocation: true
 ---
 
@@ -49,7 +49,7 @@ Cover **every topic**, following up to concrete names/versions/commands/paths; i
 | 11 | **Commands to run** | Exact build/test/lint/run verification commands, or none |
 | 12 | **Cross-cutting** | Logging, configuration, authn/authz, time source, other shared rules |
 | 13 | **Existing code** (existing project only) | Path, read permission, conventions to follow (**user confirms findings**) |
-| 14 | **Output** | **User chooses** skill names (suggest `implement-state-change-<tech>`, `implement-state-read-<tech>`, `implement-automation-<tech>`), location (suggest `.claude/skills/`), replacements, shared decisions file or not (suggest `.claude/skills/stack-<tech>.md`, link `../stack-<tech>.md`) |
+| 14 | **Output** | **User chooses** skill names (suggest `implement-state-change`, `implement-state-read`, `implement-automation`; implementation skill names must not include a technology name), location (suggest `.claude/skills/`), replacements, shared decisions file or not (suggest `.claude/skills/stack-<tech>.md`, link `../stack-<tech>.md`) |
 
 Answer opens dependency (e.g. library needs database): add topic, ask. **Order flexible, coverage mandatory.**
 
@@ -66,7 +66,7 @@ Each generated skill has **five steps**. Present per-skill plan, **confirm befor
 
 ## Step 5 — Write
 
-Generate skills/shared decisions if chosen from `reference/`; follow `reference/common.md` frontmatter: `name` = folder, description includes "Use for ..." / "Not for ...". **Copy needed content; never link generated skill to builder's references.**
+Generate skills/shared decisions if chosen from `reference/`; follow `reference/common.md` frontmatter: `name` = folder and does not include a technology name; description is technology-neutral, matches broad slice-building prompts, and includes "Use for ..." / "Not for ..." with excluded slice types (not sibling skill names). **Copy needed content; never link generated skill to builder's references.**
 - Technology statements trace to confirmed answers/docs; no invented API/option/command. Unknown at implementation time → skill stops with an error naming the missing information; it does not ask the user.
 - Generated skills read and apply `info` on every element type that supports it, not only translation elements.
 - Copy the common scenario-test rule into every generated skill: descriptions guide test setup and assertions alongside GWT/example data, not just test names.

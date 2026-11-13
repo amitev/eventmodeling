@@ -1,6 +1,6 @@
 ---
 name: pii-audit
-description: Read-only script audit mapping `pii` fields across Screens/Commands/Events/Read Models; flags suspected unmarked PII, inconsistent flags and PII in Events. Use for "where does personal data go", "GDPR review", "check the PII flags", "which fields are personal". Never changes flags unasked.
+description: Read-only script maps `pii` fields across Screens/Commands/Events/Read Models and flags suspected unmarked PII, inconsistent flags and PII in Events. Use for personal-data flows, GDPR or flag checks. Never changes flags without request.
 ---
 
 # PII Audit

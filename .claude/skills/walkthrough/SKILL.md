@@ -1,6 +1,6 @@
 ---
 name: walkthrough
-description: Give a read-only, slice-by-slice explanation of an existing feature or map the impact of a planned change. Use for "how does X work?", "walk me through X" or "what would change if X?". Never edits the board.
+description: Read-only, slice-by-slice explanation of a feature or impact map for a planned change. Use for "how does X work?", "walk me through X" or "what would change?". Never edits the board.
 disable-model-invocation: true
 ---
 

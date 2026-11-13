@@ -1,6 +1,6 @@
 ---
 name: model-check
-description: Read-only API-based script check for rules, gaps, candidates, slice boundaries/names and Event dependencies. Use after model changes, before review, or for "check the model", "what is missing", "is this consistent", "validate the chapter", "review the slices", "what does this slice depend on".
+description: Read-only API script check for rules, gaps, candidates, slice boundaries/names and Event dependencies. Use after model changes or before review to check gaps, consistency, a Chapter, slices or dependencies.
 ---
 
 # Model Check

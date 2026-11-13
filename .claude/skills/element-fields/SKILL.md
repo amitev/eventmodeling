@@ -1,6 +1,6 @@
 ---
 name: element-fields
-description: Create, edit or remove Screen/Command/Event/Read Model fields through the API; inherit, Propagate and Get from parent as the board does. Use for "add field X to Y", "define the fields of this command/event/read model", "propagate this field", "make the fields consistent along the flow", "get the fields from the parent".
+description: Create, edit or remove Screen/Command/Event/Read Model fields via API, following board inheritance, Propagate and Get-from-parent behavior. Use to define fields or keep them consistent along a flow.
 ---
 
 # Element Fields

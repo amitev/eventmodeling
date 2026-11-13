@@ -1,6 +1,6 @@
 ---
 name: model-validation-checklist
-description: Read-only semantic readiness review of a completed event model. Complements model-check with evidence-based checks of Event meaning, business rules, traceability, flow and structural shapes. Use before declaring a model ready, not while it is still being explored.
+description: Read-only semantic review of a completed model, complementing `model-check` with evidence for Event meaning, business rules, traceability, flow and structure. Use before declaring readiness, not during exploration.
 disable-model-invocation: true
 ---
 

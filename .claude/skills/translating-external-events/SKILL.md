@@ -1,6 +1,6 @@
 ---
 name: translating-external-events
-description: Analyze external webhooks, queues, APIs, polling or device events and model their translation into domain facts. Use when payload mapping, correlation, enrichment, duplicate handling or ordering needs discovery. Builds translation slices and scenarios through the API. Already-specified translation slice uses slice-modeler; downstream business behavior is a separate task.
+description: Discover webhook, queue, API, polling or device-event contracts and model translation into domain facts, including payload mapping, correlation, enrichment, duplicates and ordering. Builds slices/scenarios via API. Specified slices use `slice-modeler`; downstream behavior is separate.
 ---
 
 # Translating External Events

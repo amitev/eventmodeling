@@ -1,6 +1,6 @@
 ---
 name: add-next-slice
-description: Choose and create a genuinely new next capability when the board has no slice for it. Use for "add the next slice", "what comes next", "continue the model", "add another step". Fully specified slice uses `slice-modeler`; existing structure/elements use `chapter-setup` / `edit-and-delete`.
+description: Choose/add a genuinely new capability when no slice exists. Use for "what comes next" or "add another step". Fully specified slices use `slice-modeler`; existing structure/elements use `chapter-setup` or `edit-and-delete`.
 ---
 
 # Add Next Slice

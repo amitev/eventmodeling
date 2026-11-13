@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: Build a clickable one-Context prototype in /prototype — board HTML Screens, browser event store, GWT-driven Commands, projected Read Models, Automations/todo lists and scenario checks. Script exports model; board read-only. Use for "build a prototype of X", "make the Registration context clickable", "update the prototype".
+description: Build/update a clickable one-Context prototype in `/prototype` with board HTML Screens, browser event store, GWT-driven Commands, projected Read Models, Automations/todo lists and scenario checks. Script exports the model; board stays read-only. Use to prototype or update a Context.
 disable-model-invocation: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: screen-restyle
-description: Restyle existing Screens to a user-named base, preserving content, fields, ids and structure; fingerprint, count and confirm first since old mockups are not saved. Use for "make all screens match", "unify the look of this Chapter", "apply the style of X to these screens". New Screen in base style uses `html-screen`; no content redesign.
+description: Restyle existing Screens to a named base, preserving content, fields, ids and structure. Fingerprint, count and confirm first; old mockups are not saved. Use to unify screen styles. New Screens use `html-screen`; no content redesign.
 ---
 
 # Screen Restyle

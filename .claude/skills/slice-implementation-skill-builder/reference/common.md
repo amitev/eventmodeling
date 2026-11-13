@@ -4,7 +4,7 @@ Technology-neutral base. The generated skill's Steps 1, 2 and 5 come from here; 
 
 ## Frontmatter of a generated skill
 
-- `name`: as the user chose (builder topic 14). `description`: what it implements, from the type file's "Description seed", plus the technology; "Use for ..." phrases; "Not for ..." naming the sibling skills by their chosen names.
+- `name`: as the user chose (builder topic 14), but do not include a technology name (for example, use `implement-state-change`, not `implement-state-change-springboot`). `description`: technology-neutral; describe what it implements, based on the type file's "Description seed", and match broad requests such as "Build slice X" or "Build the slice in Chapter Y". Tell the skill to identify the requested slice and its type from the model. Include "Use for ..." prompt examples and "Not for ..." with excluded slice types, but do not name sibling skills. Technology decisions belong in the skill body or shared decisions file, not its name or description.
 - First line of the body: `Read eventmodeling-core-rules first. Endpoints: [../em-board-api.md](../em-board-api.md) (base URL http://localhost:3300). Reads only: this skill never changes the model.` Then, if a shared decisions file exists, a link to it.
 - Second line: `**Model access:** the model is read only through the API ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.`
 

@@ -1,6 +1,6 @@
 ---
 name: chapter-setup
-description: Create, rename, move, reorder, resize or delete Contexts, Chapters, lanes and slices through the API; insert slices and mark flow ends. Use for "add a chapter", "create a context", "add a slice after X", "move this slice", "add a lane", "rename", "split the model into contexts".
+description: Create, rename, move, reorder, resize or delete Contexts, Chapters, lanes and slices via API; insert slices and mark flow ends. Use for structure changes ("add a slice after X", "split contexts"); element changes use `edit-and-delete`.
 ---
 
 # Chapter Setup (structure)

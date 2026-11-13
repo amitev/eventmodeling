@@ -1,6 +1,6 @@
 ---
 name: wdyt
-description: Business-analyst review of all slices; show questions/observations first, report when user agrees. Comments carry questions; canvas arrows additionally mark relational findings.
+description: Review all slices as a business analyst. Show questions/observations first; report findings only after agreement. Comments mark questions; canvas arrows also mark relationships.
 disable-model-invocation: true
 ---
 

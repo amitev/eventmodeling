@@ -1,6 +1,6 @@
 ---
 name: naming
-description: Naming rules and valid/invalid examples for elements, scenarios, slices, lanes, Chapters, Contexts and fields, including file-safe names. Use before naming, renaming or checking a name.
+description: Naming rules and valid/invalid examples for elements, scenarios, slices, lanes, Chapters, Contexts and fields, including file-safe names. Use when naming, renaming or checking names.
 ---
 
 # Naming

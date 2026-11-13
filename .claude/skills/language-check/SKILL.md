@@ -1,6 +1,6 @@
 ---
 name: language-check
-description: Cross-Chapter/Context language check — script finds duplicate/near names, Command/Event subject mismatches, tense slips and field-type conflicts; judge synonyms and write glossary in chat and Markdown. Use for "check the language", "find duplicates", "are we consistent", "build a glossary", "ubiquitous language". Propose renames; approved changes use `edit-and-delete`.
+description: Check language across Chapters/Contexts for duplicate names, Command/Event subject or tense mismatches, and field-type conflicts; assess synonyms and provide a glossary in chat/Markdown. Use to check consistency or ubiquitous language. Propose renames; approved edits use `edit-and-delete`.
 ---
 
 # Language Check

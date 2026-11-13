@@ -1,6 +1,6 @@
 ---
 name: event-storming
-description: Facilitate live event storming from questions/text/documents; build/adjust Event timeline, record red Notes for hot spots, enrich into full slices only on request. Use for "let's storm this process", "walk me through the events", "what happens first / next", "put these events on the board". Whole document with rules/deadlines uses `summarize`.
+description: Facilitate event storming from questions, text or documents: build an Event timeline, note hot spots in red, and expand to full slices only on request. Use to explore a process or sequence events; whole documents with rules/deadlines use `summarize`.
 ---
 
 # Event Storming

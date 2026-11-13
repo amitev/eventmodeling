@@ -1,6 +1,6 @@
 ---
 name: slice-modeler
-description: Build a state-change, state-read, automation or translation slice in one atomic call, including elements, lanes, arrows and fields. Use for "add a slice for X", "model the Place Order step", "create a screen, command and event for Y", "add a view for Z", "add an automation that reacts to E".
+description: Atomically build a fully specified state-change, state-read, automation or translation slice, including elements, lanes, arrows and fields. Use to add/model a slice, view or automation.
 ---
 
 # Slice Modeler

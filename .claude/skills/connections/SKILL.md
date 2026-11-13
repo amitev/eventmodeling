@@ -1,6 +1,6 @@
 ---
 name: connections
-description: Add/remove arrows through the API — allowed pairs, direction, automatic arrows and copied fields. Use for "connect X to Y", "link the screen to the command", "remove the arrow", "why is there (no) arrow", "wire up this slice".
+description: Add/remove API arrows; covers allowed pairs, direction, auto-arrows and copied fields. Use to connect/link or unlink elements, wire a slice, or diagnose missing/unexpected arrows.
 ---
 
 # Connections (arrows)

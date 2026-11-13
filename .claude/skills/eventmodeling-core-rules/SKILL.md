@@ -1,6 +1,6 @@
 ---
 name: eventmodeling-core-rules
-description: Shared rules for elements, naming, slices, flow and anti-patterns. Read upfront from other modeling skills (element-fields, scenarios, connections, wdyt, etc.) rather than repeating fundamentals. Not a standalone task.
+description: Shared rules for elements, names, slices, flow and anti-patterns. Other modeling skills read this first; not a standalone task.
 ---
 
 # Event Modeling — Core Rules

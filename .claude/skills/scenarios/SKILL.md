@@ -1,6 +1,6 @@
 ---
 name: scenarios
-description: Create, edit, copy, reorder or delete Given/When/Then scenarios through the API, using Chapter Commands/Events and field-based examples. Use for "add a scenario", "write the GWT for this command", "elaborate the scenarios of this slice", "add an error scenario", "fix the example data".
+description: Create, edit, copy, reorder or delete Given/When/Then scenarios via API, using Chapter Commands/Events and field-based examples. Use to write or elaborate scenarios, add error cases or fix examples.
 ---
 
 # Given/When/Then Scenarios
