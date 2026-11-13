@@ -49,4 +49,11 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 - **A7.1** Skills allow a back arrow within an Automation slice from its Command's output Event to the TODO Read Model used by its Processor. Cross-slice forward-only and Translation TODO rules stay unchanged.
 
+## 8. Alternative business-failure flows
+
+- **A8.1** A Command may record a business-failure Event (e.g. `Payment Capture Failed`) when an alternative flow follows.
+- **A8.2** The alternative flow may start a new Chapter with a linked copy of that Event; the original Command remains its producer.
+- **A8.3** Recorded business failure: Then Event with `error: null`. Precondition rejection: no Event, `then: []` and `error`.
+- **A8.4** An intentional copied-fact-only entry slice may have no derived type; do not add unrelated elements merely to force a type.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

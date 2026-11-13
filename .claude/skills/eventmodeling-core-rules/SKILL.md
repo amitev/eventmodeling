@@ -73,7 +73,7 @@ Anything else, including empty slice: no type.
   - Valid: `PlaceOrder`, `ConfirmPayment`, `CancelSubscription`
   - Invalid: `LoadOrders`, `FetchData`, `OpenDialog` (read models/UI actions)
 - **Exactly one SCREEN/PROCESSOR issuer**, one inbound arrow, never two.
-- Success: ≥1 EVENT; rejection: no Event.
+- Recorded outcome: ≥1 EVENT; precondition rejection: no Event. Business-failure outcomes follow "Open Questions vs. Decided Failures" below.
 
 ### READ_MODEL
 - Event projection for specific query; business noun phrase naming data, not machinery.
@@ -99,7 +99,7 @@ Anything else, including empty slice: no type.
 
 - Every EVENT traces to producing COMMAND.
 - Every COMMAND traces to exactly one issuing SCREEN/PROCESSOR.
-- Start with read (READ_MODEL + SCREEN) or Processor reacting to existing Event, **never unmotivated Command**.
+- Start with read (READ_MODEL + SCREEN) or Processor reacting to existing Event; alternative-failure Chapters may start with the linked Event described below. **Never unmotivated Command**.
 
 ## Roles
 
@@ -165,7 +165,8 @@ external EVENT → todo-list READ_MODEL → translation PROCESSOR → COMMAND �
 ## Open Questions vs. Decided Failures
 
 - **Open question:** genuinely undecided; comment on relevant element, phrased as question. No separate question type. Stays unresolved until **answered, not deleted**.
-- **Decided failure:** specified rejection/error (e.g. payment fails → reject, no Event); permanent scenario with `error` and no Then Events (`scenarios`), **never comment standing in for scenario**.
+- **Precondition rejection:** permanent scenario with `error` and no Then Events (`scenarios`), **never comment standing in for scenario**.
+- **Recorded business failure:** when failure leads to an alternative flow, a Command may produce an Event such as `Payment Capture Failed`. Its scenario has that Then Event and `error: null`, not a rejection error. The alternative flow may start a new Chapter with a **linked copy of that Event**, then model the reaction (`connections`, Across Chapters). The original Command remains the Event's producer.
 - Completeness: only genuinely unanswered question comments count as gaps; don't leave decided failures as unresolved questions.
 
 ## Info and Notes
@@ -210,7 +211,7 @@ Check these shapes when arrows are visible. Only **bed always violates**; others
 
 ## Flow & Causality
 
-**Causality, not strict sequence:** Chapter starts with state read (Read Model → Screen) or automation reacting to Event already on board, never bare Command. Every Command has Screen/Processor trigger. Consecutive state changes require **new Screen/Processor trigger**; unissued second Command = gap.
+**Causality, not strict sequence:** Chapter starts with state read (Read Model → Screen), automation reacting to Event already on board, or the alternative-failure Event copy described above; never bare Command. Every Command has Screen/Processor trigger. Consecutive state changes require **new Screen/Processor trigger**; unissued second Command = gap.
 
 Valid slice transitions (`translation` follows `automation` rules):
 - state read → state change
@@ -230,7 +231,7 @@ Before done:
 - [ ] Computed/aggregated values in READ_MODELs, never EVENTs
 - [ ] Exactly one SCREEN/PROCESSOR issuer/inbound arrow per COMMAND
 - [ ] Every COMMAND traces to user decision/system reaction
-- [ ] Chapter starts state read/event-triggered automation, never bare COMMAND
+- [ ] Chapter starts state read/event-triggered automation or the permitted alternative-failure Event copy, never bare COMMAND
 - [ ] New trigger between consecutive state changes
 - [ ] No SCREEN triggers >1 COMMAND
 - [ ] One real flow with real data, not generic

@@ -44,6 +44,7 @@ Reuse slice's existing `SCENARIOS`. Otherwise:
 - **Given:** precondition Events in time order; empty allowed.
 - **When:** exactly one Command of slice, never Event.
 - **Then:** recorded Events with examples, or error + `then: []`; never both.
+- A recorded business failure driving an alternative flow (e.g. `Payment Capture Failed`) is a Then Event with `error: null`, not a precondition rejection (`eventmodeling-core-rules`).
 - Use existing elements only; report missing Commands/Events.
 - No Read Model outcomes supported; state-read slice has no scenario content.
 

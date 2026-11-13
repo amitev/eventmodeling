@@ -80,6 +80,8 @@ When a later Event refreshes the same business view, **use linked copies**, not 
 
 For a dependency on another Chapter's Event/Screen, place a **linked copy in the consuming Chapter**, then connect it.
 
+An alternative business-failure flow may start a new Chapter with a linked copy of the Command's failure Event (e.g. `Payment Capture Failed`), then model the reaction. Follow `eventmodeling-core-rules`; do not create an independent failure Event or make a local Command appear to produce the copied fact.
+
 1. Resolve original (copy of copy means original); `SCENARIOS`/`NOTES` cannot be copied.
 2. Event copy placement:
    - Event lane of **closest earlier slice already containing Events** (state change/automation; extra Event preserves type).

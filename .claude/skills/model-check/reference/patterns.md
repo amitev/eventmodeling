@@ -71,6 +71,12 @@ An external party's Event (in an Integration lane) feeds a todo-list Read Model;
 
 ---
 
+## Alternative business-failure flow
+
+A Command may record a business-failure Event such as `Payment Capture Failed` when a whole alternative flow follows. Model the producing Command's scenario with that Then Event and `error: null`; a precondition rejection still records no Event.
+
+The alternative flow may start a new Chapter with a linked copy of that Event, then model the reaction. The original Command remains the producer; use `connections` for copy placement and explicit arrows. Never replace the copy with a second independent Event definition.
+
 ## Splitting patterns
 
 | Found | Proposal |
