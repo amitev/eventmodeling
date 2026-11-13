@@ -57,6 +57,15 @@ const HOTKEYS = [
     ],
   },
   {
+    group: 'Cell context menu',
+    keys: [
+      ['Up / Down', 'Focus the previous / next enabled menu item'],
+      ['Home / End', 'Focus the first / last enabled menu item'],
+      ['Enter / Space', 'Run the focused menu action'],
+      ['Esc / Tab', 'Close the menu without an action'],
+    ],
+  },
+  {
     group: 'Selected element',
     keys: [
       ['I', 'Open the info of the element (not for Notes, Scenarios or a linked copy)'],

@@ -61,6 +61,7 @@ import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
 import { MovieStrip } from './dialogs/MovieStrip.jsx';
 import { SearchBox } from './Search.jsx';
+import { CellMenu } from './CellMenu.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
 import { HistoryContext, useHistory } from './state/history.js';
 import { kindOfKey, hotkeyOf, HotkeysDialog } from './dialogs/Hotkeys.jsx';
@@ -206,6 +207,8 @@ function Board() {
   // The selected Cell, if any: { chapterId, laneId, sliceId }. Selection only: it is not
   // saved, exported or recorded for undo.
   const [selectedCell, setSelectedCell] = useState(null);
+  const [cellMenu, setCellMenu] = useState(null);
+  const closeCellMenu = useCallback(() => setCellMenu(null), []);
   // Nothing hidden stays selected: its Cell, or it, could still be acted on by a hotkey.
   useEffect(() => {
     if (!hiddenChapters.size) return;
@@ -247,7 +250,7 @@ function Board() {
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
-  modalOpen.current = scenarioOpen.current || helpOpen;
+  modalOpen.current = scenarioOpen.current || helpOpen || !!cellMenu;
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return;
@@ -408,7 +411,7 @@ function Board() {
     [setNodes, setEdges]
   );
   const historyBlocked = useRef(false); // no undo or redo behind a popup or in the overview
-  historyBlocked.current = scenarioOpen.current || overview;
+  historyBlocked.current = scenarioOpen.current || overview || !!cellMenu;
   const { hist, undo, redo, api: historyApi, markSilent, gesture, settled } = useHistory({
     nodes,
     edges,
@@ -1171,7 +1174,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
+    if (cellMenu || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
     // The overview is read-only: only V (view) and Shift+F (fit) work.
     if (overview && !(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') && !(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'v')) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
@@ -1436,6 +1439,26 @@ function Board() {
     }
   };
 
+  // R5a.13: an enlarged Screen still targets its own Cell, not the Cell under its preview.
+  const openCellMenu = (e, node) => {
+    if (overview || scenarioOpen.current || helpOpen) return;
+    if (node && !['sticky', 'lane'].includes(node.type)) return;
+    const ns = getNodes();
+    const element = node?.type === 'sticky' ? node : null;
+    const cell = element
+      ? cellOfElement(ns, element)
+      : cellAt(ns, screenToFlowPosition({ x: e.clientX, y: e.clientY }), hiddenChapters);
+    if (!cell || hiddenChapters.has(cell.chapterId)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (element) {
+      setSelectedCell(cell);
+      setNodes((current) => selectOnly(current, element.id));
+    } else chooseCell(cell);
+    setActiveId(cell.chapterId);
+    setCellMenu({ cell, elementId: element?.id, x: e.clientX, y: e.clientY });
+  };
+
   // Where the dragged elements were when the drag began, so a drop over no Cell can undo the move.
   const dragOrigin = useRef(new Map());
   const rememberDrag = (dragged) => {
@@ -1457,6 +1480,16 @@ function Board() {
   };
 
   const selectedLane = selectedCell && nodes.find((n) => n.id === selectedCell.laneId);
+  const menuLane = cellMenu && nodes.find((n) => n.id === cellMenu.cell.laneId);
+  const menuSlice = cellMenu && nodes.find((n) => n.id === cellMenu.cell.sliceId);
+  const menuVisible = !!(cellMenu && menuLane && menuSlice &&
+    selectedCell?.laneId === menuLane.id && selectedCell?.sliceId === menuSlice.id &&
+    menuLane.parentId === cellMenu.cell.chapterId && menuSlice.parentId === cellMenu.cell.chapterId &&
+    !hiddenChapters.has(cellMenu.cell.chapterId) && !overview && !scenarioOpen.current && !helpOpen &&
+    (!cellMenu.elementId || nodes.some((n) => n.id === cellMenu.elementId)));
+  useEffect(() => {
+    if (cellMenu && !menuVisible) closeCellMenu();
+  }, [cellMenu, menuVisible, closeCellMenu]);
 
   return (
     <div className={`app${overview ? ' overview' : ''}`}>
@@ -1601,6 +1634,10 @@ function Board() {
           }}
           onEdgeClick={() => setSelectedCell(null)}
           onPaneClick={selectCellAt}
+          onPaneContextMenu={openCellMenu}
+          onNodeContextMenu={openCellMenu}
+          onEdgeContextMenu={(e) => openCellMenu(e)}
+          onMoveStart={closeCellMenu}
           onNodeDragStart={(_, node, dragged) => {
             historyApi.begin();
             rememberDrag(dragged ?? [node]);
@@ -1636,7 +1673,7 @@ function Board() {
           autoPanOnNodeDrag={false}
           disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell || cellMenu ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={overview ? null : selectedCell} />
@@ -1653,6 +1690,23 @@ function Board() {
         </BoardActions.Provider>
         </HistoryContext.Provider>
       </div>
+      {menuVisible && (
+        <CellMenu
+          key={`${cellMenu.cell.sliceId}:${cellMenu.cell.laneId}:${cellMenu.elementId ?? ''}:${cellMenu.x}:${cellMenu.y}`}
+          x={cellMenu.x}
+          y={cellMenu.y}
+          kinds={Object.keys(KINDS).filter((kind) => laneAllows(menuLane, kind))}
+          full={cellIsFull(nodes, menuLane, menuSlice)}
+          canRemove={slices(nodes, cellMenu.cell.chapterId).length > 1}
+          laneType={menuLane.data.type}
+          onAdd={(kind) => addSticky(kind, { cell: cellMenu.cell })}
+          onCopyContext={() => copyContext(cellMenu.elementId ? { elementId: cellMenu.elementId } : { sliceId: menuSlice.id })}
+          onAddSlice={() => addSliceAfter(menuSlice.id)}
+          onRemoveSlice={() => removeSlice(menuSlice.id)}
+          onAddLane={(type) => addLaneAfter(menuLane.id, type)}
+          onClose={closeCellMenu}
+        />
+      )}
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
       {search.open && (
         <SearchBox
