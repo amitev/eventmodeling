@@ -1,3 +1,7 @@
+TODO:
+- Generate Java + Axon and to see the dependencies
+
+
 SKILLs
 - Create a SKILL that copies from Martin's skills, but adjusts it for us
 - RENAME element names and slice types to match Martin's skills, otherwise we cannot reuse

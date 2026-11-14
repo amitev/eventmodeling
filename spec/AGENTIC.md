@@ -26,6 +26,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
 - **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `summarize` and `wdyt` are slash-command only; they do not auto-activate.
 - **A3.3** Keep skill descriptions concise and token-efficient without losing scope, triggers or constraints.
+- **A3.4** Orchestrator skills delegate owned procedures to task-specific skills instead of restating them.
 
 ## 4. Walkthrough
 
