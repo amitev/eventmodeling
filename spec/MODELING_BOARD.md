@@ -58,6 +58,8 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.22** **Global full screen.** The rightmost main-header button toggles the Fullscreen API on `document.documentElement`, including header, board and popup portals. Request hidden browser navigation UI. Match R1.3b; keep visible in overview.
   - Icon, pressed state and tooltip follow `fullscreenchange`: "Full screen" or "Exit full screen".
   - Unsupported API: disable with tooltip "Full screen is unavailable in this browser". Failed requests show a notice.
+  - Capture `Escape` with Keyboard Lock while app full screen. Esc closes/cancels popup content first (modals, movie strip, Tasks, search and Cell menu); without a popup, exit full screen. Ignore key repeats; holding Esc retains browser emergency exit.
+  - Request keyboard permission when needed; release lock on full-screen exit or board unmount. Unsupported/denied lock: show a notice; native Esc behavior remains.
   - No saved state or undo step. F11 remains browser-controlled; its separate browser mode cannot be triggered or reliably detected by the button.
 
 ## 1a. Multiple Chapters

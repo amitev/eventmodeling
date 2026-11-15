@@ -1,12 +1,6 @@
 TODO:
 - Generate Java + Axon and to see the dependencies
 
-
-Tasks functionality
-- button on the header and popup
-- Tasks are store in the context element and can have a target element
-
-
 SKILLs
 - Create a SKILL that copies from Martin's skills, but adjusts it for us
 - RENAME element names and slice types to match Martin's skills, otherwise we cannot reuse
@@ -25,10 +19,8 @@ You can do this at any point, even much later. In an EVL (L=legacy) codebase, it
 
 
 Lanes
-- Fix name editing
 
 Chapters
-- The chapters can be connected by a dot under each slice - this is used to show alternative paths
 
 Slices
 - Slice states (from Q&A1 1:16:00)
@@ -85,7 +77,6 @@ https://www.linkedin.com/posts/martindilger_eventmodeling-emstudio-share-7506952
 
 https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/
 - Build slices - skills for building the slice types. Agent should also read the chapter and lane docs.
-- Agent Tasks - Places an Agent-Task, that is picked up by an agent and worked on. Each Tasks holds it´s context. So the agent know what you were looking at on the screen at the time you placed the task.
 - Agent Cockpit - The Agent Cockpit gives full control and visibility for Agent Activities across all Boards. In this example we are putting two tasks into status 'planned' - which allows an agent to pick them up.
 - Agent Chat - The Agent Chat allows you to interact with an agent directly. The Chat is Context-Aware - means every chat message carries a snapshot of your screen. The Agent knows exactly what you were looking at. And you can render any kind of visualization or report - in this case I needed a Bar-Chart of the number of slices.
 

@@ -22,6 +22,7 @@ const HOTKEYS = [
       ['Ctrl+F', 'Search elements by name'],
       ['Ctrl+H', 'High level view (Esc leaves it)'],
       ['Shift+F', 'Fit view: show the whole board'],
+      ['Esc', 'In app full screen: close popups first, otherwise exit (requires keyboard permission)'],
     ],
   },
   {

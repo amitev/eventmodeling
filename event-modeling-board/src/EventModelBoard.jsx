@@ -370,10 +370,56 @@ function Board() {
   const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement);
   const fullscreenAvailable = !!(document.fullscreenEnabled &&
     document.documentElement.requestFullscreen && document.exitFullscreen);
+  const fullscreenPopupOpen = useRef(false);
+  fullscreenPopupOpen.current = modalOpen.current || tasksOpen || search.open;
   useEffect(() => {
-    const changed = () => setFullscreen(!!document.fullscreenElement);
+    const keyboard = navigator.keyboard;
+    const canLock = typeof keyboard?.lock === 'function' && typeof keyboard?.unlock === 'function';
+    let active = true;
+    let request = 0;
+    let locked = false;
+    const changed = async () => {
+      const current = ++request;
+      locked = false;
+      setFullscreen(!!document.fullscreenElement);
+      if (!document.fullscreenElement) {
+        if (canLock) keyboard.unlock();
+        return;
+      }
+      if (!canLock) {
+        setNotice('This browser cannot keep full screen when Esc closes a popup. Use its Close or Cancel button instead.');
+        return;
+      }
+      try {
+        await keyboard.lock(['Escape']);
+        if (!active || !document.fullscreenElement) keyboard.unlock();
+        else if (current === request) locked = true;
+      } catch (err) {
+        if (active && current === request && document.fullscreenElement) {
+          setNotice(`Could not capture Esc: ${err.message}. Esc may exit full screen; use Close or Cancel instead.`);
+        }
+      }
+    };
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || !locked || !document.fullscreenElement) return;
+      e.preventDefault();
+      if (e.repeat) {
+        e.stopPropagation();
+        return;
+      }
+      if (fullscreenPopupOpen.current) return;
+      e.stopPropagation();
+      document.exitFullscreen().catch((err) => setNotice(`Could not exit full screen: ${err.message}`));
+    };
     document.addEventListener('fullscreenchange', changed);
-    return () => document.removeEventListener('fullscreenchange', changed);
+    window.addEventListener('keydown', onKey, true);
+    if (document.fullscreenElement) changed();
+    return () => {
+      active = false;
+      document.removeEventListener('fullscreenchange', changed);
+      window.removeEventListener('keydown', onKey, true);
+      if (canLock) keyboard.unlock();
+    };
   }, []);
   const toggleFullscreen = async () => {
     const exiting = !!document.fullscreenElement;
