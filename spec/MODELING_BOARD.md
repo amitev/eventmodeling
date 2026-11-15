@@ -350,6 +350,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 
 - **R5a.13** **Cell context menu.** Right-click a Cell or its element to select it and open a non-modal menu at the pointer, within the window. An enlarged Screen targets its own Cell. No menu outside Cells or in overview.
   - **Add <type>** lists only types the lane accepts (R2.10). A full Spec Cell disables creation. Creation uses R5a.10, automatic arrows (R4.8) and inherited fields (R9.4).
+  - **Paste** appears when a copyable element is remembered with Ctrl+C; it pastes a linked copy into the Cell, as Ctrl+V (R3.22). It is disabled if the lane rejects that element or the Spec Cell is full.
   - **Copy Context** uses R1c.6; include the clicked element's id, or omit Element for a Cell's empty space.
   - **Add next slice** uses R5.2a. **Delete current slice** uses R5.18 and linked-copy safeguards (R3.22); disabled for the Chapter's last slice (R5.19).
   - **Add <type> lane** entries sit at the bottom, after a separator. Types and insertion match the lane header buttons (R2.10), including the current lane's type.

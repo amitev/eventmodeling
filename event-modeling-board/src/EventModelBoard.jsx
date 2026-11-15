@@ -1164,6 +1164,16 @@ function Board() {
     if (added.length) setEdges((es) => [...es, ...added]);
   };
 
+  const pasteCopy = () => {
+    const original = clipboard.current && getNodes().find((n) => n.id === clipboard.current);
+    if (!original) {
+      clipboard.current = null;
+      return false;
+    }
+    addSticky(original.data.kind, undefined, original.id);
+    return true;
+  };
+
   // Deletes the elements of a Cell, with their arrows, after confirmation.
   const removeCellElements = (cell) => {
     const ns = getNodes();
@@ -1251,13 +1261,7 @@ function Board() {
         const selected = getNodes().filter((n) => n.selected);
         const only = selected.length === 1 && selected[0].type === 'sticky' ? selected[0] : null;
         if (only) rememberCopy(only.id);
-      } else {
-        const original = clipboard.current && getNodes().find((n) => n.id === clipboard.current);
-        if (original) {
-          e.preventDefault();
-          addSticky(original.data.kind, undefined, original.id);
-        } else clipboard.current = null;
-      }
+      } else if (pasteCopy()) e.preventDefault();
       return;
     }
     // Shift+F fits the whole board in the window, as the Fit view control does (R1.20).
@@ -1501,6 +1505,23 @@ function Board() {
 
   const menuLane = cellMenu && nodes.find((n) => n.id === cellMenu.cell.laneId);
   const menuSlice = cellMenu && nodes.find((n) => n.id === cellMenu.cell.sliceId);
+  const menuPasteElement = clipboard.current && nodes.find((n) => n.id === clipboard.current);
+  const menuCellFull = !!(menuLane && menuSlice && cellIsFull(nodes, menuLane, menuSlice));
+  const menuCanPaste = !!menuPasteElement;
+  const menuPasteEnabled = !!(
+    menuPasteElement &&
+    menuLane &&
+    menuSlice &&
+    laneAllows(menuLane, menuPasteElement.data.kind) &&
+    !menuCellFull
+  );
+  const menuPasteDisabledReason = menuPasteElement && menuLane && menuSlice
+    ? !laneAllows(menuLane, menuPasteElement.data.kind)
+      ? 'This lane cannot hold this element'
+      : menuCellFull
+        ? 'This Spec Cell already has an element'
+        : undefined
+    : undefined;
   const menuVisible = !!(cellMenu && menuLane && menuSlice &&
     selectedCell?.laneId === menuLane.id && selectedCell?.sliceId === menuSlice.id &&
     menuLane.parentId === cellMenu.cell.chapterId && menuSlice.parentId === cellMenu.cell.chapterId &&
@@ -1741,10 +1762,14 @@ function Board() {
           x={cellMenu.x}
           y={cellMenu.y}
           kinds={Object.keys(KINDS).filter((kind) => laneAllows(menuLane, kind))}
-          full={cellIsFull(nodes, menuLane, menuSlice)}
+          full={menuCellFull}
           canRemove={slices(nodes, cellMenu.cell.chapterId).length > 1}
+          canPaste={menuCanPaste}
+          pasteEnabled={menuPasteEnabled}
+          pasteDisabledReason={menuPasteDisabledReason}
           laneType={menuLane.data.type}
           onAdd={(kind) => addSticky(kind, { cell: cellMenu.cell })}
+          onPaste={pasteCopy}
           onCopyContext={() => copyContext(cellMenu.elementId ? { elementId: cellMenu.elementId } : { sliceId: menuSlice.id })}
           onAddSlice={() => addSliceAfter(menuSlice.id)}
           onRemoveSlice={() => removeSlice(menuSlice.id)}

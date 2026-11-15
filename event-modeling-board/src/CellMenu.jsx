@@ -4,8 +4,8 @@ import { KINDS, LANE_TYPES, nextLaneTypes } from './model/model.js';
 import { useModalFocus } from './dialogs/popup.js';
 
 export function CellMenu({
-  x, y, kinds, full, canRemove, laneType,
-  onAdd, onCopyContext, onAddSlice, onRemoveSlice, onAddLane, onClose,
+  x, y, kinds, full, canRemove, canPaste, pasteEnabled, pasteDisabledReason, laneType,
+  onAdd, onPaste, onCopyContext, onAddSlice, onRemoveSlice, onAddLane, onClose,
 }) {
   const menu = useModalFocus();
   const [position, setPosition] = useState({ left: x, top: y });
@@ -79,6 +79,17 @@ export function CellMenu({
         </button>
       ))}
       <div className="cell-menu-separator" role="separator" />
+      {canPaste && (
+        <button
+          type="button"
+          role="menuitem"
+          disabled={!pasteEnabled}
+          title={pasteDisabledReason}
+          onClick={() => run(onPaste)}
+        >
+          Paste
+        </button>
+      )}
       <button type="button" role="menuitem" onClick={() => run(onCopyContext)}>Copy Context</button>
       <button type="button" role="menuitem" onClick={() => run(onAddSlice)}>Add next slice</button>
       <button
