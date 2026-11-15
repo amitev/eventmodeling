@@ -515,7 +515,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R12.4** Deleting a Chapter keeps its tasks in its Context with `chapter: null`. Moving a Chapter to another Context moves its tasks with it. Deleting a Context moves all its tasks to Default with its Chapters (R1b.6); Chapter links stay.
 - **R12.5** Clicking a task's Chapter name closes Tasks, makes that Chapter active, clears Cell selection and fits it into view with R1.20's title/handle space and padding. Not an undo step. Context-only tasks show only Context name, without separator or Chapter label.
 - **R12.6** Chapter dropdown directly after Context name in popup title filters task list. Blank default shows all tasks in current Context scope, including Chapter tasks; other options filter per Chapter. No **No Chapter** option. Lists current Context's Chapters; with **All contexts**, lists all Chapters labelled `Context / Chapter`. Missing Chapter selection falls back to blank. Resets on popup reopen; not saved or an undo step. Header Context filter stays unchanged.
-- **R12.7** Double-click task title in list to edit in place; select full title. Enter or blur saves one undo step; Esc cancels title edit without closing Tasks. Reject blank titles with an error; keep original title.
+- **R12.7** Task title shows a thin border and text cursor on hover, without shifting layout. Double-click to edit in place; select full title. Enter or blur saves one undo step; Esc cancels title edit without closing Tasks. Reject blank titles with an error; keep original title.
 
 ## Out of scope for now
 

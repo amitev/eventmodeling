@@ -616,6 +616,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .tasks-list li:last-child { border-bottom: 0; }
 .task-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .task-heading strong, .task-title-input { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
+.task-heading strong:hover { outline: 1px solid #999; cursor: text; }
 .task-title-input { box-sizing: border-box; padding: 0; border: 1px solid #999; background: #fff; font: inherit; font-weight: 700; }
 .task-heading button, .tasks-dialog select, .tasks-editor input, .tasks-editor textarea {
   box-sizing: border-box; padding: 4px 8px; border: 1px solid #999; border-radius: 4px;
