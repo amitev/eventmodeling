@@ -195,7 +195,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .html-url { flex: 1; min-width: 0; padding: 6px 8px; font: 13px system-ui, sans-serif; border: 1px solid #ccd; border-radius: 4px; }
 .html-url.invalid { border-color: #c62828; }
 .html-open { align-self: center; font-size: 12px; white-space: nowrap; }
-.info-editor:disabled { background: #f1f2f6; color: #99a; }
+.info-editor:disabled, .html-code[readonly] { background: #f1f2f6; }
+.info-editor:disabled { color: #99a; }
 .info-panes:has(.html-preview-box):not(.reading) .info-left { border-right: 1px solid #ddd; }
 /* The Screen mockup in the element body: laid out at a fixed size and scaled down to fill the whole body, never scrolled or clicked. */
 .sticky-body.has-mockup { padding: 0; overflow: hidden; }

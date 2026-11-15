@@ -1467,7 +1467,7 @@ function Board() {
     }
     if (hk === 'e' && !e.shiftKey) {
       const selected = getNodes().filter((n) => n.selected);
-      if (selected.length === 1 && selected[0].data.kind === 'screen' && !selected[0].data.copyOf) {
+      if (selected.length === 1 && selected[0].data.kind === 'screen') {
         e.preventDefault();
         setHtmlReading(false);
         setHtmlId(selected[0].id);
@@ -2009,7 +2009,8 @@ function Board() {
       {htmlNode && (
         <HtmlDialog
           key={htmlTarget.id}
-          initialReading={(screenInfo ? infoReading : htmlReading) || htmlCopy || overview}
+          initialReading={screenInfo ? infoReading : htmlReading}
+          previewOnly={overview}
           readOnly={htmlCopy || overview}
           highlightsReadOnly={overview || (htmlCopy && !!htmlNode.data.url)}
           title={`Screen${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}

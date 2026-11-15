@@ -14,7 +14,7 @@ export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
 // One draft for Screen content and info; tab panels stay mounted to keep editor state.
-export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialHighlights = [], initialTab = 'content', initialReading = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
+export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialHighlights = [], initialTab = 'content', initialReading = false, previewOnly = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
   const [content] = useState(() => extractHighlights(initial));
   const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(content.html) : content.html);
   const [highlights, setHighlights] = useState(initialHighlights);
@@ -26,7 +26,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   const tabId = useId();
   const editors = useRef(null);
   const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
-  const [reading, setReading] = useState(initialReading || readOnly);
+  const [reading, setReading] = useState(initialReading || previewOnly);
   const [maximized, setMaximized] = useState(false); // the popup fills the whole window
   const [highlighting, setHighlighting] = useState(false);
   const [highlightColor, setHighlightColor] = useState('red');
@@ -153,11 +153,11 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
       >
         <div className="info-title">
           <span>{title}</span>
-          {canSave && (
+          {!previewOnly && (
             <button
               className="info-mode"
-              title={reading ? (readOnly ? 'Show source and edit highlights' : 'Edit mode: show the editor') : 'View mode: show only the preview'}
-              aria-label={reading ? (readOnly ? 'Edit highlights' : 'Edit mode') : 'View mode'}
+              title={reading ? (readOnly ? 'Show shared source (read-only)' : 'Edit mode: show the editor') : 'View mode: show only the preview'}
+              aria-label={reading ? (readOnly ? 'Show source' : 'Edit mode') : 'View mode'}
               onClick={() => setReading((v) => !v)}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -239,7 +239,11 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                   </a>
                 )}
               </div>
-              {readOnly && <div className="html-blocked-hint">Shared content is read-only. Save changes only this Screen's highlights.</div>}
+              {readOnly && (
+                <div className="html-blocked-hint">
+                  Shared content is read-only.{!highlightsReadOnly && " Save changes only this Screen's highlights."}
+                </div>
+              )}
               <textarea
                 className="info-editor html-code"
                 aria-label="Screen HTML"

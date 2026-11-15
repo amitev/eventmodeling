@@ -95,8 +95,18 @@ export function StickyNode({ id, data, selected }) {
 
   // The toolbar above a selected element: Copy and Info, the Fields and HTML mockup buttons where they
   // apply, and Copy Context. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a). A linked copy
-  // (R3.22) has the eye of a Screen, and Notes and Scenarios only Copy Context.
+  // (R3.22) has Screen content/view buttons, and Notes and Scenarios only Copy Context.
   const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
+  const contentButton = (
+    <button
+      className="info-btn html-tool"
+      title={isCopy ? 'View Screen content (E)' : 'Edit Screen content (E)'}
+      aria-label={isCopy ? 'View Screen content' : 'Edit Screen content'}
+      onClick={() => openHtml(id)}
+    >
+      {'</>'}
+    </button>
+  );
   const eyeButton = (
     <button
       className="info-btn"
@@ -112,7 +122,7 @@ export function StickyNode({ id, data, selected }) {
     </button>
   );
   const copyContextButton = <CopyContextButton elementId={id} />;
-  // Notes and Scenarios have only the Copy Context button; a linked copy the eye (Screen) and that button.
+  // Notes and Scenarios have only Copy Context; Screen copies also have content/view buttons.
   const toolbar = (
     <NodeToolbar
       position={Position.Top}
@@ -125,7 +135,7 @@ export function StickyNode({ id, data, selected }) {
         copyContextButton
       ) : isCopy ? (
         <>
-          {isScreen && eyeButton}
+          {isScreen && <>{contentButton}{eyeButton}</>}
           {copyContextButton}
         </>
       ) : (
@@ -198,14 +208,7 @@ export function StickyNode({ id, data, selected }) {
           )}
           {isScreen && (
             <>
-              <button
-                className="info-btn html-tool"
-                title="Edit Screen content (E)"
-                aria-label="Edit Screen content"
-                onClick={() => openHtml(id)}
-              >
-                {'</>'}
-              </button>
+              {contentButton}
               {eyeButton}
             </>
           )}
