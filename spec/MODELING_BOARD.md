@@ -517,6 +517,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R12.6** Chapter dropdown directly after Context name in popup title filters task list. Blank default shows all tasks in current Context scope, including Chapter tasks; other options filter per Chapter. No **No Chapter** option. Lists current Context's Chapters; with **All contexts**, lists all Chapters labelled `Context / Chapter`. Missing Chapter selection falls back to blank. Resets on popup reopen; not saved or an undo step. Header Context filter stays unchanged.
 - **R12.7** Task title shows a thin border and text cursor on hover, without shifting layout. Double-click to edit in place; select full title. Enter or blur saves one undo step; Esc cancels title edit without closing Tasks. Reject blank titles with an error; keep original title.
 - **R12.8** Description edits in place as R12.7, using a 6-row multiline field. Enter inserts a line break; blur saves and ends editing; Esc cancels without closing Tasks. Empty allowed; show an editable "Description" placeholder when empty. Same hover border and text cursor.
+- **R12.9** Task row's status dropdown, Edit and Delete share 28px height and 13px text; widths fit content.
 
 ## Out of scope for now
 
