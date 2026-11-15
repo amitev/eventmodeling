@@ -442,7 +442,7 @@ The board file is the single, complete description of a board, written and read 
 ## 8. Undo and redo
 
 - **R8.1** Every user operation that modifies the board is recorded in memory so it can be undone: adding, editing (name and HTML), moving (including to another Chapter) and deleting elements; adding, editing, copying, reordering and deleting scenarios; creating and deleting connections, including Chapter connections; adding, renaming, resizing and deleting slices; compacting a Chapter; adding, renaming and removing lanes; changing a lane's colour; editing the info of Chapters, lanes and slices; adding, renaming, moving and removing Chapters; adding, renaming and deleting Contexts and changing a Chapter's Context; and a pull from the server other than on opening (R10.2).
-- **R8.2** **Undo** and **Redo** buttons sit in the header next to the title, disabled when there is nothing to undo or redo.
+- **R8.2** Icon-only **Undo** and **Redo** buttons sit in the header next to the title, with tooltips "Undo (Ctrl+Z)" and "Redo (Ctrl+Y)"; disabled when there is nothing to undo or redo.
 - **R8.3** Ctrl+Z (Cmd+Z) undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Ignored while typing in a text field (its own undo applies) and while the scenario popup is open (R3.15).
 - **R8.4** A continuous gesture is one step: dragging an element or a Chapter, reordering a slice or resizing a slice, is recorded once when it ends.
 - **R8.5** An operation and its automatic adjustments (re-settling elements in slices, centring in lanes, shifting later slices) are one step; undo restores the board exactly.

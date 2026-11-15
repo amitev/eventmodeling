@@ -1514,17 +1514,15 @@ function Board() {
     <div className={`app${overview ? ' overview' : ''}`}>
       <header className="toolbar">
         <strong className="keep">Event Modeling Board</strong>
-        <button onClick={undo} disabled={!hist.undo} title="Undo (Ctrl+Z)">
+        <button className="history-button" onClick={undo} disabled={!hist.undo} title="Undo (Ctrl+Z)" aria-label="Undo">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M6 3L2 7l4 4M2 7h7a4 4 0 0 1 4 4v2" />
           </svg>
-          Undo
         </button>
-        <button onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)">
+        <button className="history-button" onClick={redo} disabled={!hist.redo} title="Redo (Ctrl+Y)" aria-label="Redo">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 3l4 4-4 4M14 7H7a4 4 0 0 0-4 4v2" />
           </svg>
-          Redo
         </button>
         <select
           className="context-filter keep"
