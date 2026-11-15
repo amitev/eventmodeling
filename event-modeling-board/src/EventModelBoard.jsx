@@ -184,13 +184,16 @@ function Board() {
   const hiddenChapters = useMemo(() => new Set(hiddenKey ? hiddenKey.split('|') : []), [hiddenKey]);
   const isHidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
   const hoveredElementEdge = edges.find((edge) => edge.id === hoveredElementEdgeId);
-  const focusedElementIds = useMemo(() => {
+  const focusedArrow = useMemo(() => {
     if (!hoveredElementEdge) return null;
-    const source = nodes.find((node) => node.id === hoveredElementEdge.source);
-    const target = nodes.find((node) => node.id === hoveredElementEdge.target);
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    const source = nodesById.get(hoveredElementEdge.source);
+    const target = nodesById.get(hoveredElementEdge.target);
+    const chapterId = source?.parentId;
     if (
       source?.type !== 'sticky' ||
       target?.type !== 'sticky' ||
+      !chapterId ||
       hiddenChapters.has(source.id) ||
       hiddenChapters.has(source.parentId) ||
       hiddenChapters.has(target.id) ||
@@ -198,13 +201,20 @@ function Board() {
     ) {
       return null;
     }
-    return new Set([source.id, target.id]);
-  }, [hoveredElementEdge, nodes, hiddenChapters]);
+    const belongsToChapter = (node) => node?.type === 'sticky' && node.parentId === chapterId;
+    return {
+      endpointIds: new Set([source.id, target.id]),
+      chapterElementIds: new Set(nodes.filter(belongsToChapter).map((node) => node.id)),
+      chapterEdgeIds: new Set(edges
+        .filter((edge) => belongsToChapter(nodesById.get(edge.source)) && belongsToChapter(nodesById.get(edge.target)))
+        .map((edge) => edge.id)),
+    };
+  }, [hoveredElementEdge, nodes, edges, hiddenChapters]);
   const displayNodes = useMemo(
     () =>
       nodes.map((n) => {
         const hidden = isHidden(n);
-        const dimmed = focusedElementIds && n.type === 'sticky' && !focusedElementIds.has(n.id);
+        const dimmed = focusedArrow?.chapterElementIds.has(n.id) && !focusedArrow.endpointIds.has(n.id);
         const visibilityChanged = !!n.hidden !== hidden || (hidden && n.selected);
         if (!dimmed && !visibilityChanged) return n;
         return {
@@ -214,7 +224,7 @@ function Board() {
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, hiddenChapters, focusedElementIds]
+    [nodes, hiddenChapters, focusedArrow]
   );
 
   // An element arrow leaves the lower point of its source and enters the upper point of its
@@ -227,13 +237,14 @@ function Board() {
     [projectEdges, nodes, edges, hiddenChapters, overview]
   );
   const hoverDisplayEdges = useMemo(() => {
-    if (!focusedElementIds) return displayEdges;
-    return displayEdges.map((edge) =>
-      edge.id === hoveredElementEdgeId
-        ? edge
-        : { ...edge, className: [edge.className, 'edge-hover-muted'].filter(Boolean).join(' ') }
-    );
-  }, [displayEdges, focusedElementIds, hoveredElementEdgeId]);
+    if (!focusedArrow) return displayEdges;
+    return displayEdges.map((edge) => {
+      if (edge.id === hoveredElementEdgeId || !focusedArrow.chapterEdgeIds.has(edge.id)) {
+        return edge;
+      }
+      return { ...edge, className: [edge.className, 'edge-hover-muted'].filter(Boolean).join(' ') };
+    });
+  }, [displayEdges, focusedArrow, hoveredElementEdgeId]);
   const visibleChapters = chapters.filter((c) => !hiddenChapters.has(c.id));
   const active = visibleChapters.find((c) => c.id === activeId) ?? visibleChapters[0];
   const activeChapterId = active?.id;

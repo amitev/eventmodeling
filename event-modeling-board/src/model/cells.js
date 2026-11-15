@@ -57,7 +57,7 @@ export function createEdgeDisplay() {
               style: {
                 ...edge.style,
                 ...(color ? { stroke: color, strokeDasharray: '2 5', strokeLinecap: 'round' } : {}),
-                ...(incomplete ? { stroke: '#ff0000', strokeWidth: 7 } : {}),
+                ...(incomplete ? { stroke: '#ff0000', strokeWidth: 4 } : {}),
               },
               markerEnd: { ...edge.markerEnd, color: incomplete ? '#ff0000' : color },
             } : {}),
