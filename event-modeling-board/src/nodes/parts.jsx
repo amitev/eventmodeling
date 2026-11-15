@@ -4,7 +4,7 @@ import { highlightHtml } from '../../../server/html-highlights.js';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { chapterMetadata, LANE_COLORS, snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';
-import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { ScreenFrame } from './ScreenFrame.jsx';
 import { BoardActions } from '../state/BoardActions.js';
 
 export function ColorPicker({ color, onChange, open, onOpenChange, disabled = false, label = 'Lane colour' }) {
@@ -264,12 +264,11 @@ export function CopyContextButton({ elementId, sliceId, chapterId, className = '
   );
 }
 
-// The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
-// iframe and scaled down to the body's width, so there is nothing to scroll.
+// HTML previews fit content; URL previews retain the full-page viewport (R3.8).
 export function ScreenPreview({ html, url, title, highlights }) {
   const content = useMemo(() => html ? highlightHtml(html, highlights) : html, [html, highlights]);
   const box = useRef(null);
-  const [scale, setScale] = useState(0.14);
+  const [size, setSize] = useState({ width: 158, height: 118 });
   // The mockup loads when its box first comes near the view, and then stays loaded.
   const [near, setNear] = useState(false);
   useEffect(() => {
@@ -286,7 +285,7 @@ export function ScreenPreview({ html, url, title, highlights }) {
   }, []);
   useLayoutEffect(() => {
     const el = box.current;
-    const update = () => el.clientWidth && setScale(el.clientWidth / MOCKUP_W);
+    const update = () => el.clientWidth && setSize({ width: el.clientWidth, height: el.clientHeight });
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
@@ -295,14 +294,13 @@ export function ScreenPreview({ html, url, title, highlights }) {
   return (
     <div ref={box} className="screen-frame-box">
       {near && (
-        <iframe
-          key={url ?? 'code'}
+        <ScreenFrame
           className="screen-frame"
           title={title}
-          sandbox={url ? URL_SANDBOX : HTML_SANDBOX}
-          scrolling="no"
-          {...(url ? { src: url } : { srcDoc: content })}
-          style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
+          html={content}
+          url={url}
+          width={size.width}
+          height={size.height}
         />
       )}
     </div>

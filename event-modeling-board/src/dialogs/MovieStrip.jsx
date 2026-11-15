@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { MOVIE_HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { ScreenFrame } from '../nodes/ScreenFrame.jsx';
 
 const ZOOMS = [0.3, 0.4, 0.5, 0.65, 0.8, 1]; // size of the current screen, 1 = fits the window
 const START_ZOOM = ZOOMS.length - 1;
@@ -41,14 +42,14 @@ function Card({ screen, width, state, live, onClick }) {
       <div className="movie-shot" style={{ height }}>
         {hasMockup ? (
           live && (
-            <iframe
-              key={screen.url ?? 'code'}
+            <ScreenFrame
               className="movie-frame"
               title={screen.name || 'Screen mockup'}
-              sandbox={screen.url ? URL_SANDBOX : MOVIE_HTML_SANDBOX}
-              scrolling="no"
-              {...(screen.url ? { src: screen.url } : { srcDoc: screen.html + KEY_RELAY })}
-              style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${width / MOCKUP_W})` }}
+              html={screen.html ? screen.html + KEY_RELAY : undefined}
+              url={screen.url}
+              width={width}
+              height={height}
+              scripted
             />
           )
         ) : (

@@ -30,7 +30,6 @@ Elements
 - Agentic - suggest automatic slice and element names
 
 Screens
-- Blurring/highlighting parts of the screen (overlay?)
 
 Specs
 - To learn the difference between GWT and storylines and see what to do with them - storylines are only for the READ models.

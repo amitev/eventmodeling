@@ -198,9 +198,10 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .info-editor:disabled, .html-code[readonly] { background: #f1f2f6; }
 .info-editor:disabled { color: #99a; }
 .info-panes:has(.html-preview-box):not(.reading) .info-left { border-right: 1px solid #ddd; }
-/* The Screen mockup in the element body: laid out at a fixed size and scaled down to fill the whole body, never scrolled or clicked. */
+/* HTML mockups fit measured content; URL mockups keep the full-page viewport. */
 .sticky-body.has-mockup { padding: 0; overflow: hidden; }
 .screen-frame-box { position: relative; width: 100%; height: 118px; overflow: hidden; background: #fff; box-sizing: border-box; }
+.screen-fit-error { position: absolute; z-index: 1; bottom: 0; left: 0; right: 0; padding: 3px 5px; background: #fff3cd; color: #664d03; font: 10px/1.3 system-ui, sans-serif; }
 /* Every Screen is as tall as one with a mockup: 26px header + 118px body (a 4:3 preview of the 158px body width) + borders. */
 .sticky.screen { min-height: 146px; }
 /* Command, Read Model and Event are exactly as tall as a Screen; the fields scroll in the body (R3.6c). */
