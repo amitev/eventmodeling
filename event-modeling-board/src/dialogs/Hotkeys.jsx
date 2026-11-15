@@ -146,8 +146,8 @@ const HOTKEYS = [
   {
     group: 'Tasks popup',
     keys: [
-      ['Enter', 'Save the task title being edited in place'],
-      ['Esc', 'Cancel the title edit, otherwise close and discard the unsaved form'],
+      ['Enter', 'Save the in-place task title, or add a line break in the description'],
+      ['Esc', 'Cancel the in-place edit, otherwise close and discard the unsaved form'],
     ],
   },
   {

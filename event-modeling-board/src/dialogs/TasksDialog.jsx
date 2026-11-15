@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalFocus, useOutsideClose } from './popup.js';
 
-function TaskTitle({ title, onSave, onCancel }) {
+function TaskText({ value, multiline = false, onSave, onCancel }) {
   const [editing, setEditing] = useState(false);
   const input = useRef(null);
   const finished = useRef(false);
@@ -15,16 +15,19 @@ function TaskTitle({ title, onSave, onCancel }) {
       setEditing(false);
     }
   };
+  const Editor = multiline ? 'textarea' : 'input';
+  const Display = multiline ? 'p' : 'strong';
 
   return editing ? (
-    <input
+    <Editor
       ref={input}
-      className="task-title-input"
-      aria-label="Task title"
-      defaultValue={title}
+      className={`task-inline-input ${multiline ? 'task-description-input' : 'task-title-input'}`}
+      aria-label={multiline ? 'Task description' : 'Task title'}
+      defaultValue={value}
+      rows={multiline ? 6 : undefined}
       onBlur={(e) => commit(e.currentTarget.value)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !multiline) {
           e.preventDefault();
           commit(e.currentTarget.value);
         } else if (e.key === 'Escape') {
@@ -37,10 +40,10 @@ function TaskTitle({ title, onSave, onCancel }) {
       }}
     />
   ) : (
-    <strong onDoubleClick={() => {
+    <Display className={multiline ? `task-description${value ? '' : ' empty'}` : undefined} onDoubleClick={() => {
       finished.current = false;
       setEditing(true);
-    }}>{title}</strong>
+    }}>{value || 'Description'}</Display>
   );
 }
 
@@ -183,8 +186,8 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
                   {tasks.map(({ context, task }) => (
                     <li key={task.id}>
                       <div className="task-heading">
-                        <TaskTitle
-                          title={task.title}
+                        <TaskText
+                          value={task.title}
                           onSave={(title) => save(context.id, { ...task, title })}
                           onCancel={() => setError('')}
                         />
@@ -218,7 +221,12 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
                           </>
                         )}
                       </div>
-                      {task.description && <p className="task-description">{task.description}</p>}
+                      <TaskText
+                        value={task.description}
+                        multiline
+                        onSave={(description) => save(context.id, { ...task, description })}
+                        onCancel={() => setError('')}
+                      />
                     </li>
                   ))}
                 </ul>

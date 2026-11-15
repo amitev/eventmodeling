@@ -616,8 +616,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .tasks-list li:last-child { border-bottom: 0; }
 .task-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .task-heading strong, .task-title-input { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
-.task-heading strong:hover { outline: 1px solid #999; cursor: text; }
-.task-title-input { box-sizing: border-box; padding: 0; border: 1px solid #999; background: #fff; font: inherit; font-weight: 700; }
+.task-heading strong:hover, .task-description:hover { outline: 1px solid #999; cursor: text; }
+.task-inline-input { box-sizing: border-box; padding: 0; border: 1px solid #999; background: #fff; font: inherit; }
+.task-title-input { font-weight: 700; }
 .task-heading button, .tasks-dialog select, .tasks-editor input, .tasks-editor textarea {
   box-sizing: border-box; padding: 4px 8px; border: 1px solid #999; border-radius: 4px;
   background: #fff; color: #222; font: inherit;
@@ -629,6 +630,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   text-decoration: underline; cursor: pointer; overflow-wrap: anywhere;
 }
 .task-description { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; }
+.task-description.empty { color: #99a; }
+.task-description-input { display: block; width: 100%; margin-top: 8px; resize: vertical; }
 .tasks-form { display: flex; flex-direction: column; min-height: 0; }
 .tasks-editor { display: flex; flex-direction: column; gap: 12px; }
 .tasks-editor h3 { margin: 0; }
