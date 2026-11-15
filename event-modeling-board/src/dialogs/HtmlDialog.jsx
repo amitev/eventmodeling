@@ -1,9 +1,12 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
-import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from '../model/mockup.js';
+import { URL_SANDBOX, isWebUrl } from '../model/mockup.js';
 import { beautifyHtml } from '../model/beautify.js';
+import { extractHighlights, htmlStructure, inspectHtml, toggleHighlight } from '../../../server/html-highlights.js';
 import { MarkdownEditor } from './InfoDialog.jsx';
+import { HighlightPreview } from './HtmlHighlight.jsx';
+import { ColorPicker } from '../nodes/parts.jsx';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
@@ -11,8 +14,11 @@ export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
 // One draft for Screen content and info; tab panels stay mounted to keep editor state.
-export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialTab = 'content', initialReading = false, readOnly = false, onSave, onCancel }) {
-  const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(initial) : initial);
+export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialHighlights = [], initialTab = 'content', initialReading = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
+  const [content] = useState(() => extractHighlights(initial));
+  const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(content.html) : content.html);
+  const [highlights, setHighlights] = useState(initialHighlights);
+  const [structureNotice, setStructureNotice] = useState(false);
   const [url, setUrl] = useState(initialUrl);
   const [info, setInfo] = useState(initialInfo);
   const [tab, setTab] = useState(initialTab);
@@ -22,12 +28,37 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
   const [reading, setReading] = useState(initialReading || readOnly);
   const [maximized, setMaximized] = useState(false); // the popup fills the whole window
+  const [highlighting, setHighlighting] = useState(false);
+  const [highlightColor, setHighlightColor] = useState('red');
+  const [pickingColor, setPickingColor] = useState(false);
+  const [highlightError, setHighlightError] = useState('');
   const backdrop = useBackdropClose(onCancel);
   const modal = useModalFocus();
   const urlInput = useRef(null);
   const focusUrl = useRef(false);
   const usingUrl = url.trim() !== '';
   const pageUrl = usingUrl && isWebUrl(url.trim()) ? url.trim() : null; // what the preview shows
+  const highlightModel = useMemo(() => inspectHtml(text, highlights), [text, highlights]);
+  const picking = highlighting && !highlightsReadOnly && !reading && tab === 'content' && !usingUrl;
+  const canSave = !readOnly || !highlightsReadOnly;
+  const pickHighlight = (offset, source) => {
+    const element = highlightModel.elements.find((item) => item.start === offset && item.path);
+    if (!picking || source !== text || !element) {
+      setHighlightError('The preview no longer matches the HTML. Wait for it to reload and try again.');
+      return false;
+    }
+    setHighlightError('');
+    if (highlightColor === 'none' && !element.selected) return false;
+    setHighlights(toggleHighlight(text, offset, highlights, highlightColor, highlightModel));
+    return true;
+  };
+  const changeText = (value) => {
+    if (htmlStructure(value) !== highlightModel.structure) {
+      setHighlights([]);
+      setStructureNotice(true);
+    }
+    setText(value);
+  };
 
   const selectTab = (next) => {
     if (next === 'content' && !formatted.current) {
@@ -37,6 +68,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
     setTab(next);
   };
   const onTabKey = (e) => {
+    if (readOnly) return;
     const next = {
       ArrowLeft: tab === 'content' ? 'info' : 'content',
       ArrowRight: tab === 'content' ? 'info' : 'content',
@@ -73,7 +105,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
       urlInput.current?.focus();
       return;
     }
-    onSave(text, wanted, info);
+    onSave(text, wanted, info, usingUrl ? [] : highlights);
   };
   const saveRef = useRef(save); // the latest save, for the Ctrl+S listener
   saveRef.current = save;
@@ -87,24 +119,27 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
     if (!document.execCommand('insertText', false, clean)) {
       const el = e.target;
       el.setRangeText(clean, el.selectionStart, el.selectionEnd, 'end');
-      setText(el.value);
+      changeText(el.value);
     }
   };
 
+  const onKey = (e) => {
+    if (e.key === 'Escape') onCancel();
+    else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      setMaximized((v) => !v);
+    } else if (canSave && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+      e.preventDefault(); // not the browser's Save page
+      saveRef.current();
+    }
+  };
+  const keyHandler = useRef(onKey);
+  keyHandler.current = onKey;
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') onCancel();
-      else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'Enter') {
-        e.preventDefault();
-        setMaximized((v) => !v);
-      } else if (!readOnly && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-        e.preventDefault(); // not the browser's Save page
-        saveRef.current();
-      }
-    };
+    const onKey = (e) => keyHandler.current(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel, readOnly]);
+  }, []);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
@@ -118,11 +153,11 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
       >
         <div className="info-title">
           <span>{title}</span>
-          {!readOnly && (
+          {canSave && (
             <button
               className="info-mode"
-              title={reading ? 'Edit mode: show the editor' : 'View mode: show only the preview'}
-              aria-label={reading ? 'Edit mode' : 'View mode'}
+              title={reading ? (readOnly ? 'Show source and edit highlights' : 'Edit mode: show the editor') : 'View mode: show only the preview'}
+              aria-label={reading ? (readOnly ? 'Edit highlights' : 'Edit mode') : 'View mode'}
               onClick={() => setReading((v) => !v)}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -139,7 +174,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
           )}
           {!reading && (
             <div className="screen-editor-tabs" role="tablist" aria-label="Screen editor" onKeyDown={onTabKey}>
-              {['content', 'info'].map((name) => (
+              {(readOnly ? ['content'] : ['content', 'info']).map((name) => (
                 <button
                   key={name}
                   id={`${tabId}-${name}-tab`}
@@ -191,6 +226,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                   placeholder="URL of a web page (http:// or https://), instead of the code"
                   aria-label="URL"
                   aria-invalid={urlInvalid}
+                  readOnly={readOnly}
                   value={url}
                   onChange={(e) => {
                     setUrl(e.target.value);
@@ -203,15 +239,17 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                   </a>
                 )}
               </div>
+              {readOnly && <div className="html-blocked-hint">Shared content is read-only. Save changes only this Screen's highlights.</div>}
               <textarea
                 className="info-editor html-code"
                 aria-label="Screen HTML"
                 spellCheck={false}
+                value={usingUrl ? '' : text}
                 placeholder={usingUrl ? 'The URL is used; the code editor is disabled' : '<h1>Hello</h1>'}
                 disabled={usingUrl}
-                value={usingUrl ? '' : text}
-                onChange={(e) => setText(e.target.value)}
-                onPaste={onPaste}
+                readOnly={readOnly}
+                onChange={(e) => changeText(e.target.value)}
+                onPaste={readOnly ? undefined : onPaste}
               />
             </div>
             <div
@@ -221,10 +259,58 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
               className="screen-editor-panel"
               hidden={tab !== 'info'}
             >
-              <MarkdownEditor text={info} onChange={setInfo} active={!reading && tab === 'info'} autoFocus={false} />
+              <MarkdownEditor text={info} onChange={setInfo} active={!readOnly && !reading && tab === 'info'} autoFocus={false} />
             </div>
           </div>
           <div className="html-preview-box">
+            {!highlightsReadOnly && (readOnly || !reading && tab === 'content') && (
+              <div className="html-highlight-tools">
+                <button
+                  type="button"
+                  disabled={usingUrl}
+                  aria-pressed={picking}
+                  title={usingUrl ? 'Highlighting is available for HTML only' : 'Click preview elements to toggle highlights'}
+                  onClick={() => {
+                    setHighlightError('');
+                    setHighlighting(!picking);
+                    if (!picking) {
+                      selectTab('content');
+                      setReading(false);
+                    }
+                  }}
+                >
+                  Highlight elements
+                </button>
+                <ColorPicker
+                  color={highlightColor}
+                  onChange={(color) => {
+                    setHighlightColor(color);
+                    setHighlightError('');
+                    setHighlighting(true);
+                    selectTab('content');
+                    setReading(false);
+                  }}
+                  open={pickingColor}
+                  onOpenChange={setPickingColor}
+                  disabled={usingUrl}
+                  label="Highlight colour"
+                />
+                <button
+                  type="button"
+                  disabled={usingUrl || !highlightModel.selected.length}
+                  onClick={() => {
+                    setHighlightError('');
+                    setHighlights([]);
+                  }}
+                >
+                  Clear highlights
+                </button>
+                <span>{usingUrl ? 'HTML only' : `${highlightModel.selected.length} selected`}</span>
+                {!usingUrl && <span>Choose colour, then click: recolour or toggle. None removes.</span>}
+              </div>
+            )}
+            {structureNotice && <div className="html-blocked-hint" role="status">HTML structure changed. Draft highlights were cleared; saving structural changes clears copies too.</div>}
+            {highlightError && <div className="html-highlight-error" role="alert">{highlightError}</div>}
             {usingUrl && (
               <div className="html-blocked-hint">
                 Blank page or an error? The site may not allow being shown in a frame.{' '}
@@ -237,25 +323,38 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
             )}
             {usingUrl && !pageUrl ? (
               <div className="html-preview html-invalid">Enter an http:// or https:// address.</div>
-            ) : (
+            ) : pageUrl ? (
               <iframe
-                key={pageUrl ?? 'code'}
+                key={pageUrl}
                 className="html-preview"
                 title="Preview"
-                sandbox={pageUrl ? URL_SANDBOX : HTML_SANDBOX}
-                {...(pageUrl ? { src: pageUrl } : { srcDoc: text })}
+                sandbox={URL_SANDBOX}
+                src={pageUrl}
+              />
+            ) : (
+              <HighlightPreview
+                text={text}
+                highlights={highlights}
+                model={highlightModel}
+                picking={picking}
+                onPick={pickHighlight}
+                onKey={onKey}
+                onError={(message) => {
+                  setHighlightError(message);
+                  setHighlighting(false);
+                }}
               />
             )}
           </div>
         </div>
         <div className="info-actions">
-          {!readOnly && (
+          {canSave && (
             <button className="primary" onClick={save} title="Save (Ctrl+S)">
               Save
             </button>
           )}
-          <button onClick={onCancel} title={readOnly ? 'Close (Esc)' : 'Cancel (Esc)'}>
-            {readOnly ? 'Close' : 'Cancel'}
+          <button onClick={onCancel} title={canSave ? 'Cancel (Esc)' : 'Close (Esc)'}>
+            {canSave ? 'Cancel' : 'Close'}
           </button>
         </div>
       </div>

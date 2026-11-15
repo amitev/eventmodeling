@@ -37,7 +37,7 @@ After reporting findings, offer selected items as Tasks; skip if none.
 | `/tasks/:id` | Stored task `{ id, title, description, status, chapter }` |
 | `/contexts/:id?screenContent=` | `application/yaml`: one `---` document per Chapter, sorted by `x`, `y`, `id`; empty body for no Chapters. `screenContent=true` (default) or `false` to omit Screen `html` |
 | `/contexts/:id/screens?name=&contains=&chapter=` | Screens including linked copies, without `html`: `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`. `name`: case-insensitive whole name, substring if `contains=true`; `chapter`: case-insensitive Chapter id/name. Neither filter: all Screens. Names need not be unique |
-| `/contexts/:id/screens/:screenId` | Same Screen shape plus its `html` or `url` (only whichever exists). Linked copy: `copyOf` + original's content |
+| `/contexts/:id/screens/:screenId` | Same shape + `html`/`url`, optional own `highlights`. Copies resolve original content across Contexts, never inherit highlights |
 
 ## Editing writes
 
@@ -73,20 +73,21 @@ Unknown body keys or nonexistent body ids: 400; nonexistent path ids: 404. Resul
 ### Elements
 
 `POST /elements`:
-- New: `{ slice, lane, type, name?, info?, isList?, html?, url?, markdown?, color?, fields?, x?, autoConnect? }`.
-- Linked copy: `{ slice, lane, copyOf, x?, autoConnect? }`; original cannot be a copy or `SCENARIOS`/`NOTES`.
+- New: `{ slice, lane, type, name?, info?, isList?, html?, url?, highlights?, markdown?, color?, fields?, x?, autoConnect? }`.
+- Linked copy: `{ slice, lane, copyOf, highlights?, x?, autoConnect? }`; original cannot be a copy or `SCENARIOS`/`NOTES`.
 - Lane must belong to slice's Chapter and accept type (`/rules`); `SPEC`: one element per slice.
 - `SCREEN` only: `html` or `url`, never both. `NOTES` only: `markdown`, `color` (`red`, `green`, `yellow`). No `info`/`name` on `SCENARIOS`/`NOTES`. `fields` only on `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`.
+- `highlights`: Screen-only `[{ path: "body/form[1]/input[2]", color: "blue" }]`; unique paths (same-tag sibling indices), lane colours except `none`, no extra keys. Default none; copies edit independently; `[]`/`null` removes. Invalid colours/targets: 400. Structure/id edits clear original/copy selections across Contexts; optional response `clearedHighlights` lists affected ids. Explicit new selections apply after clearing; formatting/text edits preserve.
 - `READ_MODEL` only: `isList` is the list-result/code-generation hint, default `false`. `true` is stored; `false` or `null` removes it; other values: 400. Fields still describe one result item; field `list` describes a collection-valued attribute.
 - `x`: offset from slice left, ≥ 40 (≥ 20 for `SCENARIOS`/`NOTES`); omitted: board placement. Slice grows as needed.
 - `autoConnect=true` by default: Screen→Command, Command→Event, Read Model→Screen, Event→Read Model.
 - `fields`: `[{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }]`; default type `string`, flags `false`; `object` has nested `fields`.
 
-`PATCH /elements/:id`: `{ name?, info?, isList?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`.
+`PATCH /elements/:id`: `{ name?, info?, isList?, html?, url?, highlights?, markdown?, color?, fields?, slice?, lane?, x? }`.
 - `null` removes optional field; setting `html` removes `url` and vice versa.
 - `isList` follows POST rules. Read it from element/Chapter content, not outline/search. Linked copies use their original's setting.
 - Move with `slice` + `lane` together, including across Chapters; deletes scenarios using element. `SCENARIOS` cannot change Chapter.
-- Linked copies accept only `slice`, `lane`, `x`; otherwise 409 naming original.
+- Linked copies accept only `slice`, `lane`, `x` and Screen `highlights`; otherwise 409 naming original.
 
 ### Scenario data
 
@@ -100,7 +101,7 @@ Example: `{"ops":[{"method":"POST","path":"/chapters/CH/slices","body":{"name":"
 
 ## Screen HTML write
 
-`PUT /contexts/:id/screens/:screenId/html`: `{ html: text }`, nonempty. Changes only this element: compacts `html`, removes `url`. Returns stored `{ html }`, always containing `<html>`, `<head>`, `<body>`. Linked copy: 409 with original id; update original.
+`PUT /contexts/:id/screens/:screenId/html`: `{ html: text }`, nonempty. Compacts `html`, removes `url`; highlight clearing as above. Returns `{ html, clearedHighlights? }`; HTML always contains `<html>`, `<head>`, `<body>`. Linked copy: 409 with original id; update original.
 
 ## Whole-Context pushes (not for agents)
 

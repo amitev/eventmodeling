@@ -1,4 +1,5 @@
 import { compactHtml } from './html-compact.js';
+import { clearScreenHighlights, extractHighlights, highlightProblem, htmlStructure } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import {
   DEFAULT_SLICE_WIDTH,
@@ -676,7 +677,7 @@ function applyContent(el, p) {
     only('html', ['SCREEN']);
     setOptional(el, 'html', p.html);
     if (el.html !== undefined) {
-      el.html = compactHtml(el.html);
+      el.html = extractHighlights(compactHtml(el.html)).html;
       delete el.url;
     }
   }
@@ -701,9 +702,17 @@ function applyContent(el, p) {
     if (fields.length) el.fields = fields;
     else delete el.fields;
   }
+  if ('highlights' in p) {
+    only('highlights', ['SCREEN']);
+    const highlights = p.highlights === null ? [] : p.highlights;
+    const error = highlightProblem(highlights);
+    if (error) throw bad(error);
+    if (highlights.length) el.highlights = highlights;
+    else delete el.highlights;
+  }
 }
 
-const CONTENT = ['name', 'info', 'icon', 'isList', 'html', 'url', 'markdown', 'color', 'fields'];
+const CONTENT = ['name', 'info', 'icon', 'isList', 'html', 'url', 'highlights', 'markdown', 'color', 'fields'];
 
 function laneOf(chapter, id, type) {
   const lane = chapter.lanes.find((l) => l.id === id);
@@ -721,11 +730,12 @@ function createElement(model, { body: b }) {
   if (p.autoConnect !== undefined && typeof p.autoConnect !== 'boolean') throw bad('autoConnect must be true or false');
   let el;
   if (p.copyOf !== undefined) {
-    if (p.type !== undefined || CONTENT.some((k) => k in p)) throw bad('A linked copy takes only slice, lane, copyOf, x and autoConnect (R3.22)');
+    if (p.type !== undefined || CONTENT.some((k) => k !== 'highlights' && k in p)) throw bad('A linked copy takes only slice, lane, copyOf, highlights, x and autoConnect (R3.22)');
     const original = referenced(ix.elements, p.copyOf, 'element').element;
     if (original.copyOf) throw bad(`"${p.copyOf}" is itself a copy: copy its original "${original.copyOf}"`);
     if (UNCONNECTABLE.includes(original.type)) throw bad(`A ${original.type} element cannot be copied (R3.22)`);
     el = { id: newId(ix), type: original.type, lane: p.lane, copyOf: original.id, x: 0, connectsTo: [] };
+    if ('highlights' in p) applyContent(el, { highlights: p.highlights });
   } else {
     if (!ELEMENT_TYPES.includes(p.type)) throw bad(`type must be one of ${ELEMENT_TYPES.join(', ')}`);
     el = {
@@ -754,10 +764,21 @@ function patchElement(model, { params, body: b }) {
   const ix = index(model);
   const { chapter, slice, element: el } = found(ix.elements, params.id, 'element');
   if (el.copyOf) {
-    const content = CONTENT.find((k) => k in p);
+    const content = CONTENT.find((k) => k !== 'highlights' && k in p);
     if (content) throw new HttpError(409, `"${el.id}" is a linked copy: change its original "${el.copyOf}"`);
   }
-  applyContent(el, p);
+  if (el.type === 'SCREEN' && el.html) {
+    const content = extractHighlights(el.html);
+    el.html = content.html;
+    if (el.highlights === undefined && content.highlights.length) el.highlights = content.highlights;
+  }
+  const contentChanged = 'html' in p || 'url' in p;
+  const before = contentChanged ? htmlStructure(el.html) : null;
+  const { highlights, ...content } = p;
+  applyContent(el, content);
+  const cleared = contentChanged && before !== htmlStructure(el.html)
+    ? clearScreenHighlights([...ix.elements.values()].map((item) => item.element), el.id) : [];
+  if ('highlights' in p) applyContent(el, { highlights });
   if ('slice' in p || 'lane' in p) {
     if (!('slice' in p && 'lane' in p)) throw bad('slice and lane come together');
     const target = referenced(ix.slices, p.slice, 'slice');
@@ -774,7 +795,10 @@ function patchElement(model, { params, body: b }) {
   } else if ('x' in p) {
     el.x = place(slice, chapter.lanes.find((l) => l.id === el.lane), el.type, p.x, el);
   }
-  return lookup('elements', el.id);
+  return (model) => ({
+    ...lookup('elements', el.id)(model),
+    ...(cleared.length ? { clearedHighlights: cleared } : {}),
+  });
 }
 
 // The element left its Chapter: the scenarios that use it go (R3.17).

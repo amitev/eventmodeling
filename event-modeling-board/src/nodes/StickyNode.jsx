@@ -66,7 +66,7 @@ export function StickyNode({ id, data, selected }) {
   // A linked copy shows its original's content, live, and cannot be edited (R3.22).
   const isCopy = !!data.copyOf;
   const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
-  const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf } : data;
+  const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf, highlights: data.highlights } : data;
 
   // The fields scroll in the fixed-height body (R3.6c). `nowheel` makes the wheel scroll them, not zoom the board,
   // only while the element is selected.
@@ -291,7 +291,7 @@ export function StickyNode({ id, data, selected }) {
       ) : (
         <div ref={bodyRef} className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}${scrolls && selected ? ' nowheel' : ''}`}>
         {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
-        {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} title={shown.name || 'Screen mockup'} />}
+        {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} highlights={shown.highlights} title={shown.name || 'Screen mockup'} />}
         </div>
       )}
     </div>

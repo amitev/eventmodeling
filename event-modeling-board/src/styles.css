@@ -177,6 +177,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 /* The Screen mockup popup: the preview is a sandboxed iframe, so the mockup's styles stay inside it. */
 .html-preview { flex: 1; width: 100%; min-height: 0; border: 0; background: #fff; }
 .html-preview-box { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.html-highlight-tools {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 12px;
+  border-bottom: 1px solid #ddd; font-size: 12px; color: #667;
+}
+.html-highlight-tools > button {
+  padding: 4px 8px; border: 1px solid #bbc; border-radius: 4px; background: #fff; cursor: pointer;
+}
+.html-highlight-tools > button[aria-pressed="true"] { border-color: #b6cef5; background: #e8f0fe; color: #174ea6; }
+.html-highlight-tools button:disabled { opacity: 0.5; cursor: default; }
+.html-highlight-error { padding: 6px 12px; color: #b71c1c; background: #ffebee; font-size: 13px; }
+.html-highlight-tools .lane-color { position: relative; }
+.html-highlight-tools .lane-palette { top: calc(100% + 6px); width: 52px; border: 1px solid #aab; border-radius: 4px; }
 .html-blocked-hint { padding: 5px 12px; font-size: 12px; color: #667; background: #f6f7fa; border-bottom: 1px solid #ddd; }
 .html-invalid { display: grid; place-items: center; color: #99a; font-size: 13px; }
 .html-url-row { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #ddd; }

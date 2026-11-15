@@ -15,6 +15,8 @@ export function isWebUrl(text) {
 // Sandbox of the preview iframe: HTML code gets no permissions (no scripts, forms, same
 // origin); a page by URL runs its own scripts so real sites work (R3.9).
 export const HTML_SANDBOX = '';
+// Parent DOM inspection only; mockup scripts and forms stay blocked.
+export const HTML_INSPECTION_SANDBOX = 'allow-same-origin';
 export const URL_SANDBOX = 'allow-scripts allow-same-origin';
 // The movie strip (R11.4) lets HTML code run its scripts, without same origin: the board stays out of reach.
 export const MOVIE_HTML_SANDBOX = 'allow-scripts';

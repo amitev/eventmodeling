@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
+import { clearScreenHighlights, extractHighlights, htmlStructure } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import { byPosition, canonical, orderedTask, validateModel, validateTasks } from './model-rules.js';
 
@@ -43,8 +44,11 @@ const validFile = (v) =>
 
 // The Chapter with the HTML of its Screens compacted (S3.10). Slices and elements are not checked further.
 function compactScreens(chapter) {
-  const element = (el) =>
-    isObject(el) && el.type === 'SCREEN' && typeof el.html === 'string' ? { ...el, html: compactHtml(el.html) } : el;
+  const element = (el) => {
+    if (!isObject(el) || el.type !== 'SCREEN' || typeof el.html !== 'string') return el;
+    const { html, highlights } = extractHighlights(compactHtml(el.html));
+    return { ...el, html, ...(el.highlights === undefined && highlights.length ? { highlights } : {}) };
+  };
   return {
     ...chapter,
     slices: chapter.slices.map((s) => (Array.isArray(s.elements) ? { ...s, elements: s.elements.map(element) } : s)),
@@ -477,21 +481,24 @@ export class ModelStore {
     });
   }
 
-  // One Screen with its `html` or `url` (S3.14). A linked copy shows its original's.
+  // Copies share content, not highlights (S3.14).
   async getScreen(contextId, screenId) {
-    return this.#run(async () => {
-      const { doc } = await this.#contextDoc(contextId);
-      const screens = ModelStore.#screens(doc);
-      const screen = screens.find((s) => s.element.id === screenId);
+    return this.read((model) => {
+      if (!model.contexts.some((context) => context.id === contextId)) throw new HttpError(404, `Unknown context "${contextId}"`);
+      const screens = ModelStore.#screens(model);
+      const screen = screens.find((s) => s.chapter.context === contextId && s.element.id === screenId);
       if (!screen) throw new HttpError(404, `Unknown screen "${screenId}"`);
       const source = screen.element.copyOf
         ? screens.find((s) => s.element.id === screen.element.copyOf)?.element
         : screen.element;
       const { html, url } = source ?? {};
+      const content = typeof html === 'string' ? extractHighlights(html) : null;
+      const highlights = screen.element.highlights ?? (!screen.element.copyOf ? content?.highlights : []) ?? [];
       return {
         ...ModelStore.#summary(screen),
-        ...(typeof html === 'string' ? { html } : {}),
+        ...(content ? { html: content.html } : {}),
         ...(typeof url === 'string' ? { url } : {}),
+        ...(highlights.length ? { highlights } : {}),
       };
     });
   }
@@ -500,29 +507,25 @@ export class ModelStore {
   // `html` or `url`, R3.7). A linked copy is refused: its original holds the HTML.
   async putScreenHtml(contextId, screenId, html) {
     if (typeof html !== 'string' || !html.trim()) throw new HttpError(400, 'Body must be { html: text }, not empty');
-    const compact = compactHtml(html);
-    return this.#mutate(undefined, async () => {
-      const { entry, doc } = await this.#contextDoc(contextId);
-      const screen = ModelStore.#screens(doc).find((s) => s.element.id === screenId);
+    const compact = extractHighlights(compactHtml(html)).html;
+    return this.edit((model) => {
+      if (!model.contexts.some((context) => context.id === contextId)) throw new HttpError(404, `Unknown context "${contextId}"`);
+      const screens = ModelStore.#screens(model);
+      const screen = screens.find((s) => s.chapter.context === contextId && s.element.id === screenId);
       if (!screen) throw new HttpError(404, `Unknown screen "${screenId}"`);
       const { element } = screen;
       if (element.copyOf) {
         throw new HttpError(409, `Screen "${screenId}" is a linked copy: change its original "${element.copyOf}"`);
       }
-      // `html` keeps the place of the field it replaces, else follows `info` or `name` (R6.5).
-      const keys = Object.keys(element);
-      const at = keys.findIndex((k) => k === 'html' || k === 'url');
-      const after = at >= 0 ? at - 1 : Math.max(keys.indexOf('info'), keys.indexOf('name'));
-      const next = {};
-      keys.forEach((k, i) => {
-        if (k !== 'html' && k !== 'url') next[k] = element[k];
-        if (i === after) next.html = compact;
-      });
-      if (!('html' in next)) next.html = compact;
-      const slice = screen.slice;
-      slice.elements = slice.elements.map((e) => (e === element ? next : e));
-      await this.#write(entry.path, yaml(doc));
-      return { html: compact };
+      const before = htmlStructure(element.html);
+      const legacy = extractHighlights(element.html);
+      if (element.highlights === undefined && legacy.highlights.length) element.highlights = legacy.highlights;
+      element.html = compact;
+      delete element.url;
+      const cleared = before !== htmlStructure(compact)
+        ? clearScreenHighlights(screens.map((s) => s.element), screenId) : [];
+      canonical(model);
+      return { html: compact, ...(cleared.length ? { clearedHighlights: cleared } : {}) };
     });
   }
 }

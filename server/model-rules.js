@@ -1,5 +1,8 @@
 import { randomInt } from 'node:crypto';
 import { HttpError } from './http-error.js';
+import { highlightProblem, inspectHtml } from './html-highlights.js';
+import { LANE_COLORS } from './lane-colors.js';
+export { LANE_COLORS };
 
 // The board's rules (spec/MODELING_BOARD.md) that the editing API (spec/SERVER.md section 4) needs.
 // Types are upper case, as in the stored files (R6.4, R6.5).
@@ -20,7 +23,6 @@ export const LANE_TYPES = {
 };
 export const LANE_ORDER = Object.keys(LANE_TYPES);
 export const REQUIRED_LANES = ['ACTOR', 'INTERACTION', 'EVENT'];
-export const LANE_COLORS = ['none', 'red', 'orange', 'yellow', 'lime', 'green', 'turquoise', 'blue', 'purple', 'pink', 'brown', 'gray'];
 export const NOTE_COLORS = ['red', 'green', 'yellow'];
 export const PROCESSOR_ICONS = ['gear', 'envelope', 'chat', 'bell', 'phone', 'clock', 'calendar', 'credit-card', 'file', 'pdf', 'table', 'printer', 'refresh', 'diamonds', 'cloud', 'bolt', 'truck'];
 export const DEFAULT_PROCESSOR_ICON = 'gear';
@@ -100,8 +102,8 @@ const KEYS = {
   chapter: ['id', 'name', 'info', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'],
   lane: ['id', 'name', 'type', 'info', 'color'],
   slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
-  element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'isList', 'html', 'url', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
-  copy: ['id', 'type', 'lane', 'copyOf', 'x', 'connectsTo'],
+  element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'isList', 'html', 'url', 'highlights', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
+  copy: ['id', 'type', 'lane', 'copyOf', 'highlights', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
   field: ['name', 'type', 'list', ...FIELD_FLAGS, 'fields'],
 };
@@ -304,6 +306,12 @@ export function validateModel({ contexts, chapters }) {
           fail(`${ep}.isList`, 'must be true for a read model, or left out');
         }
         if (e.html !== undefined && (!isText(e.html) || e.type !== 'SCREEN')) fail(`${ep}.html`, 'only a screen can have html, not empty');
+        if (e.highlights !== undefined) {
+          const error = highlightProblem(e.highlights);
+          if (e.type !== 'SCREEN' || error || !e.highlights.length) {
+            fail(`${ep}.highlights`, error ?? 'only a screen can have highlights; omit when empty');
+          }
+        }
         if (e.url !== undefined) {
           if (!isWebUrl(e.url) || e.type !== 'SCREEN') fail(`${ep}.url`, 'only a screen can have an http:// or https:// url');
           if (e.html !== undefined) fail(`${ep}.url`, 'a screen has either html or a url, not both');
@@ -327,7 +335,7 @@ export function validateModel({ contexts, chapters }) {
         }
         if (!Array.isArray(e.connectsTo)) fail(`${ep}.connectsTo`, 'must be a list');
         links.push({ owner: e.id, kind: 'element', path: `${ep}.connectsTo`, ids: e.connectsTo });
-        elements.set(e.id, { chapter: c.id, type: e.type, copy: isCopy });
+        elements.set(e.id, { chapter: c.id, type: e.type, copy: isCopy, element: e, path: ep });
         if (e.type === 'SCENARIOS') {
           if (!Array.isArray(e.scenarios)) fail(`${ep}.scenarios`, 'must be a list');
           e.scenarios.forEach((sc, k) => {
@@ -361,6 +369,16 @@ export function validateModel({ contexts, chapters }) {
     if (!original) fail(path, `no element with id "${id}"`);
     if (original.copy) fail(path, `"${id}" is itself a copy`);
     if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
+  }
+  const screenPaths = new Map();
+  for (const { element, path } of elements.values()) {
+    if (!element.highlights) continue;
+    const source = element.copyOf ? elements.get(element.copyOf).element : element;
+    if (!source.html || source.url) fail(`${path}.highlights`, 'highlights require an HTML mockup');
+    if (!screenPaths.has(source.id)) screenPaths.set(source.id, new Set(inspectHtml(source.html).elements.map((e) => e.path)));
+    if (element.highlights.some(({ path: target }) => !screenPaths.get(source.id).has(target))) {
+      fail(`${path}.highlights`, 'highlight target is missing from the HTML');
+    }
   }
   for (const { owner, chapter, kind, path, ids } of links) {
     const seen = new Set();

@@ -56,6 +56,7 @@ import {
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, StaleError } from './state/sync.js';
 import { cleanName } from './model/names.js';
+import { highlightHtml, htmlStructure } from '../../server/html-highlights.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
@@ -455,17 +456,27 @@ function Board() {
     if (screenInfo) setInfoId(null);
     setHtmlId(null);
   };
-  const saveHtml = (text, url, info) => {
+  const saveHtml = (text, url, info, highlights) => {
     const id = htmlTarget.id;
+    const changed = !htmlCopy && htmlStructure(htmlNode.data.html) !== htmlStructure(url ? '' : text);
+    const cleared = changed ? nodes.filter((n) => (n.id === id || n.data.copyOf === id) && n.data.highlights?.length) : [];
     setNodes((ns) =>
       ns.map((n) => {
+        if (changed && n.data.copyOf === id) {
+          const { highlights: _highlights, ...data } = n.data;
+          return { ...n, data };
+        }
         if (n.id !== id) return n;
-        const { html: _html, url: _url, info: _info, ...rest } = n.data;
-        const data = info.trim() ? { ...rest, info } : rest;
+        const { highlights: _highlights, ...own } = n.data;
+        if (htmlCopy) return { ...n, data: highlights.length ? { ...own, highlights } : own };
+        const { html: _html, url: _url, info: _info, ...rest } = own;
+        const content = info.trim() ? { ...rest, info } : rest;
+        const data = highlights.length ? { ...content, highlights } : content;
         if (url) return { ...n, data: { ...data, url } };
         return { ...n, data: text.trim() ? { ...data, html: text } : data };
       })
     );
+    if (cleared.length) setNotice(`HTML structure changed; cleared existing highlights on ${cleared.length} Screen(s).`);
     closeScreen();
   };
   const saveFields = (fields, propagate) => {
@@ -1096,7 +1107,7 @@ function Board() {
       .sort((a, b) => a.slice - b.slice || a.n.position.x - b.n.position.x || a.n.position.y - b.n.position.y || compareIds(a.n.id, b.n.id))
       .map(({ n }) => {
         const shown = n.data.copyOf ? byId.get(n.data.copyOf)?.data ?? {} : n.data;
-        return { id: n.id, name: (shown.name ?? '').trim(), html: shown.html, url: shown.url };
+        return { id: n.id, name: (shown.name ?? '').trim(), html: shown.html ? highlightHtml(shown.html, n.data.highlights) : shown.html, url: shown.url };
       });
   }, [nodes, movieId]);
   // The scenario popup: the Events and Commands of the Scenarios element's Chapter are offered.
@@ -2000,10 +2011,12 @@ function Board() {
           key={htmlTarget.id}
           initialReading={(screenInfo ? infoReading : htmlReading) || htmlCopy || overview}
           readOnly={htmlCopy || overview}
+          highlightsReadOnly={overview || (htmlCopy && !!htmlNode.data.url)}
           title={`Screen${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
           initial={htmlNode.data.html ?? ''}
           initialUrl={htmlNode.data.url ?? ''}
           initialInfo={htmlNode.data.info ?? ''}
+          initialHighlights={htmlTarget.data.highlights ?? []}
           initialTab={screenInfo ? 'info' : 'content'}
           onSave={saveHtml}
           onCancel={closeScreen}

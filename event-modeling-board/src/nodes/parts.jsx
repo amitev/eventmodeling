@@ -1,10 +1,54 @@
 // Pieces shared by the node components.
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { highlightHtml } from '../../../server/html-highlights.js';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { chapterMetadata, snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
+import { chapterMetadata, LANE_COLORS, snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';
 import { HTML_SANDBOX, URL_SANDBOX, MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 import { BoardActions } from '../state/BoardActions.js';
+
+export function ColorPicker({ color, onChange, open, onOpenChange, disabled = false, label = 'Lane colour' }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open || disabled) return;
+    const close = (event) => {
+      if (!ref.current?.contains(event.target)) onOpenChange(false);
+    };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [open, disabled, onOpenChange]);
+  return (
+    <div className="lane-color" ref={ref}>
+      <button
+        type="button"
+        className={`lane-color-btn swatch color-${color}`}
+        title={label}
+        aria-label={`${label}: ${color}`}
+        aria-expanded={open && !disabled}
+        disabled={disabled}
+        onClick={() => onOpenChange(!open)}
+      />
+      {open && !disabled && (
+        <div className="lane-palette" role="group" aria-label={label}>
+          {LANE_COLORS.map((value) => (
+            <button
+              type="button"
+              key={value}
+              className={`swatch color-${value}${value === color ? ' current' : ''}`}
+              title={value}
+              aria-label={value}
+              aria-pressed={value === color}
+              onClick={() => {
+                onChange(value);
+                onOpenChange(false);
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // The nodes inside one parent (a Chapter), straight from the store's parent index. Use it in
 // `useStore` selectors instead of scanning `nodeLookup`: selectors run on every store change, pan and zoom included.
@@ -222,7 +266,8 @@ export function CopyContextButton({ elementId, sliceId, chapterId, className = '
 
 // The Screen mockup in the element body (R3.8): rendered at MOCKUP_W x MOCKUP_H in a sandboxed
 // iframe and scaled down to the body's width, so there is nothing to scroll.
-export function ScreenPreview({ html, url, title }) {
+export function ScreenPreview({ html, url, title, highlights }) {
+  const content = useMemo(() => html ? highlightHtml(html, highlights) : html, [html, highlights]);
   const box = useRef(null);
   const [scale, setScale] = useState(0.14);
   // The mockup loads when its box first comes near the view, and then stays loaded.
@@ -256,7 +301,7 @@ export function ScreenPreview({ html, url, title }) {
           title={title}
           sandbox={url ? URL_SANDBOX : HTML_SANDBOX}
           scrolling="no"
-          {...(url ? { src: url } : { srcDoc: html })}
+          {...(url ? { src: url } : { srcDoc: content })}
           style={{ width: MOCKUP_W, height: MOCKUP_H, transform: `scale(${scale})` }}
         />
       )}

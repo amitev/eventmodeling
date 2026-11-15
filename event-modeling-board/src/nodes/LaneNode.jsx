@@ -1,9 +1,9 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow, useStore } from '@xyflow/react';
-import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, LANE_COLORS, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
+import { LANE_WIDTH, LABEL_ZONE, LANE_TYPES, REQUIRED_LANE_TYPES, nextLaneTypes } from '../model/model.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { chapterMetadataOf, InfoButton, useChapterDrag } from './parts.jsx';
+import { chapterMetadataOf, ColorPicker, InfoButton, useChapterDrag } from './parts.jsx';
 
 export function LaneNode({ id, data }) {
   const { setNodes } = useReactFlow();
@@ -28,20 +28,9 @@ export function LaneNode({ id, data }) {
   const [editAt, setEditAt] = useState(null); // where the horizontal name editor goes, in window pixels
   const [picking, setPicking] = useState(false);
   const ref = useRef(null);
-  const colorRef = useRef(null);
   const inputRef = useRef(null);
 
-  useEffect(() => {
-    if (!picking) return;
-    const close = (e) => {
-      if (!colorRef.current?.contains(e.target)) setPicking(false);
-    };
-    window.addEventListener('pointerdown', close);
-    return () => window.removeEventListener('pointerdown', close);
-  }, [picking]);
-
   const setColor = (color) => {
-    setPicking(false);
     setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, color } } : n)));
   };
 
@@ -89,25 +78,7 @@ export function LaneNode({ id, data }) {
             onClick={() => removeLane(id)}
           />
         )}
-        <div className="lane-color" ref={colorRef}>
-          <button
-            className={`lane-color-btn swatch color-${data.color}`}
-            title="Lane colour"
-            onClick={() => setPicking((v) => !v)}
-          />
-          {picking && (
-            <div className="lane-palette">
-              {LANE_COLORS.map((c) => (
-                <button
-                  key={c}
-                  className={`swatch color-${c}${c === data.color ? ' current' : ''}`}
-                  title={c}
-                  onClick={() => setColor(c)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <ColorPicker color={data.color} onChange={setColor} open={picking} onOpenChange={setPicking} />
         <InfoButton id={id} info={data.info} />
         {/* Edited in a horizontal input floating over the header: the label column is too narrow for it. */}
         <span

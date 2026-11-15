@@ -1,7 +1,7 @@
 import { parse, serialize } from 'parse5';
 
 // Tags removed with their content: they do not draw anything in the sandboxed preview (R3.9).
-const DROP_TAGS = new Set(['script', 'noscript', 'title', 'meta', 'base', 'template', 'iframe', 'object', 'embed']);
+export const DROP_TAGS = new Set(['script', 'noscript', 'title', 'meta', 'base', 'template', 'iframe', 'object', 'embed']);
 
 const DROP_ATTRS = new Set([
   'role', 'autocomplete', 'required', 'minlength', 'maxlength', 'pattern', 'autofocus',

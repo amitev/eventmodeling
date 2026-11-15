@@ -3,6 +3,7 @@ import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
 import { isExampleValue } from '../model/examples.js';
 import { isWebUrl } from '../model/mockup.js';
+import { extractHighlights, highlightProblem, inspectHtml } from '../../../server/html-highlights.js';
 
 export const STORAGE_KEY = 'event-model-board';
 
@@ -118,6 +119,7 @@ export function serialize(nodes, edges, contexts) {
                   type: n.data.kind.toUpperCase(),
                   lane: lane.id,
                   copyOf: n.data.copyOf,
+                  ...(n.data.kind === 'screen' && n.data.highlights?.length ? { highlights: n.data.highlights } : {}),
                   x: n.position.x - sl.position.x,
                   connectsTo: links,
                 };
@@ -135,6 +137,7 @@ export function serialize(nodes, edges, contexts) {
                 ...(n.data.kind === 'notes' && n.data.color ? { color: n.data.color } : {}),
                 ...(n.data.kind === 'screen' && n.data.html ? { html: n.data.html } : {}),
                 ...(n.data.kind === 'screen' && n.data.url ? { url: n.data.url } : {}),
+                ...(n.data.kind === 'screen' && n.data.highlights?.length ? { highlights: n.data.highlights } : {}),
                 ...(n.data.fields?.length ? { fields: serializeFields(n.data.fields) } : {}),
                 x: n.position.x - sl.position.x,
                 connectsTo: links,
@@ -427,7 +430,7 @@ export function parseBoard(text) {
           el,
           ['id', 'type', 'lane', isCopy ? 'copyOf' : 'name', 'x', 'connectsTo', ...(isScenarios ? ['scenarios'] : [])],
           ep,
-          isCopy ? [] : ['html', 'url', 'markdown', 'color', 'info', 'icon', 'isList', 'fields']
+          isCopy ? ['highlights'] : ['html', 'url', 'highlights', 'markdown', 'color', 'info', 'icon', 'isList', 'fields']
         );
         claim(el.id, 'element', at(ep, 'id'));
         if (typeof el.type !== 'string' || !hasKey(KINDS, el.type)) {
@@ -464,6 +467,12 @@ export function parseBoard(text) {
           if (el.html === '') fail(at(ep, 'html'), 'must be left out when empty');
           if (el.type !== 'screen') fail(at(ep, 'html'), 'only a screen can have html');
         }
+        if (hasKey(el, 'highlights')) {
+          const error = highlightProblem(el.highlights);
+          if (el.type !== 'screen' || error || !el.highlights.length) {
+            fail(at(ep, 'highlights'), error ?? 'only a screen can have highlights; omit when empty');
+          }
+        }
         if (hasKey(el, 'url')) {
           string(el.url, at(ep, 'url'));
           if (!isWebUrl(el.url)) fail(at(ep, 'url'), 'must be an http:// or https:// address');
@@ -497,7 +506,9 @@ export function parseBoard(text) {
         }
         list(el.connectsTo, at(ep, 'connectsTo'));
         if (isScenarios || el.type === 'notes') unconnectable.add(el.id);
-        elements.set(el.id, { chapter: c.id, type: el.type, copy: isCopy });
+        elements.set(el.id, { chapter: c.id, type: el.type, copy: isCopy, path: ep });
+        const content = el.html ? extractHighlights(el.html) : null;
+        const highlights = el.highlights ?? content?.highlights ?? [];
         const scenarios = isScenarios ? scenarioList(el.scenarios, at(ep, 'scenarios'), c.id) : null;
         links.push({ owner: el.id, kind: 'element', path: at(ep, 'connectsTo'), ids: el.connectsTo });
         nodes.push({
@@ -509,8 +520,9 @@ export function parseBoard(text) {
             kind: el.type,
             name: isCopy ? '' : el.name,
             ...(isCopy ? { copyOf: el.copyOf } : {}),
-            ...(el.html ? { html: el.html } : {}),
+            ...(content ? { html: content.html } : {}),
             ...(el.url ? { url: el.url } : {}),
+            ...(highlights.length ? { highlights } : {}),
             ...(el.markdown ? { markdown: el.markdown } : {}),
             ...(el.color ? { color: el.color } : {}),
             ...(el.info ? { info: el.info } : {}),
@@ -538,6 +550,18 @@ export function parseBoard(text) {
     if (!original) fail(path, `no element with id "${id}"`);
     if (original.copy) fail(path, `"${id}" is itself a copy`);
     if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
+  }
+  const screenNodes = new Map(nodes.filter((n) => n.type === 'sticky').map((n) => [n.id, n]));
+  const screenPaths = new Map();
+  for (const node of screenNodes.values()) {
+    if (!node.data.highlights) continue;
+    const source = node.data.copyOf ? screenNodes.get(node.data.copyOf) : node;
+    const path = at(elements.get(node.id).path, 'highlights');
+    if (!source.data.html || source.data.url) fail(path, 'highlights require an HTML mockup');
+    if (!screenPaths.has(source.id)) screenPaths.set(source.id, new Set(inspectHtml(source.data.html).elements.map((e) => e.path)));
+    if (node.data.highlights.some(({ path: target }) => !screenPaths.get(source.id).has(target))) {
+      fail(path, 'highlight target is missing from the HTML');
+    }
   }
 
   const edges = [];

@@ -119,7 +119,7 @@ export function pruneCopies(nodes) {
 }
 
 
-export const LANE_COLORS = ['none', 'red', 'orange', 'yellow', 'lime', 'green', 'turquoise', 'blue', 'purple', 'pink', 'brown', 'gray'];
+export { LANE_COLORS } from '../../../server/lane-colors.js';
 
 // Colours of a Notes element besides the default white (R3.24).
 export const NOTE_COLORS = ['red', 'green', 'yellow'];

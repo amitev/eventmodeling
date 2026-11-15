@@ -13,11 +13,11 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 
 | | Rule |
 |---|---|
-| Change | `PATCH /elements/:id` `{ name?, info?, isList?, html?, url?, markdown?, color?, fields?, slice?, lane?, x? }`; `null` removes optional property; unknown keys: 400 |
+| Change | `PATCH /elements/:id` `{ name?, info?, isList?, html?, url?, highlights?, markdown?, color?, fields?, slice?, lane?, x? }`; `null` removes optional property; unknown keys: 400 |
 | Type | Immutable; replace element (below), never PATCH `type` |
 | Content | Screen only: `html`/`url`, setting either removes other. Notes only: `markdown`/`color`. Fields only: Screen, Command, Event, Read Model |
 | Read Model list | `isList`: list-result/code-generation hint; default `false`. `true` stores it; `false`/`null` removes it; other values or element types: 400. Does not change fields or propagate downstream |
-| Linked copy | PATCH only `slice`, `lane`, `x`; other fields: 409 naming original. Edit original for content |
+| Linked copy | PATCH only `slice`, `lane`, `x`, Screen `highlights` (shared API reference); other fields: 409 naming original. Edit original for content |
 | Move | `slice` + `lane` together; lane must accept type. Omitted `x`: board placement; supplied: given offset. `x` alone moves within Cell. Keeps arrows, adds none |
 | Cross-Chapter move | Allowed, including copies; **deletes scenarios using element**. Existing arrows may cross Chapters: report, offer local-copy replacements (`connections`, Across Chapters). `SCENARIOS` cannot change Chapter (409) |
 | Spec lane | At most one element per slice; occupied destination Cell refused |
