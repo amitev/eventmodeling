@@ -570,6 +570,15 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .info-panes.reading { grid-template-columns: 1fr; }
 .info-panes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 .info-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid #ddd; }
+.screen-editor-panel { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.info-left[hidden], .screen-editor-panel[hidden] { display: none; }
+.screen-editor-tabs { display: flex; flex-shrink: 0; gap: 4px; }
+.screen-editor-tabs button {
+  padding: 5px 12px; border: 1px solid transparent; border-radius: 4px;
+  background: transparent; color: #556; font: inherit; cursor: pointer;
+}
+.screen-editor-tabs button:hover { background: #ececf2; }
+.screen-editor-tabs button[aria-selected="true"] { border-color: #b6cef5; background: #e8f0fe; color: #174ea6; }
 .info-toolbar {
   display: flex; align-items: center; gap: 2px; padding: 4px 8px; border-bottom: 1px solid #ddd;
 }

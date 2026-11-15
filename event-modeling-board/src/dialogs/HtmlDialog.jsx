@@ -1,39 +1,79 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 import { HTML_SANDBOX, URL_SANDBOX, isWebUrl } from '../model/mockup.js';
 import { beautifyHtml } from '../model/beautify.js';
+import { MarkdownEditor } from './InfoDialog.jsx';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
 export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
-// Modal to edit the mockup of a Screen (R3.7): either HTML code, or a web page by URL. The
-// URL wins and disables the code editor. The code is on the left, the rendering on the right in
-// a sandboxed iframe, so the mockup's styles cannot reach the board. The changes only apply on Save.
-// `readOnly` (a linked copy's popup, R3.22): view mode only, no Save.
-export function HtmlDialog({ title, initial, initialUrl = '', initialReading = false, readOnly = false, onSave, onCancel }) {
-  const [text, setText] = useState(() => beautifyHtml(initial)); // beautified when opened
+// One draft for Screen content and info; tab panels stay mounted to keep editor state.
+export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialTab = 'content', initialReading = false, readOnly = false, onSave, onCancel }) {
+  const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(initial) : initial);
   const [url, setUrl] = useState(initialUrl);
+  const [info, setInfo] = useState(initialInfo);
+  const [tab, setTab] = useState(initialTab);
+  const formatted = useRef(initialTab === 'content');
+  const tabId = useId();
+  const editors = useRef(null);
   const [urlInvalid, setUrlInvalid] = useState(false); // after a refused Save
-  const [reading, setReading] = useState(initialReading); // view mode: only the preview is shown
+  const [reading, setReading] = useState(initialReading || readOnly);
   const [maximized, setMaximized] = useState(false); // the popup fills the whole window
   const backdrop = useBackdropClose(onCancel);
   const modal = useModalFocus();
   const urlInput = useRef(null);
+  const focusUrl = useRef(false);
   const usingUrl = url.trim() !== '';
   const pageUrl = usingUrl && isWebUrl(url.trim()) ? url.trim() : null; // what the preview shows
+
+  const selectTab = (next) => {
+    if (next === 'content' && !formatted.current) {
+      formatted.current = true;
+      setText(beautifyHtml(text));
+    }
+    setTab(next);
+  };
+  const onTabKey = (e) => {
+    const next = {
+      ArrowLeft: tab === 'content' ? 'info' : 'content',
+      ArrowRight: tab === 'content' ? 'info' : 'content',
+      Home: 'content',
+      End: 'info',
+    }[e.key];
+    if (!next) return;
+    e.preventDefault();
+    selectTab(next);
+    e.currentTarget.querySelector(`[data-tab="${next}"]`).focus();
+  };
+  useLayoutEffect(() => {
+    if (!reading) {
+      const field = tab === 'content' && usingUrl ? 'input' : 'textarea:not(:disabled)';
+      editors.current?.querySelector(`[role="tabpanel"]:not([hidden]) ${field}`)
+        ?.focus({ preventScroll: true });
+    }
+  }, [reading]);
+  useLayoutEffect(() => {
+    if (focusUrl.current && !reading && tab === 'content') {
+      focusUrl.current = false;
+      urlInput.current?.focus({ preventScroll: true });
+    }
+  }, [urlInvalid, tab, reading]);
 
   // Save refuses a URL that is not an http(s) address (its field turns red).
   const save = () => {
     const wanted = url.trim();
     if (wanted && !isWebUrl(wanted)) {
+      focusUrl.current = true;
       setUrlInvalid(true);
+      selectTab('content');
+      setReading(false);
       urlInput.current?.focus();
       return;
     }
-    onSave(text, wanted);
+    onSave(text, wanted, info);
   };
   const saveRef = useRef(save); // the latest save, for the Ctrl+S listener
   saveRef.current = save;
@@ -97,6 +137,25 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
               </svg>
             </button>
           )}
+          {!reading && (
+            <div className="screen-editor-tabs" role="tablist" aria-label="Screen editor" onKeyDown={onTabKey}>
+              {['content', 'info'].map((name) => (
+                <button
+                  key={name}
+                  id={`${tabId}-${name}-tab`}
+                  type="button"
+                  role="tab"
+                  data-tab={name}
+                  aria-selected={tab === name}
+                  aria-controls={`${tabId}-${name}-panel`}
+                  tabIndex={tab === name ? 0 : -1}
+                  onClick={() => selectTab(name)}
+                >
+                  {name === 'content' ? 'Content' : 'Info'}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             className="info-mode info-maximize"
             title={maximized ? 'Restore the size (Alt+Enter)' : 'Full screen (Alt+Enter)'}
@@ -114,8 +173,14 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
           </button>
         </div>
         <div className={`info-panes${reading ? ' reading' : ''}`}>
-          {!reading && (
-            <div className="info-left">
+          <div ref={editors} className="info-left screen-editors" hidden={reading}>
+            <div
+              id={`${tabId}-content-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabId}-content-tab`}
+              className="screen-editor-panel"
+              hidden={tab !== 'content'}
+            >
               <div className="html-url-row">
                 <input
                   ref={urlInput}
@@ -140,7 +205,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
               </div>
               <textarea
                 className="info-editor html-code"
-                autoFocus={!usingUrl}
+                aria-label="Screen HTML"
                 spellCheck={false}
                 placeholder={usingUrl ? 'The URL is used; the code editor is disabled' : '<h1>Hello</h1>'}
                 disabled={usingUrl}
@@ -149,7 +214,16 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialReading = f
                 onPaste={onPaste}
               />
             </div>
-          )}
+            <div
+              id={`${tabId}-info-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabId}-info-tab`}
+              className="screen-editor-panel"
+              hidden={tab !== 'info'}
+            >
+              <MarkdownEditor text={info} onChange={setInfo} active={!reading && tab === 'info'} autoFocus={false} />
+            </div>
+          </div>
           <div className="html-preview-box">
             {usingUrl && (
               <div className="html-blocked-hint">

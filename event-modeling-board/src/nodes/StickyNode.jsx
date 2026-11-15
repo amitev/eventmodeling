@@ -200,8 +200,8 @@ export function StickyNode({ id, data, selected }) {
             <>
               <button
                 className="info-btn html-tool"
-                title="Edit HTML mockup (E)"
-                aria-label="Edit HTML mockup"
+                title="Edit Screen content (E)"
+                aria-label="Edit Screen content"
                 onClick={() => openHtml(id)}
               >
                 {'</>'}

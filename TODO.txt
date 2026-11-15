@@ -25,10 +25,6 @@ Chapters
 Slices
 - Slice states (from Q&A1 1:16:00)
 
-Questions
-- Introduce questions and answers to the spec
-
-
 Elements
 - Automatic name from previous element - too hard to do correctly.
 - Agentic - suggest automatic slice and element names
@@ -49,12 +45,9 @@ Export
 Prototypes
 - Just zoom in on the interesting part of the model and ask the agent to build a prototype. No need to tell it for what - it´ll know. The Prototype implements the Business Logic as defined in the Event Model. It takes only a few minutes - and every change is incremental from there.
 
-Local undo/red
+Local undo/redo
 - See what to do with it. Can it become too heavy?
 
-Server
-
-CLI
 
 Other features to add
 - https://www.linkedin.com/pulse/8-em-studio-features-simplify-planning-your-project-from-dilger-wnm5e/

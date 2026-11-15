@@ -447,22 +447,26 @@ function Board() {
   // Saves the fields of the open element and copies the new ones it was asked to propagate
   // down the chain, as one undo step.
   const fieldsNode = nodes.find((n) => n.id === fieldsId);
-  // The Screen's mockup is saved on its own: HTML code, or a URL which replaces it (the code is
-  // cleared); blank ones are removed. A linked copy opens its original's mockup, read-only (R3.22).
-  const htmlTarget = htmlId && nodes.find((n) => n.id === htmlId && n.data.kind === 'screen');
+  const screenInfo = infoNode?.data.kind === 'screen' ? infoNode : null;
+  const htmlTarget = htmlId ? nodes.find((n) => n.id === htmlId && n.data.kind === 'screen') : screenInfo;
   const htmlCopy = !!htmlTarget?.data.copyOf;
   const htmlNode = htmlCopy ? nodes.find((n) => n.id === htmlTarget.data.copyOf) : htmlTarget;
-  const saveHtml = (text, url) => {
-    const id = htmlId;
+  const closeScreen = () => {
+    if (screenInfo) setInfoId(null);
+    setHtmlId(null);
+  };
+  const saveHtml = (text, url, info) => {
+    const id = htmlTarget.id;
     setNodes((ns) =>
       ns.map((n) => {
         if (n.id !== id) return n;
-        const { html: _html, url: _url, ...rest } = n.data;
-        if (url) return { ...n, data: { ...rest, url } };
-        return { ...n, data: text.trim() ? { ...rest, html: text } : rest };
+        const { html: _html, url: _url, info: _info, ...rest } = n.data;
+        const data = info.trim() ? { ...rest, info } : rest;
+        if (url) return { ...n, data: { ...data, url } };
+        return { ...n, data: text.trim() ? { ...data, html: text } : data };
       })
     );
-    setHtmlId(null);
+    closeScreen();
   };
   const saveFields = (fields, propagate) => {
     const id = fieldsId;
@@ -1892,7 +1896,7 @@ function Board() {
           autoPanOnNodeDrag={false}
           disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId || selectedCell || cellMenu ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || screenInfo || scenariosViewId || movieId || selectedCell || cellMenu ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={overview ? null : selectedCell} />
@@ -1966,7 +1970,7 @@ function Board() {
           onClose={() => setSearch((s) => ({ ...s, open: false }))}
         />
       )}
-      {infoNode && (
+      {infoNode && !screenInfo && (
         <InfoDialog
           key={infoNode.id}
           initialReading={infoReading}
@@ -1994,13 +1998,15 @@ function Board() {
       {htmlNode && (
         <HtmlDialog
           key={htmlTarget.id}
-          initialReading={htmlReading || htmlCopy || overview}
+          initialReading={(screenInfo ? infoReading : htmlReading) || htmlCopy || overview}
           readOnly={htmlCopy || overview}
-          title={`Screen mockup${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
+          title={`Screen${htmlNode.data.name ? ` — ${htmlNode.data.name}` : ''}`}
           initial={htmlNode.data.html ?? ''}
           initialUrl={htmlNode.data.url ?? ''}
+          initialInfo={htmlNode.data.info ?? ''}
+          initialTab={screenInfo ? 'info' : 'content'}
           onSave={saveHtml}
-          onCancel={() => setHtmlId(null)}
+          onCancel={closeScreen}
         />
       )}
       {fieldsNode && (

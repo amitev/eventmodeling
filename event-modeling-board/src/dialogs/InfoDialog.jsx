@@ -107,19 +107,9 @@ const MARKDOWN_TOOLS = [
   },
 ];
 
-// Modal to edit the Markdown info of a Chapter, lane or slice: editor on the left, preview on
-// the right. The changes only apply on Save. `readOnly` (the overview, R1f): preview only, no Save.
-export function InfoDialog({ title, initial, initialReading = false, readOnly = false, onSave, onCancel }) {
-  const [text, setText] = useState(initial);
-  const textRef = useRef(initial); // the latest text, for the Ctrl+S listener
-  textRef.current = text;
-  const [reading, setReading] = useState(initialReading || readOnly); // read mode: only the preview is shown
-  const backdrop = useBackdropClose(onCancel);
-  const modal = useModalFocus();
+export function MarkdownEditor({ text, onChange, active = true, autoFocus = true }) {
   const area = useRef(null);
   const pending = useRef(null); // selection to restore after a helper button changed the text
-  // marked does not sanitise, so its HTML always goes through DOMPurify.
-  const html = useMemo(() => renderMarkdown(text), [text]);
 
   const apply = (edit) => {
     const el = area.current;
@@ -141,7 +131,7 @@ export function InfoDialog({ title, initial, initialReading = false, readOnly = 
     if (!(typing && h.typingAt && now - h.typingAt < 1000 && h.past.length)) h.past.push(snapshot());
     h.typingAt = typing ? now : 0;
     h.future = [];
-    setText(value);
+    onChange(value);
   };
   const travel = (from, to) => {
     const h = history.current;
@@ -150,7 +140,7 @@ export function InfoDialog({ title, initial, initialReading = false, readOnly = 
     h[to].push(snapshot());
     h.typingAt = 0;
     pending.current = target;
-    setText(target.value);
+    onChange(target.value);
   };
   const undo = () => travel('past', 'future');
   const redo = () => travel('future', 'past');
@@ -165,13 +155,14 @@ export function InfoDialog({ title, initial, initialReading = false, readOnly = 
     area.current.setSelectionRange(p.start, p.end);
   }, [text]);
 
+  useLayoutEffect(() => {
+    if (active && autoFocus) area.current?.focus({ preventScroll: true });
+  }, [active, autoFocus]);
+
   useEffect(() => {
+    if (!active) return;
     const onKey = (e) => {
-      if (e.key === 'Escape') onCancel();
-      else if (!readOnly && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-        e.preventDefault(); // not the browser's Save page
-        onSave(textRef.current);
-      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && area.current && e.key.toLowerCase() === 'z') {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && area.current && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) historyRef.current.redo();
         else historyRef.current.undo();
@@ -184,6 +175,82 @@ export function InfoDialog({ title, initial, initialReading = false, readOnly = 
           e.preventDefault();
           applyRef.current(tool.edit);
         }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active]);
+
+  return (
+    <>
+      <div className="info-toolbar">
+        <button
+          title="Undo (Ctrl+Z)"
+          aria-label="Undo"
+          disabled={!history.current.past.length}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={undo}
+        >
+          ↶
+        </button>
+        <button
+          title="Redo (Ctrl+Y)"
+          aria-label="Redo"
+          disabled={!history.current.future.length}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={redo}
+        >
+          ↷
+        </button>
+        <span className="info-sep" />
+        {MARKDOWN_TOOLS.map((tool, i) =>
+          tool ? (
+            <button
+              key={tool.title}
+              title={tool.key ? `${tool.title} (Ctrl+${tool.key.toUpperCase()})` : tool.title}
+              aria-label={tool.title}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => apply(tool.edit)}
+            >
+              {tool.label}
+            </button>
+          ) : (
+            <span key={i} className="info-sep" />
+          )
+        )}
+      </div>
+      <textarea
+        ref={area}
+        className="info-editor"
+        spellCheck={false}
+        aria-label="Info Markdown"
+        placeholder="Markdown"
+        value={text}
+        onChange={(e) => change(e.target.value, true)}
+        onSelect={(e) => {
+          selection.current = { start: e.target.selectionStart, end: e.target.selectionEnd };
+        }}
+      />
+    </>
+  );
+}
+
+// Screen info shares Markdown controls with the other info and Notes popups.
+export function InfoDialog({ title, initial, initialReading = false, readOnly = false, onSave, onCancel }) {
+  const [text, setText] = useState(initial);
+  const textRef = useRef(initial);
+  textRef.current = text;
+  const [reading, setReading] = useState(initialReading || readOnly);
+  const backdrop = useBackdropClose(onCancel);
+  const modal = useModalFocus();
+  const html = useMemo(() => renderMarkdown(text), [text]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onCancel();
+      else if (!readOnly && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        onSave(textRef.current);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -216,58 +283,9 @@ export function InfoDialog({ title, initial, initialReading = false, readOnly = 
           )}
         </div>
         <div className={`info-panes${reading ? ' reading' : ''}`}>
-          {!reading && (
-          <div className="info-left">
-            <div className="info-toolbar">
-              <button
-                title="Undo (Ctrl+Z)"
-                aria-label="Undo"
-                disabled={!history.current.past.length}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={undo}
-              >
-                ↶
-              </button>
-              <button
-                title="Redo (Ctrl+Y)"
-                aria-label="Redo"
-                disabled={!history.current.future.length}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={redo}
-              >
-                ↷
-              </button>
-              <span className="info-sep" />
-              {MARKDOWN_TOOLS.map((tool, i) =>
-                tool ? (
-                  <button
-                    key={tool.title}
-                    title={tool.key ? `${tool.title} (Ctrl+${tool.key.toUpperCase()})` : tool.title}
-                    aria-label={tool.title}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => apply(tool.edit)}
-                  >
-                    {tool.label}
-                  </button>
-                ) : (
-                  <span key={i} className="info-sep" />
-                )
-              )}
-            </div>
-            <textarea
-              ref={area}
-              className="info-editor"
-              autoFocus
-              spellCheck={false}
-              placeholder="Markdown"
-              value={text}
-              onChange={(e) => change(e.target.value, true)}
-              onSelect={(e) => {
-                selection.current = { start: e.target.selectionStart, end: e.target.selectionEnd };
-              }}
-            />
+          <div className="info-left" hidden={reading}>
+            <MarkdownEditor text={text} onChange={setText} active={!reading} />
           </div>
-          )}
           <div className="info-preview" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
         <div className="info-actions">

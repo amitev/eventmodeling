@@ -69,9 +69,9 @@ const HOTKEYS = [
   {
     group: 'Selected element',
     keys: [
-      ['I', 'Open the info of the element (not for Notes, Scenarios or a linked copy)'],
+      ['I', 'Open element info; Screens open the Info tab (not for Notes, Scenarios or a linked copy)'],
       ['F', 'Open the fields of a Screen, Command, Event or Read Model (not a linked copy)'],
-      ['E', 'Edit the HTML mockup of a Screen'],
+      ['E', 'Open the Content tab of a Screen'],
       ['V', 'View the HTML mockup of a Screen, or of the original of a linked copy (see also Scenarios, Notes)'],
       ['G', 'Select the original of a linked copy and go to it'],
       ['Ctrl+C', 'Remember the element (not Scenarios or Notes) to paste a linked copy of it'],
@@ -125,9 +125,10 @@ const HOTKEYS = [
     ],
   },
   {
-    group: 'Screen mockup popup',
+    group: 'Screen editor',
     keys: [
       ['Ctrl+S', 'Save and close'],
+      ['← / → / Home / End', 'Switch Content / Info when a tab is focused'],
       ['Alt+Enter', 'Full screen on / off'],
       ['Esc', 'Close without saving'],
     ],
