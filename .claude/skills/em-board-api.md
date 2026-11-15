@@ -5,7 +5,7 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 ## Agent rules and storage
 
 - **Use only the API. Never read, create, edit or delete files in `<cwd>/.event-modeling/model/`. Use atomic, board-validated editing endpoints, not whole-Context pushes.**
-- Storage: `contexts.yaml` = ordered `[{ id, name, info?, file }]`; first Context is Default. Each `<file>` (e.g. `backoffice.yaml`) = `{ id, name, chapters }`, slices inline. Chapter `context` must reference a listed Context id.
+- Storage: `contexts.yaml` = ordered `[{ id, name, info?, file }]`; first Context is Default. Each `<file>` (e.g. `backoffice.yaml`) = `{ id, name, tasks?, chapters }`, slices inline. Chapter `context` must reference a listed Context id; Tasks live in that Context file.
 - Every write compacts all `SCREEN` `html`.
 - Board auto-pulls server changes unless it has unpushed changes; then it shows a notice only.
 - Revision: opaque text, changes with each stored-model change; returned as `ETag` by `GET /`, `GET /revision` and all writes. Pushes require `If-Match: "<revision>"`; editing writes check it only if supplied.
@@ -25,6 +25,8 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 | `/search?q=&type=&context=` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q`: case-insensitive name substring; `type`: element type; `context`: Context id |
 | `/chapters/:id?screenContent=&slice=` | Stored Chapter; `screenContent=false` omits Screen `html`. `slice=<sliceId>` filters `slices` only, retaining Chapter fields/all lanes; 404 if slice not in Chapter |
 | `/elements/:id` | Stored element; copy returns its own entry |
+| `/tasks?context=` | `[{ context, id, title, description, status, chapter }]`; omit `context` query for all Contexts. Context order, then task creation order |
+| `/tasks/:id` | Stored task `{ id, title, description, status, chapter }` |
 | `/contexts/:id?screenContent=` | `application/yaml`: one `---` document per Chapter, sorted by `x`, `y`, `id`; empty body for no Chapters. `screenContent=true` (default) or `false` to omit Screen `html` |
 | `/contexts/:id/screens?name=&contains=&chapter=` | Screens including linked copies, without `html`: `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`. `name`: case-insensitive whole name, substring if `contains=true`; `chapter`: case-insensitive Chapter id/name. Neither filter: all Screens. Names need not be unique |
 | `/contexts/:id/screens/:screenId` | Same Screen shape plus its `html` or `url` (only whichever exists). Linked copy: `copyOf` + original's content |
@@ -56,6 +58,9 @@ Unknown body keys or nonexistent body ids: 400; nonexistent path ids: 404. Resul
 | `PATCH /scenarios/:id` | Same fields | |
 | `DELETE /scenarios/:id` | | `{ removed }` |
 | `POST /scenarios/:id/copy` | | Insert immediately after original |
+| `POST /tasks` | `{ context, title, description?, status?, chapter? }` | Title required, trimmed, not blank; description defaults to `""`; status `Open` (default) or `Done`; chapter `null` (default, Context-level) or Chapter id of same Context |
+| `PATCH /tasks/:id` | Same keys, all optional | Moving Context requires a valid destination Chapter or `chapter: null` |
+| `DELETE /tasks/:id` | | `{ removed: id }` |
 
 ### Elements
 
@@ -96,7 +101,7 @@ Require `If-Match`. Push list first, then each Context, passing previous respons
 | PUT path | Body | Effect / result |
 |---|---|---|
 | `/contexts` | `{ contexts: [{ id, name, info? }] }` | Nonempty, unique ids. Replaces `contexts.yaml`, deletes unlisted Context files; `{ count, removed }` |
-| `/contexts/:id` | `{ id, name, chapters }`, slices inline | Body id must match path; listed Context must have same name. Writes Context file; `{ path }` |
+| `/contexts/:id` | `{ id, name, tasks?, chapters }`, slices inline | Body id must match path; listed Context must have same name. Writes Context file; omitted/empty tasks removes them; `{ path }` |
 
 ## Error statuses
 

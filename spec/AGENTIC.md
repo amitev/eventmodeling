@@ -25,8 +25,9 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 - **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
 - **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `summarize` and `wdyt` are slash-command only; they do not auto-activate.
-- **A3.3** Keep skill descriptions concise and token-efficient without losing scope, triggers or constraints.
+- **A3.3** Keep skills concise and token-efficient without losing full intent, scope, triggers or constraints.
 - **A3.4** Orchestrator skills delegate owned procedures to task-specific skills instead of restating them.
+- **A3.5** Every skill edit requires a token-efficiency review before completion: remove repetition/filler, reuse shared procedures/defaults and preserve full intent, scope, triggers and constraints. Fix in the same edit without waiting for user feedback.
 
 ## 4. Walkthrough
 
@@ -62,5 +63,11 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A9.1** Event → Read Model arrow may be omitted only for a linked Read Model copy in a later slice of the same Chapter, with at least three slices strictly between endpoints (index difference ≥4; e.g. slices 1 → 5).
 - **A9.2** Omission reduces arrow clutter, not the Event dependency. It never applies to originals, nearer copies or other arrow types; never remove existing arrows unasked.
 - **A9.3** Skills permit eligible omissions. Reviews do not flag omission alone as a gap; arrow-based dependency reports state that omitted dependencies are absent.
+
+## 10. Review findings as Tasks
+
+- **A10.1** `wdyt` offers to save selected findings as Tasks after reporting; skip when none.
+- **A10.2** Confirm findings, titles and Context/Chapter assignment before Task writes. Never create Tasks automatically; Task approval does not authorize model fixes.
+- **A10.3** Approved Tasks use business-language titles, question/evidence descriptions and `Open` status through editing API. Read back; report saved count/titles and failures.
 
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).
