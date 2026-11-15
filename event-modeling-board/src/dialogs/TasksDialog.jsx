@@ -68,13 +68,21 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
   const [chapterFilter, setChapterFilter] = useState('');
   const context = contexts.find((c) => c.id === contextId);
   const chapterChoices = chapters.filter((chapter) => !contextId || chapter.data.context === contextId);
+  const chapterGroups = contexts
+    .map((context) => ({
+      context,
+      chapters: chapterChoices
+        .filter((chapter) => chapter.data.context === context.id)
+        .sort((a, b) => a.data.name.localeCompare(b.data.name)),
+    }))
+    .filter((group) => group.chapters.length)
+    .sort((a, b) => a.context.name.localeCompare(b.context.name));
   const activeChapterFilter = chapterChoices.some((chapter) => `chapter:${chapter.id}` === chapterFilter)
     ? chapterFilter : '';
   const tasks = contexts
     .filter((c) => !contextId || c.id === contextId)
     .flatMap((c) => (c.tasks ?? []).map((task) => ({ context: c, task })))
     .filter(({ task }) => !activeChapterFilter || `chapter:${task.chapter}` === activeChapterFilter);
-  const contextNames = new Map(contexts.map((context) => [context.id, context.name]));
   const chapterNames = new Map(chapters.map((chapter) => [chapter.id, chapter.data.name]));
   const edit = (value) => {
     setError('');
@@ -121,10 +129,12 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
             onChange={(e) => setChapterFilter(e.target.value)}
           >
             <option value=""></option>
-            {chapterChoices.map((chapter) => (
-              <option key={chapter.id} value={`chapter:${chapter.id}`}>
-                {contextId ? chapter.data.name : `${contextNames.get(chapter.data.context)} / ${chapter.data.name}`}
-              </option>
+            {chapterGroups.map(({ context, chapters }) => (
+              <optgroup key={context.id} label={context.name}>
+                {chapters.map((chapter) => (
+                  <option key={chapter.id} value={`chapter:${chapter.id}`}>{chapter.data.name}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

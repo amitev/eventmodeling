@@ -149,6 +149,9 @@ function Board() {
     }
   });
   const filterId = contexts.some((c) => c.id === contextFilter) ? contextFilter : '';
+  const openTaskCount = useMemo(() => contexts.reduce((count, context) =>
+    filterId && context.id !== filterId ? count : count + (context.tasks ?? []).filter((task) => task.status === 'Open').length,
+  0), [contexts, filterId]);
   useEffect(() => () => clearTimeout(edgeHoverTimer.current.timer), []);
   useEffect(() => {
     try {
@@ -1699,11 +1702,19 @@ function Board() {
           Chapter
         </button>
         <span className="spacer keep" />
-        <button ref={tasksButtonRef} className="keep" onClick={() => setTasksOpen((open) => !open)} title="Tasks" aria-haspopup="dialog" aria-expanded={tasksOpen}>
+        <button
+          ref={tasksButtonRef}
+          className="tasks-button keep"
+          onClick={() => setTasksOpen((open) => !open)}
+          title={`Tasks (${openTaskCount} open)`}
+          aria-label={`Tasks (${openTaskCount} open)`}
+          aria-haspopup="dialog"
+          aria-expanded={tasksOpen}
+        >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
             <path d="M1.5 4l1.5 1.5L5.5 2.5M7 4h7M1.5 10l1.5 1.5L5.5 8.5M7 10h7M7 14h7" />
           </svg>
-          Tasks
+          <span className="task-count" aria-hidden="true">{openTaskCount}</span>
         </button>
         <button
           className={`hotkeys-btn keep${overview ? ' pressed' : ''}`}
