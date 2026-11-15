@@ -31,10 +31,10 @@ Business requirements agreed so far. They describe behaviour, not implementation
 
 ### Identifiers
 
-- **R1.14** Every Context, Chapter, lane, slice, element and scenario has an **id** matching `^[A-Za-z0-9]{6}$`, generated randomly from the browser's secure random source (not a counter or the time) on creation. An id is unique among all items of the board, whatever their kind, and never changes (renaming, moving, resizing, reordering).
+- **R1.14** Every Context, Chapter, lane, slice, element, scenario and task has an **id** matching `^[A-Za-z0-9]{6}$`, generated randomly from the browser's secure random source (not a counter or the time) on creation. An id is unique among all items of the board, whatever their kind, and never changes (renaming, moving, resizing, reordering).
 - **R1.15** Everything that creates items uses such ids: the starting board (R1.4), **+ New context...** (R1b.4), **+ Chapter**, the slice **+** button, lane buttons and Cell menu (R5a.13). An id already in use is regenerated.
 - **R1.16** Connections (arrows) have no id; one is identified by its two items and direction (R4.5).
-- **R1.17** **Popups.** Every popup (modal over a blurred backdrop: info and Notes panel, scenario popup, hotkey help, any future one) closes on a click on the backdrop, like Cancel/Close (changes discarded). Only press and release both on the backdrop close it, so selecting text and releasing outside does not. A new popup must use the shared `useBackdropClose` hook and `useModalFocus` (focus moves into the popup, so Esc does not reach the element that was focused on the board and deselect it). **Buttons:** the popup's bottom row is `.info-actions` (or `.scenario-actions`); **Save** has class `primary` (blue), **Cancel** and **Close** are white; Save comes first.
+- **R1.17** **Modal popups.** Every modal popup (over a blurred backdrop: info and Notes panel, scenario popup, hotkey help, any future one) closes on a click on the backdrop, like Cancel/Close (changes discarded). Only press and release both on the backdrop close it, so selecting text and releasing outside does not. A new modal popup must use the shared `useBackdropClose` hook and `useModalFocus` (focus moves into the popup, so Esc does not reach the element that was focused on the board and deselect it). Non-modal Tasks follow R12.3. **Buttons:** the popup's bottom row is `.info-actions` (or `.scenario-actions`); **Save** has class `primary` (blue), **Cancel** and **Close** are white; Save comes first.
 - **R1.18** Ids are never shown. Users refer to items by name; items refer to each other by id, never name, so renaming cannot break a reference (lanes: R2.9).
 - **R1.19** **File-safe names.** Context names become file names on the server (SERVER.md S3.3), so they must be valid on every OS. Chapter and slice names are filtered the same way, though the server no longer uses them as file names. When one is typed or pasted (Chapter and slice: the inline input; Context: the name prompt):
   - the characters `\ / : * ? " < > |` and control characters are dropped as typed (nothing is shown); in a prompt they are removed from the result;
@@ -125,9 +125,10 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ## 1f. High level view
 
 - **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
-- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
+- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, Tasks, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
 - **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Read Model green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
 - **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning, zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
+  - Tasks are an exception: their popup stays editable (R12.2).
 
 ## 2. Lanes
 
@@ -383,7 +384,7 @@ The board file is the single, complete description of a board, written and read 
 - **R6.2** The file is one JSON object with exactly these fields, in this order:
   - `format`: the text `"event-model"`;
   - `version`: the number `1`;
-  - `contexts`: the list of Contexts, each with `id` and `name`;
+  - `contexts`: the list of Contexts, each with `id`, `name`, optional `info`, optional `tasks` (R12.1);
   - `chapters`: the list of Chapters.
 
   No timestamp, nothing else.
@@ -418,6 +419,7 @@ The board file is the single, complete description of a board, written and read 
 - **R6.8** The order in the file is fixed:
   - Chapters by `x`, then `y`, then `id`;
   - Contexts in list order (the first is the Default, R1b.3);
+  - tasks in creation order within each Context; tasks moved from another Context append, keeping their order;
   - lanes top to bottom, slices left to right;
   - elements within a slice by `x`, then lane (top first), then `id`;
   - each `connectsTo` in the order its targets appear in the file.
@@ -439,6 +441,7 @@ The board file is the single, complete description of a board, written and read 
   - **References.** A Chapter's `context` is the id of a Context of the file. An element's `lane` is the id of a lane of its own Chapter whose type takes the element's type (R2.10). Each `connectsTo` entry is an existing element id for an element, or Chapter id for a Chapter or slice; not the source's Chapter for a slice, not the owner and not repeated. A `scenarios` or `notes` element is neither owner nor target. A `copyOf` is the id of a non-copy element of the same type (not `scenarios` or `notes`). In a scenario, each `element` is the id of a non-copy element of the Scenarios element's Chapter: an `event` in `given` and `then`, a `command` in `when`.
   - **Values.** `name` of a Context, Chapter, lane or slice, and `name` of a scenario, is not empty. An element `type` is one of the seven types and a lane `type` one of the five (R2.10), written in upper case (a value in lower case is rejected); a lane `color` is one of the twelve colours (R2.6). When present, `html` is a non-empty text on a `screen`, `url` an `http://` or `https://` address on a `screen` without `html`, `markdown` a non-empty text on a `notes` element, `color` (`red`, `green` or `yellow`) only on a `notes` element, `info` a non-empty text (not on `notes` or `scenarios`), `fields` a non-empty list on a `screen`, `command`, `event` or `read_model` (never on a linked copy), and `flowEnd` is `true`. A slice `type` is `null` or one of the four types; its value is not used (the type is recomputed, R5b.2). A field has exactly the keys of R9.6: `name` non-empty and unique in its list, `type` one of the eight, the booleans true or false, `fields` only (and always) on an `object`. `scenarios` is present exactly for a `scenarios` element, and `error` is `null` when `then` is not empty. `x`, `y` and `width` are finite numbers. A scenario entry's `example` is an object whose values are text, `true`/`false`, or lists and objects of these.
   - **Geometry.** A slice `width` is at least 120. An element `x` is at least 40 (20 for Scenarios) and every element fits its slice with the margins (R5.16, R5.17): `x` plus element width (160px; 280px for Scenarios) plus margin (40px; 20px for Scenarios) is at most the slice `width`. A Spec lane holds at most one element per slice (R3.21). Nothing is corrected: a file breaking a check is rejected.
+  - **Tasks.** `tasks`, when present, is a list of exactly the fields of R12.1. Ids follow the checks above; title is not blank, description is text, status is `Open` or `Done`, chapter is `null` or a Chapter id of the owning Context.
 - **R7.5** An accepted file is laid out as a saved board (R5.12). After a pull no Cell is selected, the first Chapter is active, and the pull is one undo step (R8.1).
 - **R7.6** Files in any earlier format are rejected by the R7.4 checks (no `format` field), with a message saying so.
 
@@ -503,6 +506,13 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R11.5** Navigation: **←** / **→** go to the previous / next Screen (stopping at the ends); a click on another Screen makes it current. The strip slides to centre it.
 - **R11.6** Buttons, in this order: **Smaller** and **Larger** (size of the current Screen, six steps from 30% to 100% of what fits the window; starts at 100%), **Fit to the window** (100%), **Full screen** (the popup fills the window and back; **Alt+Enter** does the same). The popup always opens full screen. Zoom and full screen are not remembered. A button at its limit is disabled.
 - **R11.7** The popup changes nothing on the board and is not an undo step. It is listed in the hotkey help (R1d.1).
+
+## 12. Tasks
+
+- **R12.1** Each Context owns an optional `tasks` list, omitted when empty. Each task has these keys in order: `id` (R1.14), `title` (required, trimmed, not blank), `description` (text, empty allowed), `status` (`Open` default, or `Done`), `chapter` (`null` for Context itself, otherwise a Chapter id of that Context). Saved and synced with the Context.
+- **R12.2** A **Tasks** button in top header toggles a non-modal popup, also in high level view. Horizontally centred, 8px below header; follows header height changes and fits remaining window height with 8px bottom gap. No backdrop or blur; board stays usable. Shows current Context's tasks, or all Contexts' tasks when filter is **All contexts**, in Context order then task order (R6.8). Lists title, description, status and Context/Chapter names; no extra filters.
+- **R12.3** Popup supports Add, Edit, Delete (confirm first), status changes and Context/Chapter assignment. New task uses filtered Context; with **All contexts**, require a Context choice. Chapter choices belong to chosen Context; changing Context resets Chapter to Context itself. Save commits one task. List status changes save at once. Each mutation is one undo step (R8.1). Cancel, Esc inside popup or click outside closes it and discards unsaved form only; outside press and release required. Uses `useOutsideClose` and `useModalFocus` instead of R1.17's backdrop.
+- **R12.4** Deleting a Chapter keeps its tasks in its Context with `chapter: null`. Moving a Chapter to another Context moves its tasks with it. Deleting a Context moves all its tasks to Default with its Chapters (R1b.6); Chapter links stay.
 
 ## Out of scope for now
 

@@ -176,7 +176,10 @@ export function serialize(nodes, edges, contexts) {
   return {
     format: 'event-model',
     version: 1,
-    contexts: contexts.map((c) => ({ id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}) })),
+    contexts: contexts.map((c) => ({
+      id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}),
+      ...(c.tasks?.length ? { tasks: c.tasks.map(({ id, title, description, status, chapter }) => ({ id, title, description, status, chapter })) } : {}),
+    })),
     chapters,
   };
 }
@@ -323,11 +326,27 @@ export function parseBoard(text) {
 
   data.contexts.forEach((x, xi) => {
     const xp = `contexts[${xi}]`;
-    object(x, ['id', 'name'], xp, ['info']);
+    object(x, ['id', 'name'], xp, ['info', 'tasks']);
     claim(x.id, 'context', at(xp, 'id'));
     name(x.name, at(xp, 'name'));
     optionalInfo(x, xp);
-    contexts.push({ id: x.id, name: x.name, ...(x.info ? { info: x.info } : {}) });
+    const tasks = [];
+    if (hasKey(x, 'tasks')) {
+      list(x.tasks, at(xp, 'tasks'));
+      x.tasks.forEach((task, ti) => {
+        const tp = `${xp}.tasks[${ti}]`;
+        object(task, ['id', 'title', 'description', 'status', 'chapter'], tp);
+        claim(task.id, 'task', at(tp, 'id'));
+        name(task.title, at(tp, 'title'));
+        string(task.description, at(tp, 'description'));
+        if (!['Open', 'Done'].includes(task.status)) fail(at(tp, 'status'), 'must be Open or Done');
+        if (task.chapter !== null && !data.chapters.some((c) => isObject(c) && c.id === task.chapter && c.context === x.id)) {
+          fail(at(tp, 'chapter'), 'must be null or a Chapter id of this Context');
+        }
+        tasks.push({ id: task.id, title: task.title, description: task.description, status: task.status, chapter: task.chapter });
+      });
+    }
+    contexts.push({ id: x.id, name: x.name, ...(x.info ? { info: x.info } : {}), ...(tasks.length ? { tasks } : {}) });
   });
 
   data.chapters.forEach((c, ci) => {

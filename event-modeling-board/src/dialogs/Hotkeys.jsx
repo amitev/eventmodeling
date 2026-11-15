@@ -144,6 +144,10 @@ const HOTKEYS = [
     ],
   },
   {
+    group: 'Tasks popup',
+    keys: [['Esc', 'Close and discard the unsaved form']],
+  },
+  {
     group: 'Fields popup',
     keys: [
       ['Ctrl+S', 'Save and close'],

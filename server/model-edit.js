@@ -17,6 +17,7 @@ import {
   PROCESSOR_ICONS,
   REQUIRED_LANES,
   SLICE_MIN_WIDTH,
+  TASK_STATUSES,
   UNCONNECTABLE,
   canonical,
   isExampleValue,
@@ -44,11 +45,16 @@ function index(model) {
     slices: new Map(),
     elements: new Map(),
     scenarios: new Map(),
+    tasks: new Map(),
     ids: new Set(),
   };
   for (const c of model.contexts) {
     ix.contexts.set(c.id, c);
     ix.ids.add(c.id);
+    for (const task of c.tasks ?? []) {
+      ix.tasks.set(task.id, { context: c, task });
+      ix.ids.add(task.id);
+    }
   }
   for (const chapter of model.chapters) {
     ix.chapters.set(chapter.id, chapter);
@@ -84,7 +90,7 @@ function newId(ix) {
 // The item of `kind` ('chapters', 'lanes', ...) with `id`, taken from the final model.
 const lookup = (kind, id) => (model) => {
   const hit = index(model)[kind].get(id);
-  const own = { lanes: 'lane', slices: 'slice', elements: 'element', scenarios: 'scenario' }[kind];
+  const own = { lanes: 'lane', slices: 'slice', elements: 'element', scenarios: 'scenario', tasks: 'task' }[kind];
   return own ? hit[own] : hit;
 };
 
@@ -321,6 +327,7 @@ function rules() {
     processorIcons: PROCESSOR_ICONS,
     fieldTypes: FIELD_TYPES,
     fieldFlags: FIELD_FLAGS,
+    taskStatuses: TASK_STATUSES,
   };
 }
 
@@ -428,6 +435,9 @@ function deleteContext(model, { params }) {
       moved.push(c.id);
     }
   }
+  if (context.tasks?.length) {
+    model.contexts[0].tasks = [...(model.contexts[0].tasks ?? []), ...context.tasks];
+  }
   model.contexts = model.contexts.filter((c) => c !== context);
   return { moved };
 }
@@ -459,7 +469,15 @@ function patchChapter(model, { params, body: b }) {
   if ('name' in p) chapter.name = text(p.name, 'name');
   if ('info' in p) setOptional(chapter, 'info', p.info);
   if ('context' in p) {
-    referenced(ix.contexts, p.context, 'context');
+    const destination = referenced(ix.contexts, p.context, 'context');
+    if (p.context !== chapter.context) {
+      const source = ix.contexts.get(chapter.context);
+      const moved = (source.tasks ?? []).filter((task) => task.chapter === chapter.id);
+      if (moved.length) {
+        source.tasks = source.tasks.filter((task) => task.chapter !== chapter.id);
+        destination.tasks = [...(destination.tasks ?? []), ...moved];
+      }
+    }
     chapter.context = p.context;
   }
   if ('x' in p) chapter.x = grid(p.x, 'x');
@@ -471,6 +489,9 @@ function deleteChapter(model, { params }) {
   const chapter = found(index(model).chapters, params.id, 'chapter');
   const removed = removeElements(model, chapter.slices.flatMap((s) => s.elements.map((e) => e.id)));
   model.chapters = model.chapters.filter((c) => c !== chapter);
+  for (const context of model.contexts) {
+    for (const task of context.tasks ?? []) if (task.chapter === chapter.id) task.chapter = null;
+  }
   for (const c of model.chapters) {
     c.connectsTo = c.connectsTo.filter((t) => t !== chapter.id);
     for (const s of c.slices) s.connectsTo = s.connectsTo.filter((t) => t !== chapter.id);
@@ -880,6 +901,61 @@ function copyScenario(model, { params }) {
   return lookup('scenarios', copy.id);
 }
 
+// ---------- Tasks ----------
+
+function listTasks(model, { query }) {
+  const ix = index(model);
+  if (query.context !== undefined) found(ix.contexts, query.context, 'context');
+  return model.contexts
+    .filter((context) => query.context === undefined || context.id === query.context)
+    .flatMap((context) => (context.tasks ?? []).map((task) => ({ context: context.id, ...task })));
+}
+
+function applyTask(model, context, task, p) {
+  if ('title' in p) task.title = text(p.title, 'title');
+  if ('description' in p) {
+    if (typeof p.description !== 'string') throw bad('description must be a text');
+    task.description = p.description;
+  }
+  if ('status' in p) {
+    if (!TASK_STATUSES.includes(p.status)) throw bad('status must be Open or Done');
+    task.status = p.status;
+  }
+  if ('chapter' in p) task.chapter = p.chapter;
+  if (task.chapter !== null && !model.chapters.some((c) => c.id === task.chapter && c.context === context.id)) {
+    throw bad('chapter must be null or a Chapter id of this Context');
+  }
+}
+
+function createTask(model, { body: b }) {
+  const p = body(b, ['context', 'title', 'description', 'status', 'chapter']);
+  const ix = index(model);
+  const context = referenced(ix.contexts, p.context, 'context');
+  const task = { id: newId(ix), title: text(p.title, 'title'), description: '', status: 'Open', chapter: null };
+  applyTask(model, context, task, p);
+  context.tasks = [...(context.tasks ?? []), task];
+  return lookup('tasks', task.id);
+}
+
+function patchTask(model, { params, body: b }) {
+  const p = body(b, ['context', 'title', 'description', 'status', 'chapter']);
+  const ix = index(model);
+  const { context: source, task } = found(ix.tasks, params.id, 'task');
+  const context = 'context' in p ? referenced(ix.contexts, p.context, 'context') : source;
+  applyTask(model, context, task, p);
+  if (context !== source) {
+    source.tasks = source.tasks.filter((t) => t !== task);
+    context.tasks = [...(context.tasks ?? []), task];
+  }
+  return lookup('tasks', task.id);
+}
+
+function deleteTask(model, { params }) {
+  const { context, task } = found(index(model).tasks, params.id, 'task');
+  context.tasks = context.tasks.filter((t) => t !== task);
+  return { removed: task.id };
+}
+
 // ---------- Batch ----------
 
 function substitute(value, names) {
@@ -928,6 +1004,11 @@ export const ROUTES = [
   R('GET', '/rules', rules, read),
   R('GET', '/outline', outline, read),
   R('GET', '/search', search, read),
+  R('GET', '/tasks', listTasks, read),
+  R('GET', '/tasks/:id', (model, { params }) => structuredClone(found(index(model).tasks, params.id, 'task').task), read),
+  R('POST', '/tasks', createTask, created),
+  R('PATCH', '/tasks/:id', patchTask),
+  R('DELETE', '/tasks/:id', deleteTask),
   R('GET', '/chapters/:id', getChapter, read),
   R('GET', '/elements/:id', (model, { params }) => structuredClone(found(index(model).elements, params.id, 'element').element), read),
   R('POST', '/contexts', createContext, created),

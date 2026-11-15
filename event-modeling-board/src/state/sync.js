@@ -46,7 +46,7 @@ export async function pushBoard(nodes, edges, contexts, revision) {
     pushed.push(current);
   };
   try {
-    await send('/api/model/contexts', { contexts: list });
+    await send('/api/model/contexts', { contexts: list.map(({ tasks, ...context }) => context) });
     for (const context of list) {
       await send(`/api/model/contexts/${encodeURIComponent(context.id)}`, {
         ...context,

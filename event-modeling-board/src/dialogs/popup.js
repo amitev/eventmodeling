@@ -15,7 +15,7 @@ export function useModalFocus() {
 
 // Props for the blurred backdrop of a popup: a click on it closes the popup, but only when the
 // press and the release are both on the backdrop, so selecting text in the popup and letting go
-// outside does not close it. Every popup uses this (R1.17).
+// outside does not close it. Every modal popup uses this (R1.17).
 export function useBackdropClose(onClose) {
   const pressedOutside = useRef(false);
   return {
@@ -26,4 +26,21 @@ export function useBackdropClose(onClose) {
       if (e.target === e.currentTarget && pressedOutside.current) onClose();
     },
   };
+}
+
+export function useOutsideClose(ref, onClose, ignoreRef) {
+  const pressedOutside = useRef(false);
+  useEffect(() => {
+    const outside = (e) => !ref.current?.contains(e.target) && !ignoreRef.current?.contains(e.target);
+    const onDown = (e) => { pressedOutside.current = outside(e); };
+    const onClick = (e) => {
+      if (pressedOutside.current && outside(e)) onClose();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('click', onClick, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('click', onClick, true);
+    };
+  }, [ref, onClose, ignoreRef]);
 }

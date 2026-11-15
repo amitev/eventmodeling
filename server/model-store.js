@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
 import { HttpError } from './http-error.js';
-import { byPosition, canonical, validateModel } from './model-rules.js';
+import { byPosition, canonical, orderedTask, validateModel, validateTasks } from './model-rules.js';
 
 export { HttpError };
 export const DATA_DIR = '.event-modeling';
@@ -53,9 +53,28 @@ function compactScreens(chapter) {
 
 const yaml = (data) => dump(data, { noRefs: true, lineWidth: -1 });
 
+function checkContextTasks(doc) {
+  if (doc.tasks === undefined) return;
+  const ids = new Set([doc.id]);
+  const reserve = (items) => {
+    if (!Array.isArray(items)) return;
+    for (const item of items) {
+      if (!isObject(item)) continue;
+      ids.add(item.id);
+      for (const key of ['lanes', 'slices', 'elements', 'scenarios']) reserve(item[key]);
+    }
+  };
+  reserve(doc.chapters);
+  validateTasks(doc.tasks, doc.id, doc.chapters, (id, kind, at) => {
+    if (!isText(id)) throw new HttpError(400, `${at}: must be a non-empty text`);
+    if (ids.has(id)) throw new HttpError(400, `${at}: duplicate id "${id}"`);
+    ids.add(id);
+  }, 'tasks');
+}
+
 // The board kept under <root>/.event-modeling/model/:
 //   contexts.yaml        the ordered Contexts [{ id, name, file }]
-//   <context>.yaml       one Context { id, name, chapters: [Chapter] } as exported, slices inline
+//   <context>.yaml       one Context { id, name, tasks?, chapters: [Chapter] }, slices inline
 // A Context is identified by its id inside the file, so a renamed Context (new `file`) replaces its old file.
 // All operations run one at a time.
 export class ModelStore {
@@ -125,9 +144,11 @@ export class ModelStore {
     const model = { contexts: (stored ?? []).map(({ id, name, info }) => ({ id, name, ...(info ? { info } : {}) })), chapters: [] };
     for (const entry of await this.#scan()) {
       const doc = await this.#readContextFile(entry.path, true);
-      if (!model.contexts.some((c) => c.id === doc.id)) {
+      const context = model.contexts.find((c) => c.id === doc.id);
+      if (!context) {
         throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.id}" is not in ${CONTEXTS_FILE}`);
       }
+      if (doc.tasks?.length) context.tasks = structuredClone(doc.tasks);
       model.chapters.push(...structuredClone(doc.chapters));
     }
     try {
@@ -153,7 +174,12 @@ export class ModelStore {
       if (!same) await this.#write(target, content);
     };
     for (const c of list) {
-      await put(c.file, yaml({ id: c.id, name: c.name, chapters: model.chapters.filter((ch) => ch.context === c.id) }));
+      const tasks = model.contexts.find((context) => context.id === c.id).tasks;
+      await put(c.file, yaml({
+        id: c.id, name: c.name,
+        ...(tasks?.length ? { tasks: tasks.map(orderedTask) } : {}),
+        chapters: model.chapters.filter((ch) => ch.context === c.id),
+      }));
     }
     await put(CONTEXTS_FILE, yaml(list));
     const keep = new Map(list.map((c) => [c.id, c.file]));
@@ -225,6 +251,7 @@ export class ModelStore {
         if (c.context !== doc.id) throw new Error(`chapter "${c.id}" is not of context "${doc.id}"`);
         if (!validSlices(c.slices)) throw new Error('slices must be a list of slices with an id');
       }
+      checkContextTasks(doc);
     });
   }
 
@@ -297,6 +324,7 @@ export class ModelStore {
         throw new HttpError(400, `Chapter "${c.id}": slices must be a list of slices with unique ids`);
       }
     }
+    checkContextTasks(context);
 
     return this.#mutate(ifMatch, async () => {
       const stored = (await this.#readContexts(false))?.find((c) => c.id === id);
@@ -318,7 +346,11 @@ export class ModelStore {
         }
       }
       await fs.mkdir(this.#model, { recursive: true });
-      await this.#write(target, yaml({ id, name: context.name, chapters: chapters.map(compactScreens) }));
+      await this.#write(target, yaml({
+        id, name: context.name,
+        ...(context.tasks?.length ? { tasks: context.tasks.map(orderedTask) } : {}),
+        chapters: chapters.map(compactScreens),
+      }));
       for (const old of stale) await fs.rm(old, { force: true });
       return { path: this.#relative(target) };
     });
@@ -330,6 +362,7 @@ export class ModelStore {
     return this.#run(async () => {
       const contexts = await this.#readContexts(true);
       if (!contexts) throw new HttpError(404, `No model found in ${DATA_DIR}/model`);
+      const taskLists = new Map();
       const chapters = [];
       for (const entry of await this.#scan()) {
         const doc = await this.#readContextFile(entry.path, true);
@@ -337,13 +370,17 @@ export class ModelStore {
           throw new HttpError(422, `${this.#relative(entry.path)}: context "${doc.id}" is not in ${CONTEXTS_FILE}`);
         }
         chapters.push(...doc.chapters);
+        if (doc.tasks?.length) taskLists.set(doc.id, doc.tasks.map(orderedTask));
       }
       chapters.sort(byPosition);
       return {
         data: {
           format: 'event-model',
           version: 1,
-          contexts: contexts.map(({ id, name, info }) => ({ id, name, ...(info ? { info } : {}) })),
+          contexts: contexts.map(({ id, name, info }) => ({
+            id, name, ...(info ? { info } : {}),
+            ...(taskLists.has(id) ? { tasks: taskLists.get(id) } : {}),
+          })),
           chapters,
         },
         revision: await this.#revisionNow(),

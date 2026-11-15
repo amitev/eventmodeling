@@ -40,7 +40,7 @@ The board pushes its Contexts, with their Chapters, to the server after every ch
 - **S3.1** Files live in `<cwd>/.event-modeling/model/`, where `<cwd>` is the directory the CLI was started in. The folder is created as needed.
 - **S3.2** Written with `js-yaml`.
   - `contexts.yaml`: the ordered list of Contexts, each `id`, `name`, optional `info` (omitted when empty) and `file` (the file name of the Context file, e.g. `backoffice.yaml`). The first is the Default. The server sets `file` from the name on push (S3.3); the board does not send it. Reads use `file`, they do not recompute it. Not part of the export file (R6.2).
-  - `<context>.yaml`: one file per Context: `id`, `name` and `chapters`, the list of its Chapters as received (MODELING_BOARD.md R6.3), slices inline (R6.4). Every Chapter's `context` equals the Context `id`.
+  - `<context>.yaml`: one file per Context: `id`, `name`, optional `tasks` (MODELING_BOARD.md R12.1), and `chapters`, the list of its Chapters as received (R6.3), slices inline (R6.4). Every Chapter's `context` equals the Context `id`. Tasks live here, never in `contexts.yaml`.
   - The server does not check a Chapter further; the board does on pull (R10.2).
 - **S3.3** `file` is the Context name lower-cased, trimmed, each space replaced by `_`, plus `.yaml`. A rename changes it; the Context push (S3.5) replaces the old file.
 - **S3.4** Names are never changed to fit: a Context name that contains `\ / : * ? " < > |` or a control character, ends with a dot, is empty or is a Windows device name (`con`, `prn`, `aux`, `nul`, `com1`-`com9`, `lpt1`-`lpt9`, also with an extension) gets 400. So does `contexts` (it would be `contexts.yaml`, S3.2). The board prevents these names (MODELING_BOARD.md R1.19); imported ones can still reach the server. Chapter and slice names are not file names and are not checked.
@@ -68,7 +68,7 @@ Errors: `{ "error": text }` with the status below. Unknown `/api` paths get 404.
 | Request | Body | Result |
 |---|---|---|
 | `PUT /api/model/contexts` | `{ contexts: [{ id, name, info? }] }`: not empty, unique ids, `info` text if present | Writes `contexts.yaml` with `file` added (S3.2); deletes the files of Contexts not listed (S3.5); `{ count, removed }`. `If-Match` required (S4.2). 400 invalid body or name (S3.4), 409 same `file` twice (S3.6), 412 stale revision, 428 no `If-Match` |
-| `PUT /api/model/contexts/:id` | The whole Context `{ id, name, chapters }` (R6.3, slices inline); `id` equals `:id`; every Chapter has `id`, `name`, `context` = `:id` and slices with unique ids; chapter ids unique | Writes the Context file (S3.2); `{ path }` of it. `If-Match` required (S4.2). 400 invalid body or name, 409 collision, unknown Context or other name (S3.6), 412 stale revision, 428 no `If-Match` |
+| `PUT /api/model/contexts/:id` | The whole Context `{ id, name, tasks?, chapters }` (R6.3, R12.1, slices inline); `id` equals `:id`; every Chapter has `id`, `name`, `context` = `:id` and slices with unique ids; chapter ids unique | Writes the Context file (S3.2); `{ path }` of it. Tasks validated as R12.1; omitted/empty removes tasks. `If-Match` required (S4.2). 400 invalid body or name, 409 collision, unknown Context or other name (S3.6), 412 stale revision, 428 no `If-Match` |
 | `GET /api/model/contexts/:id?screenContent=` | | The Context's Chapters as multi-document YAML (S3.11); `screenContent=false` omits Screen `html` (S3.12). 400 invalid `screenContent`, 404 no `contexts.yaml` or unknown Context, 422 the Context file cannot be read, is invalid or holds another Context (as `GET /api/model`) |
 | `GET /api/model/contexts/:id/screens?name=&chapter=&contains=` | | The Context's Screens without `html` (S3.13). 400 invalid `contains`, 404 unknown Context, 422 as `GET /api/model/contexts/:id` |
 | `GET /api/model/contexts/:id/screens/:screenId` | | The Screen with its `html` or `url` (S3.14). 404 unknown Context or Screen, 422 as above |
@@ -111,10 +111,11 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
   - Replacing `fields` copies nothing downstream. Clients apply Propagate (R9.4) with explicit downstream PATCHes, atomically via S4.20.
 - **S4.18** **Connections.** `POST /connections` `{ from, to }` between two elements; the server sets the direction (R4.7); a repeat is refused (R4.5). The source's fields are copied to the target as R9.4 says for an added arrow (without Propagate). `DELETE /connections` `{ from, to }` (either order).
 - **S4.19** **Scenarios** (R3.11 to R3.16), addressed by their id. `POST /elements/:id/scenarios` `{ name, description?, given?, when?, then?, error?, index? }` appends (or inserts at `index`) to a Scenarios element. `PATCH /scenarios/:id` the same fields. `DELETE /scenarios/:id`. `POST /scenarios/:id/copy` inserts an identical scenario right after (R3.14). Entries and `error` as R6.5, checked as R7.4.
+- **S4.23** **Tasks.** `GET /tasks?context=` lists tasks as `{ context, id, title, description, status, chapter }`, all Contexts by default; unknown Context 404. Order as R6.8. `GET /tasks/:id` returns task as R12.1. `POST /tasks` `{ context, title, description?, status?, chapter? }` creates one with defaults from R12.1. `PATCH /tasks/:id` accepts same keys, all optional; `context` may move it, but `chapter` must remain valid in destination (send `null` to detach). `DELETE /tasks/:id` returns `{ removed: id }`. Chapter/Context changes follow R12.4. `/rules` includes `taskStatuses`.
 
 ### Batch
 
-- **S4.20** `POST /ops` `{ ops: [{ method, path, body?, as? }] }` runs the requests of S4.12 to S4.19 and S4.22 in order, atomically: all or none. One write, one revision. `path` is relative to `/api/model`. `as` names the `id` of the item an op creates; a later `path` segment or `body` value that is exactly `"$<as>"` is replaced by it. Result `{ results: [{ status, body }] }`, in order. On the first error nothing is written and the response has that op's status and `{ "error": text }` with the text starting `ops[<index>]: `.
+- **S4.20** `POST /ops` `{ ops: [{ method, path, body?, as? }] }` runs the requests of S4.12 to S4.19, S4.22 and S4.23 in order, atomically: all or none. One write, one revision. `path` is relative to `/api/model`. `as` names the `id` of the item an op creates; a later `path` segment or `body` value that is exactly `"$<as>"` is replaced by it. Result `{ results: [{ status, body }] }`, in order. On the first error nothing is written and the response has that op's status and `{ "error": text }` with the text starting `ops[<index>]: `.
 
 ### Editing API table
 
@@ -129,6 +130,7 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 | `POST /api/model/elements`, `PATCH`/`DELETE /api/model/elements/:id` | S4.16, S4.17 |
 | `POST`/`DELETE /api/model/connections` | S4.18 |
 | `POST /api/model/elements/:id/scenarios`, `PATCH`/`DELETE /api/model/scenarios/:id`, `POST /api/model/scenarios/:id/copy` | S4.19 |
+| `GET`/`POST /api/model/tasks`, `GET`/`PATCH`/`DELETE /api/model/tasks/:id` | S4.23 |
 | `POST /api/model/ops` | S4.20 |
 
 Statuses as S4.4; 422 as `GET /api/model` when a stored file cannot be read.

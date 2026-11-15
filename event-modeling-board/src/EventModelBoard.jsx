@@ -60,6 +60,7 @@ import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
 import { MovieStrip } from './dialogs/MovieStrip.jsx';
+import { TasksDialog } from './dialogs/TasksDialog.jsx';
 import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
@@ -182,7 +183,7 @@ function Board() {
   const newIds = (count = 1) => {
     const used = new Set([
       ...getNodes().flatMap((n) => [n.id, ...(n.data.scenarios ?? []).map((s) => s.id)]),
-      ...contexts.map((c) => c.id),
+      ...contexts.flatMap((c) => [c.id, ...(c.tasks ?? []).map((task) => task.id)]),
     ]);
     return Array.from({ length: count }, () => uniqueId(used));
   };
@@ -294,6 +295,9 @@ function Board() {
   // The Context whose info is being edited (toolbar button).
   const [contextInfoId, setContextInfoId] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const tasksButtonRef = useRef(null);
+  const headerRef = useRef(null);
   // The element whose title is to be edited (asked for by the Enter hotkey).
   const [titleEditId, setTitleEditId] = useState(null);
   // The scenario being edited: { nodeId, scenarioId } (scenarioId null for a new one).
@@ -774,6 +778,9 @@ function Board() {
       if (!confirmCopies(nodes, gone)) return;
       setNodes(nodes.filter((n) => !gone.has(n.id)));
       setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
+      setContexts((cs) => cs.map((c) => c.tasks?.some((task) => task.chapter === chapterId)
+        ? { ...c, tasks: c.tasks.map((task) => task.chapter === chapterId ? { ...task, chapter: null } : task) }
+        : c));
     },
     [nodes, setNodes, setEdges]
   );
@@ -844,10 +851,20 @@ function Board() {
     [setNodes]
   );
 
-  const setChapterContext = (chapterId, contextId) =>
+  const setChapterContext = (chapterId, contextId) => {
     setNodes((ns) =>
       ns.map((n) => (n.id === chapterId ? { ...n, data: { ...n.data, context: contextId } } : n))
     );
+    setContexts((cs) => {
+      const moved = cs.filter((c) => c.id !== contextId).flatMap((c) => (c.tasks ?? []).filter((task) => task.chapter === chapterId));
+      if (!moved.length) return cs;
+      return cs.map((c) => c.id === contextId
+        ? { ...c, tasks: [...(c.tasks ?? []), ...moved] }
+        : c.tasks?.some((task) => task.chapter === chapterId)
+          ? { ...c, tasks: c.tasks.filter((task) => task.chapter !== chapterId) }
+          : c);
+    });
+  };
 
   // Header creation selects an empty Context; Chapter creation assigns it (R1b.9).
   const addContext = (chapterId) => {
@@ -888,8 +905,13 @@ function Board() {
     const fallback = contexts[0];
     if (!contextId || contextId === fallback.id) return;
     const used = chapters.filter((c) => c.data.context === contextId).length;
-    if (!window.confirm(`Delete this context? ${used} chapter(s) move to "${fallback.name}".`)) return;
-    setContexts((cs) => cs.filter((c) => c.id !== contextId));
+    if (!window.confirm(`Delete this context? ${used} chapter(s) and its tasks move to "${fallback.name}".`)) return;
+    setContexts((cs) => {
+      const tasks = cs.find((c) => c.id === contextId)?.tasks ?? [];
+      return cs.filter((c) => c.id !== contextId).map((c) => c.id === fallback.id && tasks.length
+        ? { ...c, tasks: [...(c.tasks ?? []), ...tasks] }
+        : c);
+    });
     if (filterId === contextId) setContextFilter('');
     setNodes((ns) =>
       ns.map((n) =>
@@ -898,6 +920,31 @@ function Board() {
           : n
       )
     );
+  };
+
+  const saveTask = (contextId, task) => {
+    if (!contexts.some((c) => c.id === contextId)) throw new Error('Choose an existing Context.');
+    if (!task.title.trim()) throw new Error('Task title must not be empty.');
+    if (!['Open', 'Done'].includes(task.status)) throw new Error('Task status must be Open or Done.');
+    if (task.chapter !== null && !chapters.some((ch) => ch.id === task.chapter && ch.data.context === contextId)) {
+      throw new Error('Choose a Chapter of this Context or Context itself.');
+    }
+    if (task.id !== null && !contexts.some((c) => c.tasks?.some((t) => t.id === task.id))) {
+      throw new Error('This task no longer exists. Cancel and reopen the task list.');
+    }
+    const saved = { ...task, id: task.id ?? newIds()[0], title: task.title.trim() };
+    setContexts((cs) => cs.map((c) => {
+      const existing = (c.tasks ?? []).some((t) => t.id === saved.id);
+      if (c.id === contextId) {
+        return { ...c, tasks: existing ? c.tasks.map((t) => t.id === saved.id ? saved : t) : [...(c.tasks ?? []), saved] };
+      }
+      return existing ? { ...c, tasks: c.tasks.filter((t) => t.id !== saved.id) } : c;
+    }));
+  };
+  const deleteTask = (id) => {
+    setContexts((cs) => cs.map((c) => c.tasks?.some((task) => task.id === id)
+      ? { ...c, tasks: c.tasks.filter((task) => task.id !== id) }
+      : c));
   };
 
   // The context hands out these actions through `latest`, so its value does not change with every
@@ -1562,7 +1609,7 @@ function Board() {
 
   return (
     <div className={`app${overview ? ' overview' : ''}`}>
-      <header className="toolbar">
+      <header ref={headerRef} className="toolbar">
         <strong className="keep">Event Modeling Board</strong>
         <button className="history-button" onClick={undo} disabled={!hist.undo} title="Undo (Ctrl+Z)" aria-label="Undo">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1637,6 +1684,12 @@ function Board() {
           Chapter
         </button>
         <span className="spacer keep" />
+        <button ref={tasksButtonRef} className="keep" onClick={() => setTasksOpen((open) => !open)} title="Tasks" aria-haspopup="dialog" aria-expanded={tasksOpen}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d="M1.5 4l1.5 1.5L5.5 2.5M7 4h7M1.5 10l1.5 1.5L5.5 8.5M7 10h7M7 14h7" />
+          </svg>
+          Tasks
+        </button>
         <button
           className={`hotkeys-btn keep${overview ? ' pressed' : ''}`}
           onClick={() => setOverview((v) => !v)}
@@ -1820,6 +1873,18 @@ function Board() {
         />
       )}
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
+      {tasksOpen && (
+        <TasksDialog
+          contexts={contexts}
+          chapters={chapters}
+          contextId={filterId}
+          buttonRef={tasksButtonRef}
+          headerRef={headerRef}
+          onSave={saveTask}
+          onDelete={deleteTask}
+          onClose={() => setTasksOpen(false)}
+        />
+      )}
       {search.open && (
         <SearchBox
           items={searchItems}

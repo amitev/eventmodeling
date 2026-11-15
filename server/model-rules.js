@@ -119,11 +119,37 @@ export const orderedField = (f) => ({
   ...(f.type === 'object' ? { fields: f.fields.map(orderedField) } : {}),
 });
 export const orderedScenario = (s) => ordered(s, KEYS.scenario);
+export const TASK_STATUSES = ['Open', 'Done'];
+export const orderedTask = (task) => ordered(task, ['id', 'title', 'description', 'status', 'chapter']);
+
+export function validateTasks(tasks, context, chapters, claim, path) {
+  if (tasks === undefined) return;
+  const fail = (at, message) => { throw new HttpError(400, `${at}: ${message}`); };
+  if (!Array.isArray(tasks)) fail(path, 'must be a list');
+  tasks.forEach((task, i) => {
+    const at = `${path}[${i}]`;
+    const keys = ['id', 'title', 'description', 'status', 'chapter'];
+    if (!isObject(task)) fail(at, 'must be an object');
+    for (const key of keys) if (!(key in task)) fail(`${at}.${key}`, 'is missing');
+    for (const key of Object.keys(task)) if (!keys.includes(key)) fail(`${at}.${key}`, 'is not allowed');
+    claim(task.id, 'task', `${at}.id`);
+    if (!isText(task.title)) fail(`${at}.title`, 'must not be empty');
+    if (typeof task.description !== 'string') fail(`${at}.description`, 'must be a text');
+    if (!TASK_STATUSES.includes(task.status)) fail(`${at}.status`, 'must be Open or Done');
+    if (task.chapter !== null && !chapters.some((c) => c.id === task.chapter && c.context === context)) {
+      fail(`${at}.chapter`, 'must be null or a Chapter id of this Context');
+    }
+  });
+}
 
 // The model in the order of R6.8, every item with its keys in the order of R6.3 to R6.5 and the
 // slice types worked out (R5b.1), so the same model always gives the same files (R6.9).
 // `model` is { contexts, chapters }; it is changed in place.
 export function canonical(model) {
+  model.contexts = model.contexts.map((context) => {
+    const { tasks, ...rest } = context;
+    return { ...rest, ...(tasks?.length ? { tasks: tasks.map(orderedTask) } : {}) };
+  });
   model.chapters.sort(byPosition);
   const order = new Map();
   model.chapters.forEach((c, i) => order.set(c.id, i));
@@ -202,6 +228,7 @@ export function validateModel({ contexts, chapters }) {
     claim(c.id, 'context', `contexts[${i}].id`);
     if (!isText(c.name)) fail(`contexts[${i}].name`, 'must not be empty');
     if (c.info !== undefined && !isText(c.info)) fail(`contexts[${i}].info`, 'must be left out when empty');
+    validateTasks(c.tasks, c.id, chapters, claim, `contexts[${i}].tasks`);
   });
   const contextIds = new Set(contexts.map((c) => c.id));
 
