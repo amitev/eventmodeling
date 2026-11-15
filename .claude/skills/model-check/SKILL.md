@@ -64,3 +64,4 @@ A slice is one Command, one Read Model, or one Processor with its Events, Read M
 2. **Never fix unasked.** Offer: names/structure/lanes/slices → `chapter-setup`; elements/arrows → `slice-modeler`, `connections`; fields/sources → `element-fields`; mockups → `html-screen`; scenarios → `scenarios`.
 3. After approved fix, rerun with `--chapter`; confirm finding gone.
 4. Script error `GET ... -> status` names failed request; check `--base` and server availability.
+5. Offer [Task capture](../em-board-api.md#task-capture).

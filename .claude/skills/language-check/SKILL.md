@@ -7,7 +7,7 @@ description: Check language across Chapters/Contexts for duplicate names, Comman
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
-Read `eventmodeling-core-rules` and `naming` first; lookups: `model-navigation`. Unlike a Chapter-local `model-check` pass, compare **all Chapters and Contexts**. Check changes **nothing**.
+Read `eventmodeling-core-rules` and `naming` first; lookups: `model-navigation`. Unlike a Chapter-local `model-check` pass, compare **all Chapters and Contexts**. Check is read-only except approved Task capture.
 
 ## Run
 
@@ -49,6 +49,7 @@ Script cannot detect synonyms (`Customer` / `Client` / `Buyer`); judge manually:
 3. Duplicate fact → linked copy: inspect arrows/scenarios first (deletion loses them); **get approval** before delete/recreate via `slice-modeler` / `edit-and-delete`.
 4. Rerun after changes.
 5. Script error `GET ... -> status` names failed request; check `--base` and server availability.
+6. Offer [Task capture](../em-board-api.md#task-capture).
 
 ## Limits
 

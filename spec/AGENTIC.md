@@ -66,8 +66,10 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 ## 10. Review findings as Tasks
 
-- **A10.1** `wdyt` offers to save selected findings as Tasks after reporting; skip when none.
+- **A10.1** `wdyt`, `model-check`, `model-validation-checklist`, `language-check` and `pii-audit` offer selected findings as Tasks after reporting; skip when none.
 - **A10.2** Confirm findings, titles and Context/Chapter assignment before Task writes. Never create Tasks automatically; Task approval does not authorize model fixes.
-- **A10.3** Approved Tasks use business-language titles, question/evidence descriptions and `Open` status through editing API. Read back; report saved count/titles and failures.
+- **A10.3** Shared API reference owns Task capture: business-language titles, question/evidence descriptions, default `Open` status, API writes and read-back; report saved count/titles and failures.
+- **A10.4** Approved Task capture is the only write exception during read-only reviews.
+- **A10.5** Uncertain findings stay questions in Tasks, not confirmed fixes.
 
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

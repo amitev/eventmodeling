@@ -92,6 +92,4 @@ No meaningful questions: say so, no padding.
 
 ### Offer Tasks
 
-- After reporting findings, offer Tasks; skip if none. Confirm selection, business-language titles and owning Context/Chapter before creation via API reference; descriptions retain questions/evidence. Use default status.
-- Chapter-specific findings: that Chapter; Context-wide: `chapter: null`. Task approval does not authorize model fixes.
-- Read back; report saved count/titles and failures.
+Follow [Task capture](../em-board-api.md#task-capture).

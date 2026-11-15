@@ -7,7 +7,7 @@ description: Read-only script maps `pii` fields across Screens/Commands/Events/R
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
 
-Read `eventmodeling-core-rules` first; lookups: `model-navigation`. Audit changes **nothing**; script reads model and prints results. Never re-derive it by reading fields yourself.
+Read `eventmodeling-core-rules` first; lookups: `model-navigation`. Audit is read-only except approved Task capture; script reads model and prints results. Never re-derive it by reading fields yourself.
 
 `pii: true` marks personal data (`element-fields`). Arrow copying puts fields on multiple elements; audit compares them **by name**.
 
@@ -46,3 +46,4 @@ Name matching has false positives (product `name`) and misses (`ref` holding ema
 2. **Never change flags unasked.** Offer `element-fields` for explicit flag PATCHes on approved elements (not Propagate), `edit-and-delete` for names.
 3. After approved fix, rerun with `--chapter`; confirm finding gone.
 4. Script error `GET ... -> status` names failed request; check `--base` and server availability.
+5. Offer [Task capture](../em-board-api.md#task-capture).

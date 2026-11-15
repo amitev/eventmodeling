@@ -13,6 +13,14 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 - Context names are file names: nonempty; no `\ / : * ? " < > |`, control characters or trailing dot; not `contexts` or Windows device names.
 - `info`: Markdown on Chapters, lanes, slices and elements, mainly implementation details; not citations, summaries or traceability. Put summaries in `NOTES`; these may also hold implementation details.
 
+## Task capture
+
+After reporting findings, offer selected items as Tasks; skip if none.
+- Confirm selection, business-language titles and owning Context/Chapter before writes. Descriptions retain questions/evidence; uncertain findings stay questions, not confirmed fixes.
+- Read-only reviews allow only approved Task creation; Task approval does not authorize model fixes.
+- Use `POST /tasks` with default status. Chapter-specific: that Chapter; Context-wide: `chapter: null`.
+- Read back via `GET /tasks?context=<contextId>`; report saved count/titles and failures.
+
 ## Reads
 
 | GET path | Result / query |
