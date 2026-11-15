@@ -108,11 +108,14 @@ const NEW_CONTEXT = '__new-context__';
 const CHAPTER_TITLE_RISE = 100;
 // How long after the last change the board is pushed to the server (R10.1), in ms.
 const PUSH_DELAY_MS = 1000;
+const EDGE_HOVER_ACTIVATE_DELAY_MS = 100;
 
 function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
+  const [hoveredElementEdgeId, setHoveredElementEdgeId] = useState(null);
+  const edgeHoverTimer = useRef({ edgeId: null, timer: null });
   const [selectedCopyOriginalIds, setSelectedCopyOriginalIds] = useState(() => new Set());
   // Contexts are a list of their own; the first one is the Default (it cannot be deleted).
   const [contexts, setContexts] = useState(saved.contexts);
@@ -128,6 +131,7 @@ function Board() {
     }
   });
   const filterId = contexts.some((c) => c.id === contextFilter) ? contextFilter : '';
+  useEffect(() => () => clearTimeout(edgeHoverTimer.current.timer), []);
   useEffect(() => {
     try {
       localStorage.setItem(FILTER_KEY, filterId);
@@ -179,14 +183,38 @@ function Board() {
     : '';
   const hiddenChapters = useMemo(() => new Set(hiddenKey ? hiddenKey.split('|') : []), [hiddenKey]);
   const isHidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
+  const hoveredElementEdge = edges.find((edge) => edge.id === hoveredElementEdgeId);
+  const focusedElementIds = useMemo(() => {
+    if (!hoveredElementEdge) return null;
+    const source = nodes.find((node) => node.id === hoveredElementEdge.source);
+    const target = nodes.find((node) => node.id === hoveredElementEdge.target);
+    if (
+      source?.type !== 'sticky' ||
+      target?.type !== 'sticky' ||
+      hiddenChapters.has(source.id) ||
+      hiddenChapters.has(source.parentId) ||
+      hiddenChapters.has(target.id) ||
+      hiddenChapters.has(target.parentId)
+    ) {
+      return null;
+    }
+    return new Set([source.id, target.id]);
+  }, [hoveredElementEdge, nodes, hiddenChapters]);
   const displayNodes = useMemo(
     () =>
       nodes.map((n) => {
         const hidden = isHidden(n);
-        return !!n.hidden === hidden && !(hidden && n.selected) ? n : { ...n, hidden, selected: hidden ? false : n.selected };
+        const dimmed = focusedElementIds && n.type === 'sticky' && !focusedElementIds.has(n.id);
+        const visibilityChanged = !!n.hidden !== hidden || (hidden && n.selected);
+        if (!dimmed && !visibilityChanged) return n;
+        return {
+          ...n,
+          ...(dimmed ? { className: [n.className, 'edge-hover-muted'].filter(Boolean).join(' ') } : {}),
+          ...(visibilityChanged ? { hidden, selected: hidden ? false : n.selected } : {}),
+        };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, hiddenChapters]
+    [nodes, hiddenChapters, focusedElementIds]
   );
 
   // An element arrow leaves the lower point of its source and enters the upper point of its
@@ -198,6 +226,14 @@ function Board() {
     () => projectEdges(nodes, edges, hiddenChapters, overview),
     [projectEdges, nodes, edges, hiddenChapters, overview]
   );
+  const hoverDisplayEdges = useMemo(() => {
+    if (!focusedElementIds) return displayEdges;
+    return displayEdges.map((edge) =>
+      edge.id === hoveredElementEdgeId
+        ? edge
+        : { ...edge, className: [edge.className, 'edge-hover-muted'].filter(Boolean).join(' ') }
+    );
+  }, [displayEdges, focusedElementIds, hoveredElementEdgeId]);
   const visibleChapters = chapters.filter((c) => !hiddenChapters.has(c.id));
   const active = visibleChapters.find((c) => c.id === activeId) ?? visibleChapters[0];
   const activeChapterId = active?.id;
@@ -1607,7 +1643,7 @@ function Board() {
         <CopySelection.Provider value={selectedCopyOriginalIds}>
         <ReactFlow
           nodes={displayNodes}
-          edges={displayEdges}
+          edges={hoverDisplayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={handleNodesChange}
           onSelectionChange={handleSelectionChange}
@@ -1623,6 +1659,28 @@ function Board() {
             }
           }}
           onEdgeClick={() => setSelectedCell(null)}
+          onEdgeMouseEnter={(_, edge) => {
+            const source = nodes.find((node) => node.id === edge.source);
+            const target = nodes.find((node) => node.id === edge.target);
+            if (source?.type === 'sticky' && target?.type === 'sticky') {
+              clearTimeout(edgeHoverTimer.current.timer);
+              edgeHoverTimer.current = {
+                edgeId: edge.id,
+                timer: setTimeout(() => {
+                  if (edgeHoverTimer.current.edgeId !== edge.id) return;
+                  edgeHoverTimer.current = { edgeId: null, timer: null };
+                  setHoveredElementEdgeId(edge.id);
+                }, EDGE_HOVER_ACTIVATE_DELAY_MS),
+              };
+            }
+          }}
+          onEdgeMouseLeave={(_, edge) => {
+            if (edgeHoverTimer.current.edgeId === edge.id) {
+              clearTimeout(edgeHoverTimer.current.timer);
+              edgeHoverTimer.current = { edgeId: null, timer: null };
+            }
+            setHoveredElementEdgeId((id) => (id === edge.id ? null : id));
+          }}
           onPaneClick={selectCellAt}
           onPaneContextMenu={openCellMenu}
           onNodeContextMenu={openCellMenu}

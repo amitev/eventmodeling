@@ -269,6 +269,8 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 
   Every matching rule creates its arrow. The element and its arrows are one undo step (R8.1). The server adds the same arrows (S4.16).
 
+- **R4.9** An element-to-element arrow gets focus only after 100ms of continuous hover; leaving sooner cancels it. The focused arrow and its endpoints stay fully visible; unrelated sticky elements and all other arrows fade to 20% opacity. Pointer leave clears the focus. Chapter and slice arrows do not trigger this effect.
+
 ## 5. Slices
 
 A slice is a vertical band across all lanes that groups the elements of one piece of behaviour.

@@ -676,6 +676,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .chip.chapter-btn { background: #d6d6e0 !important; }
 .toolbar .context-info.has-info { background: #2b6cb0; color: #fff; }
 
+.react-flow__node.edge-hover-muted,
+.react-flow__edge.edge-hover-muted { opacity: 0.2; transition: opacity 0.12s ease; }
 /* Border of the selected Cell; drawn above the nodes but below the element toolbar (z-index 5), never takes the mouse. */
 .cell-highlight {
   position: absolute; z-index: 4; pointer-events: none; box-sizing: border-box;
