@@ -111,6 +111,7 @@ export function StickyNode({ id, data, selected }) {
     <NodeToolbar
       position={Position.Top}
       offset={8 * toolbarScale}
+      isVisible={selected && !grown}
       className="element-toolbar nodrag nopan"
       style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
     >
