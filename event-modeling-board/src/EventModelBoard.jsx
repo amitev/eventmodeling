@@ -946,6 +946,21 @@ function Board() {
       ? { ...c, tasks: c.tasks.filter((task) => task.id !== id) }
       : c));
   };
+  const goToTaskChapter = (id) => {
+    const chapter = getNodes().find((node) => node.id === id && node.type === 'chapter');
+    if (!chapter) {
+      setNotice('This Chapter no longer exists.');
+      return;
+    }
+    setTasksOpen(false);
+    setSelectedCell(null);
+    setActiveId(id);
+    const bounds = getNodesBounds([chapter]);
+    fitBounds({
+      x: bounds.x, y: bounds.y - CHAPTER_TITLE_RISE,
+      width: bounds.width, height: bounds.height + CHAPTER_TITLE_RISE,
+    }, { padding: 0.04, duration: 400 });
+  };
 
   // The context hands out these actions through `latest`, so its value does not change with every
   // change of the nodes (which would re-render every node); each call still runs the newest version.
@@ -1882,6 +1897,7 @@ function Board() {
           headerRef={headerRef}
           onSave={saveTask}
           onDelete={deleteTask}
+          onGoToChapter={goToTaskChapter}
           onClose={() => setTasksOpen(false)}
         />
       )}

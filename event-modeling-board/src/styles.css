@@ -607,19 +607,26 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
 }
 .tasks-dialog:focus { outline: none; }
+.tasks-title { flex-wrap: wrap; }
+.tasks-title select { min-width: 0; max-width: 100%; }
 .tasks-body { padding: 12px 14px; min-height: 0; overflow: auto; }
 .tasks-list { list-style: none; margin: 0; padding: 0; }
 .tasks-list li { padding: 12px 0; border-bottom: 1px solid #ddd; }
 .tasks-list li:first-child { padding-top: 0; }
 .tasks-list li:last-child { border-bottom: 0; }
 .task-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.task-heading strong { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
+.task-heading strong, .task-title-input { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
+.task-title-input { box-sizing: border-box; padding: 0; border: 1px solid #999; background: #fff; font: inherit; font-weight: 700; }
 .task-heading button, .tasks-dialog select, .tasks-editor input, .tasks-editor textarea {
   box-sizing: border-box; padding: 4px 8px; border: 1px solid #999; border-radius: 4px;
   background: #fff; color: #222; font: inherit;
 }
 .task-heading button { cursor: pointer; }
 .task-location { margin-top: 6px; font-size: 12px; color: #667; overflow-wrap: anywhere; }
+.task-chapter-link {
+  padding: 0; border: 0; background: none; color: #1a73e8; font: inherit;
+  text-decoration: underline; cursor: pointer; overflow-wrap: anywhere;
+}
 .task-description { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; }
 .tasks-form { display: flex; flex-direction: column; min-height: 0; }
 .tasks-editor { display: flex; flex-direction: column; gap: 12px; }

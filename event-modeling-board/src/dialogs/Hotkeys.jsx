@@ -145,7 +145,10 @@ const HOTKEYS = [
   },
   {
     group: 'Tasks popup',
-    keys: [['Esc', 'Close and discard the unsaved form']],
+    keys: [
+      ['Enter', 'Save the task title being edited in place'],
+      ['Esc', 'Cancel the title edit, otherwise close and discard the unsaved form'],
+    ],
   },
   {
     group: 'Fields popup',

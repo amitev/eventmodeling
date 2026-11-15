@@ -1,8 +1,50 @@
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalFocus, useOutsideClose } from './popup.js';
 
-export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRef, onSave, onDelete, onClose }) {
+function TaskTitle({ title, onSave, onCancel }) {
+  const [editing, setEditing] = useState(false);
+  const input = useRef(null);
+  const finished = useRef(false);
+  useLayoutEffect(() => {
+    if (editing) input.current?.select();
+  }, [editing]);
+  const commit = (value) => {
+    if (!finished.current && onSave(value)) {
+      finished.current = true;
+      setEditing(false);
+    }
+  };
+
+  return editing ? (
+    <input
+      ref={input}
+      className="task-title-input"
+      aria-label="Task title"
+      defaultValue={title}
+      onBlur={(e) => commit(e.currentTarget.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commit(e.currentTarget.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          finished.current = true;
+          setEditing(false);
+          onCancel();
+        }
+      }}
+    />
+  ) : (
+    <strong onDoubleClick={() => {
+      finished.current = false;
+      setEditing(true);
+    }}>{title}</strong>
+  );
+}
+
+export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRef, onSave, onDelete, onGoToChapter, onClose }) {
   const popup = useModalFocus();
   useOutsideClose(popup, onClose, buttonRef);
   const [top, setTop] = useState(0);
@@ -20,10 +62,16 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
   }, [headerRef]);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState('');
+  const [chapterFilter, setChapterFilter] = useState('');
   const context = contexts.find((c) => c.id === contextId);
+  const chapterChoices = chapters.filter((chapter) => !contextId || chapter.data.context === contextId);
+  const activeChapterFilter = chapterChoices.some((chapter) => `chapter:${chapter.id}` === chapterFilter)
+    ? chapterFilter : '';
   const tasks = contexts
     .filter((c) => !contextId || c.id === contextId)
-    .flatMap((c) => (c.tasks ?? []).map((task) => ({ context: c, task })));
+    .flatMap((c) => (c.tasks ?? []).map((task) => ({ context: c, task })))
+    .filter(({ task }) => !activeChapterFilter || `chapter:${task.chapter}` === activeChapterFilter);
+  const contextNames = new Map(contexts.map((context) => [context.id, context.name]));
   const chapterNames = new Map(chapters.map((chapter) => [chapter.id, chapter.data.name]));
   const edit = (value) => {
     setError('');
@@ -61,7 +109,22 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
           }
         }}
       >
-        <div className="info-title">Tasks - {context?.name ?? 'All contexts'}</div>
+        <div className="info-title tasks-title">
+          <span>Tasks - {context?.name ?? 'All contexts'}</span>
+          <select
+            aria-label="Filter tasks by Chapter"
+            title="Filter tasks by Chapter"
+            value={activeChapterFilter}
+            onChange={(e) => setChapterFilter(e.target.value)}
+          >
+            <option value=""></option>
+            {chapterChoices.map((chapter) => (
+              <option key={chapter.id} value={`chapter:${chapter.id}`}>
+                {contextId ? chapter.data.name : `${contextNames.get(chapter.data.context)} / ${chapter.data.name}`}
+              </option>
+            ))}
+          </select>
+        </div>
         {error && <div className="tasks-error" role="alert">{error}</div>}
         {draft ? (
           <form className="tasks-form" onSubmit={submit}>
@@ -85,7 +148,7 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
                   disabled={!draft.context}
                   onChange={(e) => setDraft({ ...draft, chapter: e.target.value || null })}
                 >
-                  <option value="">Context itself</option>
+                  <option value=""></option>
                   {chapters.filter((ch) => ch.data.context === draft.context).map((ch) => (
                     <option key={ch.id} value={ch.id}>{ch.data.name}</option>
                   ))}
@@ -120,7 +183,11 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
                   {tasks.map(({ context, task }) => (
                     <li key={task.id}>
                       <div className="task-heading">
-                        <strong>{task.title}</strong>
+                        <TaskTitle
+                          title={task.title}
+                          onSave={(title) => save(context.id, { ...task, title })}
+                          onCancel={() => setError('')}
+                        />
                         <select
                           aria-label={`Status of ${task.title}`}
                           value={task.status}
@@ -138,7 +205,18 @@ export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRe
                         >Delete</button>
                       </div>
                       <div className="task-location">
-                        {context.name} / {task.chapter ? chapterNames.get(task.chapter) : 'Context itself'}
+                        {context.name}{task.chapter && (
+                          <>{' / '}
+                          <button
+                            type="button"
+                            className="task-chapter-link"
+                            title="Go to Chapter"
+                            onClick={() => onGoToChapter(task.chapter)}
+                          >
+                            {chapterNames.get(task.chapter)}
+                          </button>
+                          </>
+                        )}
                       </div>
                       {task.description && <p className="task-description">{task.description}</p>}
                     </li>
