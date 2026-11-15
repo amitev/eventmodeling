@@ -29,6 +29,7 @@ export const BoardActions = createContext({
   removeChapter: () => {},
   compactChapter: () => {},
   overview: false,
+  screenHoverZoom: false,
   activeId: null,
 });
 

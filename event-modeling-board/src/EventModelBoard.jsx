@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Background,
   Controls,
+  ControlButton,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -102,6 +103,7 @@ function CellHighlight({ cell }) {
 }
 
 const FILTER_KEY = 'event-model-board-context-filter';
+const SCREEN_HOVER_ZOOM_KEY = 'event-model-board-screen-hover-zoom';
 const NEW_CONTEXT = '__new-context__';
 // How far above a Chapter's box Fit view reaches, in px. The title (top -126px, 44px high) and the
 // handle (top -74px) stand above the box; 100 shows the handle and the lower part of the title.
@@ -121,6 +123,21 @@ function Board() {
   const [contexts, setContexts] = useState(saved.contexts);
   // The overview (R1f): a read-only, high-level view without slice borders, titles and buttons.
   const [overview, setOverview] = useState(false);
+  const [screenHoverZoom, setScreenHoverZoom] = useState(() => {
+    try {
+      return localStorage.getItem(SCREEN_HOVER_ZOOM_KEY) === 'true';
+    } catch (error) {
+      console.warn('Could not load Screen hover zoom preference', error);
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCREEN_HOVER_ZOOM_KEY, String(screenHoverZoom));
+    } catch (error) {
+      console.warn('Could not save Screen hover zoom preference', error);
+    }
+  }, [screenHoverZoom]);
   // The Context filter (R1b.7): the id of the only Context whose Chapters show, '' for all.
   // Kept in the browser, not in the board.
   const [contextFilter, setContextFilter] = useState(() => {
@@ -901,6 +918,7 @@ function Board() {
   const boardActions = useMemo(
     () => ({
       overview,
+      screenHoverZoom,
       // The overview is read-only: the actions that edit do nothing there; the views still open.
       editScenario: (nodeId, scenarioId) => !overview && setScenarioEdit({ nodeId, scenarioId }),
       viewScenarios: setScenariosViewId,
@@ -947,7 +965,7 @@ function Board() {
       compactChapter,
       activeId: activeChapterId,
     }),
-    [compactChapter, activeChapterId, contexts, rememberCopy, copyContext, titleEditId, overview]
+    [compactChapter, activeChapterId, contexts, rememberCopy, copyContext, titleEditId, overview, screenHoverZoom]
   );
 
   const scenariosViewNode = scenariosViewId && nodes.find((n) => n.id === scenariosViewId);
@@ -1754,7 +1772,20 @@ function Board() {
         >
           <CellHighlight cell={overview ? null : selectedCell} />
           <Background gap={20} />
-          <Controls onFitView={fitBoard} />
+          <Controls onFitView={fitBoard}>
+            <ControlButton
+              className="screen-hover-zoom-toggle"
+              title={screenHoverZoom ? 'Disable Screen hover zoom' : 'Enable Screen hover zoom'}
+              aria-label="Screen hover zoom"
+              aria-pressed={screenHoverZoom}
+              onClick={() => setScreenHoverZoom((enabled) => !enabled)}
+            >
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="6.5" cy="6.5" r="4.5" />
+                <path d="M10 10l4 4M6.5 4v5M4 6.5h5" />
+              </svg>
+            </ControlButton>
+          </Controls>
           <MiniMap
             pannable
             zoomable

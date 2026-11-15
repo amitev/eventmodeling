@@ -40,7 +40,13 @@ export function StickyNode({ id, data, selected }) {
     const me = s.nodeLookup.get(id);
     return me && KINDS[data.kind]?.stretch ? chapterStretchWidths(s, me.parentId).get(id) ?? kindW(data.kind) : kindW(data.kind);
   });
-  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview } = useContext(BoardActions);
+  const { titleEditId, clearTitleEdit, editScenario, viewScenarios, newScenarioId, openInfo, openHtml, viewHtml, readInfo, goToOriginal, overview, screenHoverZoom } = useContext(BoardActions);
+  useEffect(() => {
+    if (!screenHoverZoom) {
+      clearTimeout(growTimer.current);
+      setGrown(false);
+    }
+  }, [screenHoverZoom]);
   const selectedCopyOriginalIds = useContext(CopySelection);
   const isOriginalOfSelectedCopy = selectedCopyOriginalIds.has(id);
 
@@ -111,7 +117,7 @@ export function StickyNode({ id, data, selected }) {
     <NodeToolbar
       position={Position.Top}
       offset={8 * toolbarScale}
-      isVisible={selected && !grown}
+      isVisible={selected && !(screenHoverZoom && grown)}
       className="element-toolbar nodrag nopan"
       style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
     >
@@ -226,7 +232,7 @@ export function StickyNode({ id, data, selected }) {
     );
   }
 
-  const zoomable = isScreen && !!(shown.html || shown.url);
+  const zoomable = screenHoverZoom && isScreen && !!(shown.html || shown.url);
   // The handles are siblings of the scaled `.sticky`: React Flow measures them from their screen position, so
   // inside the hover zoom (R3.10a) they were measured scaled and the arrows ended at wrong points.
   return (
@@ -242,7 +248,6 @@ export function StickyNode({ id, data, selected }) {
       onPointerDown={zoomable ? stopGrowing : undefined}
       onPointerUp={zoomable ? startGrowing : undefined}
     >
-      {toolbar}
       <div
         className="sticky-header"
         title={shown.name || undefined}
@@ -290,6 +295,7 @@ export function StickyNode({ id, data, selected }) {
         </div>
       )}
     </div>
+    {toolbar}
     </>
   );
 }

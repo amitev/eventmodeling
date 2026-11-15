@@ -2,6 +2,11 @@ TODO:
 - Generate Java + Axon and to see the dependencies
 
 
+Tasks functionality
+- button on the header and popup
+- Tasks are store in the context element and can have a target element
+
+
 SKILLs
 - Create a SKILL that copies from Martin's skills, but adjusts it for us
 - RENAME element names and slice types to match Martin's skills, otherwise we cannot reuse
