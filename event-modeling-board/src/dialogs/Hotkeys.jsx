@@ -128,7 +128,11 @@ const HOTKEYS = [
     group: 'Screen editor',
     keys: [
       ['Ctrl+S', 'Save and close'],
-      ['← / → / Home / End', 'Switch Content / Info when a tab is focused'],
+      ['← / → / Home / End', 'Switch Content / Sketch / Info / Fields when a tab is focused'],
+      ['Delete / Backspace', 'Delete all selected sketch shapes while the sketch canvas is focused'],
+      ['Enter', 'Finish in-place sketch text editing'],
+      ['Ctrl+Z / Cmd+Z', 'Undo sketch operation (last 5; Sketch tab only)'],
+      ['Ctrl+Y / Ctrl+Shift+Z / Cmd+Y / Cmd+Shift+Z', 'Redo sketch operation (Sketch tab only)'],
       ['Alt+Enter', 'Full screen on / off'],
       ['Esc', 'Close without saving'],
     ],

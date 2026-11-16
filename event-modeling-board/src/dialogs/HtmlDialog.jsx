@@ -8,6 +8,8 @@ import { MarkdownEditor } from './InfoDialog.jsx';
 import { HighlightPreview } from './HtmlHighlight.jsx';
 import { ColorPicker } from '../nodes/parts.jsx';
 import { FieldsEditor, useFieldsDraft } from './FieldsDialog.jsx';
+import { SketchEditor } from './SketchEditor.jsx';
+import { sketchHtml } from '../model/sketch.js';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
@@ -43,7 +45,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   const highlightModel = useMemo(() => inspectHtml(text, highlights), [text, highlights]);
   const picking = highlighting && !highlightsReadOnly && !reading && tab === 'content' && !usingUrl;
   const canSave = !readOnly || !highlightsReadOnly;
-  const tabs = readOnly ? ['content'] : ['content', 'info', 'fields'];
+  const tabs = readOnly ? ['content'] : ['content', 'sketch', 'info', 'fields'];
   const pickHighlight = (offset, source) => {
     const element = highlightModel.elements.find((item) => item.start === offset && item.path);
     if (!picking || source !== text || !element) {
@@ -195,7 +197,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                   tabIndex={tab === name ? 0 : -1}
                   onClick={() => selectTab(name)}
                 >
-                  {{ content: 'Content', info: 'Info', fields: 'Fields' }[name]}
+                  {{ content: 'Content', sketch: 'Sketch', info: 'Info', fields: 'Fields' }[name]}
                 </button>
               ))}
             </div>
@@ -265,6 +267,29 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                 onPaste={readOnly ? undefined : onPaste}
               />
             </div>
+            {!readOnly && (
+              <div
+                id={`${tabId}-sketch-panel`}
+                role="tabpanel"
+                aria-labelledby={`${tabId}-sketch-tab`}
+                className="screen-editor-panel"
+                hidden={tab !== 'sketch'}
+              >
+                <SketchEditor
+                  html={text}
+                  usingUrl={usingUrl}
+                  active={!reading && tab === 'sketch'}
+                  onChange={changeText}
+                  onStart={() => {
+                    if ((text.trim() || usingUrl) && !window.confirm('Replace the current Screen HTML and URL with an empty sketch?')) return false;
+                    setUrl('');
+                    setUrlInvalid(false);
+                    changeText(sketchHtml([]));
+                    return true;
+                  }}
+                />
+              </div>
+            )}
             <div
               id={`${tabId}-info-panel`}
               role="tabpanel"
