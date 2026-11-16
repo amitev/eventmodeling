@@ -27,7 +27,6 @@ Slices
 
 Elements
 - Automatic name from previous element - too hard to do correctly.
-- Agentic - suggest automatic slice and element names
 
 Screens
 

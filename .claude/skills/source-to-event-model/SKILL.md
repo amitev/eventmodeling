@@ -1,5 +1,5 @@
 ---
-name: summarize
+name: source-to-event-model
 description: Turn PDF, Word, Markdown, text, URL or image into a board model: Chapters, elements, HTML Screens, rule-based GWT scenarios and detailed Summary-lane notes in each Chapter's first slice. Capture facts, rules, deadlines and questions as a blueprint. Use for document modeling, e.g. tender/RFP analysis.
 disable-model-invocation: true
 ---

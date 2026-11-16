@@ -1,6 +1,6 @@
 ---
 name: event-storming
-description: Facilitate event storming from questions, text or documents: build an Event timeline, note hot spots in red, and expand to full slices only on request. Use to explore a process or sequence events; whole documents with rules/deadlines use `summarize`.
+description: Facilitate event storming from questions, text or documents: build an Event timeline, note hot spots in red, and expand to full slices only on request. Use to explore a process or sequence events; whole documents with rules/deadlines use `source-to-event-model`.
 ---
 
 # Event Storming
@@ -79,7 +79,7 @@ For passage/story/minutes/file:
 1. Read all; extract time-ordered Events with source sentences. Unstated Event = question, never invention.
 2. Show ordered names, mark ambiguity; ask only unclear points, then add all in **one `POST /ops`**, report one line/Event.
 3. Ambiguity/contradictions → hot spots.
-4. Long source or traceable rules/deadlines/penalties: recommend/offer `summarize`.
+4. Long source or traceable rules/deadlines/penalties: recommend/offer `source-to-event-model`.
 
 ## Checkpoints
 
