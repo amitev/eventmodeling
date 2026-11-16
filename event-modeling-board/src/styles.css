@@ -713,20 +713,22 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   display: flex; flex-direction: column; width: min(960px, 94vw); max-height: 85vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
 }
-.fields-dialog .info-title { justify-content: space-between; }
-.fields-dialog .fields-parent { padding: 4px 12px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
-.fields-dialog .fields-parent:disabled { opacity: 0.4; cursor: default; }
+.fields-editor { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.fields-editor .info-title { justify-content: space-between; }
+.fields-toolbar { display: flex; justify-content: flex-end; padding: 8px 14px; border-bottom: 1px solid #ddd; }
+.fields-editor .fields-parent { padding: 4px 12px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
+.fields-editor .fields-parent:disabled { opacity: 0.4; cursor: default; }
 .fields-body { flex: 1; min-height: 0; overflow: auto; padding: 8px 14px 12px; }
-.fields-dialog .field-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
-.fields-dialog .field-head { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #667; }
-.fields-dialog .f-name { flex: 1; min-width: 120px; }
-.fields-dialog .f-type { flex: none; width: 100px; }
-.fields-dialog .f-flag { flex: none; width: 64px; text-align: center; }
-.fields-dialog .f-prop { flex: none; width: 76px; text-align: center; }
-.fields-dialog .f-rm { flex: none; width: 24px; }
-.fields-dialog button.f-rm { height: 24px; padding: 0; border: 1px solid #bbb; border-radius: 4px; background: #fff; cursor: pointer; }
-.fields-dialog .field-children { margin: 0 0 4px 18px; padding-left: 10px; border-left: 2px solid #e3e6ef; }
-.fields-dialog .f-add { margin: 4px 0; padding: 2px 10px; border: 1px dashed #99a; border-radius: 4px; background: #fff; cursor: pointer; }
+.fields-editor .field-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-width: 780px; }
+.fields-editor .field-head { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #667; }
+.fields-editor .f-name { flex: 1; min-width: 120px; }
+.fields-editor .f-type { flex: none; width: 100px; }
+.fields-editor .f-flag { flex: none; width: 64px; text-align: center; }
+.fields-editor .f-prop { flex: none; width: 76px; text-align: center; }
+.fields-editor .f-rm { flex: none; width: 24px; }
+.fields-editor button.f-rm { height: 24px; padding: 0; border: 1px solid #bbb; border-radius: 4px; background: #fff; cursor: pointer; }
+.fields-editor .field-children { margin: 0 0 4px 18px; padding-left: 10px; border-left: 2px solid #e3e6ef; }
+.fields-editor .f-add { margin: 4px 0; padding: 2px 10px; border: 1px dashed #99a; border-radius: 4px; background: #fff; cursor: pointer; }
 .fields-error { padding: 6px 14px; color: #b00020; font-size: 13px; }
 .chapter-remove,
 .chapter-compact {

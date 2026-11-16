@@ -456,12 +456,13 @@ function Board() {
     if (screenInfo) setInfoId(null);
     setHtmlId(null);
   };
-  const saveHtml = (text, url, info, highlights) => {
+  const saveHtml = (text, url, info, highlights, fields, propagate) => {
     const id = htmlTarget.id;
     const changed = !htmlCopy && htmlStructure(htmlNode.data.html) !== htmlStructure(url ? '' : text);
     const cleared = changed ? nodes.filter((n) => (n.id === id || n.data.copyOf === id) && n.data.highlights?.length) : [];
-    setNodes((ns) =>
-      ns.map((n) => {
+    const es = getEdges();
+    setNodes((ns) => {
+      const updated = ns.map((n) => {
         if (changed && n.data.copyOf === id) {
           const { highlights: _highlights, ...data } = n.data;
           return { ...n, data };
@@ -470,12 +471,13 @@ function Board() {
         const { highlights: _highlights, ...own } = n.data;
         if (htmlCopy) return { ...n, data: highlights.length ? { ...own, highlights } : own };
         const { html: _html, url: _url, info: _info, ...rest } = own;
-        const content = info.trim() ? { ...rest, info } : rest;
+        const content = { ...rest, fields, ...(info.trim() ? { info } : {}) };
         const data = highlights.length ? { ...content, highlights } : content;
         if (url) return { ...n, data: { ...data, url } };
         return { ...n, data: text.trim() ? { ...data, html: text } : data };
-      })
-    );
+      });
+      return htmlCopy ? updated : propagateFields(updated, es, id, propagate);
+    });
     if (cleared.length) setNotice(`HTML structure changed; cleared existing highlights on ${cleared.length} Screen(s).`);
     closeScreen();
   };
@@ -2017,6 +2019,8 @@ function Board() {
           initial={htmlNode.data.html ?? ''}
           initialUrl={htmlNode.data.url ?? ''}
           initialInfo={htmlNode.data.info ?? ''}
+          initialFields={htmlNode.data.fields ?? []}
+          parent={parentFields(nodes, edges, htmlNode.id)}
           initialHighlights={htmlTarget.data.highlights ?? []}
           initialTab={screenInfo ? 'info' : 'content'}
           onSave={saveHtml}

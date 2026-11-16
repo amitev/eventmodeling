@@ -7,20 +7,22 @@ import { extractHighlights, htmlStructure, inspectHtml, toggleHighlight } from '
 import { MarkdownEditor } from './InfoDialog.jsx';
 import { HighlightPreview } from './HtmlHighlight.jsx';
 import { ColorPicker } from '../nodes/parts.jsx';
+import { FieldsEditor, useFieldsDraft } from './FieldsDialog.jsx';
 
 // Pasted HTML loses its <script> tags (and their code): the preview is sandboxed anyway, but a
 // mockup has no use for scripts (R3.7).
 export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
-// One draft for Screen content and info; tab panels stay mounted to keep editor state.
-export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialHighlights = [], initialTab = 'content', initialReading = false, previewOnly = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
+// Tab panels stay mounted to keep editor state across the Screen's drafts.
+export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialFields = [], parent = [], initialHighlights = [], initialTab = 'content', initialReading = false, previewOnly = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
   const [content] = useState(() => extractHighlights(initial));
   const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(content.html) : content.html);
   const [highlights, setHighlights] = useState(initialHighlights);
   const [structureNotice, setStructureNotice] = useState(false);
   const [url, setUrl] = useState(initialUrl);
   const [info, setInfo] = useState(initialInfo);
+  const fieldsDraft = useFieldsDraft(initialFields, parent);
   const [tab, setTab] = useState(initialTab);
   const formatted = useRef(initialTab === 'content');
   const tabId = useId();
@@ -41,6 +43,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   const highlightModel = useMemo(() => inspectHtml(text, highlights), [text, highlights]);
   const picking = highlighting && !highlightsReadOnly && !reading && tab === 'content' && !usingUrl;
   const canSave = !readOnly || !highlightsReadOnly;
+  const tabs = readOnly ? ['content'] : ['content', 'info', 'fields'];
   const pickHighlight = (offset, source) => {
     const element = highlightModel.elements.find((item) => item.start === offset && item.path);
     if (!picking || source !== text || !element) {
@@ -70,10 +73,10 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   const onTabKey = (e) => {
     if (readOnly) return;
     const next = {
-      ArrowLeft: tab === 'content' ? 'info' : 'content',
-      ArrowRight: tab === 'content' ? 'info' : 'content',
-      Home: 'content',
-      End: 'info',
+      ArrowLeft: tabs[(tabs.indexOf(tab) + tabs.length - 1) % tabs.length],
+      ArrowRight: tabs[(tabs.indexOf(tab) + 1) % tabs.length],
+      Home: tabs[0],
+      End: tabs[tabs.length - 1],
     }[e.key];
     if (!next) return;
     e.preventDefault();
@@ -82,7 +85,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
   };
   useLayoutEffect(() => {
     if (!reading) {
-      const field = tab === 'content' && usingUrl ? 'input' : 'textarea:not(:disabled)';
+      const field = tab === 'fields' ? ':is(input, button):not(:disabled)' : tab === 'content' && usingUrl ? 'input' : 'textarea:not(:disabled)';
       editors.current?.querySelector(`[role="tabpanel"]:not([hidden]) ${field}`)
         ?.focus({ preventScroll: true });
     }
@@ -105,7 +108,13 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
       urlInput.current?.focus();
       return;
     }
-    onSave(text, wanted, info, usingUrl ? [] : highlights);
+    const fields = readOnly ? null : fieldsDraft.validate();
+    if (!readOnly && !fields) {
+      selectTab('fields');
+      setReading(false);
+      return;
+    }
+    onSave(text, wanted, info, usingUrl ? [] : highlights, fields?.fields, fields?.propagate);
   };
   const saveRef = useRef(save); // the latest save, for the Ctrl+S listener
   saveRef.current = save;
@@ -174,7 +183,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
           )}
           {!reading && (
             <div className="screen-editor-tabs" role="tablist" aria-label="Screen editor" onKeyDown={onTabKey}>
-              {(readOnly ? ['content'] : ['content', 'info']).map((name) => (
+              {tabs.map((name) => (
                 <button
                   key={name}
                   id={`${tabId}-${name}-tab`}
@@ -186,7 +195,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                   tabIndex={tab === name ? 0 : -1}
                   onClick={() => selectTab(name)}
                 >
-                  {name === 'content' ? 'Content' : 'Info'}
+                  {{ content: 'Content', info: 'Info', fields: 'Fields' }[name]}
                 </button>
               ))}
             </div>
@@ -265,6 +274,17 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
             >
               <MarkdownEditor text={info} onChange={setInfo} active={!readOnly && !reading && tab === 'info'} autoFocus={false} />
             </div>
+            {!readOnly && (
+              <div
+                id={`${tabId}-fields-panel`}
+                role="tabpanel"
+                aria-labelledby={`${tabId}-fields-tab`}
+                className="screen-editor-panel"
+                hidden={tab !== 'fields'}
+              >
+                <FieldsEditor draft={fieldsDraft} parent={parent} />
+              </div>
+            )}
           </div>
           <div className="html-preview-box">
             {!highlightsReadOnly && (readOnly || !reading && tab === 'content') && (

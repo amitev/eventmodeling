@@ -119,28 +119,10 @@ function FieldRows({ fields, path, edit, counter }) {
   );
 }
 
-// The fields popup of an element (R9.3). `parent` is the list of fields to take over with "Get
-// from parent". onSave gets the fields and those created here to copy down the chain.
-export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
+export function useFieldsDraft(initial, parent) {
   const counter = useRef(0);
   const [fields, setFields] = useState(() => keyed(cloneFields(initial), counter));
   const [error, setError] = useState(null);
-  const backdrop = useBackdropClose(onClose);
-  const modal = useModalFocus();
-
-  const saveRef = useRef(null);
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-      else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        saveRef.current();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const edit = (fn) => {
     setError(null);
     setFields((cur) => {
@@ -159,49 +141,84 @@ export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
       }
     });
 
-  const save = () => {
+  const validate = () => {
     const found = problem(fields);
-    if (found) return setError(found);
-    onSave(
-      clean(fields),
-      clean(fields.filter((f) => f._new && f._propagate))
-    );
+    setError(found);
+    if (found) return null;
+    return {
+      fields: clean(fields),
+      propagate: clean(fields.filter((f) => f._new && f._propagate)),
+    };
   };
+
+  return { fields, error, edit, counter, getFromParent, validate };
+}
+
+export function FieldsEditor({ title, draft, parent }) {
+  const { fields, error, edit, counter, getFromParent } = draft;
+  return (
+    <div className="fields-editor">
+      <div className={title ? 'info-title' : 'fields-toolbar'}>
+        {title}
+        <button
+          type="button"
+          className="fields-parent"
+          disabled={!parent.length}
+          title={parent.length ? 'Copy all fields of the parent elements, replacing fields of the same name' : 'No parent element has fields'}
+          onClick={getFromParent}
+        >
+          Get from parent
+        </button>
+      </div>
+      <div className="fields-body">
+        <div className="field-row field-head">
+          <span className="f-name">Name</span>
+          <span className="f-type">Type</span>
+          <span className="f-flag" title="A list of values">List</span>
+          {FIELD_FLAGS.map(({ key, label, hint }) => (
+            <span key={key} className="f-flag" title={hint}>
+              {label}
+            </span>
+          ))}
+          <span className="f-prop" title="Also copy a new field to all following elements in the chain">
+            Propagate
+          </span>
+          <span className="f-rm" />
+        </div>
+        <FieldRows fields={fields} path={[]} edit={edit} counter={counter} />
+      </div>
+      {error && <div className="fields-error" role="alert">{error}</div>}
+    </div>
+  );
+}
+
+// The fields popup of an element (R9.3). onSave gets its fields and new fields to propagate.
+export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
+  const draft = useFieldsDraft(initial, parent);
+  const backdrop = useBackdropClose(onClose);
+  const modal = useModalFocus();
+  const save = () => {
+    const result = draft.validate();
+    if (result) onSave(result.fields, result.propagate);
+  };
+  const saveRef = useRef(save);
   saveRef.current = save;
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      else if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
       <div ref={modal} tabIndex={-1} className="fields-dialog" role="dialog" aria-modal="true" aria-label="Fields">
-        <div className="info-title">
-          {title}
-          <button
-            type="button"
-            className="fields-parent"
-            disabled={!parent.length}
-            title={parent.length ? 'Copy all fields of the parent elements, replacing fields of the same name' : 'No parent element has fields'}
-            onClick={getFromParent}
-          >
-            Get from parent
-          </button>
-        </div>
-        <div className="fields-body">
-          <div className="field-row field-head">
-            <span className="f-name">Name</span>
-            <span className="f-type">Type</span>
-            <span className="f-flag" title="A list of values">List</span>
-            {FIELD_FLAGS.map(({ key, label, hint }) => (
-              <span key={key} className="f-flag" title={hint}>
-                {label}
-              </span>
-            ))}
-            <span className="f-prop" title="Also copy a new field to all following elements in the chain">
-              Propagate
-            </span>
-            <span className="f-rm" />
-          </div>
-          <FieldRows fields={fields} path={[]} edit={edit} counter={counter} />
-        </div>
-        {error && <div className="fields-error">{error}</div>}
+        <FieldsEditor title={title} draft={draft} parent={parent} />
         <div className="info-actions">
           <button type="button" className="primary" title="Save (Ctrl+S)" onClick={save}>
             Save
