@@ -44,7 +44,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 ## 6. Scenario-driven tests
 
 - **A6.1** Test-implementation skills read scenario `description` alongside name, GWT/error and example data; apply stated requirements to setup, actions and assertions, not only labels/comments.
-- **A6.2** Generated implementation skills stop before code changes on ambiguous descriptions or conflicts with GWT/example data; never invent requirements or silently choose one source.
+- **A6.2** Generated implementation skills stop before code changes on ambiguous descriptions, conflicts with GWT/example data, or conflicts between scenarios for the same conditions; never invent requirements or silently choose one source.
 - **A6.3** Report description requirements covered by tests. Prototype checks report requirements they cannot exercise as coverage gaps; GWT matches alone do not prove full coverage.
 
 ## 7. Automation feedback

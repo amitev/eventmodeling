@@ -16,7 +16,7 @@
 ## Step 4 — Implement (neutral part)
 
 1. **Command**: the input type from the Command's fields.
-2. **Decision**: from the history (`given` Events) and the Command, return the Events of `then`, or refuse as the `error` scenarios say. The scenarios are the only source of business rules; if a required rule has no scenario, stop and report the missing scenario. Do not invent rules or ask.
+2. **Decision**: from the history (`given` Events) and the Command, return the Events of `then`, or refuse as the `error` scenarios say. The scenarios are the only source of business rules; if a required rule has no scenario, report the gap and implement only independent behavior. Do not invent rules or ask.
 3. **Events**: one type per Event with its fields, named as in the model.
 4. **Tests**: one per scenario, applying the common scenario-test rule to description, GWT and example data.
 
