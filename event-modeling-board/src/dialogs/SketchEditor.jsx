@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
-import { lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, selectSketchShapes, sketchBounds, sketchHtml, sketchId, sketchLayers, sketchPoint, travelSketchHistory, validSketchSize } from '../model/sketch.js';
+import { addTableColumn, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchHtml, sketchId, sketchLayers, sketchPoint, tableDividers, tableParts, travelSketchHistory, validSketchSize } from '../model/sketch.js';
 
 const CORNERS = ['nw', 'ne', 'sw', 'se'];
 
@@ -127,7 +127,18 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
     const shapeId = event.target.closest('[data-shape-id]')?.getAttribute('data-shape-id');
     const corner = event.target.getAttribute('data-corner');
     const endpoint = event.target.getAttribute('data-endpoint');
+    const column = event.target.getAttribute('data-column');
     const shape = shapes.find(({ id }) => id === shapeId);
+    if (tool === 'table') {
+      const added = {
+        id: sketchId(shapes), type: 'table', x: Math.min(start.x, MOCKUP_W - 360),
+        y: Math.min(start.y, MOCKUP_H - 180), width: 360, height: 180, columns: [1 / 3, 1 / 3, 1 / 3],
+      };
+      commit([...shapes, added]);
+      setSelectedIds([added.id]);
+      setTool('select');
+      return;
+    }
     if (tool === 'text') {
       const added = textShape('Text', start, sketchId(shapes));
       commit([...shapes, added]);
@@ -148,7 +159,8 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
       const nextIds = selectedIds.includes(shape.id) ? selectedShapes.map(({ id }) => id) : [shape.id];
       setSelectedIds(nextIds);
       gesture.current = {
-        type: corner || endpoint ? 'resize' : 'move', corner, endpoint, shape, start, shapes, pointerId: event.pointerId,
+        type: column !== null ? 'column' : corner || endpoint ? 'resize' : 'move',
+        corner, endpoint, column: Number(column), shape, start, shapes, pointerId: event.pointerId,
         selectedIds: nextIds, selectionBefore: selectedIds,
       };
     } else {
@@ -174,11 +186,13 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
       setDraft(next);
       return next;
     }
-    const nextShape = drag.type === 'draw'
-      ? { ...drag.shape, ...(drag.shape.type === 'line' ? lineBetween(drag.start, current) : rectangleBetween(drag.start, current)) }
-      : drag.shape.type === 'line'
-        ? resizeSketchLine(drag.shape, current, drag.endpoint)
-        : resizeSketchShape(drag.shape, current, drag.corner);
+    const nextShape = drag.type === 'column'
+      ? resizeTableColumn(drag.shape, drag.column, current)
+      : drag.type === 'draw'
+        ? { ...drag.shape, ...(drag.shape.type === 'line' ? lineBetween(drag.start, current) : rectangleBetween(drag.start, current)) }
+        : drag.shape.type === 'line'
+          ? resizeSketchLine(drag.shape, current, drag.endpoint)
+          : resizeSketchShape(drag.shape, current, drag.corner);
     const next = drag.shapes.map((shape) => shape.id === nextShape.id ? nextShape : shape);
     setDraft(next);
     return next;
@@ -224,7 +238,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           setTool('select');
           setError('');
         }}>Start sketch</button>
-        <p>Rectangles, lines and text. Existing content is replaced after confirmation.</p>
+        <p>Rectangles, lines, tables and text. Existing content is replaced after confirmation.</p>
       </div>
     );
   }
@@ -233,7 +247,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
     <>
       <div className="sketch-toolbar" role="toolbar" aria-label="Sketch tools">
         <div className="sketch-tools">
-          {[['select', 'Select / move'], ['rect', 'Rectangle'], ['line', 'Line'], ['text', 'Text']].map(([value, label]) => (
+          {[['select', 'Select / move'], ['rect', 'Rectangle'], ['line', 'Line'], ['table', 'Table'], ['text', 'Text']].map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -250,6 +264,11 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
               ) : value === 'line' ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
                   <path d="M2 14 14 2" />
+                </svg>
+              ) : value === 'table' ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
+                  <rect x="1" y="1" width="14" height="14" rx="1" />
+                  <path d="M1 5.5h14M1 10h14M5.5 1v14M10 1v14" />
                 </svg>
               ) : value === 'text' ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
@@ -279,6 +298,16 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           </button>
         </div>
         <div className="sketch-properties">
+          {selected?.type === 'table' && (
+            <button type="button" className="sketch-add-column" onClick={() => {
+              const next = addTableColumn(selected);
+              if (!next) {
+                setError('Not enough space for another column. Widen the table or its narrowest column first.');
+                return;
+              }
+              commit(shapes.map((shape) => shape.id === selected.id ? next : shape));
+            }}>Add column</button>
+          )}
           {(selected?.type === 'line' || !selected && tool === 'line') && (
             <SketchColor label="Line color" allowNone={false} value={selected?.stroke ?? lineColor} onChange={(value) => {
               setLineColor(value);
@@ -305,7 +334,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           )}
         </div>
       </div>
-      <div className="html-blocked-hint">1024 × 768. Drag to draw rectangles or lines. Select touching shapes by dragging from empty space. Drag line endpoints to resize. Double-click text to edit; Enter or click outside finishes.</div>
+      <div className="html-blocked-hint">1024 × 768. Click to insert a table; drag its dividers to resize columns. Elements over cells stay independent. Drag rectangles/lines; double-click text to edit.</div>
       {error && <div className="html-highlight-error" role="alert">{error}</div>}
       <div className="sketch-canvas-box">
         <svg
@@ -336,7 +365,16 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           onLostPointerCapture={(event) => finish(event, true)}
         >
           <rect width={MOCKUP_W} height={MOCKUP_H} fill="#ffffff" />
-          {sketchLayers(shapes).map((shape) => shape.type === 'rect' ? (
+          {sketchLayers(shapes).map((shape) => shape.type === 'table' ? (
+            <g key={shape.id} data-shape-id={shape.id}>
+              {tableParts(shape).map(({ tag, attrs }, index) => {
+                const { 'stroke-width': strokeWidth, ...rest } = attrs;
+                return tag === 'rect'
+                  ? <rect key={index} {...rest} strokeWidth={strokeWidth} />
+                  : <line key={index} {...rest} strokeWidth={strokeWidth} />;
+              })}
+            </g>
+          ) : shape.type === 'rect' ? (
             <rect key={shape.id} data-shape-id={shape.id} x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={shape.fill} stroke={shape.stroke} strokeWidth={2} pointerEvents="all" />
           ) : shape.type === 'line' ? (
             <g key={shape.id} data-shape-id={shape.id}>
@@ -379,6 +417,15 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
                   height={16}
                   pointerEvents="all"
                   vectorEffect="non-scaling-stroke"
+                />
+              ))}
+              {selected && shape.type === 'table' && tableDividers(shape).map((x, index) => (
+                <line
+                  key={`column-${index}`}
+                  className="sketch-column-handle"
+                  data-column={index}
+                  x1={x} y1={shape.y} x2={x} y2={shape.y + shape.height}
+                  stroke="transparent" strokeWidth={12} pointerEvents="stroke"
                 />
               ))}
             </g>

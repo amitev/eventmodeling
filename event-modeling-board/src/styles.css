@@ -197,7 +197,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   min-height: 45px; box-sizing: border-box; overflow-x: auto; border-bottom: 1px solid #ddd; font-size: 13px;
 }
 .sketch-tools, .sketch-properties { display: flex; flex-shrink: 0; align-items: center; gap: 8px; white-space: nowrap; }
-.sketch-tools button, .sketch-start button {
+.sketch-tools button, .sketch-start button, .sketch-add-column {
   padding: 5px 8px; border: 1px solid #bbc; border-radius: 4px; background: #fff; cursor: pointer;
 }
 .sketch-tools button[aria-pressed="true"] { border-color: #b6cef5; background: #e8f0fe; color: #174ea6; }
@@ -226,6 +226,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sketch-marquee { fill: #174ea622; stroke: #174ea6; stroke-width: 1; stroke-dasharray: 4 3; }
 .sketch-handle { fill: #fff; stroke-dasharray: none; }
 .sketch-canvas .sketch-handle.endpoint { cursor: crosshair; }
+.sketch-canvas .sketch-column-handle { cursor: col-resize; stroke-dasharray: none; }
 .sketch-canvas .sketch-handle.nw, .sketch-canvas .sketch-handle.se { cursor: nwse-resize; }
 .sketch-canvas .sketch-handle.ne, .sketch-canvas .sketch-handle.sw { cursor: nesw-resize; }
 .html-url-row { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #ddd; }

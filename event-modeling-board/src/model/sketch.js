@@ -8,6 +8,9 @@ const SVG_ATTRS = new Set(['id', 'xmlns', 'width', 'height', 'viewBox', 'style']
 const RECT_ATTRS = new Set(['id', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'stroke-width']);
 const TEXT_ATTRS = new Set(['id', 'x', 'y', 'font-size', 'font-family', 'fill', 'textLength', 'lengthAdjust']);
 const LINE_ATTRS = new Set(['id', 'x1', 'y1', 'x2', 'y2', 'stroke', 'stroke-width']);
+const TABLE_ATTRS = new Set(['id', 'class']);
+export const TABLE_MIN_COLUMN = 24;
+export const TABLE_MIN_HEIGHT = 60;
 const number = (value) => Math.round(value * 100) / 100;
 const escape = (value) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -17,7 +20,8 @@ const onlyAttrs = (node, allowed) => node.attrs.every(({ name }) => allowed.has(
 const numeric = (value) => typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value));
 
 export const sketchLayers = (shapes) => [
-  ...shapes.filter(({ type }) => type !== 'text'),
+  ...shapes.filter(({ type }) => type === 'table'),
+  ...shapes.filter(({ type }) => type !== 'table' && type !== 'text'),
   ...shapes.filter(({ type }) => type === 'text'),
 ];
 
@@ -45,6 +49,12 @@ export function travelSketchHistory(history, redo = false) {
 export function sketchHtml(shapes) {
   const content = sketchLayers(shapes).map((shape) => {
     const { id, x, y, width, fill } = shape;
+    if (shape.type === 'table') {
+      const parts = tableParts(shape).map(({ tag, attrs }) =>
+        `<${tag} ${Object.entries(attrs).map(([key, value]) => `${key}="${value}"`).join(' ')}></${tag}>`,
+      ).join('');
+      return `<g id="${id}" class="em-sketch-table">${parts}</g>`;
+    }
     if (shape.type === 'rect') {
       return `<rect id="${id}" x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(shape.height)}" fill="${fill}" stroke="${shape.stroke}" stroke-width="2"></rect>`;
     }
@@ -79,7 +89,7 @@ export function readSketch(html) {
   const shapes = [];
   const ids = new Set();
   for (const node of children(svg)) {
-    const allowed = { rect: RECT_ATTRS, text: TEXT_ATTRS, line: LINE_ATTRS }[node.tagName];
+    const allowed = { rect: RECT_ATTRS, text: TEXT_ATTRS, line: LINE_ATTRS, g: TABLE_ATTRS }[node.tagName];
     if (!allowed || !onlyAttrs(node, allowed)) {
       return problem('The sketch contains unsupported shapes or attributes. Edit Content or start a new sketch.');
     }
@@ -87,12 +97,16 @@ export function readSketch(html) {
     if (!/^em-sketch-[1-9]\d*$/.test(a.id) || ids.has(a.id)) {
       return problem('The sketch has invalid or duplicate shape ids.');
     }
-    if (node.tagName !== 'line' && (!numeric(a.x) || !numeric(a.y) || !COLOR.test(a.fill ?? ''))) {
+    if (!['line', 'g'].includes(node.tagName) && (!numeric(a.x) || !numeric(a.y) || !COLOR.test(a.fill ?? ''))) {
       return problem('The sketch has invalid ids, positions or colors. Edit Content or start a new sketch.');
     }
     const shape = { id: a.id, type: node.tagName };
-    if (node.tagName !== 'line') Object.assign(shape, { x: Number(a.x), y: Number(a.y), fill: a.fill });
-    if (node.tagName === 'line') {
+    if (!['line', 'g'].includes(node.tagName)) Object.assign(shape, { x: Number(a.x), y: Number(a.y), fill: a.fill });
+    if (node.tagName === 'g') {
+      const table = readTable(node);
+      if (!table) return problem('A sketch table has invalid geometry or unsupported content. Edit Content or start a new sketch.');
+      Object.assign(shape, table);
+    } else if (node.tagName === 'line') {
       if (children(node).length || !['x1', 'y1', 'x2', 'y2'].every((name) => numeric(a[name])) ||
           !COLOR.test(a.stroke ?? '') || a['stroke-width'] !== '2') {
         return problem('A sketch line has invalid endpoints, content or stroke settings.');
@@ -152,7 +166,76 @@ export function lineEndpoints(shape) {
 }
 
 export function validSketchSize(shape) {
+  if (shape.type === 'table') {
+    return shape.height >= TABLE_MIN_HEIGHT && shape.columns.length >= 3 &&
+      shape.columns.every((width) => width * shape.width >= TABLE_MIN_COLUMN - 0.02);
+  }
   return shape.type === 'line' ? Math.hypot(shape.width, shape.height) >= 4 : shape.width >= 4 && shape.height >= 4;
+}
+
+export function tableDividers(shape) {
+  let x = shape.x;
+  return shape.columns.slice(0, -1).map((width) => {
+    x += width * shape.width;
+    return x;
+  });
+}
+
+export function tableParts(shape) {
+  const { x, y, width, height } = shape;
+  const rect = (fill, h = height, stroke = 'none') => ({
+    tag: 'rect', attrs: { x: number(x), y: number(y), width: number(width), height: number(h), fill, stroke, 'stroke-width': 2 },
+  });
+  const line = (x1, y1, x2, y2) => ({
+    tag: 'line', attrs: { x1: number(x1), y1: number(y1), x2: number(x2), y2: number(y2), stroke: '#1f2937', 'stroke-width': 2 },
+  });
+  return [
+    rect('#ffffff'), rect('#e5e7eb', height / 3),
+    line(x, y + height / 3, x + width, y + height / 3),
+    line(x, y + height * 2 / 3, x + width, y + height * 2 / 3),
+    ...tableDividers(shape).map((at) => line(at, y, at, y + height)),
+    rect('none', height, '#1f2937'),
+  ];
+}
+
+function readTable(node) {
+  if (attributes(node).class !== 'em-sketch-table') return null;
+  const parts = children(node);
+  if (parts.length < 7 || parts[0].tagName !== 'rect' || parts.some((part) => !['rect', 'line'].includes(part.tagName))) return null;
+  const a = attributes(parts[0]);
+  if (!['x', 'y', 'width', 'height'].every((name) => numeric(a[name]))) return null;
+  const shape = { type: 'table', x: Number(a.x), y: Number(a.y), width: Number(a.width), height: Number(a.height) };
+  if (shape.width <= 0 || shape.height <= 0) return null;
+  const boundaries = [shape.x, ...parts.slice(4, -1).map((part) => Number(attributes(part).x1)), shape.x + shape.width];
+  if (boundaries.some((value, i) => !Number.isFinite(value) || i > 0 && value <= boundaries[i - 1])) return null;
+  shape.columns = boundaries.slice(1).map((value, i) => (value - boundaries[i]) / shape.width);
+  const expected = tableParts(shape);
+  if (parts.length !== expected.length || parts.some((part, i) => {
+    const wanted = expected[i];
+    const actual = attributes(part);
+    return part.tagName !== wanted.tag || children(part).length ||
+      Object.keys(actual).length !== Object.keys(wanted.attrs).length ||
+      Object.entries(wanted.attrs).some(([key, value]) => typeof value === 'number'
+        ? !numeric(actual[key]) || Math.abs(Number(actual[key]) - value) > 0.02
+        : actual[key] !== value);
+  })) return null;
+  return shape;
+}
+
+export function addTableColumn(shape) {
+  const count = shape.columns.length + 1;
+  const columns = [...shape.columns.map((width) => width * (count - 1) / count), 1 / count];
+  if (columns.some((width) => width * shape.width < TABLE_MIN_COLUMN)) return null;
+  return { ...shape, columns };
+}
+
+export function resizeTableColumn(shape, index, point) {
+  const edges = [shape.x, ...tableDividers(shape), shape.x + shape.width];
+  const x = clamp(point.x, edges[index] + TABLE_MIN_COLUMN, edges[index + 2] - TABLE_MIN_COLUMN);
+  const columns = [...shape.columns];
+  columns[index] = (x - edges[index]) / shape.width;
+  columns[index + 1] = (edges[index + 2] - x) / shape.width;
+  return { ...shape, columns };
 }
 
 export function resizeSketchLine(shape, point, endpoint) {
@@ -217,8 +300,10 @@ export function resizeSketchShape(shape, point, corner) {
   const anchorY = north ? shape.y + shape.height : shape.y;
   const maxWidth = west ? anchorX : MOCKUP_W - anchorX;
   const maxHeight = north ? anchorY : MOCKUP_H - anchorY;
-  let width = clamp(west ? anchorX - point.x : point.x - anchorX, 4, maxWidth);
-  let height = clamp(north ? anchorY - point.y : point.y - anchorY, 4, maxHeight);
+  const minWidth = shape.type === 'table' ? TABLE_MIN_COLUMN / Math.min(...shape.columns) : 4;
+  const minHeight = shape.type === 'table' ? TABLE_MIN_HEIGHT : 4;
+  let width = clamp(west ? anchorX - point.x : point.x - anchorX, minWidth, maxWidth);
+  let height = clamp(north ? anchorY - point.y : point.y - anchorY, minHeight, maxHeight);
   let fontSize = shape.fontSize;
   if (shape.type === 'text') {
     const scale = clamp(
