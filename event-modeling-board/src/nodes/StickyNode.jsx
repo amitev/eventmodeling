@@ -253,7 +253,7 @@ export function StickyNode({ id, data, selected }) {
     >
       <div
         className="sticky-header"
-        title={shown.name || undefined}
+        title={shown.name ? `${shown.name}${shown.kind === 'read_model' && shown.isList ? ' []' : ''}` : undefined}
         onDoubleClick={isCopy || overview ? undefined : () => setEditingTitle(true)}
       >
         {isCopy && (
@@ -284,7 +284,10 @@ export function StickyNode({ id, data, selected }) {
             }}
           />
         ) : (
-          <span className={`title ${shown.name ? '' : 'empty'}`}>{shown.name || 'Name'}</span>
+          <span className={`title ${shown.name ? '' : 'empty'}`}>
+            <span className="title-name">{shown.name || 'Name'}</span>
+            {shown.kind === 'read_model' && shown.isList && <span className="title-list">[]</span>}
+          </span>
         )}
       </div>
       {data.kind === 'processor' ? (
