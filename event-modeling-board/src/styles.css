@@ -83,6 +83,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .lane.color-yellow, .swatch.color-yellow { --lane-rgb: 255, 214, 10; }
 .lane.color-brown, .swatch.color-brown { --lane-rgb: 141, 110, 99; }
 .lane.color-gray, .swatch.color-gray { --lane-rgb: 120, 120, 120; }
+.lane.color-white, .swatch.color-white { --lane-rgb: 255, 255, 255; }
+.lane.color-black, .swatch.color-black { --lane-rgb: 0, 0, 0; }
 .lane[class*="color-"]:not(.color-none) {
   background-image: linear-gradient(rgba(var(--lane-rgb), 0.18), rgba(var(--lane-rgb), 0.18));
 }
@@ -212,7 +214,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   outline: 1px solid #174ea6; background: #fff; font-family: sans-serif; line-height: 1.2;
   user-select: text;
 }
-.sketch-color input[type="color"] { width: 28px; height: 26px; padding: 0; border: 1px solid #bbc; cursor: pointer; }
+.sketch-color .lane-color-btn { width: 28px; height: 26px; }
 .sketch-canvas-box {
   display: flex; flex: 1; align-items: center; justify-content: center; min-height: 0;
   padding: 16px; overflow: hidden; background: #eceef3;
@@ -310,12 +312,19 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   border: 1px solid #889; border-radius: 3px; background: #fff;
 }
 .swatch[class*="color-"]:not(.color-none) { background: rgb(var(--lane-rgb)); }
+.swatch.color-none {
+  background: repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 0 0 / 8px 8px;
+}
 .swatch.current { outline: 2px solid #1a73e8; outline-offset: 1px; }
 .lane-color-btn { width: 18px; height: 18px; }
 .lane-palette {
   position: absolute; z-index: 6; left: 0; top: 56px; width: 100%; box-sizing: border-box; padding: 6px 4px;
   display: grid; grid-template-columns: repeat(2, 16px); gap: 4px; justify-content: center;
   background: #fff; border-top: 1px solid #aab; border-bottom: 1px solid #aab;
+}
+.lane-palette.floating {
+  position: fixed; width: 52px; max-height: calc(100vh - 100px); overflow-y: auto;
+  border: 1px solid #aab; border-radius: 4px;
 }
 
 /* Processor: a cogwheel under its name, no box (R3.6). */

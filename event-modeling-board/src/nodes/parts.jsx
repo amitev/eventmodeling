@@ -7,8 +7,21 @@ import { HistoryContext } from '../state/history.js';
 import { ScreenFrame } from './ScreenFrame.jsx';
 import { BoardActions } from '../state/BoardActions.js';
 
-export function ColorPicker({ color, onChange, open, onOpenChange, disabled = false, label = 'Lane colour' }) {
+export function ColorPicker({ color, onChange, open, onOpenChange, disabled = false, label = 'Lane colour', allowNone = true, floating = false, swatchStyle }) {
   const ref = useRef(null);
+  const [position, setPosition] = useState(null);
+  useLayoutEffect(() => {
+    if (!open || !floating || disabled) return;
+    const rect = ref.current.getBoundingClientRect();
+    setPosition({ left: Math.max(0, Math.min(rect.left, window.innerWidth - 52)), top: rect.bottom + 6 });
+    const close = () => onOpenChange(false);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open, floating, disabled, onOpenChange]);
   useEffect(() => {
     if (!open || disabled) return;
     const close = (event) => {
@@ -22,6 +35,7 @@ export function ColorPicker({ color, onChange, open, onOpenChange, disabled = fa
       <button
         type="button"
         className={`lane-color-btn swatch color-${color}`}
+        style={swatchStyle}
         title={label}
         aria-label={`${label}: ${color}`}
         aria-expanded={open && !disabled}
@@ -29,8 +43,8 @@ export function ColorPicker({ color, onChange, open, onOpenChange, disabled = fa
         onClick={() => onOpenChange(!open)}
       />
       {open && !disabled && (
-        <div className="lane-palette" role="group" aria-label={label}>
-          {LANE_COLORS.map((value) => (
+        <div className={`lane-palette${floating ? ' floating' : ''}`} style={floating ? position : undefined} role="group" aria-label={label}>
+          {LANE_COLORS.filter((value) => allowNone || value !== 'none').map((value) => (
             <button
               type="button"
               key={value}

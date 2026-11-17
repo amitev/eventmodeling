@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
+import { LANE_COLOR_RGB } from '../../../server/lane-colors.js';
+import { ColorPicker } from '../nodes/parts.jsx';
 import { addTableColumn, expandSketchSelection, groupSketchShapes, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchGroupId, sketchHtml, sketchId, sketchItems, sketchPoint, tableDividers, tableParts, travelSketchHistory, ungroupSketchShapes, validSketchSize } from '../model/sketch.js';
 
 const CORNERS = ['nw', 'ne', 'sw', 'se'];
+const SKETCH_COLORS = Object.fromEntries(Object.entries(LANE_COLOR_RGB).map(([name, rgb]) => [
+  name, rgb === null ? 'none' : `#${rgb.split(',').map((part) => Number(part).toString(16).padStart(2, '0')).join('')}`,
+]));
 
 function SketchShape({ shape, editingId }) {
   if (shape.type === 'table') {
@@ -512,12 +517,21 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
 }
 
 function SketchColor({ label, value, onChange, allowNone = true }) {
+  const [open, setOpen] = useState(false);
+  const color = Object.keys(SKETCH_COLORS).find((name) => SKETCH_COLORS[name] === value.toLowerCase());
   return (
     <div className="sketch-color">
-      <label>{label}
-        <input type="color" aria-label={`Sketch ${label.toLowerCase()}`} value={value === 'none' ? '#ffffff' : value} onChange={(event) => onChange(event.target.value)} />
-      </label>
-      {allowNone && <label><input type="checkbox" checked={value === 'none'} onChange={(event) => onChange(event.target.checked ? 'none' : '#1f2937')} />None</label>}
+      <span>{label}</span>
+      <ColorPicker
+        label={`Sketch ${label.toLowerCase()}`}
+        color={color ?? value}
+        swatchStyle={color ? undefined : { background: value }}
+        open={open}
+        onOpenChange={setOpen}
+        allowNone={allowNone}
+        floating
+        onChange={(name) => onChange(SKETCH_COLORS[name])}
+      />
     </div>
   );
 }

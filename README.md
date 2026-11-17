@@ -21,7 +21,13 @@ To install the CLI from this checkout for local use:
 ```sh
 npm install
 npm run build
-npm link
+npm link --force
+```
+
+Or a single command:
+
+```sh
+npm install && npm run build && npm link --force
 ```
 
 `em-cli` is then available globally; `em-cli board` runs the board from the current directory.

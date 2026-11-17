@@ -94,7 +94,7 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 
 ### Read
 
-- **S4.8** `GET /rules` returns what an agent must not guess: element types, lane types in order with the element types each takes (R2.10), allowed connections (R4.7), lane colours (R2.6), Notes colours (R3.24), Processor icon names (R3.6), the field types (R9).
+- **S4.8** `GET /rules` returns what an agent must not guess: element types, lane types in order with the element types each takes (R2.10), allowed connections (R4.7), lane colours including `white`/`black` (R2.6), Notes colours (R3.24), Processor icon names (R3.6), the field types (R9).
 - **S4.9** `GET /outline?context=` returns the Contexts (only the one with id `context`, when given), each with its Chapters: `id`, `name`, `x`, `y`, `connectsTo`, lanes (`id`, `name`, `type`) and slices (`id`, `name`, `type`, `flowEnd?`, `width`, `connectsTo`) with their elements `{ id, type, name, lane, x, copyOf?, connectsTo }` (`name` of a linked copy is its original's). No `html`, `url`, `fields`, `info`, `markdown` or scenarios. Order as R6.8.
 - **S4.10** `GET /search?q=&type=&context=` lists elements `{ id, type, name, chapterId, sliceId, lane }`. `q`: part of the name, case-insensitive; `type`: an element type (upper case); `context`: a Context id. Without all three, all elements.
 - **S4.11** `GET /chapters/:id?screenContent=` returns the Chapter as stored (R6.3; `screenContent` as S3.12). `GET /elements/:id` returns the element as stored (R6.5), a linked copy as its own entry (unlike S3.14).

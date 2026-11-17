@@ -11,6 +11,8 @@ export const LANE_COLOR_RGB = {
   pink: '240, 98, 146',
   brown: '141, 110, 99',
   gray: '120, 120, 120',
+  white: '255, 255, 255',
+  black: '0, 0, 0',
 };
 
 export const LANE_COLORS = Object.keys(LANE_COLOR_RGB);
