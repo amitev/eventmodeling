@@ -54,7 +54,7 @@ import {
   DEFAULT_PROCESSOR_ICON,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
-import { pushBoard, pullBoard, watchRevision, StaleError } from './state/sync.js';
+import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
 import { highlightHtml, htmlStructure } from '../../server/html-highlights.js';
@@ -1161,7 +1161,6 @@ function Board() {
   // pull or push, so a board that differs has changes not yet pushed.
   const serverRevision = useRef(null);
   const serverText = useRef(null);
-  const syncing = useRef(false);
   const ownRevisions = useRef(new Set());
   const latestBoard = useRef(null);
   latestBoard.current = { nodes, edges, contexts };
@@ -1173,7 +1172,6 @@ function Board() {
   };
 
   const pullFromServer = async () => {
-    syncing.current = true;
     try {
       const opening = serverRevision.current === null;
       const board = latestBoard.current;
@@ -1197,30 +1195,28 @@ function Board() {
       }
     } catch (err) {
       setNotice(`Could not pull from the server: ${err.message}`);
-    } finally {
-      syncing.current = false;
     }
   };
 
-  const pushToServer = async (board) => {
-    if (syncing.current || serverRevision.current === null) return;
-    syncing.current = true;
-    let outcome = 'failed';
+  const [revisionSync] = useState(() => createRevisionSync(
+    (revision) => serverRevision.current !== null
+      && (revision === serverRevision.current || ownRevisions.current.has(revision)),
+    pullFromServer
+  ));
+
+  const pushToServer = (board) => revisionSync.run(async () => {
+    if (serverRevision.current === null) return;
     try {
       const pushed = await pushBoard(board.nodes, board.edges, board.contexts, serverRevision.current);
       rememberPushes(pushed.revision, pushed.pushed);
       serverText.current = boardText(board.nodes, board.edges, board.contexts);
-      outcome = 'pushed';
+      setSyncTick((t) => t + 1);
     } catch (err) {
       if (err.pushed) rememberPushes(err.revision, err.pushed);
-      if (err instanceof StaleError) outcome = 'stale';
+      if (err instanceof StaleError) await pullFromServer();
       else setNotice(`Could not push to the server: ${err.message}`);
-    } finally {
-      syncing.current = false;
     }
-    if (outcome === 'stale') pullFromServer();
-    else if (outcome === 'pushed') setSyncTick((t) => t + 1);
-  };
+  });
 
   // Auto-push (R10.1): 1 s after the last change, the board is pushed. A failure is retried with the
   // next change.
@@ -1235,18 +1231,7 @@ function Board() {
 
   // Open and auto-pull (R10.2, R10.6): the server model replaces the board when it has no known
   // revision (opening, or after a lost connection that never answered) or a revision of someone else.
-  useEffect(
-    () =>
-      watchRevision((revision) => {
-        if (syncing.current) return;
-        const known = serverRevision.current;
-        if (known !== null && (revision === known || ownRevisions.current.has(revision))) return;
-        pullFromServer();
-      }),
-    // pullFromServer only uses refs and state setters
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
+  useEffect(() => watchRevision(revisionSync.notify), [revisionSync]);
 
   const isValidConnection = useCallback(
     (c) => {

@@ -7,7 +7,7 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 - **Use only the API. Never read, create, edit or delete files in `<cwd>/.event-modeling/model/`. Use atomic, board-validated editing endpoints, not whole-Context pushes.**
 - Storage: `contexts.yaml` = ordered `[{ id, name, info?, file }]`; first Context is Default. Each `<file>` (e.g. `backoffice.yaml`) = `{ id, name, tasks?, chapters }`, slices inline. Chapter `context` must reference a listed Context id; Tasks live in that Context file.
 - Every write compacts all `SCREEN` `html`.
-- Board auto-pulls server changes unless it has unpushed changes; then it shows a notice only.
+- Board auto-pulls server changes, after any in-flight sync. It shows a notice if the pull replaces unpushed edits.
 - Revision: opaque text, changes with each stored-model change; returned as `ETag` by `GET /`, `GET /revision` and all writes. Pushes require `If-Match: "<revision>"`; editing writes check it only if supplied.
 - Read `GET /rules` once per session; scope lookups via `model-navigation`. Server creates globally unique 6-character ids (`a-zA-Z0-9`); address items by id alone. Types uppercase; names free text except Context names.
 - Context names are file names: nonempty; no `\ / : * ? " < > |`, control characters or trailing dot; not `contexts` or Windows device names.

@@ -74,6 +74,29 @@ export async function pullBoard() {
   }
 }
 
+// Coalesce notifications during sync, then check against the revision the sync actually reached.
+export function createRevisionSync(isKnown, pull) {
+  let busy = false;
+  let pending;
+  const run = async (sync) => {
+    if (busy) return;
+    busy = true;
+    try {
+      await sync();
+    } finally {
+      busy = false;
+      const revision = pending;
+      pending = undefined;
+      if (revision !== undefined) notify(revision);
+    }
+  };
+  const notify = (revision) => {
+    if (busy) pending = revision;
+    else if (!isKnown(revision)) return run(pull);
+  };
+  return { run, notify };
+}
+
 const RETRY_MS = 3000;
 
 // Calls `onRevision(revision)` whenever the server's model changes (R10.6); the stream reconnects
