@@ -296,7 +296,7 @@ An element is a sticky note with an id (R1.14), a type, a name and a position. I
 ## 4. Connections
 
 - **R4.1** Elements are connected with directed arrows (with arrowhead), 3px thick.
-- **R4.2** Each element has two connection points, **top** and **bottom**; either can start or end a connection. When the target is below the source (also in another slice or Chapter; equal height counts as below), the arrow leaves the source's **lower** point and enters the target's **upper** point; when above, it leaves the source's top point and enters the target's bottom point. Points follow the elements.
+- **R4.2** Each connectable element has **top** and **bottom** points; Processors also have **left** and **right** points at the icon's side centres. Each point can start or end a connection. When the target is below the source (also in another slice or Chapter; equal height counts as below), the arrow leaves the source's **lower** point and enters the target's **upper** point; when above, it leaves the source's top point and enters the target's bottom point. For each Processor endpoint, use left/right whenever the other element's centre x differs from its own; use top/bottom only when centre x matches. Compare board coordinates, including Chapter offsets. Other endpoint follows normal rules. Recompute on movement; points follow elements.
 - **R4.3** The user connects by dragging from a connection point of one element to one of another; R4.2, not the drag's start, decides which points the arrow uses.
 - **R4.4** Selected connections can be deleted with Backspace or Delete.
 - **R4.5** Two elements are connected at most once (A to B cannot be made twice). A connection is identified by source and target and has no id (R1.16).

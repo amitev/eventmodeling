@@ -336,6 +336,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky.processor .sticky-header .title-input { flex: 1; text-align: center; }
 .sticky.processor .cogwheel { display: flex; justify-content: center; height: 88px; color: var(--processor); }
 .react-flow__node:has(> .sticky.processor) > .react-flow__handle-top { top: 26px; }
+.react-flow__node:has(> .sticky.processor) > .react-flow__handle-left { left: calc(50% - 44px); top: 70px; }
+.react-flow__node:has(> .sticky.processor) > .react-flow__handle-right { right: calc(50% - 44px); top: 70px; }
 
 /* Notes: a fixed 280x200 card showing rendered Markdown; vertical scrolling only. */
 .sticky.notes {

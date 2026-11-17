@@ -244,6 +244,14 @@ export function StickyNode({ id, data, selected }) {
       <Handle id="top-out" type="source" position={Position.Top} />
       <Handle id="bottom-out" type="source" position={Position.Bottom} />
       <Handle id="bottom-in" type="target" position={Position.Bottom} />
+      {data.kind === 'processor' && (
+        <>
+          <Handle id="left-in" type="target" position={Position.Left} />
+          <Handle id="left-out" type="source" position={Position.Left} />
+          <Handle id="right-in" type="target" position={Position.Right} />
+          <Handle id="right-out" type="source" position={Position.Right} />
+        </>
+      )}
     <div
       className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${isOriginalOfSelectedCopy ? ' copy-origin-selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
       onPointerEnter={zoomable ? startGrowing : undefined}

@@ -30,6 +30,12 @@ export function createEdgeDisplay() {
     }
     const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
     const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
+    const centreX = (n) => (byId.get(n.parentId)?.position.x ?? 0) + n.position.x + stickyW(n) / 2;
+    const side = (node, other, vertical) => {
+      if (node.data.kind !== 'processor') return vertical;
+      const dx = centreX(other) - centreX(node);
+      return dx === 0 ? vertical : dx < 0 ? 'left' : 'right';
+    };
     const nextCache = new Map();
     const result = edges.map((edge) => {
       const source = byId.get(edge.source);
@@ -37,11 +43,14 @@ export function createEdgeDisplay() {
       const hidden = hiddenNode(source) || hiddenNode(target);
       const element = source?.type === 'sticky' && target?.type === 'sticky';
       const down = element ? centreY(target) >= centreY(source) : undefined;
+      const sourceHandle = element ? `${side(source, target, down ? 'bottom' : 'top')}-out` : undefined;
+      const targetHandle = element ? `${side(target, source, down ? 'top' : 'bottom')}-in` : undefined;
       const color = element && overview ? OVERVIEW_EDGE_COLORS[source.data?.kind] : undefined;
       const incomplete = element && incompleteTargets.has(edge.target);
       const cached = cache.get(edge.id);
       if (cached && cached.edge === edge && cached.hidden === hidden && cached.element === element &&
-          cached.down === down && cached.color === color && cached.incomplete === incomplete) {
+          cached.sourceHandle === sourceHandle && cached.targetHandle === targetHandle &&
+          cached.color === color && cached.incomplete === incomplete) {
         nextCache.set(edge.id, cached);
         return cached.shown;
       }
@@ -51,8 +60,8 @@ export function createEdgeDisplay() {
             ...edge,
             hidden,
             selected,
-            sourceHandle: down ? 'bottom-out' : 'top-out',
-            targetHandle: down ? 'top-in' : 'bottom-in',
+            sourceHandle,
+            targetHandle,
             ...(color || incomplete ? {
               style: {
                 ...edge.style,
@@ -63,7 +72,7 @@ export function createEdgeDisplay() {
             } : {}),
           }
         : hidden === !!edge.hidden && !(hidden && edge.selected) ? edge : { ...edge, hidden, selected };
-      nextCache.set(edge.id, { edge, hidden, element, down, color, incomplete, shown });
+      nextCache.set(edge.id, { edge, hidden, element, sourceHandle, targetHandle, color, incomplete, shown });
       return shown;
     });
     cache = nextCache;
