@@ -56,6 +56,7 @@ import {
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, StaleError } from './state/sync.js';
 import { cleanName } from './model/names.js';
+import { readSketch } from './model/sketch.js';
 import { highlightHtml, htmlStructure } from '../../server/html-highlights.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
@@ -452,6 +453,10 @@ function Board() {
   const htmlTarget = htmlId ? nodes.find((n) => n.id === htmlId && n.data.kind === 'screen') : screenInfo;
   const htmlCopy = !!htmlTarget?.data.copyOf;
   const htmlNode = htmlCopy ? nodes.find((n) => n.id === htmlTarget.data.copyOf) : htmlTarget;
+  const initialHtmlTab = useMemo(() => {
+    if (screenInfo) return 'info';
+    return !htmlCopy && !overview && htmlNode && !htmlNode.data.url && readSketch(htmlNode.data.html ?? '').isSketch ? 'sketch' : 'content';
+  }, [screenInfo, htmlCopy, overview, htmlNode]);
   const closeScreen = () => {
     if (screenInfo) setInfoId(null);
     setHtmlId(null);
@@ -2022,7 +2027,7 @@ function Board() {
           initialFields={htmlNode.data.fields ?? []}
           parent={parentFields(nodes, edges, htmlNode.id)}
           initialHighlights={htmlTarget.data.highlights ?? []}
-          initialTab={screenInfo ? 'info' : 'content'}
+          initialTab={initialHtmlTab}
           onSave={saveHtml}
           onCancel={closeScreen}
         />

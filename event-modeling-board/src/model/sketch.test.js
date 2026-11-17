@@ -35,3 +35,11 @@ test('marquee selection requires the full shape bounds inside the box', () => {
   assert.deepEqual(selectSketchShapes(shapes, { x: 140, y: 30, width: 80, height: 60 }), ['em-sketch-2']);
   assert.deepEqual(selectSketchShapes(shapes, { x: 25, y: 35, width: 90, height: 50 }), []);
 });
+
+test('sketch detection uses the SVG root id, including unsupported marked sketches', () => {
+  const html = sketchHtml([]);
+  assert.equal(readSketch(html).isSketch, true);
+  assert.equal(readSketch(html.replace('viewBox="0 0 1024 768"', 'viewBox="0 0 100 100"')).isSketch, true);
+  assert.equal(readSketch(html.replace('<svg id=', '<p>Content</p><svg id=')).isSketch, true);
+  assert.equal(readSketch('<!doctype html><html><body><svg></svg></body></html>').isSketch, false);
+});

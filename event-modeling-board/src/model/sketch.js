@@ -93,13 +93,16 @@ export function sketchHtml(shapes) {
 
 // Read only our complete SVG document; never silently drop handwritten HTML or SVG features.
 export function readSketch(html) {
-  const problem = (error) => ({ shapes: null, error });
+  let isSketch = false;
+  const problem = (error) => ({ shapes: null, error, isSketch });
   if (!html.trim()) return problem('No sketch yet.');
   const document = parse(html);
   const root = document.childNodes.find((node) => node.tagName === 'html');
   const head = root?.childNodes.find((node) => node.tagName === 'head');
   const body = root?.childNodes.find((node) => node.tagName === 'body');
-  const svg = body && children(body)[0];
+  const bodyChildren = body ? children(body) : [];
+  const svg = bodyChildren[0];
+  isSketch = bodyChildren.some((node) => node.tagName === 'svg' && attributes(node).id === SKETCH_ID);
   if (!svg || svg.tagName !== 'svg' || attributes(svg).id !== SKETCH_ID) {
     return problem('This content is not an editable sketch.');
   }
@@ -176,7 +179,7 @@ export function readSketch(html) {
     ids.add(shape.id);
     shapes.push(shape);
   }
-  return { shapes, error: '' };
+  return { shapes, error: '', isSketch };
 }
 
 export function sketchId(shapes) {
