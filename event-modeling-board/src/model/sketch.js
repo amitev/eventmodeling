@@ -25,6 +25,43 @@ export const sketchLayers = (shapes) => [
   ...shapes.filter(({ type }) => type === 'text'),
 ];
 
+export const sketchItems = (shapes) => {
+  const items = [];
+  const groups = new Map();
+  for (const shape of sketchLayers(shapes)) {
+    if (!shape.groupId) {
+      items.push(shape);
+      continue;
+    }
+    let group = groups.get(shape.groupId);
+    if (!group) {
+      group = { id: shape.groupId, type: 'group', shapes: [] };
+      groups.set(shape.groupId, group);
+      items.push(group);
+    }
+    group.shapes.push(shape);
+  }
+  return items;
+};
+
+const shapeHtml = (shape) => {
+  const { id, x, y, width, fill } = shape;
+  if (shape.type === 'table') {
+    const parts = tableParts(shape).map(({ tag, attrs }) =>
+      `<${tag} ${Object.entries(attrs).map(([key, value]) => `${key}="${value}"`).join(' ')}></${tag}>`,
+    ).join('');
+    return `<g id="${id}" class="em-sketch-table">${parts}</g>`;
+  }
+  if (shape.type === 'rect') {
+    return `<rect id="${id}" x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(shape.height)}" fill="${fill}" stroke="${shape.stroke}" stroke-width="2"></rect>`;
+  }
+  if (shape.type === 'line') {
+    const { x1, y1, x2, y2 } = lineEndpoints(shape);
+    return `<line id="${id}" x1="${number(x1)}" y1="${number(y1)}" x2="${number(x2)}" y2="${number(y2)}" stroke="${shape.stroke}" stroke-width="2"></line>`;
+  }
+  return `<text id="${id}" x="${number(x)}" y="${number(y + shape.fontSize)}" font-size="${number(shape.fontSize)}" font-family="sans-serif" fill="${fill}" textLength="${number(width)}" lengthAdjust="spacingAndGlyphs">${escape(shape.text)}</text>`;
+};
+
 export function recordSketchHistory(history, present, group = null) {
   if (present === history.present) return history;
   return {
@@ -47,23 +84,10 @@ export function travelSketchHistory(history, redo = false) {
 }
 
 export function sketchHtml(shapes) {
-  const content = sketchLayers(shapes).map((shape) => {
-    const { id, x, y, width, fill } = shape;
-    if (shape.type === 'table') {
-      const parts = tableParts(shape).map(({ tag, attrs }) =>
-        `<${tag} ${Object.entries(attrs).map(([key, value]) => `${key}="${value}"`).join(' ')}></${tag}>`,
-      ).join('');
-      return `<g id="${id}" class="em-sketch-table">${parts}</g>`;
-    }
-    if (shape.type === 'rect') {
-      return `<rect id="${id}" x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(shape.height)}" fill="${fill}" stroke="${shape.stroke}" stroke-width="2"></rect>`;
-    }
-    if (shape.type === 'line') {
-      const { x1, y1, x2, y2 } = lineEndpoints(shape);
-      return `<line id="${id}" x1="${number(x1)}" y1="${number(y1)}" x2="${number(x2)}" y2="${number(y2)}" stroke="${shape.stroke}" stroke-width="2"></line>`;
-    }
-    return `<text id="${id}" x="${number(x)}" y="${number(y + shape.fontSize)}" font-size="${number(shape.fontSize)}" font-family="sans-serif" fill="${fill}" textLength="${number(width)}" lengthAdjust="spacingAndGlyphs">${escape(shape.text)}</text>`;
-  }).join('');
+  const content = sketchItems(shapes).map((item) => item.type === 'group'
+    ? `<g id="${item.id}" class="em-sketch-group">${item.shapes.map(shapeHtml).join('')}</g>`
+    : shapeHtml(item),
+  ).join('');
   return `<!DOCTYPE html><html><head></head><body style="margin:0"><svg id="${SKETCH_ID}" xmlns="http://www.w3.org/2000/svg" width="${MOCKUP_W}" height="${MOCKUP_H}" viewBox="0 0 ${MOCKUP_W} ${MOCKUP_H}" style="${SVG_STYLE}">${content}</svg></body></html>`;
 }
 
@@ -88,7 +112,23 @@ export function readSketch(html) {
   }
   const shapes = [];
   const ids = new Set();
+  const groupIds = new Set();
+  const nodes = [];
   for (const node of children(svg)) {
+    const a = attributes(node);
+    if (node.tagName === 'g' && a.class === 'em-sketch-group') {
+      if (!onlyAttrs(node, TABLE_ATTRS) || !/^em-sketch-group-[1-9]\d*$/.test(a.id) || groupIds.has(a.id)) {
+        return problem('The sketch has invalid or duplicate group ids.');
+      }
+      const members = children(node);
+      if (members.length < 2) return problem('A sketch group must contain at least two shapes.');
+      groupIds.add(a.id);
+      for (const member of members) nodes.push({ node: member, groupId: a.id });
+    } else {
+      nodes.push({ node, groupId: null });
+    }
+  }
+  for (const { node, groupId } of nodes) {
     const allowed = { rect: RECT_ATTRS, text: TEXT_ATTRS, line: LINE_ATTRS, g: TABLE_ATTRS }[node.tagName];
     if (!allowed || !onlyAttrs(node, allowed)) {
       return problem('The sketch contains unsupported shapes or attributes. Edit Content or start a new sketch.');
@@ -100,7 +140,7 @@ export function readSketch(html) {
     if (!['line', 'g'].includes(node.tagName) && (!numeric(a.x) || !numeric(a.y) || !COLOR.test(a.fill ?? ''))) {
       return problem('The sketch has invalid ids, positions or colors. Edit Content or start a new sketch.');
     }
-    const shape = { id: a.id, type: node.tagName };
+    const shape = { id: a.id, type: node.tagName, ...(groupId ? { groupId } : {}) };
     if (!['line', 'g'].includes(node.tagName)) Object.assign(shape, { x: Number(a.x), y: Number(a.y), fill: a.fill });
     if (node.tagName === 'g') {
       const table = readTable(node);
@@ -141,6 +181,34 @@ export function readSketch(html) {
 
 export function sketchId(shapes) {
   return `em-sketch-${Math.max(0, ...shapes.map(({ id }) => Number(id.slice('em-sketch-'.length)))) + 1}`;
+}
+
+export function sketchGroupId(shapes) {
+  const max = Math.max(0, ...shapes.map(({ groupId }) =>
+    Number(groupId?.slice('em-sketch-group-'.length)) || 0,
+  ));
+  return `em-sketch-group-${max + 1}`;
+}
+
+export function expandSketchSelection(shapes, selectedIds) {
+  const selected = new Set(selectedIds);
+  const groupIds = new Set(shapes.filter(({ id, groupId }) => selected.has(id) && groupId).map(({ groupId }) => groupId));
+  return shapes.filter(({ id, groupId }) => selected.has(id) || groupIds.has(groupId)).map(({ id }) => id);
+}
+
+export function groupSketchShapes(shapes, selectedIds, groupId) {
+  const selected = new Set(expandSketchSelection(shapes, selectedIds));
+  if (selected.size < 2) return shapes;
+  return shapes.map((shape) => selected.has(shape.id) ? { ...shape, groupId } : shape);
+}
+
+export function ungroupSketchShapes(shapes, selectedIds) {
+  const selected = new Set(expandSketchSelection(shapes, selectedIds));
+  return shapes.map((shape) => {
+    if (!selected.has(shape.id) || !shape.groupId) return shape;
+    const { groupId, ...ungrouped } = shape;
+    return ungrouped;
+  });
 }
 
 export function sketchPoint(x, y) {
@@ -244,27 +312,6 @@ export function resizeSketchLine(shape, point, endpoint) {
   return { ...shape, ...lineBetween(fixed, sketchPoint(point.x, point.y)) };
 }
 
-function lineIntersectsBox(shape, box) {
-  const { x1, y1, x2, y2 } = lineEndpoints(shape);
-  let start = 0;
-  let end = 1;
-  for (const [origin, delta, min, max] of [
-    [x1, x2 - x1, box.x, box.x + box.width],
-    [y1, y2 - y1, box.y, box.y + box.height],
-  ]) {
-    if (delta === 0) {
-      if (origin < min || origin > max) return false;
-    } else {
-      const a = (min - origin) / delta;
-      const b = (max - origin) / delta;
-      start = Math.max(start, Math.min(a, b));
-      end = Math.min(end, Math.max(a, b));
-      if (start > end) return false;
-    }
-  }
-  return true;
-}
-
 export function sketchBounds(shapes) {
   if (!shapes.length) return null;
   const x = Math.min(...shapes.map((shape) => shape.x));
@@ -277,15 +324,15 @@ export function sketchBounds(shapes) {
 }
 
 export function selectSketchShapes(shapes, box) {
-  return shapes.filter((shape) =>
-    shape.type === 'line' ? lineIntersectsBox(shape, box) :
-    shape.x <= box.x + box.width && shape.x + shape.width >= box.x &&
-    shape.y <= box.y + box.height && shape.y + shape.height >= box.y,
-  ).map(({ id }) => id);
+  return expandSketchSelection(shapes, shapes.filter((shape) =>
+    shape.x >= box.x && shape.y >= box.y &&
+    shape.x + shape.width <= box.x + box.width &&
+    shape.y + shape.height <= box.y + box.height,
+  ).map(({ id }) => id));
 }
 
 export function moveSketchShapes(shapes, selectedIds, dx, dy) {
-  const selected = new Set(selectedIds);
+  const selected = new Set(expandSketchSelection(shapes, selectedIds));
   const bounds = sketchBounds(shapes.filter(({ id }) => selected.has(id)));
   if (!bounds) return shapes;
   dx = clamp(dx, -bounds.x, MOCKUP_W - bounds.x - bounds.width);

@@ -1,8 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
-import { addTableColumn, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchHtml, sketchId, sketchLayers, sketchPoint, tableDividers, tableParts, travelSketchHistory, validSketchSize } from '../model/sketch.js';
+import { addTableColumn, expandSketchSelection, groupSketchShapes, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchGroupId, sketchHtml, sketchId, sketchItems, sketchPoint, tableDividers, tableParts, travelSketchHistory, ungroupSketchShapes, validSketchSize } from '../model/sketch.js';
 
 const CORNERS = ['nw', 'ne', 'sw', 'se'];
+
+function SketchShape({ shape, editingId }) {
+  if (shape.type === 'table') {
+    return (
+      <g data-shape-id={shape.id}>
+        {tableParts(shape).map(({ tag, attrs }, index) => {
+          const { 'stroke-width': strokeWidth, ...rest } = attrs;
+          return tag === 'rect'
+            ? <rect key={index} {...rest} strokeWidth={strokeWidth} />
+            : <line key={index} {...rest} strokeWidth={strokeWidth} />;
+        })}
+      </g>
+    );
+  }
+  if (shape.type === 'rect') {
+    return <rect data-shape-id={shape.id} x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={shape.fill} stroke={shape.stroke} strokeWidth={2} pointerEvents="all" />;
+  }
+  if (shape.type === 'line') {
+    return (
+      <g data-shape-id={shape.id}>
+        <line {...lineEndpoints(shape)} stroke={shape.stroke} strokeWidth={2} pointerEvents="none" />
+        <line {...lineEndpoints(shape)} stroke="transparent" strokeWidth={12} pointerEvents="stroke" />
+      </g>
+    );
+  }
+  return <text data-shape-id={shape.id} x={shape.x} y={shape.y + shape.fontSize} fontSize={shape.fontSize} fontFamily="sans-serif" fill={shape.fill} textLength={shape.width} lengthAdjust="spacingAndGlyphs" pointerEvents="all" visibility={shape.id === editingId ? 'hidden' : undefined}>{shape.text}</text>;
+}
 
 export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
   const model = useMemo(() => readSketch(html), [html]);
@@ -22,6 +49,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
   const shapes = draft ?? model.shapes ?? [];
   const selectedShapes = shapes.filter(({ id }) => selectedIds.includes(id));
   const selected = selectedShapes.length === 1 ? selectedShapes[0] : null;
+  const canGroup = new Set(selectedShapes.map(({ id, groupId }) => groupId ?? id)).size > 1;
   const editing = shapes.find((shape) => shape.id === editingId && shape.type === 'text');
   const selectionBounds = selectedShapes.length > 1 ? sketchBounds(selectedShapes) : null;
   const ready = !usingUrl && model.shapes !== null;
@@ -156,7 +184,9 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
       setDraft(next);
       gesture.current = { type: 'draw', shape: added, start, shapes: next, pointerId: event.pointerId, selectionBefore: selectedIds };
     } else if (shape) {
-      const nextIds = selectedIds.includes(shape.id) ? selectedShapes.map(({ id }) => id) : [shape.id];
+      const nextIds = selectedIds.includes(shape.id)
+        ? expandSketchSelection(shapes, selectedIds)
+        : expandSketchSelection(shapes, [shape.id]);
       setSelectedIds(nextIds);
       gesture.current = {
         type: column !== null ? 'column' : corner || endpoint ? 'resize' : 'move',
@@ -219,6 +249,14 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
   const remove = () => {
     commit(shapes.filter(({ id }) => !selectedIds.includes(id)));
     setSelectedIds([]);
+  };
+  const group = () => {
+    if (!canGroup) return;
+    commit(groupSketchShapes(shapes, selectedIds, sketchGroupId(shapes)));
+  };
+  const ungroup = () => {
+    if (!selectedShapes.some(({ groupId }) => groupId)) return;
+    commit(ungroupSketchShapes(shapes, selectedIds));
   };
   const onKey = (event) => {
     if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -286,6 +324,8 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
               <path d="M2 4h12M6 4V2h4v2M4 4l.7 10h6.6L12 4M6.5 6v6M9.5 6v6" />
             </svg>
           </button>
+          <button type="button" disabled={!canGroup || !!gesture.current} onClick={group} title="Group selected shapes">Group</button>
+          <button type="button" disabled={!selectedShapes.some(({ groupId }) => groupId) || !!gesture.current} onClick={ungroup} title="Ungroup selected shapes">Ungroup</button>
           <button type="button" className="sketch-tool-icon" aria-label="Undo sketch operation" title="Undo sketch operation (Ctrl+Z / Cmd+Z)" disabled={!history.past.length || !!gesture.current} onMouseDown={(event) => event.preventDefault()} onClick={() => travel()}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <path d="M6 2 2 6l4 4M2 6h7a5 5 0 0 1 0 10" transform="translate(0 -1)" />
@@ -334,7 +374,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           )}
         </div>
       </div>
-      <div className="html-blocked-hint">1024 × 768. Click to insert a table; drag its dividers to resize columns. Elements over cells stay independent. Drag rectangles/lines; double-click text to edit.</div>
+      <div className="html-blocked-hint">1024 × 768. Marquee-select shapes fully inside the box. Click to insert a table; drag its dividers to resize columns. Elements over cells stay independent. Group selected shapes to move them together; ungroup before editing a member.</div>
       {error && <div className="html-highlight-error" role="alert">{error}</div>}
       <div className="sketch-canvas-box">
         <svg
@@ -356,6 +396,11 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
               position.y >= item.y && position.y <= item.y + item.height);
             if (!shape) return;
             event.preventDefault();
+            if (shape.groupId) {
+              setSelectedIds(expandSketchSelection(shapes, [shape.id]));
+              setError('Ungroup the shapes before editing text.');
+              return;
+            }
             setSelectedIds([shape.id]);
             setEditingId(shape.id);
           }}
@@ -365,24 +410,10 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           onLostPointerCapture={(event) => finish(event, true)}
         >
           <rect width={MOCKUP_W} height={MOCKUP_H} fill="#ffffff" />
-          {sketchLayers(shapes).map((shape) => shape.type === 'table' ? (
-            <g key={shape.id} data-shape-id={shape.id}>
-              {tableParts(shape).map(({ tag, attrs }, index) => {
-                const { 'stroke-width': strokeWidth, ...rest } = attrs;
-                return tag === 'rect'
-                  ? <rect key={index} {...rest} strokeWidth={strokeWidth} />
-                  : <line key={index} {...rest} strokeWidth={strokeWidth} />;
-              })}
-            </g>
-          ) : shape.type === 'rect' ? (
-            <rect key={shape.id} data-shape-id={shape.id} x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={shape.fill} stroke={shape.stroke} strokeWidth={2} pointerEvents="all" />
-          ) : shape.type === 'line' ? (
-            <g key={shape.id} data-shape-id={shape.id}>
-              <line {...lineEndpoints(shape)} stroke={shape.stroke} strokeWidth={2} pointerEvents="none" />
-              <line {...lineEndpoints(shape)} stroke="transparent" strokeWidth={12} pointerEvents="stroke" />
-            </g>
-          ) : (
-            <text key={shape.id} data-shape-id={shape.id} x={shape.x} y={shape.y + shape.fontSize} fontSize={shape.fontSize} fontFamily="sans-serif" fill={shape.fill} textLength={shape.width} lengthAdjust="spacingAndGlyphs" pointerEvents="all" visibility={shape.id === editingId ? 'hidden' : undefined}>{shape.text}</text>
+          {sketchItems(shapes).map((item) => (
+            item.type === 'group'
+              ? <g key={item.id} data-group-id={item.id}>{item.shapes.map((shape) => <SketchShape key={shape.id} shape={shape} editingId={editingId} />)}</g>
+              : <SketchShape key={item.id} shape={item} editingId={editingId} />
           ))}
           {tool === 'select' && selectedShapes.map((shape) => (
             <g key={shape.id} className="sketch-selection" data-shape-id={shape.id}>
