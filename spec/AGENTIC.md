@@ -24,7 +24,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 ## 3. Model validation
 
 - **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
-- **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `source-to-event-model` and `wdyt` are slash-command only; they do not auto-activate.
+- **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `source-to-event-model`, `stressor-analysis` and `wdyt` are slash-command only; they do not auto-activate.
 - **A3.3** Keep skills concise and token-efficient without losing full intent, scope, triggers or constraints.
 - **A3.4** Orchestrator skills delegate owned procedures to task-specific skills instead of restating them.
 - **A3.5** Every skill edit requires a token-efficiency review before completion: remove repetition/filler, reuse shared procedures/defaults and preserve full intent, scope, triggers and constraints. Fix in the same edit without waiting for user feedback.
@@ -66,7 +66,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 ## 10. Review findings as Tasks
 
-- **A10.1** `wdyt`, `model-check`, `model-validation-checklist`, `language-check` and `pii-audit` offer selected findings as Tasks after reporting; skip when none.
+- **A10.1** `wdyt`, `model-check`, `model-validation-checklist`, `language-check`, `pii-audit` and `stressor-analysis` offer selected findings as Tasks after reporting; skip when none.
 - **A10.2** Confirm findings, titles and Context/Chapter assignment before Task writes. Never create Tasks automatically; Task approval does not authorize model fixes.
 - **A10.3** Shared API reference owns Task capture: business-language titles, question/evidence descriptions, default `Open` status, API writes and read-back; report saved count/titles and failures.
 - **A10.4** Approved Task capture is the only write exception during read-only reviews.
@@ -76,5 +76,13 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 - **A11.1** Batch ready writes with compact responses (S4.20/S4.24); retain required approvals, creation order and verification. Shared API reference owns response shape and mode choice.
 - **A11.2** Navigation uses resolved Screen metadata (S3.13) to check linked-copy mockup presence without fetching HTML.
+
+## 12. Stressor analysis
+
+- **A12.1** `stressor-analysis` reviews one Chapter through Markdown tables and structured user decisions; read-only until explicit redesign approval. Task capture follows section 10.
+- **A12.2** Start with about 15 wide stressors, at least 5 external; alternate external/business stressors. More adds about 10, retaining previous rows/IDs. Residues describe surviving/lost behavior, not fixes.
+- **A12.3** Submitted unacceptable residues lead directly to an incidence matrix of all affected business elements. Shared hits suggest coupling; unknown behavior stays explicit.
+- **A12.4** Retain baseline, selections, approvals and judgments across turns. Reassess changed evidence before writes; use revision guards. Apply only approved additions via `slice-modeler`, including its HTML/scenario checks.
+- **A12.5** Compare the same fresh stressors before/after using separate user judgments. Report acceptable/assessed and unknown counts; no runtime-resilience claim from model changes. No-new-element hits is a stopping heuristic, not proof.
 
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).
