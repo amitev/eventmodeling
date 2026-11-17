@@ -37,6 +37,81 @@ async function setup(t) {
   return { root, request, context, chapter };
 }
 
+test('Chapter discovery omits board structure and supports Context filtering', async (t) => {
+  const { request, context, chapter } = await setup(t);
+  const first = await context('First');
+  const second = await context('Second');
+  const ch = await chapter(first.id, 'Signup');
+  const shallow = await request('GET', '/outline?detail=chapters');
+  assert.deepEqual(shallow, [
+    { id: first.id, name: first.name, chapters: [{ id: ch.id, name: ch.name, x: ch.x, y: ch.y }] },
+    { id: second.id, name: second.name, chapters: [] },
+  ]);
+  assert.deepEqual(await request('GET', `/outline?detail=chapters&context=${second.id}`), shallow.slice(1));
+  assert.ok((await request('GET', '/outline'))[0].chapters[0].slices.length);
+  await request('GET', '/outline?detail=chapters&context=absent', undefined, 404);
+  await request('GET', '/outline?detail=unknown', undefined, 400);
+});
+
+test('one compact batch builds and verifies a new Chapter without echoing HTML or examples', async (t) => {
+  const { request } = await setup(t);
+  const post = (path, body, as) => ({ method: 'POST', path, body, as });
+  const batch = await request('POST', '/ops', {
+    compact: true,
+    verify: ['$ch.slice', '$ch.slice'],
+    ops: [
+      post('/contexts', { name: 'Streaming' }, 'context'),
+      post('/chapters', { context: '$context', name: 'Signup' }, 'ch'),
+      { method: 'PATCH', path: '/slices/$ch.slice', body: { name: 'Start Subscription' } },
+      post('/chapters/$ch/lanes', { type: 'SPEC', after: '$ch.event' }, 'spec'),
+      post('/elements', { slice: '$ch.slice', lane: '$ch.actor', type: 'SCREEN', name: 'Checkout',
+        html: '<h1>Review your plan</h1>', fields: [{ name: 'plan' }] }, 'screen'),
+      post('/elements', { slice: '$ch.slice', lane: '$ch.interaction', type: 'COMMAND',
+        name: 'Start Subscription' }, 'cmd'),
+      post('/elements', { slice: '$ch.slice', lane: '$ch.event', type: 'EVENT',
+        name: 'Subscription Started' }, 'event'),
+      post('/elements', { slice: '$ch.slice', lane: '$spec', type: 'SCENARIOS' }, 'specElement'),
+      post('/elements/$specElement/scenarios', {
+        name: 'Accept signup',
+        when: { element: '$cmd', example: { plan: 'Example plan' } },
+        then: [{ element: '$event', example: { plan: 'Example plan' } }],
+      }),
+    ],
+  });
+  const [, ch, slice, , screen, command, event, spec, scenario] = batch.results.map(({ body }) => body.id);
+  assert.equal(batch.slices.length, 1);
+  const summary = batch.slices[0];
+  assert.deepEqual([summary.chapter, summary.id, summary.type], [ch, slice, 'STATE_CHANGE']);
+  const elements = new Map(summary.elements.map((e) => [e.id, e]));
+  assert.deepEqual(elements.get(screen).connectsTo, [command]);
+  assert.equal(elements.get(screen).hasHtml, true);
+  assert.deepEqual(elements.get(command).fields, ['plan']);
+  assert.deepEqual(elements.get(command).connectsTo, [event]);
+  assert.deepEqual(elements.get(spec).scenarios, [
+    { id: scenario, name: 'Accept signup', given: [], when: command, then: [event], error: null },
+  ]);
+  assert.doesNotMatch(JSON.stringify(batch), /Review your plan|Example plan/);
+  const stored = await request('GET', `/chapters/${ch}`);
+  assert.equal(stored.slices[0].id, slice);
+  assert.match(stored.slices[0].elements.find((e) => e.id === screen).html, /Review your plan/);
+});
+
+test('failed batch verification or Chapter alias collision leaves no writes', async (t) => {
+  const { request, context } = await setup(t);
+  const existing = await context('Existing');
+  const before = await request('GET', '/revision');
+  const create = { method: 'POST', path: '/chapters', as: 'ch', body: { context: existing.id, name: 'Signup' } };
+  const unknown = await request('POST', '/ops', { verify: ['$missing'], ops: [create] }, 400);
+  assert.match(unknown.error, /Unknown slice/);
+  const invalid = await request('POST', '/ops', { verify: 'ch', ops: [create] }, 400);
+  assert.match(invalid.error, /verify must be a list/);
+  const collision = await request('POST', '/ops', { ops: [
+    { method: 'POST', path: '/contexts', as: 'ch.actor', body: { name: 'Transient' } }, create,
+  ] }, 400);
+  assert.match(collision.error, /^ops\[1\]: .*aliases/);
+  assert.deepEqual(await request('GET', '/revision'), before);
+});
+
 test('Tasks persist through CRUD, filtering, board round trips, pushes and Context rename', async (t) => {
   const { root, request, context, chapter } = await setup(t);
   const first = await context('Default');

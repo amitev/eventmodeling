@@ -9,9 +9,9 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 
 ## Principles
 
-1. **Read narrowly.** Never fetch the whole model (`GET /api/model`) for lookups. Outline first; `elements/:id` for a few elements. Chapter/Context content only when most elements are needed; use `screenContent=false` unless reading mockups.
+1. **Read narrowly.** Never fetch the whole model (`GET /api/model`) for lookups. Pick the smallest read below; use `screenContent=false` unless reading mockups.
 2. **Filter before printing.** Use shell `curl` or PowerShell `Invoke-RestMethod`; select needed ids, names and properties in the same command, not the whole response.
-3. **Reuse reads and write responses.** Re-read content only after outside changes or when compact responses omitted required verification data; structural verification is the exception below.
+3. **Reuse reads and write responses.** Read again only after outside changes or for missing evidence.
 4. **Look up ids, never recall them from memory.** Use search/outline. Names are not unique: ask which match, naming Chapters; never choose one.
 
 ## Which call for which question
@@ -19,6 +19,7 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 | Need | GET path | Result / query |
 |---|---|---|
 | Changes since last read | `/revision` | `{ revision }` + `ETag`; unchanged text = unchanged model |
+| Contexts and Chapter locations only | `/outline?detail=chapters` | IDs, names and Chapter positions; optional `context` id |
 | Structure and arrows | `/outline?context=<id>` | Context list with Chapters, lanes, slices, elements; ids, names, types, positions, `copyOf?`, `connectsTo`, slice `width`. No `html`, `fields`, `info`, scenarios. Omit filter for all; unknown Context: 404 |
 | Element by name | `/search?q=<text>&type=<TYPE>&context=<id>` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q`: case-insensitive substring; `type`: uppercase |
 | Element content | `/elements/:id` | Stored element: `fields`, `info`, `isList?`, `html` or `url`, `markdown`, `scenarios`, `connectsTo`, `copyOf` |
@@ -69,5 +70,5 @@ Check response shape once (first item or property names), then script the rest. 
 ## After a change
 
 - Use write responses (creation: 201) for new ids; compact batches follow the shared API reference.
-- Verify structure (slice type, arrows, order) with one Context-filtered outline read.
+- Use the batch slice summary to verify type and arrows. If you still need Chapter order or other structure, read its Context-filtered outline.
 - Server changes notify the open board automatically; no manual notification.

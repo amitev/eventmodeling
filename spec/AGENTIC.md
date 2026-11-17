@@ -76,6 +76,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 - **A11.1** Batch ready writes with compact responses (S4.20/S4.24); retain required approvals, creation order and verification. Shared API reference owns response shape and mode choice.
 - **A11.2** Navigation uses resolved Screen metadata (S3.13) to check linked-copy mockup presence without fetching HTML.
+- **A11.3** Discover Contexts/Chapters with S4.25 when no structure is needed. Use S4.26 to build inside new Chapters in the same batch. Include ready HTML and scenarios; verify changed slices with S4.27. Read only missing evidence; use Chapter reads for multiple elements. Group unresolved requirements and approvals when possible.
 
 ## 12. Stressor analysis
 

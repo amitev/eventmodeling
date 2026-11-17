@@ -9,13 +9,13 @@ description: Model a slice, workflow or process with atomic structure creation, 
 
 Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 
-Build the structure with **one atomic `POST /ops`**, all or none, one revision/write. Refused op changes nothing; error prefixed `ops[<index>]: `. The required HTML and scenario steps below may use subsequent API writes; do not describe the entire workflow as atomic when they do.
+Build the structure with **one atomic `POST /ops`**. Prepare required HTML and scenarios before sending it; use follow-up batches only when their inputs are not ready. Do not call a multi-batch workflow atomic.
 
 **Default deliverable:** modeling a slice, workflow or process includes its structure, fields, **persisted HTML screen mockups and Given/When/Then scenarios**. Invoke `html-screen` and `scenarios` as applicable; merely offering them as follow-up is not completion. Skip either only when the user explicitly excludes it (for example, "structure only"). This applies to elements in the requested scope, not unrelated existing placeholders. Automation/translation without Screens needs no mockup; state-read slices need no GWT scenarios.
 
 ## Step 1 — Gather (ask, do not assume)
 
-1. **Chapter/place:** `GET /outline`; ask Chapter and insertion point (after which slice, or end). Select one lane per needed type; multiple choices: ask. Missing type: ask, then add via `chapter-setup`. Processors use system-actor lanes, Screens human-role lanes; prefer system lanes above human lanes when adding.
+1. **Chapter/place:** use `model-navigation`; read full structure only when needed. Confirm unclear Chapter, insertion point and lane choices. For new structure use `chapter-setup`. Processors use system-actor lanes above human-role Screen lanes. Group missing details and approvals below into one clarification where possible.
 2. **Behavior/type:** user's words for who acts, recorded facts and displayed data; choose recipe below. Unclear: ask.
 3. **Names:** business language (`naming`); slice exactly like Command/Read Model/Processor; Screen user-facing, Command imperative, Event past tense, Read Model noun phrase. Unsure: ask.
 4. **Fields:** use names/types/flags from the user or parents; never invent. Read Model fields describe one result item; set element `isList: true` for list results, omit for single results. Ask whether a query returns one or many items when unclear. Mark `generated` only for system-created data; otherwise ask. Apply the core completeness rule to non-copy elements with incoming arrows.
@@ -84,10 +84,10 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
 
 ## Step 2 — Write
 
-`POST /ops`; choose response mode via shared API reference. Build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change example:
+Prepare Step 3 before sending `POST /ops`; include ready HTML and scenarios using aliases. Use `compact: true` and `verify` (shared API reference). Build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change structure example:
 
 ```json
-{ "compact": true, "ops": [
+{ "compact": true, "verify": ["$s"], "ops": [
   { "method": "POST", "path": "/chapters/CH1234/slices", "body": { "name": "Place Order", "after": "SL1234" }, "as": "s" },
   { "method": "POST", "path": "/elements", "body": { "slice": "$s", "lane": "LA0001", "type": "SCREEN", "name": "Checkout",
       "fields": [{ "name": "customerName" }, { "name": "quantity", "type": "integer" }] }, "as": "screen" },
@@ -99,7 +99,7 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
 
 ## Step 3 — Complete HTML and GWT
 
-Required unless the user explicitly excludes them. Delegate details and verification to the owning skill:
+Required unless the user explicitly excludes them. Use the owning skills to prepare ops:
 
 - **HTML:** invoke `html-screen` once per in-scope original Screen, including a reused original with blank HTML. Pass known ids, fields, confirmed behavior and any user-named style reference; do not ask the user to select already identified elements. Resolve copies first; never write HTML to a copy. Preserve existing designs. Confirm before replacing a URL.
 - **GWT:** invoke `scenarios` for every in-scope original Command, including automation/translation. Pass known Chapter, slice, Command, output/prior Events, Spec lane/container ids, rules and fields. Use same-Chapter non-copy elements; report cross-Chapter limits and never move originals. Ensure a success scenario and one rejection for each documented precondition failure. Rejections use `then: []` + `error`; recorded business failures use a Then Event + `error: null`. Use synthetic field-based examples. Reuse existing coverage; never duplicate or overwrite scenarios unasked.
@@ -107,8 +107,8 @@ Required unless the user explicitly excludes them. Delegate details and verifica
 
 ## Step 4 — Finish and verify
 
-1. `GET /outline?context=<id>`: expected `STATE_CHANGE`/`STATE_READ`/`AUTOMATION`/`TRANSLATION`, correct lanes and recipe arrows. `null`: fix missing element/arrow, except an intentional copied-fact-only entry slice described in `connections`.
-2. `GET /elements/:id` for arrow-affected fields; apply the core completeness rule and report gaps. For copies, read the original and verify `copyOf` resolves to the intended definition. Adjust originals only via `element-fields` PATCH (whole-list replacement, no propagation). Confirm repeated views did not become independent originals.
+1. Check expected type, lanes and arrows in the batch summary; use a scoped outline only for missing structure. `null`: fix missing element/arrow except an intentional copied-fact-only entry slice (`connections`).
+2. Check field lineage and `copyOf` against the summary and known originals. For missing detail across multiple elements, read the Chapter once; omit HTML unless needed. Adjust originals via `element-fields`. Confirm repeated views are linked copies.
 3. Confirm `html-screen` verified persisted HTML and field matches for each in-scope original; copies resolve to those originals. A placeholder is incomplete. Report unresolved URL-replacement permission as blocked.
 4. Confirm `scenarios` verified success and documented-rejection coverage for each in-scope Command, with valid references/examples and mutually exclusive Then Events/error. A container or scenario count alone does not prove coverage.
 5. Run `model-check` for the target Chapter(s), report findings and verify the HTML/GWT requirements above separately. Missing required HTML or scenarios means the requested modeling work is incomplete, unless explicitly excluded. Retry failed writes or report partial completion and the exact blocker; never report placeholders or planned scenarios as created.

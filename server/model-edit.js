@@ -333,10 +333,21 @@ function rules() {
 }
 
 function outline(model, { query }) {
+  const { context, detail = 'full' } = query;
+  if (detail !== 'full' && detail !== 'chapters') throw bad('detail must be full or chapters');
+  if (context !== undefined && !model.contexts.some((c) => c.id === context)) throw unknown('context', context);
+  if (detail === 'chapters') {
+    const contexts = new Map(model.contexts
+      .filter((c) => context === undefined || c.id === context)
+      .map(({ id, name }) => [id, { id, name, chapters: [] }]));
+    for (const { id, name, context, x, y } of model.chapters) {
+      contexts.get(context)?.chapters.push({ id, name, x, y });
+    }
+    return [...contexts.values()];
+  }
   const ix = index(model);
-  if (query.context !== undefined && !ix.contexts.has(query.context)) throw unknown('context', query.context);
   return model.contexts
-    .filter((c) => query.context === undefined || c.id === query.context)
+    .filter((c) => context === undefined || c.id === context)
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -989,10 +1000,46 @@ function substitute(value, names) {
   return value;
 }
 
+function sliceSummary(ix, id) {
+  const { chapter, slice } = referenced(ix.slices, id, 'slice');
+  return {
+    chapter: chapter.id,
+    id,
+    name: slice.name,
+    type: slice.type,
+    width: slice.width,
+    elements: slice.elements.map((e) => {
+      const definition = e.copyOf ? ix.elements.get(e.copyOf).element : e;
+      return {
+        id: e.id,
+        type: e.type,
+        name: nameOf(ix, e),
+        lane: e.lane,
+        connectsTo: e.connectsTo,
+        ...(e.copyOf ? { copyOf: e.copyOf } : {}),
+        ...(FIELD_HOLDERS.includes(e.type) ? { fields: (definition.fields ?? []).map((f) => f.name) } : {}),
+        ...(e.type === 'READ_MODEL' ? { isList: definition.isList === true } : {}),
+        ...(e.type === 'SCREEN' ? { hasHtml: !!definition.html, hasUrl: !!definition.url } : {}),
+        ...(e.type === 'SCENARIOS' ? { scenarios: e.scenarios.map((s) => ({
+          id: s.id,
+          name: s.name,
+          given: s.given.map((entry) => entry.element),
+          when: s.when?.element ?? null,
+          then: s.then.map((entry) => entry.element),
+          error: s.error ?? null,
+        })) } : {}),
+      };
+    }),
+  };
+}
+
 function ops(model, { body: b }) {
-  const { ops: list, compact = false } = body(b, ['ops', 'compact']);
+  const { ops: list, compact = false, verify } = body(b, ['ops', 'compact', 'verify']);
   if (!Array.isArray(list) || !list.length) throw bad('ops must be a list of requests, not empty');
   if (typeof compact !== 'boolean') throw bad('compact must be true or false');
+  if (verify !== undefined && (!Array.isArray(verify) || !verify.every(isText))) {
+    throw bad('verify must be a list of slice ids or aliases');
+  }
   const names = new Map();
   const results = [];
   list.forEach((op, i) => {
@@ -1006,9 +1053,17 @@ function ops(model, { body: b }) {
       if (!hit || !hit.route.write || hit.route.pattern === '/ops') throw bad(`${method} ${path} is not an editing request`);
       const out = execute(model, hit, {}, substitute(opBody, names));
       if (as !== undefined) {
-        if (!isText(as) || names.has(as)) throw bad('as must be a name not used before');
+        if (!isText(as)) throw bad('as must be a name not used before');
         if (!out.body?.id) throw bad(`${method} ${path} creates no item to name`);
-        names.set(as, out.body.id);
+        const bindings = [[as, out.body.id]];
+        if (hit.route.run === createChapter) {
+          bindings.push(
+            ...out.body.lanes.map((lane) => [`${as}.${lane.type.toLowerCase()}`, lane.id]),
+            [`${as}.slice`, out.body.slices[0].id],
+          );
+        }
+        if (bindings.some(([name]) => names.has(name))) throw bad('as or its Chapter aliases are already in use');
+        for (const [name, id] of bindings) names.set(name, id);
       }
       results.push(compact ? {
         status: out.status,
@@ -1020,7 +1075,10 @@ function ops(model, { body: b }) {
       throw e;
     }
   });
-  return { results };
+  if (verify === undefined) return { results };
+  const ix = index(model);
+  const ids = [...new Set(substitute(verify, names))];
+  return { results, slices: ids.map((id) => sliceSummary(ix, id)) };
 }
 
 // ---------- Routes ----------

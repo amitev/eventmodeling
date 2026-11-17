@@ -26,7 +26,7 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 
 ## Step 1 — Look first
 
-1. `GET /outline` (`?context=<id>` to narrow): get ids, positions, lanes, slice order/widths and elements. Never guess ids.
+1. Use the Chapter-only outline for names and positions; request full structure only when needed (`model-navigation`). Never guess ids.
 2. Multiple name matches: ask which, naming Chapters.
 3. **Ask before content loss or unexpected changes:** lane/slice/Chapter/Context deletion, adding a lane to an existing Chapter, moving a Chapter between Contexts.
 
@@ -47,6 +47,8 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 | Delete | `DELETE /chapters/:id` → `{ removed: { elements, scenarios } }` |
 | Connect | `PUT /chapters/:id/connections/:targetId`; `DELETE` removes. Chapter → Chapter only, never self |
 | Connect from slice | `PUT /slices/:id/connections/:targetId`; `DELETE` removes. Slice bottom centre → another Chapter in same Context, never own Chapter; stored in slice `connectsTo` |
+
+To populate a new Chapter in the same batch, use its default-lane and first-slice aliases (shared API reference).
 
 **Position:** server permits overlaps. Put new Chapter right of rightmost: `x = rightmost.x + 48 + sum(rightmost slice widths) + 100`, rounded to multiple of 20; `y = rightmost.y`. `48` is lane-label width. User can drag it later.
 

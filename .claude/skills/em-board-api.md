@@ -9,7 +9,7 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 - Every write compacts all `SCREEN` `html`.
 - Board auto-pulls server changes unless it has unpushed changes; then it shows a notice only.
 - Revision: opaque text, changes with each stored-model change; returned as `ETag` by `GET /`, `GET /revision` and all writes. Pushes require `If-Match: "<revision>"`; editing writes check it only if supplied.
-- Start with `GET /rules` and `GET /outline`. Server creates globally unique 6-character ids (`a-zA-Z0-9`); address items by id alone. Types uppercase; names free text except Context names.
+- Read `GET /rules` once per session; scope lookups via `model-navigation`. Server creates globally unique 6-character ids (`a-zA-Z0-9`); address items by id alone. Types uppercase; names free text except Context names.
 - Context names are file names: nonempty; no `\ / : * ? " < > |`, control characters or trailing dot; not `contexts` or Windows device names.
 - `info`: Markdown on Chapters, lanes, slices and elements, mainly implementation details; not citations, summaries or traceability. Put summaries in `NOTES`; these may also hold implementation details.
 
@@ -30,6 +30,7 @@ After reporting findings, offer selected items as Tasks; skip if none.
 | `/events` | SSE `data: {"revision":"…"}` on connect and every server-made change; not manual file edits |
 | `/rules` | `{ elementTypes, laneTypes: [{ type, label, takes }], connections: [{ from, to }], laneColors, noteColors, fieldTypes, fieldFlags }` |
 | `/outline?context=` | Contexts (filter by Context id) → Chapters `{ id, name, x, y, connectsTo, lanes: [{ id, name, type }], slices: [{ id, name, type, flowEnd?, width, elements: [{ id, type, name, lane, x, copyOf?, connectsTo }] }] }`. Excludes `html`, `url`, `fields`, `info`, `markdown`, scenarios; copies use original names |
+| `/outline?detail=chapters&context=` | Context `{ id, name, chapters }`; Chapter `{ id, name, x, y }`. Optional Context id filter; `detail=full` is the default |
 | `/search?q=&type=&context=` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q`: case-insensitive name substring; `type`: element type; `context`: Context id |
 | `/chapters/:id?screenContent=&slice=` | Stored Chapter; `screenContent=false` omits Screen `html`. `slice=<sliceId>` filters `slices` only, retaining Chapter fields/all lanes; 404 if slice not in Chapter |
 | `/elements/:id` | Stored element; copy returns its own entry |
@@ -95,9 +96,11 @@ Unknown body keys or nonexistent body ids: 400; nonexistent path ids: 404. Resul
 
 ### Atomic batch
 
-`POST /ops`: `{ ops: [{ method, path, body?, as? }], compact? }`. Runs editing writes above in order, all or none, one revision. Paths relative to `/api/model`. `as: "a"` binds created id; later `"$a"` path segments/body values resolve to it. Returns `{ results: [{ status, body }] }`. Failure writes nothing; error prefixed `ops[<index>]: `.
+`POST /ops`: `{ ops: [{ method, path, body?, as? }], compact?, verify? }`. Runs edits in order, all or none, one revision. Paths relative to `/api/model`. `as: "a"` binds an id; later `"$a"` path segments/body values resolve to it. `POST /chapters` with `as: "ch"` also binds `$ch.actor`, `$ch.interaction`, `$ch.event` and `$ch.slice` (default lanes and first slice). Aliases cannot collide. Returns `{ results: [{ status, body }] }`. Op errors start `ops[<index>]: `.
 
-**Batch ready writes; prefer `compact: true`** when only ids/statuses/effects are needed, including HTML/Notes writes. Preserve approvals and creation order. Compact bodies keep only present `id`, `from`, `to`, `removed`, `moved`, `clearedHighlights`; aliases/status/order/`ETag` are unchanged. Check every result and retain effect reports. `compact` must be boolean (otherwise 400); omitted/false returns full bodies. Use full mode when stored fields/content are needed next; compact acknowledgments do not verify inheritance or sanitized HTML. Read only missing verification data.
+**Batch ready writes with `compact: true`** unless full stored bodies are needed. Compact bodies keep present `id`, `from`, `to`, `removed`, `moved`, `clearedHighlights`; status, order and `ETag` stay. `compact` must be boolean; default `false`.
+
+**Verify in the batch:** `verify: ["$ch.slice", "$s", "<slice id>"]` adds `slices` in requested order without duplicates. Invalid input or absent final slice rolls back all writes (400). Summary: `chapter`, `id`, `name`, `type`, `width`, `elements` (`id`, `name`, `type`, `lane`, `connectsTo`, `copyOf?`). Field holders show top-level `fields` names; Read Models show `isList`; Screens show `hasHtml`/`hasUrl`; copies resolve their original. Scenarios show `id`, `name`, `given`/`then` event ids, `when` Command id or null, and `error`. Read exact field definitions, HTML or scenario examples only when needed; the summary does not include them.
 
 Example: `{"compact":true,"ops":[{"method":"POST","path":"/chapters/CH/slices","body":{"name":"Add item"},"as":"s"},{"method":"POST","path":"/elements","body":{"slice":"$s","lane":"LANE","type":"COMMAND","name":"Add item"}}]}`
 

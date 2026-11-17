@@ -60,7 +60,7 @@ Read each element's `fields`:
 
 ## Step 4 — Write
 
-Several scenarios: one atomic `POST /ops`, one revision; `as` / `"$<as>"` for created ids. Build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`.
+Batch ready scenarios with their structure via `POST /ops` aliases (shared API reference).
 
 **Create** `POST /elements/:scenariosId/scenarios`
 ```json
@@ -83,6 +83,6 @@ Optional `index`: list position, default end. Rejection: `"then": []`, `"error":
 
 ## Step 5 — Verify and report
 
-1. `GET /elements/:scenariosId`: verify entries and `error: null` when `then` nonempty.
+1. Check scenario entries and `error` in the batch summary. Validate example values before writing; read stored examples only when needed (one Chapter read for multiple containers).
 2. Report container (id, Chapter, slice), scenarios (id, name, one-line GWT), invented example values, uncovered preconditions (missing elements, cross-Chapter originals, no fields), automatic board updates (pull behavior: API reference).
 3. Errors: 400 invalid body, wrong type/Chapter, copy, JSON number in example or error + Then; 404 unknown id; 409 forbidden model change. Read `error`, fix cause, retry.

@@ -67,7 +67,7 @@ Build JSON with `ConvertTo-Json` or `JSON.stringify` (escape HTML quotes/newline
 
 HTML-only alternative: `PUT /contexts/:contextId/screens/:id/html` `{ html: "<markup>" }`.
 
-Ready Screen edits may share one batch; follow shared API reference.
+Include ready HTML in the structure batch, on Screen creation or PATCH. Use its summary to confirm persisted HTML; read back sanitized markup only when needed to verify rendering details.
 
 **Creating a new screen**
 
