@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
 import { LANE_COLOR_RGB } from '../../../server/lane-colors.js';
 import { ColorPicker } from '../nodes/parts.jsx';
-import { addTableColumn, expandSketchSelection, groupSketchShapes, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchGroupId, sketchHtml, sketchId, sketchItems, sketchPoint, tableDividers, tableParts, travelSketchHistory, ungroupSketchShapes, validSketchSize } from '../model/sketch.js';
+import { addTableColumn, cloneSketchShapes, expandSketchSelection, groupSketchShapes, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchGroupId, sketchHtml, sketchId, sketchItems, sketchPoint, tableDividers, tableParts, travelSketchHistory, ungroupSketchShapes, validSketchSize } from '../model/sketch.js';
 
 const CORNERS = ['nw', 'ne', 'sw', 'se'];
 const SKETCH_COLORS = Object.fromEntries(Object.entries(LANE_COLOR_RGB).map(([name, rgb]) => [
@@ -195,6 +195,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
       setSelectedIds(nextIds);
       gesture.current = {
         type: column !== null ? 'column' : corner || endpoint ? 'resize' : 'move',
+        clone: event.ctrlKey && selectedIds.includes(shape.id),
         corner, endpoint, column: Number(column), shape, start, shapes, pointerId: event.pointerId,
         selectedIds: nextIds, selectionBefore: selectedIds,
       };
@@ -217,7 +218,13 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
       return drag.shapes;
     }
     if (drag.type === 'move') {
-      const next = moveSketchShapes(drag.shapes, drag.selectedIds, current.x - drag.start.x, current.y - drag.start.y);
+      const dx = current.x - drag.start.x;
+      const dy = current.y - drag.start.y;
+      const source = drag.clone && (dx !== 0 || dy !== 0)
+        ? cloneSketchShapes(drag.shapes, drag.selectedIds)
+        : { shapes: drag.shapes, selectedIds: drag.selectedIds };
+      const next = moveSketchShapes(source.shapes, source.selectedIds, dx, dy);
+      if (drag.clone) setSelectedIds(source.selectedIds);
       setDraft(next);
       return next;
     }
@@ -254,6 +261,13 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
   const remove = () => {
     commit(shapes.filter(({ id }) => !selectedIds.includes(id)));
     setSelectedIds([]);
+  };
+  const copy = () => {
+    const cloned = cloneSketchShapes(shapes, selectedIds);
+    commit(moveSketchShapes(cloned.shapes, cloned.selectedIds, 20, 20));
+    setSelectedIds(cloned.selectedIds);
+    setTool('select');
+    canvas.current.focus();
   };
   const group = () => {
     if (!canGroup) return;
@@ -324,6 +338,12 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
               )}
             </button>
           ))}
+          <button type="button" className="sketch-tool-icon" aria-label="Copy selected shapes" disabled={!selectedShapes.length || !!gesture.current} onClick={copy} title="Copy selected shapes">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
+              <rect x="5" y="5" width="9" height="9" rx="1" />
+              <path d="M3 11H2V2h9v1" />
+            </svg>
+          </button>
           <button type="button" className="sketch-tool-icon" aria-label="Delete selected shapes" disabled={!selectedShapes.length || !!gesture.current} onClick={remove} title="Delete selected shapes (Delete / Backspace)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
               <path d="M2 4h12M6 4V2h4v2M4 4l.7 10h6.6L12 4M6.5 6v6M9.5 6v6" />
@@ -379,7 +399,7 @@ export function SketchEditor({ html, usingUrl, active, onChange, onStart }) {
           )}
         </div>
       </div>
-      <div className="html-blocked-hint">1024 × 768. Marquee-select shapes fully inside the box. Click to insert a table; drag its dividers to resize columns. Elements over cells stay independent. Group selected shapes to move them together; ungroup before editing a member.</div>
+      <div className="html-blocked-hint">1024 × 768. Marquee-select shapes fully inside the box. Ctrl+drag selected shapes to clone them. Click to insert a table; drag its dividers to resize columns. Elements over cells stay independent. Group selected shapes to move them together; ungroup before editing a member.</div>
       {error && <div className="html-highlight-error" role="alert">{error}</div>}
       <div className="sketch-canvas-box">
         <svg

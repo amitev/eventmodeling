@@ -199,6 +199,25 @@ export function expandSketchSelection(shapes, selectedIds) {
   return shapes.filter(({ id, groupId }) => selected.has(id) || groupIds.has(groupId)).map(({ id }) => id);
 }
 
+export function cloneSketchShapes(shapes, selectedIds) {
+  const selected = new Set(expandSketchSelection(shapes, selectedIds));
+  const next = [...shapes];
+  const groups = new Map();
+  const clones = [];
+  for (const shape of shapes) {
+    if (!selected.has(shape.id)) continue;
+    const clone = { ...shape, id: sketchId(next) };
+    if (shape.groupId) {
+      if (!groups.has(shape.groupId)) groups.set(shape.groupId, sketchGroupId(next));
+      clone.groupId = groups.get(shape.groupId);
+    }
+    if (shape.type === 'table') clone.columns = [...shape.columns];
+    next.push(clone);
+    clones.push(clone.id);
+  }
+  return { shapes: next, selectedIds: clones };
+}
+
 export function groupSketchShapes(shapes, selectedIds, groupId) {
   const selected = new Set(expandSketchSelection(shapes, selectedIds));
   if (selected.size < 2) return shapes;
