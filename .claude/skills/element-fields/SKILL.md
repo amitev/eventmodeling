@@ -47,7 +47,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 
 ## Step 3 — Write
 
-Multiple elements: one atomic `POST /ops`, one revision. Body `{"ops":[{"method":"PATCH","path":"/elements/<id>","body":{"fields":[...]}}]}`; check `results[].status`. Build JSON with `ConvertTo-Json -Depth 10` or `JSON.stringify`.
+Multiple elements: one atomic `POST /ops`, one revision. Body `{"compact":true,"ops":[{"method":"PATCH","path":"/elements/<id>","body":{"fields":[...]}}]}`; response modes/checks: shared API reference. Build JSON with `ConvertTo-Json -Depth 10` or `JSON.stringify`.
 
 ### A. New element (with fields)
 

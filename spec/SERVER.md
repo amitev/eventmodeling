@@ -58,7 +58,8 @@ The board pushes its Contexts, with their Chapters, to the server after every ch
 - **S3.11** `GET /api/model/contexts/:id` returns the Chapters of one Context as multi-document YAML (`Content-Type: application/yaml`): one document per Chapter, each starting with `---`, as stored (S3.2, S3.10), ordered by `x`, `y`, `id` (R6.8). Only that Context's file is read. A Context without a file or Chapters gives an empty body.
 - **S3.12** S3.11 takes the query parameter `screenContent` (`true` or `false`, default `true`). With `false` the `html` of every `SCREEN` element (R6.5) is left out; `url` and other fields stay. Any other value gets 400.
 - **S3.13** `GET /api/model/contexts/:id/screens` lists the `SCREEN` elements (R6.5) of one Context, linked copies included, without `html` or `url`: `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`. Query `name` keeps those with that name (whole name, case-insensitive, trimmed); with `contains=true` (`true` or `false`, default `false`, other values 400) a part of the name is enough. Query `chapter` keeps those of the Chapter with that id or name (case-insensitive). Without both, all. A Context without a file gives `[]`. Order as stored.
-- **S3.14** `GET /api/model/contexts/:id/screens/:screenId` returns S3.13 plus `html` or `url` and optional own `highlights` (R3.7b). Copies resolve original content across Contexts but never inherit highlights. HTML excludes generated highlight markup; selections stay separate.
+  - Copies resolve original `name`, `hasHtml` and `hasUrl` across Contexts; `name` filters use resolved names. Identity and location stay the copy's.
+- **S3.14** `GET /api/model/contexts/:id/screens/:screenId` returns S3.13 plus `html` or `url` and optional own `highlights` (R3.7b). Copies resolve original name/content across Contexts but never inherit highlights. HTML excludes generated highlight markup; selections stay separate.
 - **S3.15** `PUT /api/model/contexts/:id/screens/:screenId/html` with `{ html: text }` (not empty) sets compacted `html` (S3.10), removes `url` (R3.7) and follows S4.17a. Other fields stay. Returns `{ html, clearedHighlights? }`. A linked copy gets 409 naming its original. The board shows the change by auto-pull (R10.6); a push with an older revision gets 412 (S4.2).
 
 ### API
@@ -116,7 +117,8 @@ Small edits for LLM agents; the board follows (MODELING_BOARD.md R10.6). Paths a
 
 ### Batch
 
-- **S4.20** `POST /ops` `{ ops: [{ method, path, body?, as? }] }` runs the requests of S4.12 to S4.19, S4.22 and S4.23 in order, atomically: all or none. One write, one revision. `path` is relative to `/api/model`. `as` names the `id` of the item an op creates; a later `path` segment or `body` value that is exactly `"$<as>"` is replaced by it. Result `{ results: [{ status, body }] }`, in order. On the first error nothing is written and the response has that op's status and `{ "error": text }` with the text starting `ops[<index>]: `.
+- **S4.20** `POST /ops` `{ ops: [{ method, path, body?, as? }], compact? }` runs the requests of S4.12 to S4.19, S4.22 and S4.23 in order, atomically: all or none. One write, one revision. `path` is relative to `/api/model`. `as` names the `id` of the item an op creates; a later `path` segment or `body` value that is exactly `"$<as>"` is replaced by it. Result `{ results: [{ status, body }] }`, in order; compact bodies follow S4.24. On the first error nothing is written and the response has that op's status and `{ "error": text }` with the text starting `ops[<index>]: `.
+- **S4.24** `compact` is boolean, default `false`; other values get 400 before any op. With `true`, each result body keeps only present `id`, `from`, `to`, `removed`, `moved`, `clearedHighlights`; status/order, aliases, validation, atomicity and `ETag` stay unchanged. Omitted/false returns full bodies (S4.6).
 
 ### Editing API table
 

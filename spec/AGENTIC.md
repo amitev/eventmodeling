@@ -72,4 +72,9 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A10.4** Approved Task capture is the only write exception during read-only reviews.
 - **A10.5** Uncertain findings stay questions in Tasks, not confirmed fixes.
 
+## 11. API efficiency
+
+- **A11.1** Batch ready writes with compact responses (S4.20/S4.24); retain required approvals, creation order and verification. Shared API reference owns response shape and mode choice.
+- **A11.2** Navigation uses resolved Screen metadata (S3.13) to check linked-copy mockup presence without fetching HTML.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

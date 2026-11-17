@@ -107,3 +107,53 @@ test('structural edits clear original and cross-Context copy highlights, preserv
   assert.deepEqual(new Set(url.clearedHighlights), new Set([original.id, copy.id]));
   await request('PATCH', copyPath, { highlights: [{ path: 'body/article[1]/input[1]', color: 'blue' }] }, 400);
 });
+
+test('Screen listings and detail resolve copy names and content flags across Contexts', async (t) => {
+  const { request, first, second, original, copy } = await setup(t);
+  const chapter = (await request('GET', '')).chapters.find((chapter) => chapter.context === first.id);
+  const localCopy = await request('POST', '/elements', {
+    slice: chapter.slices[0].id, lane: original.lane, copyOf: original.id,
+  }, 201);
+  const assertScreens = async (name, hasHtml, hasUrl) => {
+    for (const [context, expected] of [[first, [original, localCopy]], [second, [copy]]]) {
+      for (const query of ['', `?name=${encodeURIComponent(` ${name.toUpperCase()} `)}`, '?name=orm&contains=true']) {
+        const screens = await request('GET', `/contexts/${context.id}/screens${query}`);
+        assert.deepEqual(new Set(screens.map((screen) => screen.id)), new Set(expected.map((screen) => screen.id)));
+        for (const screen of screens) {
+          assert.equal(screen.name, name);
+          assert.equal(screen.hasHtml, hasHtml);
+          assert.equal(screen.hasUrl, hasUrl);
+          assert.equal('html' in screen, false);
+          assert.equal('url' in screen, false);
+          assert.equal(screen.copyOf, screen.id === original.id ? undefined : original.id);
+        }
+      }
+    }
+    assert.deepEqual(await request('GET', `/contexts/${second.id}/screens?chapter=${chapter.id}`), []);
+    assert.deepEqual(await request('GET', `/contexts/${second.id}/screens?name=missing`), []);
+    assert.equal((await request('GET', `/contexts/${second.id}/screens/${copy.id}`)).name, name);
+  };
+  await assertScreens('Form', true, false);
+  await request('PATCH', `/elements/${original.id}`, { name: 'Updated Form', url: 'https://example.com' });
+  await assertScreens('Updated Form', false, true);
+  await request('PATCH', `/elements/${original.id}`, { url: null });
+  await assertScreens('Updated Form', false, false);
+  const empty = await request('POST', '/contexts', { name: 'Empty' }, 201);
+  assert.deepEqual(await request('GET', `/contexts/${empty.id}/screens`), []);
+  await request('GET', '/contexts/missing/screens', undefined, 404);
+});
+
+test('compact Screen writes omit HTML but retain cleared-highlight effects', async (t) => {
+  const { request, second, original, copy } = await setup(t);
+  await request('PATCH', `/elements/${copy.id}`, { highlights: [{ path: 'body/main[1]/button[1]', color: 'green' }] });
+  const batch = await request('POST', '/ops', { compact: true, ops: [
+    { method: 'PATCH', path: `/elements/${original.id}`, body: { html: '<section><input></section>' } },
+  ] });
+  assert.equal(batch.results[0].status, 200);
+  assert.deepEqual(Object.keys(batch.results[0].body).sort(), ['clearedHighlights', 'id']);
+  assert.equal(batch.results[0].body.id, original.id);
+  assert.deepEqual(new Set(batch.results[0].body.clearedHighlights), new Set([original.id, copy.id]));
+  const stored = await request('GET', `/contexts/${second.id}/screens/${copy.id}`);
+  assert.match(stored.html, /<section><input><\/section>/);
+  assert.equal('highlights' in stored, false);
+});

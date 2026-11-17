@@ -448,10 +448,10 @@ export class ModelStore {
     return found;
   }
 
-  static #summary({ element, chapter, slice }) {
+  static #summary({ element, chapter, slice }, source = element) {
     return {
       id: element.id,
-      name: element.name ?? '',
+      name: source.name ?? '',
       chapterId: chapter.id,
       chapterName: chapter.name,
       sliceId: slice.id,
@@ -463,20 +463,24 @@ export class ModelStore {
   // `chapter` a Chapter id or name, all case-insensitively. No HTML is returned.
   async findScreens(contextId, { name, chapter, contains = false } = {}) {
     const lower = (v) => String(v ?? '').trim().toLowerCase();
-    return this.#run(async () => {
-      const { doc } = await this.#contextDoc(contextId);
-      return ModelStore.#screens(doc)
+    return this.read((model) => {
+      if (!model.contexts.some((context) => context.id === contextId)) throw new HttpError(404, `Unknown context "${contextId}"`);
+      const screens = ModelStore.#screens(model);
+      const originals = new Map(screens.filter((s) => !s.element.copyOf).map((s) => [s.element.id, s.element]));
+      return screens
+        .filter((s) => s.chapter.context === contextId)
+        .map((s) => ({ ...s, source: s.element.copyOf ? originals.get(s.element.copyOf) : s.element }))
         .filter((s) => {
           if (chapter !== undefined && lower(chapter) !== lower(s.chapter.id) && lower(chapter) !== lower(s.chapter.name)) {
             return false;
           }
           if (name === undefined) return true;
-          return contains ? lower(s.element.name).includes(lower(name)) : lower(s.element.name) === lower(name);
+          return contains ? lower(s.source.name).includes(lower(name)) : lower(s.source.name) === lower(name);
         })
         .map((s) => ({
-          ...ModelStore.#summary(s),
-          hasHtml: typeof s.element.html === 'string',
-          hasUrl: typeof s.element.url === 'string',
+          ...ModelStore.#summary(s, s.source),
+          hasHtml: typeof s.source.html === 'string',
+          hasUrl: typeof s.source.url === 'string',
         }));
     });
   }
@@ -495,7 +499,7 @@ export class ModelStore {
       const content = typeof html === 'string' ? extractHighlights(html) : null;
       const highlights = screen.element.highlights ?? (!screen.element.copyOf ? content?.highlights : []) ?? [];
       return {
-        ...ModelStore.#summary(screen),
+        ...ModelStore.#summary(screen, source),
         ...(content ? { html: content.html } : {}),
         ...(typeof url === 'string' ? { url } : {}),
         ...(highlights.length ? { highlights } : {}),

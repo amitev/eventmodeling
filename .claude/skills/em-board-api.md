@@ -36,8 +36,8 @@ After reporting findings, offer selected items as Tasks; skip if none.
 | `/tasks?context=` | `[{ context, id, title, description, status, chapter }]`; omit `context` query for all Contexts. Context order, then task creation order |
 | `/tasks/:id` | Stored task `{ id, title, description, status, chapter }` |
 | `/contexts/:id?screenContent=` | `application/yaml`: one `---` document per Chapter, sorted by `x`, `y`, `id`; empty body for no Chapters. `screenContent=true` (default) or `false` to omit Screen `html` |
-| `/contexts/:id/screens?name=&contains=&chapter=` | Screens including linked copies, without `html`: `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`. `name`: case-insensitive whole name, substring if `contains=true`; `chapter`: case-insensitive Chapter id/name. Neither filter: all Screens. Names need not be unique |
-| `/contexts/:id/screens/:screenId` | Same shape + `html`/`url`, optional own `highlights`. Copies resolve original content across Contexts, never inherit highlights |
+| `/contexts/:id/screens?name=&contains=&chapter=` | Screens including linked copies, without `html`: `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`. Copies resolve original name/content flags across Contexts; identity/location stay the copy's. `name`: case-insensitive whole resolved name, substring if `contains=true`; `chapter`: case-insensitive Chapter id/name. Neither filter: all Screens. Names need not be unique |
+| `/contexts/:id/screens/:screenId` | Same shape + `html`/`url`, optional own `highlights`. Copies resolve original name/content across Contexts, never inherit highlights |
 
 ## Editing writes
 
@@ -95,9 +95,11 @@ Unknown body keys or nonexistent body ids: 400; nonexistent path ids: 404. Resul
 
 ### Atomic batch
 
-`POST /ops`: `{ ops: [{ method, path, body?, as? }] }`. Runs editing writes above in order, all or none, one revision. Paths relative to `/api/model`. `as: "a"` binds created id; later `"$a"` path segments/body values resolve to it. Returns `{ results: [{ status, body }] }`. Failure writes nothing; error prefixed `ops[<index>]: `.
+`POST /ops`: `{ ops: [{ method, path, body?, as? }], compact? }`. Runs editing writes above in order, all or none, one revision. Paths relative to `/api/model`. `as: "a"` binds created id; later `"$a"` path segments/body values resolve to it. Returns `{ results: [{ status, body }] }`. Failure writes nothing; error prefixed `ops[<index>]: `.
 
-Example: `{"ops":[{"method":"POST","path":"/chapters/CH/slices","body":{"name":"Add item"},"as":"s"},{"method":"POST","path":"/elements","body":{"slice":"$s","lane":"LANE","type":"COMMAND","name":"Add item"}}]}`
+**Batch ready writes; prefer `compact: true`** when only ids/statuses/effects are needed, including HTML/Notes writes. Preserve approvals and creation order. Compact bodies keep only present `id`, `from`, `to`, `removed`, `moved`, `clearedHighlights`; aliases/status/order/`ETag` are unchanged. Check every result and retain effect reports. `compact` must be boolean (otherwise 400); omitted/false returns full bodies. Use full mode when stored fields/content are needed next; compact acknowledgments do not verify inheritance or sanitized HTML. Read only missing verification data.
+
+Example: `{"compact":true,"ops":[{"method":"POST","path":"/chapters/CH/slices","body":{"name":"Add item"},"as":"s"},{"method":"POST","path":"/elements","body":{"slice":"$s","lane":"LANE","type":"COMMAND","name":"Add item"}}]}`
 
 ## Screen HTML write
 

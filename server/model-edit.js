@@ -990,8 +990,9 @@ function substitute(value, names) {
 }
 
 function ops(model, { body: b }) {
-  const { ops: list } = body(b, ['ops']);
+  const { ops: list, compact = false } = body(b, ['ops', 'compact']);
   if (!Array.isArray(list) || !list.length) throw bad('ops must be a list of requests, not empty');
+  if (typeof compact !== 'boolean') throw bad('compact must be true or false');
   const names = new Map();
   const results = [];
   list.forEach((op, i) => {
@@ -1009,7 +1010,11 @@ function ops(model, { body: b }) {
         if (!out.body?.id) throw bad(`${method} ${path} creates no item to name`);
         names.set(as, out.body.id);
       }
-      results.push(out);
+      results.push(compact ? {
+        status: out.status,
+        body: Object.fromEntries(Object.entries(out.body).filter(([key]) =>
+          ['id', 'from', 'to', 'removed', 'moved', 'clearedHighlights'].includes(key))),
+      } : out);
     } catch (e) {
       if (e instanceof HttpError) throw new HttpError(e.status, `ops[${i}]: ${e.message}`);
       throw e;

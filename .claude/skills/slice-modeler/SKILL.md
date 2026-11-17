@@ -84,10 +84,10 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
 
 ## Step 2 — Write
 
-`POST /ops` `{ ops: [...] }`; build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change example:
+`POST /ops`; choose response mode via shared API reference. Build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change example:
 
 ```json
-{ "ops": [
+{ "compact": true, "ops": [
   { "method": "POST", "path": "/chapters/CH1234/slices", "body": { "name": "Place Order", "after": "SL1234" }, "as": "s" },
   { "method": "POST", "path": "/elements", "body": { "slice": "$s", "lane": "LA0001", "type": "SCREEN", "name": "Checkout",
       "fields": [{ "name": "customerName" }, { "name": "quantity", "type": "integer" }] }, "as": "screen" },
@@ -96,8 +96,6 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
   { "method": "POST", "path": "/elements", "body": { "slice": "$s", "lane": "LA0003", "type": "EVENT", "name": "Order Placed" } }
 ] }
 ```
-
-Check each `results[]` status/body.
 
 ## Step 3 — Complete HTML and GWT
 

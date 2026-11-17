@@ -11,7 +11,7 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 
 1. **Read narrowly.** Never fetch the whole model (`GET /api/model`) for lookups. Outline first; `elements/:id` for a few elements. Chapter/Context content only when most elements are needed; use `screenContent=false` unless reading mockups.
 2. **Filter before printing.** Use shell `curl` or PowerShell `Invoke-RestMethod`; select needed ids, names and properties in the same command, not the whole response.
-3. **Reuse reads and write responses.** Re-read content only after a change you did not make; structural verification is the exception below.
+3. **Reuse reads and write responses.** Re-read content only after outside changes or when compact responses omitted required verification data; structural verification is the exception below.
 4. **Look up ids, never recall them from memory.** Use search/outline. Names are not unique: ask which match, naming Chapters; never choose one.
 
 ## Which call for which question
@@ -24,7 +24,7 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 | Element content | `/elements/:id` | Stored element: `fields`, `info`, `isList?`, `html` or `url`, `markdown`, `scenarios`, `connectsTo`, `copyOf` |
 | Chapter content | `/chapters/:id?screenContent=false` | Stored Chapter without Screen `html` |
 | Context content | `/contexts/:id?screenContent=false` | Multi-document YAML, one document per Chapter |
-| Screens | `/contexts/:id/screens` | `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`; no `html`. Filters: `?name=`, `?contains=true`, `?chapter=` |
+| Screens | `/contexts/:id/screens` | `[{ id, name, chapterId, chapterName, sliceId, copyOf?, hasHtml, hasUrl }]`; no `html`. Copies resolve original name/content flags across Contexts; identity/location stay the copy's. Filters: `?name=`, `?contains=true`, `?chapter=` |
 | Screen mockup | `/contexts/:id/screens/:screenId` | Screen + `html` or `url`; copy returns original's |
 | Types, lanes, arrows, colours, field types | `/rules` | Read once per session |
 
@@ -68,6 +68,6 @@ Check response shape once (first item or property names), then script the rest. 
 
 ## After a change
 
-- Use stored-item write responses (creation: 201) for new ids; no outline re-read needed.
+- Use write responses (creation: 201) for new ids; compact batches follow the shared API reference.
 - Verify structure (slice type, arrows, order) with one Context-filtered outline read.
 - Server changes notify the open board automatically; no manual notification.

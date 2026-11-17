@@ -142,3 +142,44 @@ test('Invalid Task writes and stale revisions leave persisted Tasks unchanged', 
   }
   assert.deepEqual(await request('GET', `/tasks/${task.id}`), task);
 });
+
+test('compact batches preserve aliases, effects and atomic errors without returning item content', async (t) => {
+  const { request, context } = await setup(t);
+  const first = await context('Default');
+  const compact = await request('POST', '/ops', { compact: true, ops: [
+    { method: 'POST', path: '/tasks', body: { context: first.id, title: 'Review' }, as: 'task' },
+    { method: 'PATCH', path: '/tasks/$task', body: { status: 'Done' } },
+  ] });
+  const id = compact.results[0].body.id;
+  assert.deepEqual(compact, { results: [
+    { status: 201, body: { id } },
+    { status: 200, body: { id } },
+  ] });
+  assert.equal((await request('GET', `/tasks/${id}`)).status, 'Done');
+  for (const options of [{}, { compact: false }]) {
+    const full = await request('POST', '/ops', { ...options, ops: [
+      { method: 'PATCH', path: `/tasks/${id}`, body: { title: 'Keep full response' } },
+    ] });
+    assert.deepEqual(full.results[0].body, await request('GET', `/tasks/${id}`));
+  }
+  const revision = (await request('GET', '/revision')).revision;
+  for (const compact of ['true', 1, null]) {
+    const error = await request('POST', '/ops', { compact, ops: [
+      { method: 'DELETE', path: `/tasks/${id}` },
+    ] }, 400);
+    assert.match(error.error, /compact must be true or false/);
+  }
+  const failed = await request('POST', '/ops', { compact: true, ops: [
+    { method: 'DELETE', path: `/tasks/${id}` },
+    { method: 'PATCH', path: '/tasks/missing', body: { title: 'No' } },
+  ] }, 404);
+  assert.match(failed.error, /^ops\[1\]: /);
+  await request('POST', '/ops', { compact: true, ops: [
+    { method: 'DELETE', path: `/tasks/${id}` },
+  ] }, 412, '"stale"');
+  assert.equal((await request('GET', '/revision')).revision, revision);
+  assert.equal((await request('GET', `/tasks/${id}`)).title, 'Keep full response');
+  assert.deepEqual(await request('POST', '/ops', { compact: true, ops: [
+    { method: 'DELETE', path: `/tasks/${id}` },
+  ] }), { results: [{ status: 200, body: { removed: id } }] });
+});

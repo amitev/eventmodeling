@@ -101,6 +101,8 @@ Briefly show proposed Chapters; **continue without waiting for approval**, user 
 
 **One Chapter at a time, in order, every step**; never all Chapters' Events first/rest later.
 
+Group ready HTML, scenario and Note writes via shared API reference; reuse reads/ids via `model-navigation`. Keep verification.
+
 | Step | Skill | What it does here |
 |---|---|---|
 | Find/create Context/Chapter | `chapter-setup` | Add **Summary Spec lane**, plus scenario Spec lane if none other. **Ask before adding lanes to existing Chapter** |
