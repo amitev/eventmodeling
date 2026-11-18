@@ -1,7 +1,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
 import { DEFAULT_PROCESSOR_ICON, KINDS, PROCESSOR_ICONS, kindW } from '../model/model.js';
-import { hasFields } from '../model/fields.js';
+import { fieldsOf, hasFields, mergeFields } from '../model/fields.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions, CopySelection } from '../state/BoardActions.js';
@@ -11,7 +11,7 @@ import { ProcessorIcon } from '../ProcessorIcon.jsx';
 const ZOOM_DELAY_MS = 300;
 
 export function StickyNode({ id, data, selected }) {
-  const { setNodes } = useReactFlow();
+  const { getEdges, setNodes } = useReactFlow();
   const [editingTitle, setEditingTitle] = useState(false);
   const [pickingIcon, setPickingIcon] = useState(false);
   const iconMenuRef = useRef(null);
@@ -67,6 +67,21 @@ export function StickyNode({ id, data, selected }) {
   const isCopy = !!data.copyOf;
   const original = useStore((s) => (data.copyOf ? s.nodeLookup.get(data.copyOf) : undefined));
   const shown = isCopy ? { ...(original?.data ?? {}), kind: data.kind, copyOf: data.copyOf, highlights: data.highlights } : data;
+  const fieldSourceKind = isScreen ? 'command' : data.kind === 'command' ? 'event' : null;
+  const fieldSourceLabel = fieldSourceKind ? KINDS[fieldSourceKind].label : '';
+  const hasConnectedFields = useStore((s) => !!fieldSourceKind && !isCopy && selected && s.edges.some((edge) => {
+    const source = edge.source === id ? s.nodeLookup.get(edge.target) : null;
+    return source?.data.kind === fieldSourceKind && fieldsOf(s.nodeLookup, source).length > 0;
+  }));
+  const copyConnectedFields = () => setNodes((ns) => {
+    const byId = new Map(ns.map((n) => [n.id, n]));
+    const incoming = getEdges().flatMap((edge) => {
+      const source = edge.source === id ? byId.get(edge.target) : null;
+      return source?.data.kind === fieldSourceKind ? fieldsOf(byId, source) : [];
+    });
+    if (!incoming.length) return ns;
+    return ns.map((n) => n.id === id ? { ...n, data: { ...n.data, fields: mergeFields(n.data.fields, incoming) } } : n);
+  });
 
   // The fields scroll in the fixed-height body (R3.6c). `nowheel` makes the wheel scroll them, not zoom the board,
   // only while the element is selected.
@@ -192,6 +207,20 @@ export function StickyNode({ id, data, selected }) {
             </div>
           )}
           {hasFields(data.kind) && <FieldsButton id={id} has={!!data.fields?.length} />}
+          {fieldSourceKind && (
+            <button
+              type="button"
+              className="info-btn nodrag"
+              title={hasConnectedFields ? `Copy fields from connected ${fieldSourceLabel}s` : `No connected ${fieldSourceLabel} has fields`}
+              aria-label={`Copy fields from connected ${fieldSourceLabel}s`}
+              disabled={!hasConnectedFields}
+              onClick={copyConnectedFields}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M8 2v12M3 9l5 5 5-5" />
+              </svg>
+            </button>
+          )}
           {data.kind === 'read_model' && (
             <button
               type="button"
