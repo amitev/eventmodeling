@@ -16,6 +16,7 @@ const HOTKEYS = [
   {
     group: 'Board',
     keys: [
+      ['← ↑ → ↓', 'Pan the view when nothing is selected (100 board pixels, minimum 100 screen pixels)'],
       ['Ctrl+Z', 'Undo'],
       ['Ctrl+Y / Ctrl+Shift+Z', 'Redo'],
       ['Backspace / Delete', 'Delete the selected elements or arrows'],

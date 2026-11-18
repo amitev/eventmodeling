@@ -114,6 +114,7 @@ const CHAPTER_TITLE_RISE = 100;
 // How long after the last change the board is pushed to the server (R10.1), in ms.
 const PUSH_DELAY_MS = 1000;
 const EDGE_HOVER_ACTIVATE_DELAY_MS = 100;
+const KEYBOARD_PAN_STEP = 100;
 
 function Board() {
   const saved = useMemo(() => load() ?? makeEmptyBoard(), []);
@@ -162,7 +163,7 @@ function Board() {
       // ignore unavailable storage
     }
   }, [filterId]);
-  const { screenToFlowPosition, getNodes, getEdges, setCenter, getZoom, fitBounds, getNodesBounds } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getEdges, getViewport, setViewport, setCenter, getZoom, fitBounds, getNodesBounds } = useReactFlow();
   // Fit view: the shown Chapters with their title and handle, which stand above a Chapter's own
   // box (R1.20), so they are not cut off.
   const fitBoard = useCallback(
@@ -1371,7 +1372,19 @@ function Board() {
 
   cellKeys.current = (e) => {
     if (cellMenu || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
-    // The overview is read-only: only V (view) and Shift+F (fit) work.
+    const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (step && !selectedCell && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
+        !contextInfoId && !tasksOpen && !search.open &&
+        !getNodes().some((n) => n.selected) && !getEdges().some((edge) => edge.selected)) {
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      const { x, y, zoom } = getViewport();
+      const distance = KEYBOARD_PAN_STEP * Math.max(1, zoom);
+      setViewport({ x: x - step[1] * distance, y: y - step[0] * distance, zoom });
+      return;
+    }
+    // Other overview hotkeys: only V (view) and Shift+F (fit).
     if (overview && !(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') && !(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'v')) return;
     // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
@@ -1532,7 +1545,6 @@ function Board() {
       setInfoId(selectedCell.sliceId);
       return;
     }
-    const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step) {
       e.preventDefault();
       if (moveKey) {

@@ -62,6 +62,8 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - Request keyboard permission when needed; release lock on full-screen exit or board unmount. Unsupported/denied lock: show a notice; native Esc behavior remains.
   - No saved state or undo step. F11 remains browser-controlled; its separate browser mode cannot be triggered or reliably detected by the button.
 
+- **R1.23** With no Cell, node or arrow selected, unmodified arrow keys pan the view 100 board pixels in their direction, with a minimum of 100 screen pixels per press. Works in high level view. Ignore while typing or while a popup or search is open. Holding a key repeats. No selection, model change or undo step.
+
 ## 1a. Multiple Chapters
 
 - **R1a.1** The board holds any number of Chapters, each with its own lanes, slices and elements, laid out independently: changing one never changes another. Sections 2 to 5 apply per Chapter.
@@ -129,7 +131,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
 - **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, Tasks, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
 - **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Read Model green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
-- **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning, zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
+- **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning (including R1.23), zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
   - Tasks are an exception: their popup stays editable (R12.2).
 
 ## 2. Lanes
