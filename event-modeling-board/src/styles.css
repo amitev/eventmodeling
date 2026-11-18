@@ -120,8 +120,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
   padding: 4px 8px; font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.8);
 }
-.sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; }
-.sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sticky:not(.copy) .sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; cursor: default; }
+.sticky:not(.copy) .sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 .sticky-header .title-list { display: flex; flex: none; align-items: center; margin-left: 3px; line-height: 1; transform: translateY(-1px); }
 .sticky-header .title.empty { font-weight: 400; font-style: italic; opacity: 0.35; }
 .sticky-header .title-input {
@@ -348,14 +348,18 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   display: flex; align-items: center; gap: 6px;
   color: #667; line-height: 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
 }
-.notes-eye { display: grid; place-items: center; padding: 0; border: 0; background: none; color: #667; cursor: pointer; }
+.notes-eye { display: grid; place-items: center; padding: 0; border: 0; background: none; color: #667; cursor: pointer; visibility: hidden; }
+.sticky.notes:hover .notes-eye,
+.sticky.notes.selected .notes-eye,
+.sticky.notes:focus-within .notes-eye { visibility: visible; }
 .notes-eye:hover { color: #1a73e8; }
 /* Colours (R3.24): a pastel card; the dots show while the header is hovered. */
 .sticky.notes.note-red { background: #fbd9d8; }
 .sticky.notes.note-green { background: #d9f0db; }
 .sticky.notes.note-yellow { background: #fff4b8; }
 .notes-colors { display: flex; gap: 4px; margin-left: auto; visibility: hidden; }
-.notes-head:hover .notes-colors { visibility: visible; }
+.sticky.notes:hover .notes-colors,
+.sticky.notes:focus-within .notes-colors { visibility: visible; }
 .notes-dot { box-sizing: border-box; width: 12px; height: 12px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.3); border-radius: 50%; cursor: pointer; }
 .notes-dot.dot-white { background: #fff; }
 .notes-dot.dot-red { background: rgb(239, 83, 80); }
@@ -385,6 +389,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   display: flex; align-items: center; gap: 8px; color: #667; line-height: 14px;
   font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
 }
+.scenarios-head .notes-eye { opacity: 0; visibility: visible; }
+.sticky.scenarios:hover .scenarios-head .notes-eye,
+.sticky.scenarios:focus-within .scenarios-head .notes-eye { opacity: 1; }
 .scenarios-list {
   flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
 }
@@ -396,17 +403,21 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .scenario-item.failed { background: #fff0f0; border-color: #f2a0a0; }
 .scenario-item.over-before { box-shadow: 0 -3px 0 var(--scenarios); }
 .scenario-item.over-after { box-shadow: 0 3px 0 var(--scenarios); }
-.scenario-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scenario-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
 .scenario-text.empty { font-style: italic; opacity: 0.4; }
-.scenario-icon { display: flex; padding: 0; border: 0; background: none; color: #556; cursor: pointer; }
+.scenario-icon { display: none; padding: 0; border: 0; background: none; color: #556; cursor: pointer; }
+.scenario-item:hover .scenario-icon,
+.scenario-item:focus-within .scenario-icon { display: flex; }
 .scenarios-foot {
   display: flex; align-items: center; gap: 8px; margin: 0 -10px; padding: 6px 10px;
   border-top: 1px solid #e3e6ec;
 }
 .scenario-btn {
   display: flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid #aab; border-radius: 4px;
-  background: #fff; color: #222; font-size: 12px; cursor: pointer;
+  background: #fff; color: #222; font-size: 12px; cursor: pointer; opacity: 0;
 }
+.sticky.scenarios:hover .scenario-btn,
+.sticky.scenarios:focus-within .scenario-btn { opacity: 1; }
 .scenario-count {
   margin-left: auto; min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 4px;
   display: flex; align-items: center; justify-content: center; color: #556; font-size: 12px; font-weight: 700;
@@ -696,7 +707,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .tasks-list li:last-child { border-bottom: 0; }
 .task-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .task-heading strong, .task-title-input { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
-.task-heading strong:hover, .task-description:hover { outline: 1px solid #999; cursor: text; }
+.task-heading strong:hover, .task-description:hover { cursor: text; }
 .task-inline-input { box-sizing: border-box; padding: 0; border: 1px solid #999; background: #fff; font: inherit; }
 .task-title-input { font-weight: 700; }
 .task-heading button, .tasks-dialog select, .tasks-editor input, .tasks-editor textarea {
