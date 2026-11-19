@@ -120,8 +120,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
   padding: 4px 8px; font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.8);
 }
-.sticky:not(.copy) .sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; cursor: default; }
-.sticky:not(.copy) .sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+.sticky:not(.copy) .sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; cursor: pointer; }
+.sticky:not(.copy) .sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .sticky-header .title-list { display: flex; flex: none; align-items: center; margin-left: 3px; line-height: 1; transform: translateY(-1px); }
 .sticky-header .title.empty { font-weight: 400; font-style: italic; opacity: 0.35; }
 .sticky-header .title-input {
@@ -331,7 +331,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .sticky.processor {
   --kind-color: var(--processor); min-height: 0; background: none; border: 0; box-shadow: none;
 }
-.sticky.processor .sticky-header { background: none; border: 0; justify-content: center; text-align: center; }
+.sticky.processor .sticky-header { background: none; border: 0; justify-content: center; text-align: center; font-size: 16px; }
 .sticky.processor .sticky-header .title { flex: 0 1 auto; }
 .sticky.processor .sticky-header .title-input { flex: 1; text-align: center; }
 .sticky.processor .cogwheel { display: flex; justify-content: center; height: 88px; color: var(--processor); }
@@ -403,7 +403,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .scenario-item.failed { background: #fff0f0; border-color: #f2a0a0; }
 .scenario-item.over-before { box-shadow: 0 -3px 0 var(--scenarios); }
 .scenario-item.over-after { box-shadow: 0 3px 0 var(--scenarios); }
-.scenario-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.scenario-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .scenario-text.empty { font-style: italic; opacity: 0.4; }
 .scenario-icon { display: none; padding: 0; border: 0; background: none; color: #556; cursor: pointer; }
 .scenario-item:hover .scenario-icon,
