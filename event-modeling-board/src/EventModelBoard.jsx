@@ -1775,7 +1775,7 @@ function Board() {
           Chapter
         </button>
         <span className="spacer keep" />
-        <AgentIcons agents={agents} listError={listError} />
+        <AgentIcons agents={agents} listError={listError} onStop={removeAgent} />
         <button ref={agentButtonRef} onClick={() => setAgentOpen(true)} aria-haspopup="dialog">
           Send to CLI
         </button>

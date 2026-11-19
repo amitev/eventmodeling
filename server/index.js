@@ -124,37 +124,44 @@ if (command === 'agent') {
   url.searchParams.set('model', model);
   try {
     await receiveAgentMessages(url);
-    throw new Error('Server closed the message stream');
   } catch (e) {
     console.error(`Agent stream at ${url}: ${e.cause?.message || e.message}`);
+    process.exitCode = 1;
+  }
+} else {
+  startBoard();
+}
+
+function startBoard() {
+  if (!values.dev && !fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+    fail('Board build not found. Run "npm run build" first.');
+  }
+
+  const server = createServer({ publicDir: values.dev ? null : PUBLIC_DIR });
+  server.on('error', (e) => {
+    console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use.` : e.message);
     process.exit(1);
-  }
+  });
+  server.listen(port, values.host, () => {
+    const { port: actual } = server.address();
+    const host = values.host.includes(':') ? `[${values.host}]` : values.host;
+    console.log(`Event Modeling Board: http://${host}:${actual}${values.dev ? ' (API only)' : ''}`);
+    console.log(`Model folder: ${path.join(process.cwd(), DATA_DIR, 'model')}`);
+    if (!values.dev) {
+      const browserHost = ['0.0.0.0', '::'].includes(values.host) ? 'localhost' : host;
+      openBrowser(`http://${browserHost}:${actual}`);
+    }
+  });
 }
-
-if (!values.dev && !fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
-  fail('Board build not found. Run "npm run build" first.');
-}
-
-const server = createServer({ publicDir: values.dev ? null : PUBLIC_DIR });
-server.on('error', (e) => {
-  console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use.` : e.message);
-  process.exit(1);
-});
-server.listen(port, values.host, () => {
-  const { port: actual } = server.address();
-  const host = values.host.includes(':') ? `[${values.host}]` : values.host;
-  console.log(`Event Modeling Board: http://${host}:${actual}${values.dev ? ' (API only)' : ''}`);
-  console.log(`Model folder: ${path.join(process.cwd(), DATA_DIR, 'model')}`);
-  if (!values.dev) {
-    const browserHost = ['0.0.0.0', '::'].includes(values.host) ? 'localhost' : host;
-    openBrowser(`http://${browserHost}:${actual}`);
-  }
-});
 
 async function receiveAgentMessages(url) {
   const response = await fetch(url, { redirect: 'error' });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`HTTP ${response.status}`);
+  }
   if (!response.body || response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream') {
+    await response.body?.cancel();
     throw new Error('Expected an event stream from the board server');
   }
 
@@ -163,11 +170,40 @@ async function receiveAgentMessages(url) {
     const frames = (pending + chunk).split('\n\n');
     pending = frames.pop();
     for (const frame of frames) {
-      const data = frame.split('\n').find((line) => line.startsWith('data:'));
+      const lines = frame.split('\n');
+      const event = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+      if (event === 'stop') return;
+      const data = lines.find((line) => line.startsWith('data:'));
       if (!data) continue;
-      const { message } = JSON.parse(data.slice('data:'.length));
+      const payload = JSON.parse(data.slice('data:'.length));
+      if (event === 'ping') {
+        await acknowledgePing(url, payload);
+        continue;
+      }
+      if (event) continue;
+      const { message } = payload;
       if (typeof message !== 'string') throw new Error('Invalid agent message');
       console.log(stripVTControlCharacters(message).replace(/\r\n/g, '\n').replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, ''));
     }
+  }
+  throw new Error('Server closed the message stream');
+}
+
+async function acknowledgePing(url, { id, nonce }) {
+  if (typeof id !== 'string' || typeof nonce !== 'string') throw new Error('Invalid agent heartbeat');
+  try {
+    const response = await fetch(new URL(`/api/agents/${encodeURIComponent(id)}/ping`, url), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nonce }),
+      redirect: 'error',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`Could not acknowledge agent heartbeat: ${error.message}`);
   }
 }

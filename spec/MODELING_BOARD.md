@@ -581,8 +581,11 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R13.1** **Send to CLI** in the toolbar opens a modal (R1.17) with a recipient picker, multiline message, **Send** and **Close**.
 - **R13.2** Picker shows session names; append short session IDs to duplicate names. Require explicit selection; never switch recipients automatically.
 - **R13.3** Send only to the selected live session. On success, clear the message and report acceptance for forwarding. On failure, show the error and keep the draft. If the CLI disconnects, require a new selection.
-- **R13.4** Header shows one robot icon per live CLI session, including in high level view. Tooltip and accessible label show the agent name. Hash only the name for the color; equal names have equal colors across sessions.
+- **R13.4** Header shows one 32px robot icon per live CLI session in a 36px square button, including in high level view. Accessible label: agent name. Hash only the name for the color; equal names have equal colors across sessions.
 - **R13.5** Header and picker share one live session list. Fetch on board mount and 3 seconds after each fetch. On failure, replace icons with **CLI list unavailable**.
+- **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: `MODELING`. Status: `Idle`.
+- **R13.7** Card shows relative age and local time of the last acknowledged ping, or **Not yet**. Connectivity: `pending` before first acknowledgment, `alive` for age under 65 seconds, `unresponsive` otherwise.
+- **R13.8** **Cancel run** stays disabled while runs are unsupported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
 
 ## Out of scope for now
 

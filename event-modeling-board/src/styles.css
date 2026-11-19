@@ -32,8 +32,29 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .toolbar button > svg { display: block; flex: none; width: 16px; height: 16px; }
 .toolbar .context-filter { padding: 0 6px; max-width: 180px; }
 .agent-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #445; }
-.agent-icons svg { display: block; flex: none; width: 24px; height: 24px; }
 .agent-icons-error { color: #556; font-size: 13px; }
+.agent-icon { position: relative; }
+.toolbar .agent-icon-trigger { width: 36px; height: 36px; padding: 0; border-color: transparent; color: inherit; }
+.toolbar .agent-icon-trigger:hover, .toolbar .agent-icon-trigger[aria-expanded="true"] { background: #f0f0f5; }
+.toolbar .agent-icon-trigger > svg { width: 32px; height: 32px; }
+.agent-card-anchor {
+  position: absolute; top: 100%; z-index: 1100; padding-top: 6px;
+  width: min(320px, calc(100vw - 16px));
+}
+.agent-card {
+  padding: 12px; border: 1px solid #ddd; border-radius: 6px;
+  box-shadow: 0 4px 16px #0003; background: #fff; color: #222; font-size: 13px;
+}
+.agent-card-title { display: flex; align-items: flex-start; gap: 5px; overflow-wrap: anywhere; }
+.agent-card-title svg { width: 20px; height: 20px; flex: none; }
+.agent-card dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 12px; }
+.agent-card dt { color: #556; }
+.agent-card dd { margin: 0; }
+.agent-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #888; }
+.agent-dot.alive { background: #169143; }
+.agent-dot.idle { background: #bc8500; }
+.agent-card-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.toolbar .agent-stop { background: #c62828; border-color: #9c1d1d; color: #fff; }
 .spacer { flex: 1; }
 .canvas { flex: 1; min-height: 0; }
 .react-flow__controls-button.screen-hover-zoom-toggle[aria-pressed="true"] { background: #dceaff; color: #1a73e8; }

@@ -6,6 +6,14 @@ export function agentApi() {
   const router = express.Router();
   const sessions = new Map();
 
+  function liveSession(id) {
+    const session = sessions.get(id);
+    if (!session || session.res.destroyed || session.res.writableEnded) {
+      throw new HttpError(404, 'CLI disconnected. Select a recipient again.');
+    }
+    return session;
+  }
+
   router.head('/agent/events', (req, res) => res.set('Allow', 'GET').sendStatus(405));
   router.get('/agent/events', (req, res) => {
     const name = typeof req.query.name === 'string' ? req.query.name.trim() : '';
@@ -15,19 +23,42 @@ export function agentApi() {
 
     const id = randomUUID();
     res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
-    const beat = setInterval(() => {
-      if (!res.writableNeedDrain) res.write(': keep-alive\n\n');
-    }, 30000);
+    const session = { name, model, res, lastPing: null, nonce: null };
+    const ping = () => {
+      if (res.writableNeedDrain) return;
+      session.nonce = randomUUID();
+      res.write(`event: ping\ndata: ${JSON.stringify({ id, nonce: session.nonce })}\n\n`);
+    };
+    const beat = setInterval(ping, 30000);
     res.once('close', () => {
       clearInterval(beat);
       sessions.delete(id);
     });
-    sessions.set(id, { name, model, res });
+    sessions.set(id, session);
     res.flushHeaders();
+    ping();
   });
 
   router.get('/agents', (req, res) => {
-    res.set('Cache-Control', 'no-store').json([...sessions].map(([id, { name, model }]) => ({ id, name, model })));
+    const agents = [...sessions].map(([id, { name, model, lastPing }]) => ({ id, name, model, lastPing }));
+    res.set('Cache-Control', 'no-store').json(agents);
+  });
+
+  router.post('/agents/:id/ping', (req, res) => {
+    const session = liveSession(req.params.id);
+    if (!session.nonce || req.body?.nonce !== session.nonce) {
+      throw new HttpError(400, 'Invalid or expired heartbeat');
+    }
+    session.nonce = null;
+    session.lastPing = Date.now();
+    res.status(204).end();
+  });
+
+  router.delete('/agents/:id', (req, res) => {
+    const session = liveSession(req.params.id);
+    sessions.delete(req.params.id);
+    session.res.end('event: stop\ndata: {}\n\n');
+    res.status(204).end();
   });
 
   router.post('/agents/:id/messages', (req, res) => {
@@ -35,8 +66,7 @@ export function agentApi() {
     const { message } = req.body ?? {};
     if (typeof message !== 'string' || !message.trim()) throw new HttpError(400, 'Message is required');
 
-    const recipient = sessions.get(req.params.id)?.res;
-    if (!recipient || recipient.destroyed) throw new HttpError(404, 'CLI disconnected. Select a recipient again.');
+    const { res: recipient } = liveSession(req.params.id);
     if (recipient.writableNeedDrain) throw new HttpError(503, 'CLI is busy receiving messages. Try again.');
     recipient.write(`data: ${JSON.stringify({ message })}\n\n`);
     res.status(204).end();

@@ -64,7 +64,7 @@ test('rejects legacy syntax, unknown commands and options outside their command'
   }
 });
 
-test('board messages reach only the selected live CLI session', { timeout: 10000 }, async (t) => {
+test('live CLI sessions acknowledge pings, receive targeted messages and stop independently', { timeout: 15000 }, async (t) => {
   const { createServer } = await import('./app.js');
   const server = createServer({ publicDir: null, rootDir: tempDir(t) });
   server.listen(0, 'localhost');
@@ -80,7 +80,7 @@ test('board messages reach only the selected live CLI session', { timeout: 10000
       const response = await fetch(`${base}/agents`, { signal: t.signal });
       assert.equal(response.status, 200);
       const agents = await response.json();
-      if (agents.length === count) return agents;
+      if (agents.length === count && agents.every(({ lastPing }) => Number.isFinite(lastPing))) return agents;
       await delay(20, undefined, { signal: t.signal });
     }
     t.signal.throwIfAborted();
@@ -116,14 +116,17 @@ test('board messages reach only the selected live CLI session', { timeout: 10000
   assert.equal(missingModel.status, 400);
   assert.deepEqual(await missingModel.json(), { error: 'Agent model is required' });
 
+  const startedAt = Date.now();
   const first = startAgent(' vendor/model+A ');
   const [firstSession] = await waitForAgents(1);
-  const { id: firstId } = firstSession;
-  assert.deepEqual(firstSession, { id: firstId, name: 'Shared name', model: 'vendor/model+A' });
+  const { id: firstId, lastPing: firstPing } = firstSession;
+  assert.ok(firstPing >= startedAt && firstPing <= Date.now());
+  assert.deepEqual(firstSession, { id: firstId, name: 'Shared name', model: 'vendor/model+A', lastPing: firstPing });
   const second = startAgent('model-b');
   const sessions = await waitForAgents(2);
-  const { id: secondId } = sessions[1];
-  assert.deepEqual(sessions, [firstSession, { id: secondId, name: 'Shared name', model: 'model-b' }]);
+  const { id: secondId, lastPing: secondPing } = sessions[1];
+  const secondSession = { id: secondId, name: 'Shared name', model: 'model-b', lastPing: secondPing };
+  assert.deepEqual(sessions, [firstSession, secondSession]);
   assert.notEqual(firstId, secondId);
 
   assert.equal(await send(firstId, ' '), 400);
@@ -136,9 +139,11 @@ test('board messages reach only the selected live CLI session', { timeout: 10000
     await delay(20, undefined, { signal: t.signal });
   }
 
-  first.child.kill();
-  await first.closed;
-  assert.deepEqual(await waitForAgents(1), [{ id: secondId, name: 'Shared name', model: 'model-b' }]);
+  const stop = await fetch(`${base}/agents/${firstId}`, { method: 'DELETE', signal: t.signal });
+  assert.equal(stop.status, 204);
+  assert.deepEqual(await first.closed, [0, null], first.output.errors);
+  assert.equal(first.output.errors, '');
+  assert.deepEqual(await waitForAgents(1), [secondSession]);
   assert.equal(await send(firstId, 'Do not reroute'), 404);
   server.closeAllConnections();
   const [code] = await second.closed;
