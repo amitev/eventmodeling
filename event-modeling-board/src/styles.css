@@ -31,6 +31,9 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 }
 .toolbar button > svg { display: block; flex: none; width: 16px; height: 16px; }
 .toolbar .context-filter { padding: 0 6px; max-width: 180px; }
+.agent-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #445; }
+.agent-icons svg { display: block; flex: none; width: 24px; height: 24px; }
+.agent-icons-error { color: #556; font-size: 13px; }
 .spacer { flex: 1; }
 .canvas { flex: 1; min-height: 0; }
 .react-flow__controls-button.screen-hover-zoom-toggle[aria-pressed="true"] { background: #dceaff; color: #1a73e8; }
@@ -641,6 +644,15 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: rgba(0, 0, 0, 0.35);
 }
 .info-backdrop [role="dialog"]:focus { outline: none; }
+.agent-dialog {
+  width: min(440px, 90vw); max-height: 90vh; overflow: auto;
+  background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+.agent-dialog-fields { display: grid; gap: 8px; padding: 14px; }
+.agent-dialog-fields label { display: grid; gap: 4px; min-width: 0; }
+.agent-dialog-fields select, .agent-dialog-fields textarea { font: inherit; width: 100%; }
+.agent-dialog-fields textarea { resize: vertical; }
+.agent-dialog .primary:disabled { opacity: 0.5; cursor: default; }
 .info-dialog {
   display: flex; flex-direction: column; width: min(2400px, 90vw); height: 90vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;

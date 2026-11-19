@@ -576,6 +576,14 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R12.9** Task row's status dropdown, Edit and Delete share 28px height and 13px text; widths fit content.
 - **R12.10** Header Tasks button is icon-only, 28px square, with a count badge for Open tasks in selected Context, or all Contexts when **All contexts** is selected. Include Context-only and Chapter tasks; show 0 when none. Tooltip and accessible label: `Tasks (<count> open)`.
 
+## 13. CLI messages
+
+- **R13.1** **Send to CLI** in the toolbar opens a modal (R1.17) with a recipient picker, multiline message, **Send** and **Close**.
+- **R13.2** Picker shows session names; append short session IDs to duplicate names. Require explicit selection; never switch recipients automatically.
+- **R13.3** Send only to the selected live session. On success, clear the message and report acceptance for forwarding. On failure, show the error and keep the draft. If the CLI disconnects, require a new selection.
+- **R13.4** Header shows one robot icon per live CLI session, including in high level view. Tooltip and accessible label show the agent name. Hash only the name for the color; equal names have equal colors across sessions.
+- **R13.5** Header and picker share one live session list. Fetch on board mount and 3 seconds after each fetch. On failure, replace icons with **CLI list unavailable**.
+
 ## Out of scope for now
 
 - Icons for element types other than Processor.

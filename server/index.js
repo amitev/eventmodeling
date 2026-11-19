@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { parseArgs } from 'node:util';
+import { parseArgs, stripVTControlCharacters } from 'node:util';
 import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
@@ -12,6 +12,7 @@ const HELP = `Usage: em-cli <command> [options]
 Commands:
   board              Start the Event Modeling Board
   init               Install (or update) the skills in the current directory
+  agent              Connect to the board server and print its messages
 
 Options:
   -h, --help         Show this help
@@ -35,8 +36,18 @@ Options:
   -h, --help         Show this help
 `;
 
+const AGENT_HELP = `Usage: em-cli agent [options]
+
+Options:
+      --name <name>  Display name on the board (required)
+      --model <model> Model identifier sent to the server (required)
+  -p, --port <port>  Board server port on localhost (default: PORT environment variable, else 3300)
+  -h, --help         Show this help
+`;
+
 const [command, ...args] = process.argv.slice(2);
-const help = command === 'board' ? BOARD_HELP : command === 'init' ? INIT_HELP : HELP;
+const commandHelp = new Map([['board', BOARD_HELP], ['init', INIT_HELP], ['agent', AGENT_HELP]]);
+const help = commandHelp.get(command) ?? HELP;
 
 function fail(message) {
   console.error(`${message}\n\n${help}`);
@@ -53,7 +64,7 @@ function openBrowser(url) {
   child.unref();
 }
 
-if (command !== undefined && !['board', 'init', '-h', '--help'].includes(command)) {
+if (command !== undefined && !commandHelp.has(command) && command !== '-h' && command !== '--help') {
   fail(`Unknown command: ${command}`);
 }
 
@@ -62,12 +73,18 @@ try {
   ({ values } = parseArgs({
     args: command === '-h' || command === '--help' ? process.argv.slice(2) : args,
     options: {
-      ...(command === 'board' ? {
+      ...(command === 'board' || command === 'agent' ? {
         port: { type: 'string', short: 'p', default: process.env.PORT || '3300' },
+      } : {}),
+      ...(command === 'board' ? {
         host: { type: 'string', default: 'localhost' },
         dev: { type: 'boolean', default: false },
       } : {}),
       ...(command === 'init' ? { target: { type: 'string' } } : {}),
+      ...(command === 'agent' ? {
+        name: { type: 'string' },
+        model: { type: 'string' },
+      } : {}),
       help: { type: 'boolean', short: 'h', default: false },
     },
   }));
@@ -94,7 +111,25 @@ if (command === 'init') {
 }
 
 const port = Number(values.port);
-if (!Number.isInteger(port) || port < 0 || port > 65535) fail(`Invalid port: ${values.port}`);
+const minPort = command === 'agent' ? 1 : 0;
+if (!Number.isInteger(port) || port < minPort || port > 65535) fail(`Invalid port: ${values.port}`);
+
+if (command === 'agent') {
+  const name = values.name?.trim();
+  if (!name) fail('--name needs a display name');
+  const model = values.model?.trim();
+  if (!model) fail('--model needs a model identifier');
+  const url = new URL(`http://localhost:${port}/api/agent/events`);
+  url.searchParams.set('name', name);
+  url.searchParams.set('model', model);
+  try {
+    await receiveAgentMessages(url);
+    throw new Error('Server closed the message stream');
+  } catch (e) {
+    console.error(`Agent stream at ${url}: ${e.cause?.message || e.message}`);
+    process.exit(1);
+  }
+}
 
 if (!values.dev && !fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
   fail('Board build not found. Run "npm run build" first.');
@@ -115,3 +150,24 @@ server.listen(port, values.host, () => {
     openBrowser(`http://${browserHost}:${actual}`);
   }
 });
+
+async function receiveAgentMessages(url) {
+  const response = await fetch(url, { redirect: 'error' });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.body || response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream') {
+    throw new Error('Expected an event stream from the board server');
+  }
+
+  let pending = '';
+  for await (const chunk of response.body.pipeThrough(new TextDecoderStream())) {
+    const frames = (pending + chunk).split('\n\n');
+    pending = frames.pop();
+    for (const frame of frames) {
+      const data = frame.split('\n').find((line) => line.startsWith('data:'));
+      if (!data) continue;
+      const { message } = JSON.parse(data.slice('data:'.length));
+      if (typeof message !== 'string') throw new Error('Invalid agent message');
+      console.log(stripVTControlCharacters(message).replace(/\r\n/g, '\n').replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, ''));
+    }
+  }
+}

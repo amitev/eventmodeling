@@ -51,7 +51,7 @@ Or, from the repository: `npm start`.
 
 Serves at `http://localhost:3300` and tries to open the default browser. Uses the selected host and actual port (`localhost` for wildcard hosts). If no browser is available, the server continues without a warning. No browser opens with `--dev`.
 
-Commands: `board` starts the server; `init` installs skills. No command prints help.
+Commands: `board` starts the server; `init` installs skills; `agent` connects to the running server. With no command, the CLI prints help.
 Options belong to their command; the old `--init` and commandless server options are not accepted.
 Use `em-cli --help` for commands or `em-cli <command> --help` for command options.
 
@@ -61,9 +61,23 @@ Use `em-cli --help` for commands or `em-cli <command> --help` for command option
 | `board` | `--host <host>` | `localhost` | Host to bind to |
 | `board` | `--dev` | | API only, no build needed (used by `npm run dev`) |
 | `init` | `--target <dir>` | `.claude/skills` | Skills folder |
-| Both | `-h`, `--help` | | Show command usage |
+| `agent` | `--name <name>` | Required | Display name in the board's recipient picker |
+| `agent` | `--model <model>` | Required | Model identifier sent to the server |
+| `agent` | `-p`, `--port <port>` | `PORT` env, else `3300` | Board server port on localhost |
+| All | `-h`, `--help` | | Show command usage |
 
 Example: `npx em-cli board --port 8080 --host 0.0.0.0`
+
+Start one CLI per terminal:
+
+```sh
+npx em-cli agent --name frontend --model model-a
+npx em-cli agent --name backend --model model-b
+```
+
+Each connected CLI appears as a robot icon in the board header. Hover to see its name; the same name always has the same color. Open **Send to CLI**, choose a connected CLI, enter a message, and click **Send**. Only the chosen CLI prints it. Messages aren't stored or delivered offline; success means the server accepted the message for forwarding.
+
+Press Ctrl+C to disconnect. If the connection fails or closes, `agent` reports the error and exits without reconnecting. For a custom board port, pass the same `--port` to `agent`. Keep the server on localhost for private messages; it has no authentication.
 
 ## Skills
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import { agentApi } from './agent-api.js';
 import { HttpError } from './http-error.js';
 import { execute, findRoute } from './model-edit.js';
 
@@ -22,6 +23,8 @@ function pushRevision(req) {
 export function modelApi(store) {
   const router = express.Router();
   router.use(express.json({ limit: '50mb' }));
+
+  router.use(agentApi());
 
   router.get('/model', async (req, res) => {
     const { data, revision } = await store.pull();

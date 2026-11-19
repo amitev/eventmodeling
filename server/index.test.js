@@ -4,6 +4,8 @@ import { once } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createInterface } from 'node:readline';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -22,7 +24,7 @@ function tempDir(t) {
 }
 
 test('no command and help show usage without starting the board', () => {
-  for (const args of [[], ['--help'], ['-h'], ['board', '--help'], ['init', '-h']]) {
+  for (const args of [[], ['--help'], ['-h'], ['board', '--help'], ['init', '-h'], ['agent', '-h']]) {
     const result = run(args);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Usage: em-cli/);
@@ -33,6 +35,13 @@ test('no command and help show usage without starting the board', () => {
     } else if (args[0] === 'init') {
       assert.match(result.stdout, /--target/);
       assert.doesNotMatch(result.stdout, /--port/);
+    } else if (args[0] === 'agent') {
+      assert.match(result.stdout, /--port/);
+      assert.match(result.stdout, /--name/);
+      assert.match(result.stdout, /--model/);
+      assert.doesNotMatch(result.stdout, /--dev|--target/);
+    } else {
+      assert.match(result.stdout, /\bagent\b/);
     }
   }
 });
@@ -44,11 +53,99 @@ test('rejects legacy syntax, unknown commands and options outside their command'
     ['init', '--host', 'localhost'], ['init', '--dev'], ['board', '--init'],
     ['board', 'init'], ['board', '--unknown'], ['board', '--port', '65536'],
     ['board', '--port', 'abc'], ['init', '--target'], ['init', '--target='],
+    ['agent', '--name', 'frontend', '--port', '0'], ['agent', '--dev'], ['agent', '--target', 'skills'],
+    ['agent'], ['agent', '--name=  ', '--model', 'test-model'],
+    ['agent', '--name', 'frontend'], ['agent', '--name', 'frontend', '--model=  '],
+    ['board', '--name', 'frontend'], ['init', '--model', 'test-model'],
   ]) {
     const result = run(args);
     assert.equal(result.status, 1, JSON.stringify(args));
     assert.match(result.stderr, /Usage: em-cli/);
   }
+});
+
+test('board messages reach only the selected live CLI session', { timeout: 10000 }, async (t) => {
+  const { createServer } = await import('./app.js');
+  const server = createServer({ publicDir: null, rootDir: tempDir(t) });
+  server.listen(0, 'localhost');
+  await once(server, 'listening');
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+
+  const base = `http://localhost:${server.address().port}/api`;
+  async function waitForAgents(count) {
+    while (!t.signal.aborted) {
+      const response = await fetch(`${base}/agents`, { signal: t.signal });
+      assert.equal(response.status, 200);
+      const agents = await response.json();
+      if (agents.length === count) return agents;
+      await delay(20, undefined, { signal: t.signal });
+    }
+    t.signal.throwIfAborted();
+  }
+  function startAgent(model) {
+    const child = spawn(process.execPath, [cli, 'agent', '--name', 'Shared name', '--model', model], {
+      env: { ...process.env, PORT: String(server.address().port) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const closed = once(child, 'close');
+    t.after(() => {
+      if (child.exitCode === null && child.signalCode === null) child.kill();
+      return closed;
+    });
+    const output = { lines: [], errors: '' };
+    const lines = createInterface({ input: child.stdout });
+    lines.on('line', (line) => output.lines.push(line));
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { output.errors += chunk; });
+    return { child, closed, output };
+  }
+  async function send(id, message) {
+    const response = await fetch(`${base}/agents/${id}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+      signal: t.signal,
+    });
+    await response.text();
+    return response.status;
+  }
+
+  const missingModel = await fetch(`${base}/agent/events?name=frontend`, { signal: t.signal });
+  assert.equal(missingModel.status, 400);
+  assert.deepEqual(await missingModel.json(), { error: 'Agent model is required' });
+
+  const first = startAgent(' vendor/model+A ');
+  const [firstSession] = await waitForAgents(1);
+  const { id: firstId } = firstSession;
+  assert.deepEqual(firstSession, { id: firstId, name: 'Shared name', model: 'vendor/model+A' });
+  const second = startAgent('model-b');
+  const sessions = await waitForAgents(2);
+  const { id: secondId } = sessions[1];
+  assert.deepEqual(sessions, [firstSession, { id: secondId, name: 'Shared name', model: 'model-b' }]);
+  assert.notEqual(firstId, secondId);
+
+  assert.equal(await send(firstId, ' '), 400);
+  assert.equal(await send(firstId, 'First CLI only\nSecond line'), 204);
+  assert.equal(await send(secondId, 'Second CLI only'), 204);
+  while (first.output.lines.length < 2 || second.output.lines.length < 1) {
+    for (const { child, output } of [first, second]) {
+      assert.equal(child.exitCode, null, output.errors);
+    }
+    await delay(20, undefined, { signal: t.signal });
+  }
+
+  first.child.kill();
+  await first.closed;
+  assert.deepEqual(await waitForAgents(1), [{ id: secondId, name: 'Shared name', model: 'model-b' }]);
+  assert.equal(await send(firstId, 'Do not reroute'), 404);
+  server.closeAllConnections();
+  const [code] = await second.closed;
+  assert.equal(code, 1, second.output.errors);
+  assert.match(second.output.errors, /Agent stream at http:\/\/localhost:/);
+  assert.deepEqual(first.output.lines, ['First CLI only', 'Second line']);
+  assert.deepEqual(second.output.lines, ['Second CLI only']);
 });
 
 test('init installs skills in its default or custom target without starting a server', (t) => {

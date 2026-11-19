@@ -55,6 +55,7 @@ import {
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
+import { useConnectedAgents } from './state/agents.js';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
 import { highlightHtml, htmlStructure } from '../../server/html-highlights.js';
@@ -63,6 +64,8 @@ import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
 import { MovieStrip } from './dialogs/MovieStrip.jsx';
 import { TasksDialog } from './dialogs/TasksDialog.jsx';
+import { AgentDialog } from './dialogs/AgentDialog.jsx';
+import { AgentIcons } from './AgentIcons.jsx';
 import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
 import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
@@ -302,6 +305,9 @@ function Board() {
   const [contextInfoId, setContextInfoId] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
+  const agentButtonRef = useRef(null);
+  const { agents, listError, removeAgent } = useConnectedAgents();
   const tasksButtonRef = useRef(null);
   const headerRef = useRef(null);
   // The element whose title is to be edited (asked for by the Enter hotkey).
@@ -318,7 +324,7 @@ function Board() {
   // The Chapter whose movie strip is open.
   const [movieId, setMovieId] = useState(null);
   const scenarioOpen = useRef(false);
-  scenarioOpen.current = !!scenarioEdit || !!infoId || !!contextInfoId || !!fieldsId || !!htmlId || !!scenariosViewId || !!movieId;
+  scenarioOpen.current = !!scenarioEdit || !!infoId || !!contextInfoId || !!fieldsId || !!htmlId || !!scenariosViewId || !!movieId || agentOpen;
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
@@ -1769,6 +1775,10 @@ function Board() {
           Chapter
         </button>
         <span className="spacer keep" />
+        <AgentIcons agents={agents} listError={listError} />
+        <button ref={agentButtonRef} onClick={() => setAgentOpen(true)} aria-haspopup="dialog">
+          Send to CLI
+        </button>
         <button
           ref={tasksButtonRef}
           className="tasks-button keep"
@@ -1966,6 +1976,17 @@ function Board() {
         />
       )}
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
+      {agentOpen && (
+        <AgentDialog
+          agents={agents}
+          listError={listError}
+          onDisconnect={removeAgent}
+          onClose={() => {
+            setAgentOpen(false);
+            agentButtonRef.current?.focus();
+          }}
+        />
+      )}
       {tasksOpen && (
         <TasksDialog
           contexts={contexts}
