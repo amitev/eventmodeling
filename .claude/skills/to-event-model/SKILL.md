@@ -1,5 +1,5 @@
 ---
-name: source-to-event-model
+name: to-event-model
 description: Turn PDF, Word, Markdown, text, URL or image into a board model: Chapters, elements, HTML Screens, rule-based GWT scenarios and detailed Summary-lane notes in each Chapter's first slice. Capture facts, rules, deadlines and questions as a blueprint. Use for document modeling, e.g. tender/RFP analysis.
 disable-model-invocation: true
 ---
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Orchestrates modeling skills; owns **source ingestion, Chapter structure, element-to-source traceability**. Read `eventmodeling-core-rules` once/session first. Use `naming`, `model-navigation`, `chapter-setup`, `slice-modeler`, `connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `edit-and-delete` for their tasks.
+Orchestrates modeling skills; owns **source ingestion, Chapter structure, element-to-source traceability**. Read `eventmodeling-core-rules` once/session first. Use `naming`, `model-navigation`, `chapter-setup`, `slice-modeler`, `em-connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `em-edit-and-delete` for their tasks.
 
 **Modeling Mode Steps 2–6; Critic Mode Step 7.** Capture completely; flag gaps and continue, not stall.
 
@@ -109,9 +109,9 @@ Group ready HTML, scenario and Note writes via shared API reference; reuse reads
 | Order Events | `eventmodeling-core-rules` (Flow & Causality) | Time-ordered Events first, slices around them |
 | Build slices | `slice-modeler` | State change/read, automation, external-party translation; **one atomic batch/slice** |
 | Fields | `element-fields` | Data facts → fields; no source → generated or question |
-| Inter-slice arrows | `connections` | Add nonautomatic arrows; **never cross-Chapter**, use local copies (Across Chapters) |
+| Inter-slice arrows | `em-connections` | Add nonautomatic arrows; **never cross-Chapter**, use local copies (Across Chapters) |
 | Names | `naming` | Every element/slice/Chapter |
-| Fix/rename/move | `edit-and-delete` | As model develops |
+| Fix/rename/move | `em-edit-and-delete` | As model develops |
 
 **Consistent fact → model mapping:**
 

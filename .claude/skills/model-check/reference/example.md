@@ -71,7 +71,7 @@ Moving keeps the arrows. Screen Checkout stays with Place Order; the arrow Check
 Do you want me to do this?
 ```
 
-After a yes: add the slice after "Orders" (`chapter-setup`), rename the first, move Confirm Order and its Event with `PATCH /elements/:id { slice, lane }` (`edit-and-delete`), then run the check again for the Chapter: the new slice must have type `STATE_CHANGE`.
+After a yes: add the slice after "Orders" (`chapter-setup`), rename the first, move Confirm Order and its Event with `PATCH /elements/:id { slice, lane }` (`em-edit-and-delete`), then run the check again for the Chapter: the new slice must have type `STATE_CHANGE`.
 
 ---
 

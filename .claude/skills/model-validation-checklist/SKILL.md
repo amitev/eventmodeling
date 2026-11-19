@@ -75,7 +75,7 @@ Include:
 1. Chapters reviewed and `model-check` counts.
 2. Each of the 14 checks with status and specific evidence.
 3. Both readiness answers.
-4. Findings and unresolved business questions, with suggested next skill only when useful (`model-check`, `wdyt`, `scenarios`, `element-fields`, `connections` or `chapter-setup`).
+4. Findings and unresolved business questions, with suggested next skill only when useful (`model-check`, `wdyt`, `scenarios`, `element-fields`, `em-connections` or `chapter-setup`).
 5. One verdict:
    - **PASS** — all checks pass and both readiness answers are YES.
    - **PASS WITH WARNINGS** — no failures, but at least one check or readiness answer is unclear.

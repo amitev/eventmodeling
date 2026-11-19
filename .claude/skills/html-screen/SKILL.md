@@ -75,7 +75,7 @@ Include ready HTML in the structure batch, on Screen creation or PATCH. Use its 
 ```json
 { "slice": "<slice id>", "lane": "<actor lane id>", "type": "SCREEN", "name": "<screen name>", "html": "<markup>", "fields": [...] }
 ```
-Returns new element, HTTP 201. Omit optional `x` for board placement. Default `autoConnect: true` links same-slice Read Model below → Screen, copying its fields. Other arrows: `connections`.
+Returns new element, HTTP 201. Omit optional `x` for board placement. Default `autoConnect: true` links same-slice Read Model below → Screen, copying its fields. Other arrows: `em-connections`.
 
 Errors 400/404/409/412/422: read `error`, fix cause, retry; never silently leave Screen without HTML.
 

@@ -48,7 +48,7 @@ For a `new` impact step, sketch a valid board slice using `eventmodeling-core-ru
 - Automation: prior Event(s) → todo Read Model → Processor → Command → Event(s).
 - Translation: follow the Translation Chain and name the external system only when known.
 
-List proposed elements by lane, using business names and field names only when the request or existing model supports them. Mark assumptions and missing business decisions as open questions. Use `naming` for proposed names when needed. Do not create model elements, fields, scenarios, or Screen HTML; later work uses `slice-modeler`, `element-fields`, `scenarios`, `connections` or `html-screen`.
+List proposed elements by lane, using business names and field names only when the request or existing model supports them. Mark assumptions and missing business decisions as open questions. Use `naming` for proposed names when needed. Do not create model elements, fields, scenarios, or Screen HTML; later work uses `slice-modeler`, `element-fields`, `scenarios`, `em-connections` or `html-screen`.
 
 ## 3. Report and check
 

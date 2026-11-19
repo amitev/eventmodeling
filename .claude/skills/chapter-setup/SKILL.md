@@ -1,13 +1,13 @@
 ---
 name: chapter-setup
-description: Create, rename, move, reorder, resize or delete Contexts, Chapters, lanes and slices via API; insert slices and mark flow ends. Use for structure changes ("add a slice after X", "split contexts"); element changes use `edit-and-delete`.
+description: Create, rename, move, reorder, resize or delete Contexts, Chapters, lanes and slices via API; insert slices and mark flow ends. Use for structure changes ("add a slice after X", "split contexts"); element changes use `em-edit-and-delete`.
 ---
 
 # Chapter Setup (structure)
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `html-screen`, `element-fields`, `connections`, `scenarios`.
+Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `html-screen`, `element-fields`, `em-connections`, `scenarios`.
 
 ## Rules to know
 

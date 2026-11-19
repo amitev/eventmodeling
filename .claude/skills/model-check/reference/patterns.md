@@ -75,7 +75,7 @@ An external party's Event (in an Integration lane) feeds a todo-list Read Model;
 
 A Command may record a business-failure Event such as `Payment Capture Failed` when a whole alternative flow follows. Model the producing Command's scenario with that Then Event and `error: null`; a precondition rejection still records no Event.
 
-The alternative flow may start a new Chapter with a linked copy of that Event, then model the reaction. The original Command remains the producer; use `connections` for copy placement and explicit arrows. Never replace the copy with a second independent Event definition.
+The alternative flow may start a new Chapter with a linked copy of that Event, then model the reaction. The original Command remains the producer; use `em-connections` for copy placement and explicit arrows. Never replace the copy with a second independent Event definition.
 
 ## Splitting patterns
 
@@ -88,7 +88,7 @@ The alternative flow may start a new Chapter with a linked copy of that Event, t
 
 - A Screen belongs to the slice of the Command it issues, or of the Read Model it shows. A Screen that does both (a list with a Delete button) goes with the state read slice; the arrow Screen → Command then crosses slices.
 - Moving an element to another slice keeps its arrows and adds none. A Cell of a Spec lane holds one element: scenarios move with their Command's slice.
-- Propose first, ask, then move (`chapter-setup`, `edit-and-delete`). Never split on your own.
+- Propose first, ask, then move (`chapter-setup`, `em-edit-and-delete`). Never split on your own.
 
 ---
 

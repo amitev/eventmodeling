@@ -1,5 +1,5 @@
 ---
-name: connections
+name: em-connections
 description: Add/remove API arrows; covers allowed pairs, direction, auto-arrows and copied fields. Use to connect/link or unlink elements, wire a slice, or diagnose missing/unexpected arrows.
 ---
 
@@ -74,7 +74,7 @@ When a later Event refreshes the same business view, **use linked copies**, not 
 4. Connect relevant earlier Events forward to this copy; eligible distant arrows may be omitted per `eventmodeling-core-rules`. Do not wire later Events backward to the original or move existing arrows.
 5. Create the Screen copy with the same copy-only body shape in the Actor lane, then explicitly connect Read Model copy → Screen copy. Copies mirror definitions, not the original occurrence's connections.
 6. Incoming arrows do not copy fields into linked copies. If the shared result contract needs an agreed field change, edit the original via `element-fields` before connecting onward; never PATCH copy content.
-7. Assess reuse separately for each element. A genuinely different Screen interaction may be a new original even when its Read Model is reused. Do not automatically convert existing duplicates or delete originals; follow `edit-and-delete` impact and confirmation rules.
+7. Assess reuse separately for each element. A genuinely different Screen interaction may be a new original even when its Read Model is reused. Do not automatically convert existing duplicates or delete originals; follow `em-edit-and-delete` impact and confirmation rules.
 
 ## Across Chapters
 

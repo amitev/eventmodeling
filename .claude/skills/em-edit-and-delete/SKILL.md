@@ -1,5 +1,5 @@
 ---
-name: edit-and-delete
+name: em-edit-and-delete
 description: Rename, edit, move or delete elements via API; check impact and confirm destructive edits, including type changes. Use for renames, moves, deletes, Read Model list changes, Command type changes or cleanup.
 ---
 
@@ -7,7 +7,7 @@ description: Rename, edit, move or delete elements via API; check impact and con
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `element-fields`, `connections`, `scenarios`, `chapter-setup`.
+Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `element-fields`, `em-connections`, `scenarios`, `chapter-setup`.
 
 ## Rules to know
 
@@ -19,7 +19,7 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 | Read Model list | `isList`: list-result/code-generation hint; default `false`. `true` stores it; `false`/`null` removes it; other values or element types: 400. Does not change fields or propagate downstream |
 | Linked copy | PATCH only `slice`, `lane`, `x`, Screen `highlights` (shared API reference); other fields: 409 naming original. Edit original for content |
 | Move | `slice` + `lane` together; lane must accept type. Omitted `x`: board placement; supplied: given offset. `x` alone moves within Cell. Keeps arrows, adds none |
-| Cross-Chapter move | Allowed, including copies; **deletes scenarios using element**. Existing arrows may cross Chapters: report, offer local-copy replacements (`connections`, Across Chapters). `SCENARIOS` cannot change Chapter (409) |
+| Cross-Chapter move | Allowed, including copies; **deletes scenarios using element**. Existing arrows may cross Chapters: report, offer local-copy replacements (`em-connections`, Across Chapters). `SCENARIOS` cannot change Chapter (409) |
 | Spec lane | At most one element per slice; occupied destination Cell refused |
 | Rename | References use id; scenarios/copies show new name automatically. Field renames never propagate (`element-fields`) |
 | Info | Markdown, default empty; not on Scenarios/Notes. Mainly implementation details (formats, limits, integrations, technical constraints); never citations, summaries or traceability. Summaries go in Notes, which may also hold implementation details |
@@ -53,7 +53,7 @@ Several changes: one atomic `POST /ops` (all or none).
 **Replace**, never mutate type:
 1. Record name, fields, parents/children, scenarios and copies.
 2. Confirm loss of old arrows/copies/scenarios; copied downstream fields remain.
-3. One `POST /ops`: create replacement with fields in valid lane; add still-valid arrows; **then delete old element**. Account for automatic arrows (`slice-modeler`, `connections`) and new type's allowed pairs.
+3. One `POST /ops`: create replacement with fields in valid lane; add still-valid arrows; **then delete old element**. Account for automatic arrows (`slice-modeler`, `em-connections`) and new type's allowed pairs.
 4. Report arrows/copies/scenarios not carried over; redo scenarios with `scenarios`.
 
 ## After a change

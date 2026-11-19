@@ -1,6 +1,6 @@
 ---
 name: language-check
-description: Check language across Chapters/Contexts for duplicate names, Command/Event subject or tense mismatches, and field-type conflicts; assess synonyms and provide a glossary in chat/Markdown. Use to check consistency or ubiquitous language. Propose renames; approved edits use `edit-and-delete`.
+description: Check language across Chapters/Contexts for duplicate names, Command/Event subject or tense mismatches, and field-type conflicts; assess synonyms and provide a glossary in chat/Markdown. Use to check consistency or ubiquitous language. Propose renames; approved edits use `em-edit-and-delete`.
 ---
 
 # Language Check
@@ -45,8 +45,8 @@ Script cannot detect synonyms (`Customer` / `Client` / `Buyer`); judge manually:
 ## After the run
 
 1. Briefly report count, findings by kind and proposed actions; explicitly say when none.
-2. **Rename only after approval**, via `edit-and-delete`. Element rename shows everywhere by id; field rename does not propagate (`element-fields`).
-3. Duplicate fact → linked copy: inspect arrows/scenarios first (deletion loses them); **get approval** before delete/recreate via `slice-modeler` / `edit-and-delete`.
+2. **Rename only after approval**, via `em-edit-and-delete`. Element rename shows everywhere by id; field rename does not propagate (`element-fields`).
+3. Duplicate fact → linked copy: inspect arrows/scenarios first (deletion loses them); **get approval** before delete/recreate via `slice-modeler` / `em-edit-and-delete`.
 4. Rerun after changes.
 5. Script error `GET ... -> status` names failed request; check `--base` and server availability.
 6. Offer [Task capture](../em-board-api.md#task-capture).

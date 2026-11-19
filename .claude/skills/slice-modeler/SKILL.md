@@ -7,7 +7,7 @@ description: Model a slice, workflow or process with atomic structure creation, 
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
+Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `em-connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 
 Build the structure with **one atomic `POST /ops`**. Prepare required HTML and scenarios before sending it; use follow-up batches only when their inputs are not ready. Do not call a multi-batch workflow atomic.
 
@@ -59,7 +59,7 @@ Nonhuman trigger/no Screen: use Automation.
 4. `POST /elements` `{ slice: "$s", lane: <Actor lane>, copyOf: <original Screen id>, autoConnect: false }`, `as: "screen"`, then explicitly connect `"$q"` to `"$screen"`. Copies mirror content, not the original occurrence's arrows.
 5. Do not send `type`, `name`, `fields`, `isList`, `html` or `info` on copy creation, and do not PATCH copy content. If the shared definition needs fields, update the original via `element-fields` before connecting onward. If only one of the two definitions is reused, use a copy for it and the normal recipe for the genuinely new element.
 
-Other Chapter's Event: **local linked copy, never direct arrow** (`connections`, Across Chapters). `POST /elements` `{ slice, lane, copyOf, autoConnect: false }` **outside state-read slice**, then connect copy → Read Model.
+Other Chapter's Event: **local linked copy, never direct arrow** (`em-connections`, Across Chapters). `POST /elements` `{ slice, lane, copyOf, autoConnect: false }` **outside state-read slice**, then connect copy → Read Model.
 
 ### Automation — Event → Read Model → Processor → Command → Event
 
@@ -107,7 +107,7 @@ Required unless the user explicitly excludes them. Use the owning skills to prep
 
 ## Step 4 — Finish and verify
 
-1. Check expected type, lanes and arrows in the batch summary; use a scoped outline only for missing structure. `null`: fix missing element/arrow except an intentional copied-fact-only entry slice (`connections`).
+1. Check expected type, lanes and arrows in the batch summary; use a scoped outline only for missing structure. `null`: fix missing element/arrow except an intentional copied-fact-only entry slice (`em-connections`).
 2. Check field lineage and `copyOf` against the summary and known originals. For missing detail across multiple elements, read the Chapter once; omit HTML unless needed. Adjust originals via `element-fields`. Confirm repeated views are linked copies.
 3. Confirm `html-screen` verified persisted HTML and field matches for each in-scope original; copies resolve to those originals. A placeholder is incomplete. Report unresolved URL-replacement permission as blocked.
 4. Confirm `scenarios` verified success and documented-rejection coverage for each in-scope Command, with valid references/examples and mutually exclusive Then Events/error. A container or scenario count alone does not prove coverage.

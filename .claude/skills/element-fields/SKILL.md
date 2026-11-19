@@ -18,7 +18,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 | Holders | Only `SCREEN`, `COMMAND`, `EVENT`, `READ_MODEL`; no fields on `PROCESSOR`, `SCENARIOS`, `NOTES` |
 | Field | `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fields? }`; types: `string` (default), `integer`, `decimal`, `boolean`, `date`, `datetime`, `uuid`, `object` (`GET /rules`: `fieldTypes`). Only `object` has nested `fields`, any depth |
 | Names / flags | Names nonempty, unique per list. Flags default `false`; `list: true` = list; `id` = identifier; `optional` = may be absent; `generated` = system-created (id, current date, acting user); `pii` = personal data; `technical` = implementation detail |
-| Flow | Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor (`connections`) |
+| Flow | Screen → Command, Processor → Command, Command → Event, Event → Read Model, Read Model → Screen, Read Model → Processor (`em-connections`) |
 | Copy | **Copied, not linked.** Replace same-named target field in place, whole object including nested fields; **no deep merge**. Append new names |
 | Processor | No fields; passes Read Model's fields through to Command |
 | Linked copy | Never a field-write target: shows original; PATCH fields gets 409. As source supplies original's fields |
@@ -41,7 +41,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 - **Screen:** shown/entered mockup data; displayed Read Model data comes from it. Session/display-only calculations: `generated: true`.
 - **Command:** all decision inputs, including time, acting user, tenant (`generated: true` if not Screen-supplied); business names matching Screen inputs.
 - **Event:** captured facts only, no computed values.
-- **Read Model:** fields describe one result item, shaped for the consuming Screen. Element `isList` hints list results (default `false`), never an outer `list: true` field. Field `list` is only for a collection-valued attribute within one item. Preserve `isList` during field edits; change it only when requested via `edit-and-delete`. Never propagate it with fields.
+- **Read Model:** fields describe one result item, shaped for the consuming Screen. Element `isList` hints list results (default `false`), never an outer `list: true` field. Field `list` is only for a collection-valued attribute within one item. Preserve `isList` during field edits; change it only when requested via `em-edit-and-delete`. Never propagate it with fields.
 - Personal data: `pii`; identifiers: `id`.
 - Unclear name/type/flag/propagation: ask user with ask tool and recommended default.
 
@@ -77,7 +77,7 @@ Multiple elements: one atomic `POST /ops`, one revision. Body `{"compact":true,"
 
 ### E. New arrow between existing elements
 
-Use `connections`: `POST /connections` `{ from, to }` copies one hop only. Separately created fields follow B–C.
+Use `em-connections`: `POST /connections` `{ from, to }` copies one hop only. Separately created fields follow B–C.
 
 ### F. Remove or rename a field
 

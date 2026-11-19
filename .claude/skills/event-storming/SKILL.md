@@ -1,13 +1,13 @@
 ---
 name: event-storming
-description: Facilitate event storming from questions, text or documents: build an Event timeline, note hot spots in red, and expand to full slices only on request. Use to explore a process or sequence events; whole documents with rules/deadlines use `source-to-event-model`.
+description: Facilitate event storming from questions, text or documents: build an Event timeline, note hot spots in red, and expand to full slices only on request. Use to explore a process or sequence events; whole documents with rules/deadlines use `to-event-model`.
 ---
 
 # Event Storming
 
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
 
-Read `eventmodeling-core-rules` once/session first (Events, causality). Use `naming`, `chapter-setup`, `edit-and-delete`, `model-navigation`; hand-over adds `slice-modeler`, `element-fields`, `connections`, `html-screen`, `scenarios`.
+Read `eventmodeling-core-rules` once/session first (Events, causality). Use `naming`, `chapter-setup`, `em-edit-and-delete`, `model-navigation`; hand-over adds `slice-modeler`, `element-fields`, `em-connections`, `html-screen`, `scenarios`.
 
 **Modeling Mode:** explore/capture, adjust names/order conversationally. **No audit during storming.**
 
@@ -55,7 +55,7 @@ For each Event:
 |---|---|
 | "call it X instead" | PATCH Event **and slice** in one `POST /ops` |
 | "that comes before Y" / "swap them" | `PATCH /slices/:id` `{ index: n }` for moving slice |
-| "remove it" | `DELETE /slices/:id`; Event-only storm slice: no confirmation. After hand-over: `edit-and-delete`, confirm |
+| "remove it" | `DELETE /slices/:id`; Event-only storm slice: no confirmation. After hand-over: `em-edit-and-delete`, confirm |
 | "these two are the same" | Keep one, delete duplicate slice |
 | "this can also end in Z" | Separate alternative Event slice immediately after branch point; report. Separate-flow branches: ask about another Chapter |
 | "these happen in parallel" | Consecutive slices; explain sequential display |
@@ -69,7 +69,7 @@ Record unclear/undecided/disputed points:
 1. Missing **Spec "Hot spots" lane**: `POST /chapters/:id/lanes` `{ type: "SPEC", after: <last lane>, name: "Hot spots" }`. **Ask first in Chapter you did not create.**
 2. In relevant Event slice: `POST /elements` `{ slice, lane, type: "NOTES", color: "red", markdown }`. One note per Spec Cell: numbered questions, one per line, each answerable in one line.
 3. Include in checkpoint chat.
-4. Answered: update `markdown` or delete note (`edit-and-delete`); report.
+4. Answered: update `markdown` or delete note (`em-edit-and-delete`); report.
 
 **Never questions/notes in `info`**; implementation details only.
 
@@ -79,7 +79,7 @@ For passage/story/minutes/file:
 1. Read all; extract time-ordered Events with source sentences. Unstated Event = question, never invention.
 2. Show ordered names, mark ambiguity; ask only unclear points, then add all in **one `POST /ops`**, report one line/Event.
 3. Ambiguity/contradictions → hot spots.
-4. Long source or traceable rules/deadlines/penalties: recommend/offer `source-to-event-model`.
+4. Long source or traceable rules/deadlines/penalties: recommend/offer `to-event-model`.
 
 ## Checkpoints
 
@@ -89,7 +89,7 @@ Every **five to eight new Events**, and on request: numbered timeline from outli
 
 When user says done/requests detail, enrich **existing Event slices in place**, one at a time, time order:
 1. Trigger from conversation: person → Screen/Command; system → Processor; external party → translation. Ask system name/delivery, add named Integration lane via `chapter-setup` (one/system, details in `info`; `eventmodeling-core-rules`, External systems), PATCH Event `{ slice, lane }`. **Ask gaps**: who, inputs, rules; never invent.
-2. `slice-modeler` recipe **inside existing slice**, not replacement: Command in Interaction, Screen/Processor in Actor. Existing Event needs explicit `POST /connections` `{ from: <command>, to: <event> }`; Screen → Command automatic if Screen created first. Copy fields via `element-fields` / `connections`.
+2. `slice-modeler` recipe **inside existing slice**, not replacement: Command in Interaction, Screen/Processor in Actor. Existing Event needs explicit `POST /connections` `{ from: <command>, to: <event> }`; Screen → Command automatic if Screen created first. Copy fields via `element-fields` / `em-connections`.
 3. Rename slice to **Command** (`Place Order`); keep Event name.
 4. Feeding Read Models: **new state-read slices after producing Event slice**, via `slice-modeler`.
 5. `html-screen` mockups; `scenarios` from user-given rules.

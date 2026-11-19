@@ -12,7 +12,7 @@ Applies to **every board task**. Read once per session; individual skills add ta
 ## Modes
 
 Request determines mode; **never mix in one pass**:
-- **Modeling Mode** — building/changing (`html-screen`, `element-fields`, `connections`, `scenarios`): explore, capture process completely. Flag naming slips/incomplete preconditions and continue; don't stall or over-correct with a full audit.
+- **Modeling Mode** — building/changing (`html-screen`, `element-fields`, `em-connections`, `scenarios`): explore, capture process completely. Flag naming slips/incomplete preconditions and continue; don't stall or over-correct with a full audit.
 - **Critic Mode** — reviewing (`wdyt`): apply every rule strictly; surface every violation/gap/inconsistency, even if model mostly works. Post comments; never silently fix/add missing structure unless asked.
 
 ## Lanes — What Lives Where
@@ -120,7 +120,7 @@ Within slice: vertical between lanes (Screen → Command → Event, Read Model �
 
 **Automation exception:** within the same Automation slice, an Event produced by its Command may point back to the TODO Read Model used by its Processor, updating the TODO list. This does not permit arrows to previous slices; Translation todo rules stay unchanged.
 
-Natural slice occupied: add slice immediately before/after, keeping **every arrow forward except the Automation feedback above**, not wiring across gap. Allowed arrows/API: `connections`.
+Natural slice occupied: add slice immediately before/after, keeping **every arrow forward except the Automation feedback above**, not wiring across gap. Allowed arrows/API: `em-connections`.
 
 **Optional distant-copy arrow:** an Event → Read Model arrow may be omitted only when the target is a **linked Read Model copy** and at least **three slices lie strictly between** the Event's slice and the copy's later slice in the same Chapter (slice index difference ≥4; e.g. slices 1 → 5). This reduces arrow clutter, not the underlying Event dependency. It never applies to an original Read Model, a nearer copy or another arrow type. Do not remove existing arrows unasked.
 
@@ -137,12 +137,12 @@ A new normal Read Model or Screen is justified only by a genuinely different bus
 ## Linked Copies
 
 **Linked copy**: `copyOf` original id; same type, mirrors element in another slice/Chapter. All types except Scenarios/Notes; copy of copy resolves original.
-- **Keep arrows within Chapter** (recommendation, not enforced): cross-Chapter dependency uses local copy, never direct arrow (`connections`, Across Chapters).
+- **Keep arrows within Chapter** (recommendation, not enforced): cross-Chapter dependency uses local copy, never direct arrow (`em-connections`, Across Chapters).
 - Never duplicate another lane's recorded fact under unlinked identity: connect forward to original or use copy.
 - Repeated appearances of the same Read Model or Screen, within or across Chapters, **must be linked copies of one canonical original**. Search and resolve existing copies to their original before creating an element; do not create an independent duplicate merely to connect a later Event.
 - **Exception:** translation's internal Event is genuinely new domain fact in local language, **not copy**, even if external Event has same name.
 
-Create: `POST /elements` `{ slice, lane, copyOf }`; lane must accept original type; connect neighbors via `connections`.
+Create: `POST /elements` `{ slice, lane, copyOf }`; lane must accept original type; connect neighbors via `em-connections`.
 
 Copy mirrors original type/name/fields/mockup/`isList` **live**, never diverges. Only `slice`, `lane`, `x` editable; other changes: 409, edit original. Receives no arrow fields, passes original's fields onward. Arrows belong to each occurrence; connect each copy explicitly as needed. Changed result values do not require new definitions. For a required shared field change, edit the original via `element-fields` and keep downstream fields consistent; never PATCH a copy's content.
 
@@ -168,7 +168,7 @@ external EVENT → todo-list READ_MODEL → translation PROCESSOR → COMMAND �
 
 - **Open question:** genuinely undecided; comment on relevant element, phrased as question. No separate question type. Stays unresolved until **answered, not deleted**.
 - **Precondition rejection:** permanent scenario with `error` and no Then Events (`scenarios`), **never comment standing in for scenario**.
-- **Recorded business failure:** when failure leads to an alternative flow, a Command may produce an Event such as `Payment Capture Failed`. Its scenario has that Then Event and `error: null`, not a rejection error. The alternative flow may start a new Chapter with a **linked copy of that Event**, then model the reaction (`connections`, Across Chapters). The original Command remains the Event's producer.
+- **Recorded business failure:** when failure leads to an alternative flow, a Command may produce an Event such as `Payment Capture Failed`. Its scenario has that Then Event and `error: null`, not a rejection error. The alternative flow may start a new Chapter with a **linked copy of that Event**, then model the reaction (`em-connections`, Across Chapters). The original Command remains the Event's producer.
 - Completeness: only genuinely unanswered question comments count as gaps; don't leave decided failures as unresolved questions.
 
 ## Info and Notes
