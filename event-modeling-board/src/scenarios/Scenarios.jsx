@@ -292,23 +292,34 @@ function ElementPicker({ options, empty, onPick }) {
   );
 }
 
-// The popup to edit one scenario. Nothing is applied before Save. `candidates` are the Events and
+const draftOf = (scenario) => ({
+  name: scenario?.name ?? '',
+  description: scenario?.description ?? '',
+  given: (scenario?.given ?? []).map((e) => newEntry(e.element, e.example)),
+  when: scenario?.when ? newEntry(scenario.when.element, scenario.when.example) : null,
+  then: (scenario?.then ?? []).map((e) => newEntry(e.element, e.example)),
+  error: scenario?.error ?? null,
+});
+
+// The popup keeps scenario drafts until Save. `candidates` are the Events and
 // Commands of the Chapter: { id, kind, name, fields, where }.
-export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
-  const [draft, setDraft] = useState(() => ({
-    name: scenario?.name ?? '',
-    description: scenario?.description ?? '',
-    given: (scenario?.given ?? []).map((e) => newEntry(e.element, e.example)),
-    when: scenario?.when ? newEntry(scenario.when.element, scenario.when.example) : null,
-    then: (scenario?.then ?? []).map((e) => newEntry(e.element, e.example)),
-    error: scenario?.error ?? null,
-  }));
+export function ScenarioDialog({ scenario, scenarios, candidates, onSave, onClose }) {
+  const [activeId, setActiveId] = useState(scenario?.id ?? null);
+  const [drafts, setDrafts] = useState(() => new Map([[scenario?.id ?? null, draftOf(scenario)]]));
+  const changed = useRef(new Set(scenario ? [] : [null]));
+  const draft = drafts.get(activeId);
+  const setDraft = (update) => {
+    changed.current.add(activeId);
+    setDrafts((ds) => new Map(ds).set(activeId, update(ds.get(activeId))));
+  };
+  const navigation = scenario ? scenarios : [...scenarios, { id: null, name: 'New scenario' }];
   const [selected, setSelected] = useState(null); // key of the entry whose example data is shown
   const [picker, setPicker] = useState(null); // section whose list of elements is open
   const [problem, setProblem] = useState('');
   const [focusError, setFocusError] = useState(false);
   const errorInput = useRef(null);
   const titleInput = useRef(null);
+  const activeNavigation = useRef(null);
   const [titleMissing, setTitleMissing] = useState(false);
   const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const backdrop = useBackdropClose(onClose);
@@ -316,6 +327,25 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const entries = [...draft.given, ...(draft.when ? [draft.when] : []), ...draft.then];
   const current = entries.find((e) => e.key === selected);
+
+  const switchScenario = (id) => {
+    if (id === activeId) return;
+    setDrafts((ds) => ds.has(id) ? ds : new Map(ds).set(id, draftOf(scenarios.find((s) => s.id === id))));
+    setActiveId(id);
+    setSelected(null);
+    setPicker(null);
+    setProblem('');
+    setTitleMissing(false);
+    setFocusError(false);
+  };
+
+  useEffect(() => {
+    activeNavigation.current?.focus({ preventScroll: true });
+  }, [activeId]);
+
+  useEffect(() => {
+    if (titleMissing) titleInput.current?.focus();
+  }, [activeId, titleMissing]);
 
   const open = (section) => {
     if (section === 'then' && draft.error !== null) return;
@@ -387,6 +417,12 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
       save();
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+      e.preventDefault();
+      const target = navigation[Number(e.key) - 1];
+      if (target) switchScenario(target.id);
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || isTyping(e.target)) return;
     const arrow = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (arrow) {
@@ -426,31 +462,38 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
   const valueOf = (e) => (fieldsOf(e).length ? fitExample(fieldsOf(e), e.example) : previewOfRows(e.rows));
 
   const save = () => {
-    if (!draft.name.trim()) {
-      setTitleMissing(true);
-      titleInput.current?.focus();
-      return;
-    }
-    const values = new Map();
-    for (const e of entries) {
-      const r = fieldsOf(e).length ? { value: valueOf(e) } : valueOfRows(e.rows);
-      if (r.error) {
-        setSelected(e.key);
-        setProblem(`The example data of "${nameOf(e)}" is not valid: ${r.error}`);
+    const saved = [];
+    for (const [id, d] of drafts) {
+      if (!changed.current.has(id)) continue;
+      if (!d.name.trim()) {
+        switchScenario(id);
+        setTitleMissing(true);
+        titleInput.current?.focus();
         return;
       }
-      values.set(e.key, r.value);
+      const values = new Map();
+      for (const e of entriesOf(d)) {
+        const r = fieldsOf(e).length ? { value: valueOf(e) } : valueOfRows(e.rows);
+        if (r.error) {
+          switchScenario(id);
+          setSelected(e.key);
+          setProblem(`The example data of "${nameOf(e)}" is not valid: ${r.error}`);
+          return;
+        }
+        values.set(e.key, r.value);
+      }
+      const out = (e) => ({ element: e.element, example: values.get(e.key) });
+      saved.push({
+        id,
+        name: d.name.trim(),
+        description: d.description,
+        given: d.given.map(out),
+        when: d.when ? out(d.when) : null,
+        then: d.then.map(out),
+        error: d.error,
+      });
     }
-    const out = (e) => ({ element: e.element, example: values.get(e.key) });
-    onSave({
-      id: scenario?.id ?? null,
-      name: draft.name.trim(),
-      description: draft.description,
-      given: draft.given.map(out),
-      when: draft.when ? out(draft.when) : null,
-      then: draft.then.map(out),
-      error: draft.error,
-    });
+    onSave(saved);
   };
 
   const chip = (section) => {
@@ -533,11 +576,26 @@ export function ScenarioDialog({ scenario, candidates, onSave, onClose }) {
           ×
         </button>
         <div className="scenario-form">
+          <nav className="scenario-nav" aria-label="Scenarios in this card">
+            {navigation.map((s, i) => {
+              const name = drafts.get(s.id)?.name || s.name || 'Untitled';
+              return (
+                <button
+                  key={s.id ?? 'new'}
+                  ref={s.id === activeId ? activeNavigation : null}
+                  type="button"
+                  title={i < 9 ? `${name} (Ctrl+${i + 1})` : name}
+                  aria-label={`Scenario ${i + 1}: ${name}`}
+                  aria-current={s.id === activeId ? 'true' : undefined}
+                  onClick={() => switchScenario(s.id)}
+                />
+              );
+            })}
+          </nav>
           <label className="scenario-field">
             Name
             <input
               ref={titleInput}
-              autoFocus
               spellCheck={false}
               className={titleMissing ? 'invalid' : undefined}
               aria-required="true"

@@ -104,13 +104,14 @@ const HOTKEYS = [
   {
     group: 'Scenario editor',
     keys: [
+      ['Ctrl+1 ... Ctrl+9 / Cmd+1 ... Cmd+9', 'Switch to the first ... ninth scenario; keeps drafts, also while typing'],
       ['G', 'Choose a Given event'],
       ['W', 'Choose the When command'],
       ['T', 'Choose a Then event'],
       ['E', 'Add or edit the expected error (Then Error)'],
       ['← / →', 'Select the previous / next card in Given or Then'],
       ['↑ / ↓', 'Select a card in the section above / below (Given, When, Then)'],
-      ['Ctrl+S', 'Save and close'],
+      ['Ctrl+S', 'Save all edited scenarios and close'],
       ['Esc', 'Close the list, or close without saving'],
     ],
   },

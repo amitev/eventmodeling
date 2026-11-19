@@ -1143,18 +1143,20 @@ function Board() {
       .sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.order[2] - b.order[2]);
   }, [nodes, scenarioNode]);
 
-  const saveScenario = (scenario) => {
+  const saveScenario = (scenarios) => {
     const { nodeId } = scenarioEdit;
-    setNodes((ns) =>
-      ns.map((n) => {
-        if (n.id !== nodeId) return n;
-        const list = n.data.scenarios;
-        const next = scenario.id
-          ? list.map((s) => (s.id === scenario.id ? scenario : s))
-          : [...list, { ...scenario, id: newIds()[0] }];
-        return { ...n, data: { ...n.data, scenarios: next } };
-      })
-    );
+    const updates = new Map(scenarios.filter((s) => s.id).map((s) => [s.id, s]));
+    const added = scenarios.filter((s) => !s.id).map((s) => ({ ...s, id: newIds()[0] }));
+    if (scenarios.length) {
+      setNodes((ns) =>
+        ns.map((n) => {
+          if (n.id !== nodeId) return n;
+          const list = n.data.scenarios;
+          const next = [...list.map((s) => updates.get(s.id) ?? s), ...added];
+          return { ...n, data: { ...n.data, scenarios: next } };
+        })
+      );
+    }
     setScenarioEdit(null);
   };
 
@@ -2050,6 +2052,7 @@ function Board() {
         <ScenarioDialog
           key={`${scenarioEdit.nodeId}:${scenarioEdit.scenarioId}`}
           scenario={editedScenario}
+          scenarios={scenarioNode.data.scenarios}
           candidates={scenarioCandidates}
           onSave={saveScenario}
           onClose={() => setScenarioEdit(null)}
