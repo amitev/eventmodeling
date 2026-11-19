@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { parseArgs, stripVTControlCharacters } from 'node:util';
+import { parseArgs } from 'node:util';
 import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
@@ -12,7 +12,7 @@ const HELP = `Usage: em-cli <command> [options]
 Commands:
   board              Start the Event Modeling Board
   init               Install (or update) the skills in the current directory
-  agent              Connect to the board server and print its messages
+  agent              Connect to the board server
 
 Options:
   -h, --help         Show this help
@@ -123,7 +123,7 @@ if (command === 'agent') {
   url.searchParams.set('name', name);
   url.searchParams.set('model', model);
   try {
-    await receiveAgentMessages(url);
+    await listenForAgentEvents(url);
   } catch (e) {
     console.error(`Agent stream at ${url}: ${e.cause?.message || e.message}`);
     process.exitCode = 1;
@@ -154,7 +154,7 @@ function startBoard() {
   });
 }
 
-async function receiveAgentMessages(url) {
+async function listenForAgentEvents(url) {
   const response = await fetch(url, { redirect: 'error' });
   if (!response.ok) {
     await response.body?.cancel();
@@ -172,18 +172,14 @@ async function receiveAgentMessages(url) {
     for (const frame of frames) {
       const lines = frame.split('\n');
       const event = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
-      if (event === 'stop') return;
+      if (event === 'stop') {
+        console.log('Agent stopped from the board.');
+        return;
+      }
+      if (event !== 'ping') continue;
       const data = lines.find((line) => line.startsWith('data:'));
       if (!data) continue;
-      const payload = JSON.parse(data.slice('data:'.length));
-      if (event === 'ping') {
-        await acknowledgePing(url, payload);
-        continue;
-      }
-      if (event) continue;
-      const { message } = payload;
-      if (typeof message !== 'string') throw new Error('Invalid agent message');
-      console.log(stripVTControlCharacters(message).replace(/\r\n/g, '\n').replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, ''));
+      await acknowledgePing(url, JSON.parse(data.slice('data:'.length)));
     }
   }
   throw new Error('Server closed the message stream');

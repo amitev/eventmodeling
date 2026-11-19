@@ -576,16 +576,17 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R12.9** Task row's status dropdown, Edit and Delete share 28px height and 13px text; widths fit content.
 - **R12.10** Header Tasks button is icon-only, 28px square, with a count badge for Open tasks in selected Context, or all Contexts when **All contexts** is selected. Include Context-only and Chapter tasks; show 0 when none. Tooltip and accessible label: `Tasks (<count> open)`.
 
-## 13. CLI messages
+## 13. Connected CLIs
 
-- **R13.1** **Send to CLI** in the toolbar opens a modal (R1.17) with a recipient picker, multiline message, **Send** and **Close**.
-- **R13.2** Picker shows session names; append short session IDs to duplicate names. Require explicit selection; never switch recipients automatically.
-- **R13.3** Send only to the selected live session. On success, clear the message and report acceptance for forwarding. On failure, show the error and keep the draft. If the CLI disconnects, require a new selection.
-- **R13.4** Header shows one 32px robot icon per live CLI session in a 36px square button, including in high level view. Accessible label: agent name. Hash only the name for the color; equal names have equal colors across sessions.
-- **R13.5** Header and picker share one live session list. Fetch on board mount and 3 seconds after each fetch. On failure, replace icons with **CLI list unavailable**.
+- **R13.1** Not used (was: Send to CLI).
+- **R13.2** Not used (was: recipient picker).
+- **R13.3** Not used (was: send result).
+- **R13.4** Header shows one 28px robot icon per live CLI session in a 28px square button, including in high level view. Accessible label: agent name. Hash only the name into 32 colors: 16 evenly spaced hues at 65% saturation and 32% or 48% lightness. Equal names have equal colors across sessions.
+- **R13.5** Fetch live sessions on board mount and 3 seconds after each fetch. On failure, hide icons without a header message; log the error to the browser console.
 - **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: `MODELING`. Status: `Idle`.
 - **R13.7** Card shows relative age and local time of the last acknowledged ping, or **Not yet**. Connectivity: `pending` before first acknowledgment, `alive` for age under 65 seconds, `unresponsive` otherwise.
 - **R13.8** **Cancel run** stays disabled while runs are unsupported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
+- **R13.9** Agent icons use the header's spare width. Scroll horizontally on overflow; connecting agents does not increase header height.
 
 ## Out of scope for now
 

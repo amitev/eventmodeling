@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 function agentColor(name) {
   let hash = 2166136261;
   for (let i = 0; i < name.length; i++) hash = Math.imul(hash ^ name.charCodeAt(i), 16777619);
-  return `hsl(${(hash >>> 0) % 360} 65% 45%)`;
+  const color = (hash >>> 0) % 32;
+  const hue = Math.floor(color / 2) * 22.5;
+  const lightness = color % 2 === 0 ? 32 : 48;
+  return `hsl(${hue} 65% ${lightness}%)`;
 }
 
 function RobotIcon({ name }) {
@@ -18,7 +21,7 @@ function RobotIcon({ name }) {
   );
 }
 
-function AgentCard({ agent, onStop, cardRef, offset }) {
+function AgentCard({ agent, onStop, cardRef, position }) {
   const { id, name, model, lastPing } = agent;
   const [now, setNow] = useState(Date.now);
   const [stopping, setStopping] = useState(false);
@@ -48,7 +51,7 @@ function AgentCard({ agent, onStop, cardRef, offset }) {
   }
 
   return (
-    <div className="agent-card-anchor" style={{ left: offset }}>
+    <div className="agent-card-anchor" style={position}>
       <section ref={cardRef} className="agent-card" role="dialog" aria-label={`${name} (${model})`}>
         <div className="agent-card-title"><RobotIcon name={name} /><strong>{name} ({model})</strong></div>
         <dl>
@@ -81,31 +84,46 @@ function AgentCard({ agent, onStop, cardRef, offset }) {
 function AgentIcon({ agent, onStop }) {
   const trigger = useRef(null);
   const card = useRef(null);
-  const [offset, setOffset] = useState(null);
-  const open = offset !== null;
+  const [position, setPosition] = useState(null);
+  const open = position !== null;
 
-  function show() {
-    const { left } = trigger.current.getBoundingClientRect();
+  const show = useCallback(() => {
+    const { left, right, bottom } = trigger.current.getBoundingClientRect();
+    const rail = trigger.current.closest('.agent-icons').getBoundingClientRect();
+    if (right <= rail.left || left >= rail.right) {
+      setPosition(null);
+      return;
+    }
     const viewport = document.documentElement.clientWidth;
     const width = Math.min(320, viewport - 16);
-    setOffset(Math.min(Math.max(left, 8), viewport - width - 8) - left);
-  }
+    setPosition({ left: Math.min(Math.max(left, rail.left, 8), viewport - width - 8), top: bottom });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener('resize', show);
+    window.addEventListener('scroll', show, true);
+    return () => {
+      window.removeEventListener('resize', show);
+      window.removeEventListener('scroll', show, true);
+    };
+  }, [open, show]);
 
   return (
     <div
       className="agent-icon"
       onMouseEnter={show}
       onMouseLeave={() => {
-        if (!card.current?.contains(document.activeElement)) setOffset(null);
+        if (!card.current?.contains(document.activeElement)) setPosition(null);
       }}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) setOffset(null);
+        if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) setPosition(null);
       }}
       onKeyDown={(event) => {
         if (event.key !== 'Escape' || !open) return;
         event.stopPropagation();
         trigger.current.focus();
-        setOffset(null);
+        setPosition(null);
       }}
     >
       <button
@@ -120,20 +138,19 @@ function AgentIcon({ agent, onStop }) {
       >
         <RobotIcon name={agent.name} />
       </button>
-      {open && <AgentCard agent={agent} onStop={onStop} cardRef={card} offset={offset} />}
+      {open && <AgentCard agent={agent} onStop={onStop} cardRef={card} position={position} />}
     </div>
   );
 }
 
-export function AgentIcons({ agents, listError, onStop }) {
-  if (listError) {
-    return <span className="agent-icons-error keep" title={listError}>CLI list unavailable</span>;
-  }
+export function AgentIcons({ agents, onStop }) {
   if (!agents?.length) return null;
 
   return (
-    <div className="agent-icons keep" role="group" aria-label="Connected CLIs">
-      {agents.map((agent) => <AgentIcon key={agent.id} agent={agent} onStop={onStop} />)}
+    <div className="agent-icons" role="group" aria-label="Connected CLIs">
+      <div className="agent-icon-row">
+        {agents.map((agent) => <AgentIcon key={agent.id} agent={agent} onStop={onStop} />)}
+      </div>
     </div>
   );
 }

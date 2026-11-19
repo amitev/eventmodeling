@@ -75,9 +75,9 @@ npx em-cli agent --name frontend --model model-a
 npx em-cli agent --name backend --model model-b
 ```
 
-Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until runs are supported. Open **Send to CLI** to send a message only to the selected CLI. Messages aren't stored or delivered offline; success means the server accepted the message for forwarding.
+Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until runs are supported.
 
-Press Ctrl+C to disconnect. If the connection fails or closes, `agent` reports the error and exits without reconnecting. For a custom board port, pass the same `--port` to `agent`. Keep the server on localhost for private messages; it has no authentication.
+Press Ctrl+C to disconnect. If the connection fails or closes unexpectedly, `agent` reports the error and exits without reconnecting. For a custom board port, pass the same `--port` to `agent`. The server has no authentication.
 
 ## Skills
 

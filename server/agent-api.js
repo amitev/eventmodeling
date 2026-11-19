@@ -9,7 +9,7 @@ export function agentApi() {
   function liveSession(id) {
     const session = sessions.get(id);
     if (!session || session.res.destroyed || session.res.writableEnded) {
-      throw new HttpError(404, 'CLI disconnected. Select a recipient again.');
+      throw new HttpError(404, 'CLI disconnected');
     }
     return session;
   }
@@ -58,17 +58,6 @@ export function agentApi() {
     const session = liveSession(req.params.id);
     sessions.delete(req.params.id);
     session.res.end('event: stop\ndata: {}\n\n');
-    res.status(204).end();
-  });
-
-  router.post('/agents/:id/messages', (req, res) => {
-    if (!req.is('application/json')) throw new HttpError(415, 'Expected application/json');
-    const { message } = req.body ?? {};
-    if (typeof message !== 'string' || !message.trim()) throw new HttpError(400, 'Message is required');
-
-    const { res: recipient } = liveSession(req.params.id);
-    if (recipient.writableNeedDrain) throw new HttpError(503, 'CLI is busy receiving messages. Try again.');
-    recipient.write(`data: ${JSON.stringify({ message })}\n\n`);
     res.status(204).end();
   });
 

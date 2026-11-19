@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 
 export function useConnectedAgents() {
   const [agents, setAgents] = useState(null);
-  const [listError, setListError] = useState('');
   const revision = useRef(0);
 
   useEffect(() => {
@@ -22,10 +21,10 @@ export function useConnectedAgents() {
               agent.lastPing === next.lastPing;
           }) ? current : list);
         }
-        setListError('');
       } catch (error) {
         if (controller.signal.aborted) return;
-        setListError(`Could not load connected CLIs: ${error.message}`);
+        console.warn('Could not load connected CLIs:', error);
+        setAgents(null);
       }
       timer = setTimeout(refresh, 3000);
     }
@@ -41,5 +40,5 @@ export function useConnectedAgents() {
     setAgents((list) => list?.filter((agent) => agent.id !== id));
   }
 
-  return { agents, listError, removeAgent };
+  return { agents, removeAgent };
 }

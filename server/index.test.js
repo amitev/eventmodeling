@@ -4,7 +4,6 @@ import { once } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -64,7 +63,7 @@ test('rejects legacy syntax, unknown commands and options outside their command'
   }
 });
 
-test('live CLI sessions acknowledge pings, receive targeted messages and stop independently', { timeout: 15000 }, async (t) => {
+test('live CLI sessions acknowledge pings and stop independently', { timeout: 15000 }, async (t) => {
   const { createServer } = await import('./app.js');
   const server = createServer({ publicDir: null, rootDir: tempDir(t) });
   server.listen(0, 'localhost');
@@ -95,23 +94,11 @@ test('live CLI sessions acknowledge pings, receive targeted messages and stop in
       if (child.exitCode === null && child.signalCode === null) child.kill();
       return closed;
     });
-    const output = { lines: [], errors: '' };
-    const lines = createInterface({ input: child.stdout });
-    lines.on('line', (line) => output.lines.push(line));
+    const output = { text: '', errors: '' };
+    child.stdout.setEncoding('utf8').on('data', (chunk) => { output.text += chunk; });
     child.stderr.setEncoding('utf8').on('data', (chunk) => { output.errors += chunk; });
     return { child, closed, output };
   }
-  async function send(id, message) {
-    const response = await fetch(`${base}/agents/${id}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-      signal: t.signal,
-    });
-    await response.text();
-    return response.status;
-  }
-
   const missingModel = await fetch(`${base}/agent/events?name=frontend`, { signal: t.signal });
   assert.equal(missingModel.status, 400);
   assert.deepEqual(await missingModel.json(), { error: 'Agent model is required' });
@@ -129,28 +116,26 @@ test('live CLI sessions acknowledge pings, receive targeted messages and stop in
   assert.deepEqual(sessions, [firstSession, secondSession]);
   assert.notEqual(firstId, secondId);
 
-  assert.equal(await send(firstId, ' '), 400);
-  assert.equal(await send(firstId, 'First CLI only\nSecond line'), 204);
-  assert.equal(await send(secondId, 'Second CLI only'), 204);
-  while (first.output.lines.length < 2 || second.output.lines.length < 1) {
-    for (const { child, output } of [first, second]) {
-      assert.equal(child.exitCode, null, output.errors);
-    }
-    await delay(20, undefined, { signal: t.signal });
-  }
+  const removedRoute = await fetch(`${base}/agents/${firstId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'Old send route' }),
+    signal: t.signal,
+  });
+  assert.equal(removedRoute.status, 404);
+  assert.deepEqual(await removedRoute.json(), { error: 'Not found' });
 
   const stop = await fetch(`${base}/agents/${firstId}`, { method: 'DELETE', signal: t.signal });
   assert.equal(stop.status, 204);
   assert.deepEqual(await first.closed, [0, null], first.output.errors);
+  assert.equal(first.output.text.trim(), 'Agent stopped from the board.');
   assert.equal(first.output.errors, '');
   assert.deepEqual(await waitForAgents(1), [secondSession]);
-  assert.equal(await send(firstId, 'Do not reroute'), 404);
   server.closeAllConnections();
   const [code] = await second.closed;
   assert.equal(code, 1, second.output.errors);
   assert.match(second.output.errors, /Agent stream at http:\/\/localhost:/);
-  assert.deepEqual(first.output.lines, ['First CLI only', 'Second line']);
-  assert.deepEqual(second.output.lines, ['Second CLI only']);
+  assert.equal(second.output.text, '');
 });
 
 test('init installs skills in its default or custom target without starting a server', (t) => {
