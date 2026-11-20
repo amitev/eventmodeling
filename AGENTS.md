@@ -18,8 +18,9 @@ The Agent and LLM must NOT edit files in `.event-modeling/model/` manually. Use 
 All (without any exception) the requirements and learnings during the implementation are documented in `spec/`. The specification is updated with every change so that it stays relevant.
 
 - [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).
-- [Server requirements](spec/SERVER.md): contains only requirements related to the HTTP server and CLI (`server/`).
-- [Agent requirements](spec/AGENTIC.md): contains requirements and learnings for skills and agent workflows, not board or server behavior.
+- [Server requirements](spec/SERVER.md): HTTP server and shared CLI requirements (`server/`).
+- [Agent requirements](spec/AGENT.md): `agent` CLI command and its server connection.
+- [Skills requirements](spec/SKILLS.md): requirements and learnings for skills and agent workflows, not board or server behavior.
 
 When writing the specification use the minimal wording needed that still retains the intent. Avoid long and overbloated sentences. Style:
 

@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util';
 import { createServer, PUBLIC_DIR } from './app.js';
 import { DATA_DIR } from './model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
+import { runAgent } from './agent.js';
 
 const HELP = `Usage: em-cli <command> [options]
 
@@ -39,8 +40,10 @@ Options:
 const AGENT_HELP = `Usage: em-cli agent [options]
 
 Options:
-      --name <name>  Display name on the board (required)
+      --name <name>  Display name on the board (default: random Austrian composer)
       --model <model> Model identifier sent to the server (required)
+      --agent-type <type> Agent type: modeler or builder (required)
+      --harness <name> Harness: claude or copilot (default claude)
   -p, --port <port>  Board server port on localhost (default: PORT environment variable, else 3300)
   -h, --help         Show this help
 `;
@@ -84,6 +87,8 @@ try {
       ...(command === 'agent' ? {
         name: { type: 'string' },
         model: { type: 'string' },
+        'agent-type': { type: 'string' },
+        harness: { type: 'string', default: 'claude' },
       } : {}),
       help: { type: 'boolean', short: 'h', default: false },
     },
@@ -116,18 +121,14 @@ if (!Number.isInteger(port) || port < minPort || port > 65535) fail(`Invalid por
 
 if (command === 'agent') {
   const name = values.name?.trim();
-  if (!name) fail('--name needs a display name');
+  if (name === '') fail('--name needs a display name');
   const model = values.model?.trim();
   if (!model) fail('--model needs a model identifier');
-  const url = new URL(`http://localhost:${port}/api/agent/events`);
-  url.searchParams.set('name', name);
-  url.searchParams.set('model', model);
-  try {
-    await listenForAgentEvents(url);
-  } catch (e) {
-    console.error(`Agent stream at ${url}: ${e.cause?.message || e.message}`);
-    process.exitCode = 1;
-  }
+  const agentType = values['agent-type'];
+  if (!['modeler', 'builder'].includes(agentType)) fail('--agent-type must be modeler or builder');
+  const harness = values.harness;
+  if (!['claude', 'copilot'].includes(harness)) fail('--harness must be claude or copilot');
+  await runAgent({ port, name, model, agentType, harness });
 } else {
   startBoard();
 }
@@ -152,54 +153,4 @@ function startBoard() {
       openBrowser(`http://${browserHost}:${actual}`);
     }
   });
-}
-
-async function listenForAgentEvents(url) {
-  const response = await fetch(url, { redirect: 'error' });
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`HTTP ${response.status}`);
-  }
-  if (!response.body || response.headers.get('content-type')?.split(';')[0] !== 'text/event-stream') {
-    await response.body?.cancel();
-    throw new Error('Expected an event stream from the board server');
-  }
-
-  let pending = '';
-  for await (const chunk of response.body.pipeThrough(new TextDecoderStream())) {
-    const frames = (pending + chunk).split('\n\n');
-    pending = frames.pop();
-    for (const frame of frames) {
-      const lines = frame.split('\n');
-      const event = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
-      if (event === 'stop') {
-        console.log('Agent stopped from the board.');
-        return;
-      }
-      if (event !== 'ping') continue;
-      const data = lines.find((line) => line.startsWith('data:'));
-      if (!data) continue;
-      await acknowledgePing(url, JSON.parse(data.slice('data:'.length)));
-    }
-  }
-  throw new Error('Server closed the message stream');
-}
-
-async function acknowledgePing(url, { id, nonce }) {
-  if (typeof id !== 'string' || typeof nonce !== 'string') throw new Error('Invalid agent heartbeat');
-  try {
-    const response = await fetch(new URL(`/api/agents/${encodeURIComponent(id)}/ping`, url), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nonce }),
-      redirect: 'error',
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) {
-      await response.body?.cancel();
-      throw new Error(`HTTP ${response.status}`);
-    }
-  } catch (error) {
-    console.error(`Could not acknowledge agent heartbeat: ${error.message}`);
-  }
 }

@@ -425,7 +425,7 @@ A slice is a vertical band across all lanes that groups the elements of one piec
 - **R5b.2** The type is not shown in the UI. On import the stored `type` is only checked to be valid (R7.4); the type is recomputed from the elements.
 - **R5b.3** **External events.** An Event in an Integration lane (R2.10) never updates a Read Model directly. A translation slice (R5b.1) turns it into an internal Event (Command → Event) that is stored, and only that Event feeds the Read Model. Reason: on replay the internal Event arrives at the same point in the event store, whereas two sources (external stream, own events) do not replay to the same outcome; external streams also keep events only for a limited time. A convention only: the board does not check it.
 - **R5b.4** Translation todo lists are permanent feeds: recording an internal Event never closes their rows.
-- **R5b.5** Moved to [Agent requirements, A1.2](./AGENTIC.md#1-external-event-translation).
+- **R5b.5** Moved to [Skills requirements, A1.2](./SKILLS.md#1-external-event-translation).
 
 ## 6. Board file
 
@@ -583,10 +583,11 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R13.3** Not used (was: send result).
 - **R13.4** Header shows one 28px robot icon per live CLI session in a 28px square button, including in high level view. Accessible label: agent name. Hash only the name into 32 colors: 16 evenly spaced hues at 65% saturation and 32% or 48% lightness. Equal names have equal colors across sessions.
 - **R13.5** Fetch live sessions on board mount and 3 seconds after each fetch. On failure, hide icons without a header message; log the error to the browser console.
-- **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: `MODELING`. Status: `Idle`.
+- **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: session's `agentType` in uppercase (`MODELER` or `BUILDER`). Status: `Idle`.
 - **R13.7** Card shows relative age and local time of the last acknowledged ping, or **Not yet**. Connectivity: `pending` before first acknowledgment, `alive` for age under 65 seconds, `unresponsive` otherwise.
-- **R13.8** **Cancel run** stays disabled while runs are unsupported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
+- **R13.8** **Cancel run** stays disabled until cancellation is supported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
 - **R13.9** Agent icons use the header's spare width. Scroll horizontally on overflow; connecting agents does not increase header height.
+- **R13.10** Each agent card offers **Run Claude** or **Run Copilot** for its configured harness, for modeler and builder. Send only to that session; show send errors or acceptance with output location (agent console). Disable while sending or stopping; acceptance does not mean execution succeeded.
 
 ## Out of scope for now
 

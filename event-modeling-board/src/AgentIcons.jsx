@@ -22,9 +22,12 @@ function RobotIcon({ name }) {
 }
 
 function AgentCard({ agent, onStop, cardRef, position }) {
-  const { id, name, model, lastPing } = agent;
+  const { id, name, model, agentType, harness, lastPing } = agent;
+  const harnessLabel = harness === 'copilot' ? 'Copilot' : 'Claude';
   const [now, setNow] = useState(Date.now);
   const [stopping, setStopping] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -50,19 +53,42 @@ function AgentCard({ agent, onStop, cardRef, position }) {
     }
   }
 
+  async function runHarness() {
+    setSending(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/agents/${encodeURIComponent(id)}/run`, { method: 'POST' });
+      if (!response.ok) {
+        const detail = response.headers.get('content-type')?.startsWith('application/json')
+          ? await response.json() : null;
+        throw new Error(detail?.error || `HTTP ${response.status}`);
+      }
+      setNotice('Command sent. Output will appear in the agent console.');
+    } catch (error) {
+      setError(`Could not run ${harnessLabel}: ${error.message}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className="agent-card-anchor" style={position}>
       <section ref={cardRef} className="agent-card" role="dialog" aria-label={`${name} (${model})`}>
         <div className="agent-card-title"><RobotIcon name={name} /><strong>{name} ({model})</strong></div>
         <dl>
-          <dt>Type</dt><dd>MODELING</dd>
+          <dt>Type</dt><dd>{agentType.toUpperCase()}</dd>
           <dt>Connectivity</dt>
           <dd><span className={`agent-dot${alive ? ' alive' : ''}`} />{alive ? 'alive' : age === null ? 'pending' : 'unresponsive'}</dd>
           <dt>Status</dt><dd><span className="agent-dot idle" />Idle</dd>
           <dt>Last ping</dt><dd>{ping}</dd>
         </dl>
         {error && <div role="alert">{error}</div>}
+        {notice && <div role="status">{notice}</div>}
         <div className="agent-card-actions">
+          <button type="button" onClick={runHarness} disabled={sending || stopping}>
+            {sending ? 'Sending...' : `Run ${harnessLabel}`}
+          </button>
           <button type="button" disabled>
             <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
               <circle cx="8" cy="8" r="5" /><path d="m4.5 4.5 7 7" />

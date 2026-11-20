@@ -4,6 +4,8 @@ A browser-based Event Modeling board (React + React Flow), served by a small HTT
 
 - Board requirements: [spec/MODELING_BOARD.md](spec/MODELING_BOARD.md)
 - Server requirements: [spec/SERVER.md](spec/SERVER.md)
+- Agent CLI requirements: [spec/AGENT.md](spec/AGENT.md)
+- Skills requirements: [spec/SKILLS.md](spec/SKILLS.md)
 
 ## Build
 
@@ -61,8 +63,10 @@ Use `em-cli --help` for commands or `em-cli <command> --help` for command option
 | `board` | `--host <host>` | `localhost` | Host to bind to |
 | `board` | `--dev` | | API only, no build needed (used by `npm run dev`) |
 | `init` | `--target <dir>` | `.claude/skills` | Skills folder |
-| `agent` | `--name <name>` | Required | Display name in the board's recipient picker |
+| `agent` | `--name <name>` | Random Austrian composer | Display name on the board |
 | `agent` | `--model <model>` | Required | Model identifier sent to the server |
+| `agent` | `--agent-type <type>` | Required | `modeler` or `builder` |
+| `agent` | `--harness <name>` | `claude` | `claude` (Claude Code) or `copilot` (Copilot CLI) |
 | `agent` | `-p`, `--port <port>` | `PORT` env, else `3300` | Board server port on localhost |
 | All | `-h`, `--help` | | Show command usage |
 
@@ -71,13 +75,17 @@ Example: `npx em-cli board --port 8080 --host 0.0.0.0`
 Start one CLI per terminal:
 
 ```sh
-npx em-cli agent --name frontend --model model-a
-npx em-cli agent --name backend --model model-b
+npx em-cli agent --name frontend --model model-a --agent-type modeler
+npx em-cli agent --name backend --model model-b --agent-type builder --harness copilot
 ```
 
-Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until runs are supported.
+Omit `--name` to pick an unused Austrian composer surname, for example `npx em-cli agent --model model-a --agent-type modeler`. If all six names are taken, supply a unique `--name`. Names are unique regardless of case or surrounding spaces and become available after disconnect. The predefined list is in [spec/AGENT.md](spec/AGENT.md#cli-and-sessions). `--model` and `--agent-type` stay required.
 
-Press Ctrl+C to disconnect. If the connection fails or closes unexpectedly, `agent` reports the error and exits without reconnecting. For a custom board port, pass the same `--port` to `agent`. The server has no authentication.
+Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until cancellation is supported.
+
+Click **Run Claude** or **Run Copilot** in an agent's hover card to run its configured harness with `-p "What model are you" --model <configured model> --output-format json`. The selected CLI must be installed, authenticated and on the agent's PATH. Captured output (Claude JSON or Copilot JSONL) appears in the agent terminal after execution. Keep the server on localhost: anyone who can reach it can trigger this command.
+
+Press Ctrl+C to disconnect. On connection failure or unexpected disconnect, `agent` retries every 10 seconds, up to 10 attempts per outage. A successful connection resets the count. Invalid configuration and intentional stops do not retry. For a custom board port, pass the same `--port` to `agent`. The server has no authentication.
 
 ## Skills
 

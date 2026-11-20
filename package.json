@@ -11,6 +11,8 @@
     "server/app.js",
     "server/api.js",
     "server/agent-api.js",
+    "server/agent.js",
+    "server/harnesses",
     "server/http-error.js",
     "server/model-edit.js",
     "server/model-rules.js",

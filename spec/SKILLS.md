@@ -1,4 +1,4 @@
-# Event Modeling — Agent Requirements
+# Event Modeling — Skills Requirements
 
 Requirements and learnings for skills and agent workflows, not board or server behavior.
 
