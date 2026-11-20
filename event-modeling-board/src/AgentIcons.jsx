@@ -9,7 +9,7 @@ function agentColor(name) {
   return `hsl(${hue} 65% ${lightness}%)`;
 }
 
-function RobotIcon({ name }) {
+export function RobotIcon({ name }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
       <path d="M12 3v4M3 11v4m18-4v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -22,7 +22,7 @@ function RobotIcon({ name }) {
 }
 
 function AgentCard({ agent, onStop, cardRef, position }) {
-  const { id, name, model, agentType, harness, lastPing } = agent;
+  const { id, name, model, agentType, harness, lastPing, building } = agent;
   const harnessLabel = harness === 'copilot' ? 'Copilot' : 'Claude';
   const [now, setNow] = useState(Date.now);
   const [stopping, setStopping] = useState(false);
@@ -80,7 +80,8 @@ function AgentCard({ agent, onStop, cardRef, position }) {
           <dt>Type</dt><dd>{agentType.toUpperCase()}</dd>
           <dt>Connectivity</dt>
           <dd><span className={`agent-dot${alive ? ' alive' : ''}`} />{alive ? 'alive' : age === null ? 'pending' : 'unresponsive'}</dd>
-          <dt>Status</dt><dd><span className="agent-dot idle" />Idle</dd>
+          <dt>Status</dt>
+          <dd>{building ? <><span className="agent-dot busy" />Busy: {building}</> : <><span className="agent-dot idle" />Idle</>}</dd>
           <dt>Last ping</dt><dd>{ping}</dd>
         </dl>
         {error && <div role="alert">{error}</div>}

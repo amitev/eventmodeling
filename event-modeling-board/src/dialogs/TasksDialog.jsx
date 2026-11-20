@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalFocus, useOutsideClose } from './popup.js';
+import { useBelowHeader, useModalFocus, useOutsideClose } from './popup.js';
 
 function TaskText({ value, multiline = false, onSave, onCancel }) {
   const [editing, setEditing] = useState(false);
@@ -50,19 +50,7 @@ function TaskText({ value, multiline = false, onSave, onCancel }) {
 export function TasksDialog({ contexts, chapters, contextId, buttonRef, headerRef, onSave, onDelete, onGoToChapter, onClose }) {
   const popup = useModalFocus();
   useOutsideClose(popup, onClose, buttonRef);
-  const [top, setTop] = useState(0);
-  useLayoutEffect(() => {
-    const header = headerRef.current;
-    const position = () => setTop(header.getBoundingClientRect().bottom + 8);
-    position();
-    const observer = new ResizeObserver(position);
-    observer.observe(header);
-    window.addEventListener('resize', position);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', position);
-    };
-  }, [headerRef]);
+  const top = useBelowHeader(headerRef);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState('');
   const [chapterFilter, setChapterFilter] = useState('');

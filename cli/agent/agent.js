@@ -15,10 +15,11 @@ export async function runAgent({ port, name, model, agentType, harness = 'claude
   url.searchParams.set('agentType', agentType);
   url.searchParams.set('harness', harness);
   let attempts = 0;
+  const session = { id: null };
   while (true) {
     attempts++;
     try {
-      await listenForAgentEvents(url, model, dialect, () => { attempts = 0; });
+      await listenForAgentEvents(url, model, dialect, session, () => { attempts = 0; });
       return;
     } catch (e) {
       console.error(`Agent stream at ${url}: ${e.cause?.message || e.message}`);
@@ -33,7 +34,7 @@ export async function runAgent({ port, name, model, agentType, harness = 'claude
   }
 }
 
-async function listenForAgentEvents(url, model, dialect, onConnected) {
+async function listenForAgentEvents(url, model, dialect, session, onConnected) {
   let response;
   try {
     response = await fetch(url, { redirect: 'error' });
@@ -72,10 +73,18 @@ async function listenForAgentEvents(url, model, dialect, onConnected) {
           runHarness(dialect, model, children);
           continue;
         }
-        if (event !== 'ping') continue;
         const data = lines.find((line) => line.startsWith('data:'));
         if (!data) continue;
-        await acknowledgePing(url, JSON.parse(data.slice('data:'.length)));
+        const payload = JSON.parse(data.slice('data:'.length));
+        if (event === 'welcome') {
+          // Reconnect under the same name, so queued build tasks stay with this agent.
+          session.id = payload.id;
+          url.searchParams.set('name', payload.name);
+        } else if (event === 'build') {
+          buildSlice(url, session.id, payload);
+        } else if (event === 'ping') {
+          await acknowledgePing(url, payload);
+        }
       }
     }
     throw new ConnectionError('Server closed the message stream');
@@ -115,6 +124,33 @@ function runHarness(dialect, model, children) {
       console.error(`${dialect.label} ${signal ? `terminated by ${signal}` : `exited with code ${code}`}.`);
     }
   });
+}
+
+const BUILD_DELAY_MS = Number(process.env.EM_BUILD_DELAY_MS ?? 10_000);
+
+async function buildSlice(url, agentId, { id, sliceName }) {
+  let result = 'done';
+  let error;
+  try {
+    console.log(`Building slice "${sliceName}".`);
+    await delay(BUILD_DELAY_MS); // simulated work until builds run a harness
+  } catch (e) {
+    result = 'failed';
+    error = e.message;
+  }
+  try {
+    const response = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(error === undefined ? {} : { error }),
+      redirect: 'error',
+      signal: AbortSignal.timeout(5000),
+    });
+    await response.body?.cancel();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  } catch (e) {
+    console.error(`Could not report build of slice "${sliceName}": ${e.message}`);
+  }
 }
 
 async function acknowledgePing(url, { id, nonce }) {

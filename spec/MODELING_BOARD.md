@@ -58,7 +58,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 - **R1.22** **Global full screen.** The rightmost main-header button toggles the Fullscreen API on `document.documentElement`, including header, board and popup portals. Request hidden browser navigation UI. Match R1.3b; keep visible in overview.
   - Icon, pressed state and tooltip follow `fullscreenchange`: "Full screen" or "Exit full screen".
   - Unsupported API: disable with tooltip "Full screen is unavailable in this browser". Failed requests show a notice.
-  - Capture `Escape` with Keyboard Lock while app full screen. Esc closes/cancels popup content first (modals, movie strip, Tasks, search and Cell menu); without a popup, exit full screen. Ignore key repeats; holding Esc retains browser emergency exit.
+  - Capture `Escape` with Keyboard Lock while app full screen. Esc closes/cancels popup content first (modals, movie strip, Tasks, Agent cockpit, search and Cell menu); without a popup, exit full screen. Ignore key repeats; holding Esc retains browser emergency exit.
   - Request keyboard permission when needed; release lock on full-screen exit or board unmount. Unsupported/denied lock: show a notice; native Esc behavior remains.
   - No saved state or undo step. F11 remains browser-controlled; its separate browser mode cannot be triggered or reliably detected by the button.
 
@@ -129,7 +129,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
 ## 1f. High level view
 
 - **R1f.1** The **high level view** is read-only, without slice borders and buttons. The **High level view** button (tooltip "High level view: read-only, without slice borders and buttons (Ctrl+H)", pressed while on; just before the magnifier, R1e.1) or **Ctrl+H** (Cmd+H; ignored while typing or while a popup is open) switches it on and off; **Esc** switches it off (ignored while typing or while a popup is open). Not saved, not an undo step; it is off when the board opens.
-- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, Tasks, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
+- **R1f.2** **Hidden** while on: the header's commands (Undo, Redo, Context rename, Add buttons; the title, Context filter, Tasks, Agent cockpit, High level view, search, hotkey and Global full screen buttons stay), slice borders, backgrounds, headers and titles, the lane type text (R2.10) and the lane buttons (info, **×**, colour, **+**; the lane name stays), the Chapter handle (R1a.3), element toolbars (R1c.1a), the Cell highlight (R5a.12), the Scenarios footer and scenario Copy/Delete buttons, and the Notes colour dots. The Chapter title stays.
 - **R1f.3** Element arrows are **dotted** and take the colour of their source's type: Screen grey `#8a8a8a`, Command blue `#6f93b3`, Read Model green `#7aa64f`, Event orange `#e08a3c`, Processor purple `#9b7cc4`. Chapter arrows (R1a.9) are unchanged.
 - **R1f.4** **Read-only:** nothing can be added, moved, renamed, connected, deleted or edited, and there is no undo or redo. Panning (including R1.23), zooming, Fit view, Shift+F, search, selecting and the Context filter work. The popups open in view mode only: **V** (Screen mockup, Notes, Scenarios) and the Notes and Scenarios eye buttons; the Info and Screen popups have no edit mode or Save there. The movie strip (R11.1) is not reachable, as the handle is hidden. All other hotkeys are off.
   - Tasks are an exception: their popup stays editable (R12.2).
@@ -583,11 +583,23 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R13.3** Not used (was: send result).
 - **R13.4** Header shows one 28px robot icon per live CLI session in a 28px square button, including in high level view. Accessible label: agent name. Hash only the name into 32 colors: 16 evenly spaced hues at 65% saturation and 32% or 48% lightness. Equal names have equal colors across sessions.
 - **R13.5** Fetch live sessions on board mount and 3 seconds after each fetch. On failure, hide icons without a header message; log the error to the browser console.
-- **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: session's `agentType` in uppercase (`MODELER` or `BUILDER`). Status: `Idle`.
+- **R13.6** Hover or focus an icon to open its non-modal card; pointer can move into it. Esc closes it. Title: 20px robot icon and `name (model)`. Type: session's `agentType` in uppercase (`MODELER` or `BUILDER`). Status: `Busy: <slice name>` while the session runs a build task (R14.1), else `Idle`.
 - **R13.7** Card shows relative age and local time of the last acknowledged ping, or **Not yet**. Connectivity: `pending` before first acknowledgment, `alive` for age under 65 seconds, `unresponsive` otherwise.
 - **R13.8** **Cancel run** stays disabled until cancellation is supported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
 - **R13.9** Agent icons use the header's spare width. Scroll horizontally on overflow; connecting agents does not increase header height.
 - **R13.10** Each agent card offers **Run Claude** or **Run Copilot** for its configured harness, for modeler and builder. Send only to that session; show send errors or acceptance with output location (agent console). Disable while sending or stopping; acceptance does not mean execution succeeded.
+
+## 14. Agent cockpit
+
+- **R14.1** Server-held build queue of slices for builder agents. Not part of the board file; not an undo step. Separate from Tasks (section 12).
+- **R14.2** Not used (was: slice header add button).
+- **R14.3** Header **Agent cockpit** button, after Tasks, styled as R12.10: cockpit icon: robot head (antenna, ears) whose face is a gauge (arc with needle). Badge counts `queued` and `running` tasks. Tooltip and accessible label: `Agent cockpit (<count> active)`. Toggles a non-modal popup positioned as R12.2, 80% of window width and at most 80% of window height; closes on Esc or outside click as R12.3. Both stay in high level view.
+- **R14.4** Cockpit lists the Chapters of the header Context filter (all with **All contexts**, titled `<Context> / <Chapter>`), one under another in Context then board order. Each Chapter's slices follow left to right in slice order, wrapping. Empty: `No Chapters.`
+- **R14.5** Fetch the queue on board mount, 3 seconds after each fetch and after each action. On failure show no tasks; log the error to the browser console.
+- **R14.6** Slice tile color by status: grey not queued, amber `Queued`, blue `In progress`, green `Done`, red `Failed`. A tile with a task shows its builder's robot icon (R13.4 color; tooltip: builder name), status without builder name, and failure message.
+- **R14.7** Tile action: queued or failed: **Remove**. No Build on tiles; build only via R14.9. Action errors show in the cockpit, one message listing each failed slice.
+- **R14.8** Click a tile (not its controls) toggles it; other selected tiles stay selected. No Ctrl+click. Sets the range anchor. Shift+click adds the range from the anchor to the clicked tile, within the anchor's Chapter, to the selection; never deselects. In another Chapter or without anchor it acts as a click. Selected tiles have a blue outline. Selection clears when the cockpit closes; not an undo step.
+- **R14.9** Bar above the Chapters, left-aligned: `Build (<n>)`, `Remove (<n>)`, **Clear**, then `<n> selected`. Build applies to selected tiles not queued, done or failed (no separate retry or rebuild); Remove to selected queued or failed tiles; others are skipped. Disabled when the count is 0. Build adds the slices one at a time in cockpit order (Chapters top to bottom, slices left to right), so they enter the queue in that order. Build with one builder: builds with it; none: disabled, tooltip `No builder agent connected`; several: `Build (<n>) with...` menu under its button, listing builders, each with its robot icon (R13.4 color) and name; Esc, outside click or scroll closes it.
 
 ## Out of scope for now
 

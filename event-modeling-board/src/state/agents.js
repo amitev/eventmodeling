@@ -18,7 +18,8 @@ export function useConnectedAgents() {
           setAgents((current) => current?.length === list.length && current.every((agent, index) => {
             const next = list[index];
             return agent.id === next.id && agent.name === next.name && agent.model === next.model &&
-              agent.agentType === next.agentType && agent.harness === next.harness && agent.lastPing === next.lastPing;
+              agent.agentType === next.agentType && agent.harness === next.harness && agent.lastPing === next.lastPing &&
+              agent.building === next.building;
           }) ? current : list);
         }
       } catch (error) {

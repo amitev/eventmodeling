@@ -54,6 +54,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .agent-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #888; }
 .agent-dot.alive { background: #169143; }
 .agent-dot.idle { background: #bc8500; }
+.agent-dot.busy { background: #1a73e8; }
 .agent-card-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
 .toolbar .agent-stop { background: #c62828; border-color: #9c1d1d; color: #fff; }
 .spacer { flex: 1; min-width: 0; }
@@ -730,7 +731,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 /* Every popup: the Save button is blue (class "primary"), Cancel and Close are white (R1.17). */
 .info-actions button.primary, .scenario-actions button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
 .tasks-dialog {
-  position: fixed; z-index: 1000; left: 50%; transform: translateX(-50%);
+  position: fixed; z-index: 1000; left: 0; right: 0; margin: 0 auto;
   display: flex; flex-direction: column; width: min(900px, 94vw); max-height: 90vh;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
 }
@@ -767,6 +768,45 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .tasks-editor label { display: flex; flex-direction: column; gap: 4px; }
 .tasks-editor textarea { resize: vertical; min-height: 80px; }
 .tasks-error { padding: 8px 14px; color: #b71c1c; }
+.tasks-dialog.agent-cockpit { width: 80vw; max-height: none; }
+.cockpit-chapter + .cockpit-chapter { margin-top: 16px; }
+.cockpit-chapter h3 { margin: 0 0 8px; font-size: 14px; }
+.cockpit-slices { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.cockpit-slice {
+  display: flex; flex-direction: column; gap: 4px; width: 180px; box-sizing: border-box; padding: 8px;
+  border: 1px solid #ccd; border-left-width: 6px; border-radius: 4px; background: #f6f6f8; font-size: 12px;
+}
+.cockpit-slice.queued { border-color: #bc8500; background: #fff6df; }
+.cockpit-slice.running { border-color: #1a73e8; background: #e3eeff; }
+.cockpit-slice.done { border-color: #169143; background: #e3f5e9; }
+.cockpit-slice.failed { border-color: #c62828; background: #fde7e7; }
+.cockpit-slice-name { display: flex; align-items: center; gap: 4px; font-size: 13px; overflow-wrap: anywhere; }
+.cockpit-agent { display: flex; flex: none; }
+.cockpit-agent svg { width: 20px; height: 20px; }
+.cockpit-slice-status { color: #556; }
+.cockpit-slice-error { color: #b71c1c; overflow-wrap: anywhere; }
+.cockpit-slice-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+.cockpit-slice-actions button {
+  height: 24px; padding: 0 8px; border: 1px solid #999; border-radius: 4px; background: #fff; color: #222; font: inherit; cursor: pointer;
+}
+.cockpit-slice-actions button:disabled { cursor: default; opacity: 0.5; }
+.cockpit-slice { cursor: pointer; user-select: none; }
+.cockpit-slice.selected { outline: 2px solid #1a73e8; outline-offset: 1px; }
+.cockpit-bulk { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #ddd; font-size: 13px; }
+.cockpit-count { color: #556; }
+.cockpit-bulk button {
+  height: 28px; padding: 0 10px; border: 1px solid #999; border-radius: 4px; background: #fff; color: #222; font: inherit; cursor: pointer;
+}
+.cockpit-bulk button:disabled { cursor: default; opacity: 0.5; }
+.cockpit-menu-list {
+  position: fixed; z-index: 1000; min-width: 140px; margin: 0; padding: 4px 0; list-style: none;
+  background: #fff; border: 1px solid #bbb; border-radius: 4px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); font-size: 13px;
+}
+.cockpit-menu-list li button {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: auto; padding: 4px 10px;
+  border: 0; border-radius: 0; background: none; color: #222; font: inherit; text-align: left; cursor: pointer;
+}
+.cockpit-menu-list li button:hover, .cockpit-menu-list li button:focus-visible { background: #e3eeff; }
 .processor-icon-picker { position: relative; }
 .processor-icon-grid {
   position: absolute; z-index: 6; left: 0; top: calc(100% + 4px);

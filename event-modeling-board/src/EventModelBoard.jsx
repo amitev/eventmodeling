@@ -56,6 +56,8 @@ import {
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
 import { useConnectedAgents } from './state/agents.js';
+import { useBuildQueue } from './state/buildQueue.js';
+import { AgentCockpit } from './dialogs/AgentCockpit.jsx';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
 import { highlightHtml, htmlStructure } from '../../cli/board/html-highlights.js';
@@ -304,8 +306,12 @@ function Board() {
   const [contextInfoId, setContextInfoId] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [buildQueueOpen, setBuildQueueOpen] = useState(false);
   const { agents, removeAgent } = useConnectedAgents();
+  const buildQueue = useBuildQueue(agents);
+  const activeBuilds = buildQueue.tasks.filter((task) => task.status === 'queued' || task.status === 'running').length;
   const tasksButtonRef = useRef(null);
+  const buildQueueButtonRef = useRef(null);
   const headerRef = useRef(null);
   // The element whose title is to be edited (asked for by the Enter hotkey).
   const [titleEditId, setTitleEditId] = useState(null);
@@ -377,7 +383,7 @@ function Board() {
   const fullscreenAvailable = !!(document.fullscreenEnabled &&
     document.documentElement.requestFullscreen && document.exitFullscreen);
   const fullscreenPopupOpen = useRef(false);
-  fullscreenPopupOpen.current = modalOpen.current || tasksOpen || search.open;
+  fullscreenPopupOpen.current = modalOpen.current || tasksOpen || buildQueueOpen || search.open;
   useEffect(() => {
     const keyboard = navigator.keyboard;
     const canLock = typeof keyboard?.lock === 'function' && typeof keyboard?.unlock === 'function';
@@ -1379,7 +1385,7 @@ function Board() {
     if (cellMenu || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step && !selectedCell && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
-        !contextInfoId && !tasksOpen && !search.open &&
+        !contextInfoId && !tasksOpen && !buildQueueOpen && !search.open &&
         !getNodes().some((n) => n.selected) && !getEdges().some((edge) => edge.selected)) {
       const t = e.target;
       if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
@@ -1789,6 +1795,25 @@ function Board() {
           <span className="task-count" aria-hidden="true">{openTaskCount}</span>
         </button>
         <button
+          ref={buildQueueButtonRef}
+          className="tasks-button keep"
+          onClick={() => setBuildQueueOpen((open) => !open)}
+          title={`Agent cockpit (${activeBuilds} active)`}
+          aria-label={`Agent cockpit (${activeBuilds} active)`}
+          aria-haspopup="dialog"
+          aria-expanded={buildQueueOpen}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M8 1.2v2M6.6 1.2h2.8" />
+            <rect x="2" y="3.2" width="12" height="11" rx="2.2" />
+            <path d="M2 8.2H.8M14 8.2h1.2" />
+            <path d="M4.3 11.5a3.7 3.7 0 0 1 7.4 0" />
+            <path d="M8 11.5l2-2.3" />
+            <circle cx="8" cy="11.5" r="0.5" fill="currentColor" />
+          </svg>
+          <span className="task-count" aria-hidden="true">{activeBuilds}</span>
+        </button>
+        <button
           className={`hotkeys-btn keep${overview ? ' pressed' : ''}`}
           onClick={() => setOverview((v) => !v)}
           aria-pressed={overview}
@@ -1982,6 +2007,23 @@ function Board() {
           onDelete={deleteTask}
           onGoToChapter={goToTaskChapter}
           onClose={() => setTasksOpen(false)}
+        />
+      )}
+      {buildQueueOpen && (
+        <AgentCockpit
+          chapters={contexts
+            .filter((context) => !filterId || context.id === filterId)
+            .flatMap((context) => chapters
+              .filter((chapter) => chapter.data.context === context.id)
+              .map((chapter) => ({
+                id: chapter.id,
+                title: filterId ? chapter.data.name : `${context.name} / ${chapter.data.name}`,
+                slices: slices(nodes, chapter.id).map((slice) => ({ id: slice.id, name: slice.data.name })),
+              })))}
+          queue={buildQueue}
+          buttonRef={buildQueueButtonRef}
+          headerRef={headerRef}
+          onClose={() => setBuildQueueOpen(false)}
         />
       )}
       {search.open && (

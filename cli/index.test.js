@@ -136,7 +136,7 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
   const { id: firstId, lastPing: firstPing } = firstSession;
   assert.ok(firstPing >= startedAt && firstPing <= Date.now());
   assert.deepEqual(firstSession, {
-    id: firstId, name: 'Shared name', model: 'vendor/model+A', agentType: 'modeler', harness: 'claude', lastPing: firstPing,
+    id: firstId, name: 'Shared name', model: 'vendor/model+A', agentType: 'modeler', harness: 'claude', lastPing: firstPing, building: null,
   });
   const duplicate = startAgent('model-b', ' shared NAME ');
   assert.deepEqual(await duplicate.closed, [1, null]);
@@ -146,7 +146,7 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
   const sessions = await waitForAgents(2);
   const { id: secondId, lastPing: secondPing } = sessions[1];
   const secondSession = {
-    id: secondId, name: 'Second name', model: 'model-b', agentType: 'builder', harness: 'copilot', lastPing: secondPing,
+    id: secondId, name: 'Second name', model: 'model-b', agentType: 'builder', harness: 'copilot', lastPing: secondPing, building: null,
   };
   assert.deepEqual(sessions, [firstSession, secondSession]);
   assert.notEqual(firstId, secondId);
@@ -269,6 +269,97 @@ test('automatic agent names are unique, exhaust the pool and become reusable aft
   const replacementSession = (await updated.json()).at(-1);
   assert.equal(replacementSession.name, agents[0].name);
   assert.notEqual(replacementSession.id, agents[0].id);
+});
+
+test('build queue dispatches each slice once to its builder, one task at a time', { timeout: 15000 }, async (t) => {
+  const { createServer } = await import('./board/app.js');
+  const server = createServer({ publicDir: null, rootDir: tempDir(t) });
+  server.listen(0, 'localhost');
+  await once(server, 'listening');
+  t.after(() => {
+    server.close();
+    server.closeAllConnections();
+  });
+  const base = `http://localhost:${server.address().port}/api`;
+  const api = (path, method = 'GET', body) => fetch(`${base}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body && JSON.stringify(body),
+    signal: t.signal,
+  });
+  const queue = async () => (await api('/build-queue')).json();
+  const add = (sliceId, builder) => api('/build-queue', 'POST', { sliceId, sliceName: ` Slice ${sliceId} `, builder });
+
+  const missing = await add('s0', 'Nobody');
+  assert.equal(missing.status, 404);
+  assert.deepEqual(await missing.json(), { error: 'Builder not connected' });
+
+  // A raw builder stream: the test plays the agent and reports results itself.
+  const stream = await fetch(`${base}/agent/events?model=m&agentType=builder&name=Raw`, { signal: t.signal });
+  const reader = stream.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffered = '';
+  const events = [];
+  async function nextEvent(name) {
+    while (true) {
+      const index = events.findIndex((event) => event.name === name);
+      if (index >= 0) return events.splice(index, 1)[0].data;
+      const { value, done } = await reader.read();
+      assert.ok(!done, 'stream ended');
+      const frames = (buffered + value).split('\n\n');
+      buffered = frames.pop();
+      for (const frame of frames) {
+        const [event, data] = frame.split('\n');
+        events.push({ name: event.slice('event: '.length), data: JSON.parse(data.slice('data: '.length)) });
+      }
+    }
+  }
+  const { id: agentId, name } = await nextEvent('welcome');
+  assert.equal(name, 'Raw');
+
+  assert.equal((await add('s1', 'raw')).status, 201);
+  assert.equal((await add('s2', 'Raw')).status, 201);
+  const duplicate = await add('s1', 'Raw');
+  assert.equal(duplicate.status, 409);
+  assert.match((await duplicate.json()).error, /already in the build queue/);
+
+  const first = await nextEvent('build');
+  assert.deepEqual({ sliceId: first.sliceId, sliceName: first.sliceName }, { sliceId: 's1', sliceName: 'Slice s1' });
+  assert.deepEqual((await queue()).map(({ sliceId, builder, status }) => [sliceId, builder, status]),
+    [['s1', 'Raw', 'running'], ['s2', 'Raw', 'queued']]);
+  const [rawSession] = await (await api('/agents')).json();
+  assert.equal(rawSession.building, 'Slice s1');
+  assert.equal((await api(`/build-queue/${first.id}`, 'DELETE')).status, 409);
+
+  assert.equal((await api(`/agents/${agentId}/tasks/${first.id}/failed`, 'POST', { error: 'Boom' })).status, 204);
+  const second = await nextEvent('build');
+  assert.equal(second.sliceId, 's2');
+  assert.deepEqual((await queue()).map(({ sliceId, status, error }) => [sliceId, status, error]),
+    [['s1', 'failed', 'Boom'], ['s2', 'running', null]]);
+  assert.equal((await add('s1', 'Raw')).status, 201);
+  assert.equal((await api(`/build-queue/${second.id}/retry`, 'POST')).status, 404);
+  await reader.cancel();
+  while ((await queue()).some(({ status }) => status === 'running')) await delay(20, undefined, { signal: t.signal });
+  assert.deepEqual((await queue()).map(({ sliceId, status }) => [sliceId, status]), [['s2', 'queued'], ['s1', 'queued']]);
+  assert.equal((await api(`/build-queue/${second.id}`, 'DELETE')).status, 204);
+
+  // A real builder agent reconnecting under the same name picks up the requeued task.
+  const child = spawn(process.execPath, [cli, 'agent', '--name', 'Raw', '--model', 'm', '--agent-type', 'builder'], {
+    env: { ...process.env, PORT: String(server.address().port), EM_BUILD_DELAY_MS: '0' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const closed = once(child, 'close');
+  t.after(() => {
+    if (child.exitCode === null) child.kill();
+    return closed;
+  });
+  let output = '';
+  child.stdout.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
+  const isDone = async () => (await queue()).some(({ sliceId, status }) => sliceId === 's1' && status === 'done');
+  while (!(await isDone())) await delay(20, undefined, { signal: t.signal });
+  assert.match(output, /Building slice "Slice s1"\./);
+  const [doneTask] = await queue();
+  assert.equal((await api(`/build-queue/${doneTask.id}`, 'DELETE')).status, 409);
+  assert.equal((await add('s1', 'Raw')).status, 201);
 });
 
 test('init installs skills in its default or custom target without starting a server', (t) => {

@@ -14,6 +14,7 @@
     "cli/board/app.js",
     "cli/board/api.js",
     "cli/board/agent-api.js",
+    "cli/board/build-queue.js",
     "cli/board/http-error.js",
     "cli/board/model-edit.js",
     "cli/board/model-rules.js",

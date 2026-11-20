@@ -1,12 +1,14 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import express from 'express';
 import { HttpError } from './http-error.js';
+import { createBuildQueue } from './build-queue.js';
 
 const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler'];
 
 export function agentApi() {
   const router = express.Router();
   const sessions = new Map();
+  const queue = createBuildQueue();
 
   function liveSession(id) {
     const session = sessions.get(id);
@@ -14,6 +16,24 @@ export function agentApi() {
       throw new HttpError(404, 'CLI disconnected');
     }
     return session;
+  }
+
+  function liveBuilder(name) {
+    return [...sessions.values()].find((session) => session.agentType === 'builder' &&
+      session.name.toLowerCase() === name.toLowerCase() && !session.res.destroyed && !session.res.writableEnded);
+  }
+
+  function dispatch(name) {
+    const session = liveBuilder(name);
+    const task = session && queue.next(session.name);
+    if (!task) return;
+    const { id, sliceId, sliceName } = task;
+    session.res.write(`event: build\ndata: ${JSON.stringify({ id, sliceId, sliceName })}\n\n`);
+  }
+
+  function text(value, message) {
+    if (typeof value !== 'string' || !value.trim()) throw new HttpError(400, message);
+    return value.trim();
   }
 
   router.head('/agent/events', (req, res) => res.set('Allow', 'GET').sendStatus(405));
@@ -54,16 +74,21 @@ export function agentApi() {
     const beat = setInterval(ping, 30000);
     res.once('close', () => {
       clearInterval(beat);
-      sessions.delete(id);
+      if (sessions.get(id) === session) {
+        sessions.delete(id);
+        queue.release(name);
+      }
     });
     sessions.set(id, session);
     res.flushHeaders();
+    res.write(`event: welcome\ndata: ${JSON.stringify({ id, name })}\n\n`);
     ping();
+    if (agentType === 'builder') dispatch(name);
   });
 
   router.get('/agents', (req, res) => {
     const agents = [...sessions].map(([id, { name, model, agentType, harness, lastPing }]) =>
-      ({ id, name, model, agentType, harness, lastPing }));
+      ({ id, name, model, agentType, harness, lastPing, building: queue.running(name)?.sliceName ?? null }));
     res.set('Cache-Control', 'no-store').json(agents);
   });
 
@@ -87,7 +112,40 @@ export function agentApi() {
   router.delete('/agents/:id', (req, res) => {
     const session = liveSession(req.params.id);
     sessions.delete(req.params.id);
+    queue.release(session.name);
     session.res.end('event: stop\ndata: {}\n\n');
+    res.status(204).end();
+  });
+
+  function finishTask(result) {
+    return (req, res) => {
+      const session = liveSession(req.params.id);
+      const error = result === 'failed'
+        ? (typeof req.body?.error === 'string' && req.body.error.trim()) || 'Build failed' : undefined;
+      queue.finish(req.params.taskId, session.name, error);
+      res.status(204).end();
+      dispatch(session.name);
+    };
+  }
+  router.post('/agents/:id/tasks/:taskId/done', finishTask('done'));
+  router.post('/agents/:id/tasks/:taskId/failed', finishTask('failed'));
+
+  router.get('/build-queue', (req, res) => {
+    res.set('Cache-Control', 'no-store').json(queue.list());
+  });
+
+  router.post('/build-queue', (req, res) => {
+    const sliceId = text(req.body?.sliceId, 'Slice id is required');
+    const sliceName = text(req.body?.sliceName, 'Slice name is required');
+    const builder = liveBuilder(text(req.body?.builder, 'Builder name is required'));
+    if (!builder) throw new HttpError(404, 'Builder not connected');
+    const task = queue.add({ sliceId, sliceName, builder: builder.name });
+    res.status(201).json(task);
+    dispatch(builder.name);
+  });
+
+  router.delete('/build-queue/:id', (req, res) => {
+    queue.remove(req.params.id);
     res.status(204).end();
   });
 
