@@ -1,6 +1,6 @@
 // Pieces shared by the node components.
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { highlightHtml } from '../../../server/html-highlights.js';
+import { highlightHtml } from '../../../cli/board/html-highlights.js';
 import { useReactFlow, useStore } from '@xyflow/react';
 import { chapterMetadata, LANE_COLORS, snap, stickyH, stickyW, stretchWidths } from '../model/model.js';
 import { HistoryContext } from '../state/history.js';

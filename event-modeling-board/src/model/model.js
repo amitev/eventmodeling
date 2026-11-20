@@ -119,7 +119,7 @@ export function pruneCopies(nodes) {
 }
 
 
-export { LANE_COLORS } from '../../../server/lane-colors.js';
+export { LANE_COLORS } from '../../../cli/board/lane-colors.js';
 
 // Colours of a Notes element besides the default white (R3.24).
 export const NOTE_COLORS = ['red', 'green', 'yellow'];

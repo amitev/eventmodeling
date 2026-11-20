@@ -14,7 +14,9 @@ npm install
 npm run build
 ```
 
-The board is built into `server/public/`.
+The board is built into `cli/board/public/`.
+
+CLI layout: `cli/index.js` dispatches commands; `cli/init.js` installs skills; `cli/board/` hosts the board server; `cli/agent/` holds the agent client and harness dialects.
 
 ## Build and install the CLI
 
@@ -33,6 +35,7 @@ npm install && npm run build && npm link --force
 ```
 
 `em-cli` is then available globally; `em-cli board` runs the board from the current directory.
+Run `npm link --force` again after the CLI entry path changes.
 
 To create and install a package tarball:
 

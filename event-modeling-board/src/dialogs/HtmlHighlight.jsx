@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { HTML_INSPECTION_SANDBOX, HTML_SANDBOX } from '../model/mockup.js';
-import { SOURCE_ATTRIBUTE, highlightHtml } from '../../../server/html-highlights.js';
+import { SOURCE_ATTRIBUTE, highlightHtml } from '../../../cli/board/html-highlights.js';
 
 export function HighlightPreview({ text, highlights, model, picking, onPick, onError, onKey }) {
   const frame = useRef(null);

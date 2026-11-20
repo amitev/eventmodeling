@@ -7,7 +7,7 @@ import test from 'node:test';
 import { load as loadYaml } from 'js-yaml';
 import { createServer } from './app.js';
 import { ModelStore } from './model-store.js';
-import { parseBoard, serialize } from '../event-modeling-board/src/state/io.js';
+import { parseBoard, serialize } from '../../event-modeling-board/src/state/io.js';
 
 async function setup(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-tasks-'));

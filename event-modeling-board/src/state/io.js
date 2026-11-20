@@ -3,7 +3,7 @@ import { LANE_WIDTH, LANE_HEIGHT, SLICE_MIN_WIDTH, SLICE_TYPES, sliceType, KINDS
 import { FIELD_FLAGS, FIELD_TYPES, OBJECT, hasFields, serializeFields } from '../model/fields.js';
 import { isExampleValue } from '../model/examples.js';
 import { isWebUrl } from '../model/mockup.js';
-import { extractHighlights, highlightProblem, inspectHtml } from '../../../server/html-highlights.js';
+import { extractHighlights, highlightProblem, inspectHtml } from '../../../cli/board/html-highlights.js';
 
 export const STORAGE_KEY = 'event-model-board';
 

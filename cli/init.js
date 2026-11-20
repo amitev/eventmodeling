@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DATA_DIR } from './model-store.js';
+import { DATA_DIR } from './board/model-store.js';
 
 export const SKILLS_DIR = fileURLToPath(new URL('../.claude/skills', import.meta.url));
 export const DEFAULT_TARGET = path.join('.claude', 'skills');

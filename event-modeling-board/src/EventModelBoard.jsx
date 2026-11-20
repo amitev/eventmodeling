@@ -58,7 +58,7 @@ import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } f
 import { useConnectedAgents } from './state/agents.js';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
-import { highlightHtml, htmlStructure } from '../../server/html-highlights.js';
+import { highlightHtml, htmlStructure } from '../../cli/board/html-highlights.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';

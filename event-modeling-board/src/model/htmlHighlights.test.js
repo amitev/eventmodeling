@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compactHtml } from '../../../server/html-compact.js';
-import { extractHighlights, highlightHtml, highlightProblem, htmlStructure, inspectHtml, toggleHighlight } from '../../../server/html-highlights.js';
+import { compactHtml } from '../../../cli/board/html-compact.js';
+import { extractHighlights, highlightHtml, highlightProblem, htmlStructure, inspectHtml, toggleHighlight } from '../../../cli/board/html-highlights.js';
 
 test('independent highlights survive compaction without changing shared HTML', () => {
   const source = '<!doctype html><html><head></head><body><label>Title<input class="field" placeholder="Course"></label><button>Next</button></body></html>';

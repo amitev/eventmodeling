@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 import { URL_SANDBOX, isWebUrl } from '../model/mockup.js';
 import { beautifyHtml } from '../model/beautify.js';
-import { extractHighlights, htmlStructure, inspectHtml, toggleHighlight } from '../../../server/html-highlights.js';
+import { extractHighlights, htmlStructure, inspectHtml, toggleHighlight } from '../../../cli/board/html-highlights.js';
 import { MarkdownEditor } from './InfoDialog.jsx';
 import { HighlightPreview } from './HtmlHighlight.jsx';
 import { ColorPicker } from '../nodes/parts.jsx';

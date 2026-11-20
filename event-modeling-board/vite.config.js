@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: { proxy: { '/api': `http://localhost:${process.env.PORT || 3300}` } },
   build: {
-    outDir: fileURLToPath(new URL('../server/public', import.meta.url)),
+    outDir: fileURLToPath(new URL('../cli/board/public', import.meta.url)),
     emptyOutDir: true,
   },
 });

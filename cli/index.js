@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
-import { createServer, PUBLIC_DIR } from './app.js';
-import { DATA_DIR } from './model-store.js';
+import { createServer, PUBLIC_DIR } from './board/app.js';
+import { DATA_DIR } from './board/model-store.js';
 import { DEFAULT_TARGET, installSkills } from './init.js';
-import { runAgent } from './agent.js';
+import { runAgent } from './agent/agent.js';
 
 const HELP = `Usage: em-cli <command> [options]
 

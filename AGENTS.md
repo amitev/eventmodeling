@@ -18,7 +18,7 @@ The Agent and LLM must NOT edit files in `.event-modeling/model/` manually. Use 
 All (without any exception) the requirements and learnings during the implementation are documented in `spec/`. The specification is updated with every change so that it stays relevant.
 
 - [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).
-- [Server requirements](spec/SERVER.md): HTTP server and shared CLI requirements (`server/`).
+- [Server requirements](spec/SERVER.md): HTTP server and shared CLI requirements (`cli/board/`, `cli/index.js`).
 - [Agent requirements](spec/AGENT.md): `agent` CLI command and its server connection.
 - [Skills requirements](spec/SKILLS.md): requirements and learnings for skills and agent workflows, not board or server behavior.
 
@@ -46,8 +46,10 @@ When a skill refers to another skill, use its name in backticks (e.g. `element-f
 
 ## Code layout
 
-- `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `server/public/`.
-- `server/`: the HTTP server hosting the built board. `index.js`: CLI (`npx em-cli`). `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.event-modeling/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
+- `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `cli/board/public/`.
+- `cli/`: `index.js` dispatches CLI commands (`npx em-cli`); `init.js` installs skills.
+- `cli/agent/`: `agent.js` owns the agent client; `harnesses/` holds Claude and Copilot dialects.
+- `cli/board/`: the HTTP server hosting the built board. `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `agent-api.js`: agent sessions and controls. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.event-modeling/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
 
 Board code, all in `event-modeling-board/src/`:
 

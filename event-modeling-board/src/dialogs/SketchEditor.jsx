@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MOCKUP_W, MOCKUP_H } from '../model/mockup.js';
-import { LANE_COLOR_RGB } from '../../../server/lane-colors.js';
+import { LANE_COLOR_RGB } from '../../../cli/board/lane-colors.js';
 import { ColorPicker } from '../nodes/parts.jsx';
 import { addTableColumn, cloneSketchShapes, expandSketchSelection, groupSketchShapes, lineBetween, lineEndpoints, moveSketchShapes, readSketch, recordSketchHistory, rectangleBetween, resizeSketchLine, resizeSketchShape, resizeTableColumn, selectSketchShapes, sketchBounds, sketchGroupId, sketchHtml, sketchId, sketchItems, sketchPoint, tableDividers, tableParts, travelSketchHistory, ungroupSketchShapes, validSketchSize } from '../model/sketch.js';
 

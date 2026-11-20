@@ -73,7 +73,7 @@ test('rejects legacy syntax, unknown commands and options outside their command'
 });
 
 test('live CLI sessions acknowledge pings and stop independently', { timeout: 15000 }, async (t) => {
-  const { createServer } = await import('./app.js');
+  const { createServer } = await import('./board/app.js');
   const server = createServer({ publicDir: null, rootDir: tempDir(t) });
   server.listen(0, 'localhost');
   await once(server, 'listening');
@@ -227,7 +227,7 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
 });
 
 test('automatic agent names are unique, exhaust the pool and become reusable after stop', { timeout: 10000 }, async (t) => {
-  const { createServer } = await import('./app.js');
+  const { createServer } = await import('./board/app.js');
   const server = createServer({ publicDir: null, rootDir: tempDir(t) });
   server.listen(0, 'localhost');
   await once(server, 'listening');
