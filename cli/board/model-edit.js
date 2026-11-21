@@ -407,7 +407,8 @@ function getChapter(model, { params, query }) {
   const { screenContent = 'true', slice } = query;
   if (screenContent !== 'true' && screenContent !== 'false') throw bad('screenContent must be true or false');
   if (slice !== undefined && typeof slice !== 'string') throw bad('slice must be text');
-  const chapter = structuredClone(found(index(model).chapters, params.id, 'chapter'));
+  const ix = index(model);
+  const chapter = structuredClone(found(ix.chapters, params.id, 'chapter'));
   if (slice !== undefined) {
     chapter.slices = chapter.slices.filter((s) => s.id === slice);
     if (!chapter.slices.length) throw unknown('slice', slice);
@@ -415,7 +416,10 @@ function getChapter(model, { params, query }) {
   if (screenContent === 'false') {
     for (const s of chapter.slices) for (const e of s.elements) if (e.type === 'SCREEN') delete e.html;
   }
-  return chapter;
+  if (slice === undefined) return chapter;
+  const { slices, ...chapterDetails } = chapter;
+  const { id, name, info } = found(ix.contexts, chapter.context, 'context');
+  return { chapter: chapterDetails, context: { id, name, ...(info === undefined ? {} : { info }) }, slices };
 }
 
 // ---------- Contexts ----------

@@ -154,7 +154,8 @@ async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signa
     throw new Error(`Could not fetch slice definition: HTTP ${response.status}`);
   }
   const definition = await response.json();
-  if (definition?.id !== chapterId || definition.context !== contextId ||
+  if (definition?.chapter?.id !== chapterId || definition.chapter.context !== contextId ||
+      definition.context?.id !== contextId || !Array.isArray(definition.chapter.lanes) ||
       !Array.isArray(definition.slices) || definition.slices.length !== 1 || definition.slices[0]?.id !== sliceId) {
     throw new Error('Slice definition does not match the build task');
   }

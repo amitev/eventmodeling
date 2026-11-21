@@ -32,7 +32,7 @@ After reporting findings, offer selected items as Tasks; skip if none.
 | `/outline?context=` | Contexts (filter by Context id) → Chapters `{ id, name, x, y, connectsTo, lanes: [{ id, name, type }], slices: [{ id, name, type, flowEnd?, width, elements: [{ id, type, name, lane, x, copyOf?, connectsTo }] }] }`. Excludes `html`, `url`, `fields`, `info`, `markdown`, scenarios; copies use original names |
 | `/outline?detail=chapters&context=` | Context `{ id, name, chapters }`; Chapter `{ id, name, x, y }`. Optional Context id filter; `detail=full` is the default |
 | `/search?q=&type=&context=` | `[{ id, type, name, chapterId, sliceId, lane }]`; `q`: case-insensitive name substring; `type`: element type; `context`: Context id |
-| `/chapters/:id?screenContent=&slice=` | Stored Chapter; `screenContent=false` omits Screen `html`. `slice=<sliceId>` filters `slices` only, retaining Chapter fields/all lanes; 404 if slice not in Chapter |
+| `/chapters/:id?screenContent=&slice=` | Stored Chapter without `slice`. With `slice=<sliceId>`: `{ chapter, context, slices }`; lanes in `chapter`, Context metadata in `context` (no tasks), only the requested slice in `slices`; 404 if absent. `screenContent=false` omits Screen `html` |
 | `/elements/:id` | Stored element; copy returns its own entry |
 | `/tasks?context=` | `[{ context, id, title, description, status, chapter }]`; omit `context` query for all Contexts. Context order, then task creation order |
 | `/tasks/:id` | Stored task `{ id, title, description, status, chapter }` |

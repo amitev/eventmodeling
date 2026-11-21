@@ -28,7 +28,7 @@ Put this rule in every generated skill, as its own section before Step 1:
 Invoke-RestMethod "http://localhost:3300/api/model/chapters/<chapterId>?slice=<sliceId>&screenContent=false"
 ```
 
-Result: the Chapter as stored (name, `info`, lanes) with **only this slice** in `slices` (S4.21). Print a projection, not the whole response (`model-navigation`).
+Read Chapter metadata and lanes from `chapter`, Context metadata from `context`, and the requested slice from `slices[0]`. Print a projection, not the whole response (`model-navigation`).
 
 - Always call with `screenContent=false` (never `true`): the skills are backend only and never use the Screen's HTML.
 - Linked copies (`copyOf`) hold no content: read the original with `GET /api/model/elements/<copyOf>`.

@@ -297,19 +297,32 @@ test('build queue dispatches each slice once to its builder, one task at a time'
   const add = (sliceId, builder) => api('/build-queue', 'POST', {
     contextId: ' ctx ', chapterId: ' ch ', sliceId, sliceName: ` Slice ${sliceId} `, builder,
   });
-  const context = { id: 'ctx', name: 'Test Context' };
+  const context = { id: 'ctx', name: 'Test Context', info: 'Context notes' };
+  const tasks = [{ id: 'task-1', title: 'Review build', description: '', status: 'Open', chapter: 'ch' }];
   const chapter = {
-    id: 'ch', name: 'Test Chapter', context: context.id, x: 0, y: 0,
+    id: 'ch', name: 'Test Chapter', info: 'Chapter notes', context: context.id, x: 0, y: 0,
     connectsTo: [], lanes: [{ id: 'lane', name: 'Event', type: 'EVENT', color: 'none' }],
     slices: ['s1', 's2'].map((id) => ({ id, name: `Slice ${id}`, width: 220, connectsTo: [], elements: [] })),
   };
   for (const [route, body] of [
     ['/model/contexts', { contexts: [context] }],
-    ['/model/contexts/ctx', { ...context, chapters: [chapter] }],
+    ['/model/contexts/ctx', { ...context, tasks, chapters: [chapter] }],
   ]) {
     const response = await api(route, 'PUT', body);
     assert.equal(response.status, 200, await response.text());
   }
+  const fullChapter = await (await api('/model/chapters/ch')).json();
+  assert.deepEqual(fullChapter.lanes, chapter.lanes);
+  assert.equal(fullChapter.context, context.id);
+  const { slices, ...chapterDetails } = fullChapter;
+  const expectedDefinition = {
+    chapter: { ...chapterDetails, name: chapter.name, info: chapter.info, lanes: chapter.lanes },
+    context,
+    slices: [slices[0]],
+  };
+  const sliceResponse = await api('/model/chapters/ch?slice=s1');
+  assert.equal(sliceResponse.status, 200);
+  assert.deepEqual(await sliceResponse.json(), expectedDefinition);
 
   for (const [key, label] of [['contextId', 'Context'], ['chapterId', 'Chapter']]) {
     const invalid = await api('/build-queue', 'POST', {
@@ -419,7 +432,7 @@ test('build queue dispatches each slice once to its builder, one task at a time'
     args: ['-p', prompt, '--model', 'm', '--output-format', 'json', ...copilotPermissions],
     shell: false,
     cwd: agentCwd,
-    definition: { ...chapter, slices: [chapter.slices[0]] },
+    definition: expectedDefinition,
   });
   assert.equal((await api(`/build-queue/${doneTask.id}`, 'DELETE')).status, 409);
   assert.equal((await add('s1', 'Raw')).status, 201);

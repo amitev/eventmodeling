@@ -54,6 +54,12 @@ JIRA integration
 - Create JIRA ticket from slices
 - Update JIRA status?
 
+README
+- clean up. it lost its purpose
+
+API
+- load slice should include context and chapter info
+
 Cockpit
 - Build log
 - Agent doesn't have permissions to build
