@@ -600,6 +600,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R14.7** Tile action: queued or failed: **Remove**. No Build on tiles; build only via R14.9. Action errors show in the cockpit, one message listing each failed slice.
 - **R14.8** Click a tile (not its controls) toggles it; other selected tiles stay selected. No Ctrl+click. Sets the range anchor. Shift+click adds the range from the anchor to the clicked tile, within the anchor's Chapter, to the selection; never deselects. In another Chapter or without anchor it acts as a click. Selected tiles have a blue outline. Selection clears when the cockpit closes; not an undo step.
 - **R14.9** Bar above the Chapters, left-aligned: `Build (<n>)`, `Remove (<n>)`, **Clear**, then `<n> selected`. Build applies to selected tiles not queued, done or failed (no separate retry or rebuild); Remove to selected queued or failed tiles; others are skipped. Disabled when the count is 0. Build adds the slices one at a time in cockpit order (Chapters top to bottom, slices left to right), so they enter the queue in that order. Build with one builder: builds with it; none: disabled, tooltip `No builder agent connected`; several: `Build (<n>) with...` menu under its button, listing builders, each with its robot icon (R13.4 color) and name; Esc, outside click or scroll closes it.
+- **R14.10** Build sends each slice's own Context, Chapter and slice IDs in its queue request ([S2.38](./AGENT.md#build-queue)).
 
 ## Out of scope for now
 

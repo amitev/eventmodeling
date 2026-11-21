@@ -27,8 +27,8 @@ export function agentApi() {
     const session = liveBuilder(name);
     const task = session && queue.next(session.name);
     if (!task) return;
-    const { id, sliceId, sliceName } = task;
-    session.res.write(`event: build\ndata: ${JSON.stringify({ id, sliceId, sliceName })}\n\n`);
+    const { id, contextId, chapterId, sliceId, sliceName } = task;
+    session.res.write(`event: build\ndata: ${JSON.stringify({ id, contextId, chapterId, sliceId, sliceName })}\n\n`);
   }
 
   function text(value, message) {
@@ -135,11 +135,13 @@ export function agentApi() {
   });
 
   router.post('/build-queue', (req, res) => {
+    const contextId = text(req.body?.contextId, 'Context id is required');
+    const chapterId = text(req.body?.chapterId, 'Chapter id is required');
     const sliceId = text(req.body?.sliceId, 'Slice id is required');
     const sliceName = text(req.body?.sliceName, 'Slice name is required');
     const builder = liveBuilder(text(req.body?.builder, 'Builder name is required'));
     if (!builder) throw new HttpError(404, 'Builder not connected');
-    const task = queue.add({ sliceId, sliceName, builder: builder.name });
+    const task = queue.add({ contextId, chapterId, sliceId, sliceName, builder: builder.name });
     res.status(201).json(task);
     dispatch(builder.name);
   });

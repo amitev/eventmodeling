@@ -117,7 +117,7 @@ function SliceTile({ slice, task, selected, onSelect, onRemove }) {
   );
 }
 
-// chapters: [{ id, title, slices: [{ id, name }] }] in board order.
+// chapters: [{ id, contextId, title, slices: [{ id, name }] }] in board order.
 export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose }) {
   const popup = useModalFocus();
   useOutsideClose(popup, onClose, buttonRef);
@@ -126,7 +126,8 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
   const [picked, setPicked] = useState(() => new Set());
   const anchor = useRef(null); // { chapterId, sliceId } of the last click without Shift
   const tasks = new Map(queue.tasks.map((task) => [task.sliceId, task]));
-  const allSlices = chapters.flatMap((chapter) => chapter.slices); // cockpit order = build order (R14.9)
+  const allSlices = chapters.flatMap(({ id: chapterId, contextId, slices }) =>
+    slices.map((slice) => ({ ...slice, chapterId, contextId }))); // cockpit order = build order (R14.9)
   const selection = allSlices.filter((slice) => picked.has(slice.id));
   const toBuild = selection.filter((slice) => buildable(tasks.get(slice.id)));
   const toRemove = selection.filter((slice) => removable(tasks.get(slice.id)));
@@ -159,7 +160,8 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
     }
     if (failures.length) setError(`Could not ${verb} ${failures.join('; ')}`);
   };
-  const build = (list, builder) => each('build', list, (slice) => queue.add(slice.id, slice.name, builder));
+  const build = (list, builder) => each('build', list, ({ contextId, chapterId, id, name }) =>
+    queue.add({ contextId, chapterId, sliceId: id, sliceName: name, builder }));
   const remove = (list) => each('remove', list, (slice) => queue.remove(tasks.get(slice.id).id));
 
   return createPortal(

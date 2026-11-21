@@ -22,7 +22,7 @@ Rule IDs retain their original numbers.
 - **S2.28** Require `--agent-type`: exactly `modeler` or `builder`. Missing or invalid: exit 1 with usage. Send as `agentType`; server rejects missing, repeated or invalid values with 400.
 - **S2.29** After accepting a successful event-stream response, CLI prints `Agent connected to http://localhost:<port>.` once to stdout. Failed connections do not print it.
 - **S2.30** `POST /api/agents/:id/run` sends a `run` event only to that live session. Return 202 when queued to its stream, 404 if gone, 503 if backed up. Accept no caller-supplied command or arguments.
-- **S2.31** On `run`, spawn the configured harness with `-p "What model are you" --model <configured model> --output-format json` in the CLI's working directory, without a shell. Keep processing events while it runs. Capture stdout/stderr; print them to the agent console after exit. Report spawn failures and nonzero exits explicitly. Stop child processes when the event stream ends.
+- **S2.31** On `run`, log the harness check. Spawn the configured harness with `-p "What model are you" --model <configured model> --output-format json`, without a shell. Use the agent CLI's current working directory, not the board server's. Keep processing events while it runs. Log spawn failures and nonzero exits. Stop child processes when the event stream ends.
 - **S2.32** Retry network failures, unexpected disconnects and HTTP 408/429/5xx every 10 seconds. At most 10 connection attempts per outage, including the first; successful connection resets the count. Log each retry; after exhaustion log failure and exit 1. Do not retry intentional stop, other HTTP rejections or invalid protocol data.
 - **S2.33** `--harness`: `claude` (default, Claude Code) or `copilot` (Copilot CLI). Reject other values with usage and exit 1. Send `harness` to server; server defaults omitted value to `claude`, rejects invalid values with 400.
 - **S2.34** Dialects live in `cli/agent/harnesses/claude.js` and `cli/agent/harnesses/copilot.js`; each defines executable, label and arguments. Agent shares process capture and lifecycle handling. Claude emits JSON; Copilot emits JSONL. Preserve either output format when logging.
@@ -30,18 +30,22 @@ Rule IDs retain their original numbers.
 
 ## Build queue
 
-- **S2.36** Server keeps one in-memory build queue: tasks `{ id, sliceId, sliceName, builder, status, error }` in add order. `status`: `queued`, `running`, `done` or `failed`; `error`: text when failed, else `null`. A `sliceId` has at most one task. Done tasks stay as the slice's last result. Lost on server restart.
-- **S2.37** Each builder runs at most one task. Server starts the builder's first `queued` task and sends it as `build` event `{ id, sliceId, sliceName }` on: builder connect, task added for it, its previous task finished.
+- **S2.36** Server keeps one in-memory build queue: tasks `{ id, contextId, chapterId, sliceId, sliceName, builder, status, error }` in add order. `status`: `queued`, `running`, `done` or `failed`; `error`: text when failed, else `null`. A `sliceId` has at most one task. Done tasks stay as the slice's last result. Lost on server restart.
+- **S2.37** Each builder runs at most one task. Server starts the builder's first `queued` task and sends it as `build` event `{ id, contextId, chapterId, sliceId, sliceName }` on: builder connect, task added for it, its previous task finished.
 - **S2.38** Routes:
 
 | Route | Body | Result |
 | --- | --- | --- |
 | `GET /api/build-queue` | | Tasks (S2.36), `Cache-Control: no-store` |
-| `POST /api/build-queue` | `{ sliceId, sliceName, builder }` | 201 task. Trim values; blank: 400. `builder` matches a live `builder` session ignoring case, stored with its session name; none: 404. Slice with a `queued` or `running` task: 409; a `done` or `failed` task is replaced by a new one at the end |
+| `POST /api/build-queue` | `{ contextId, chapterId, sliceId, sliceName, builder }` | 201 task. Trim values; blank or missing: 400. `builder` matches a live `builder` session ignoring case, stored with its session name; none: 404. Slice with a `queued` or `running` task: 409; a `done` or `failed` task is replaced by a new one at the end |
 | `DELETE /api/build-queue/:id` | | 204. Only `queued` or `failed`; else 409 |
 | `POST /api/agents/:id/tasks/:taskId/done` | | 204; task `done` |
 | `POST /api/agents/:id/tasks/:taskId/failed` | `{ error? }` | 204; task `failed`, `error` defaults to `Build failed` |
 
   Unknown task or session: 404. `done`/`failed` for a task not running on that session: 409.
 - **S2.39** Builder disconnect or stop puts its running task back to `queued`, still assigned to the same name; it resumes when that name reconnects.
-- **S2.40** On `build`, CLI prints `Building slice "<sliceName>".` to stdout, waits `EM_BUILD_DELAY_MS` ms (default 10000; simulated work) and runs nothing else yet, then reports `done`; an error while building reports `failed` with its message. Keep processing events meanwhile. Report failures go to stderr.
+- **S2.40** On `build`, log `Building slice "<sliceName>". Task: <id>`. After S2.43, run the harness as in S2.31 with prompt `Build Slice <sliceId> from Chapter <chapterId> of Context <contextId>. Read the slice definition from .event-modeling/slices/<sliceId>; do not read it from the server.` Report `done` on exit 0, `failed` on fetch, write or harness failure. Log build and reporting errors to stderr.
+- **S2.41** Before spawning a harness, log its name and prompt to the agent terminal. After exit, log nonempty stdout and stderr to their respective streams, with separate harness and stream headers (S2.34).
+- **S2.42** Preapprove file read, write, edit, grep and glob for both harnesses. Claude also preapproves Bash curl commands starting with `curl http://localhost:` or `curl http://127.0.0.1:`. Copilot exposes only file tools; no curl or shell.
+- **S2.43** Before each build, fetch `GET /api/model/chapters/:chapterId?slice=<sliceId>` ([S4.21](./SERVER.md#4-editing-api)). Check the Context, Chapter and slice IDs. Replace `.event-modeling/slices/<sliceId>` in the agent CLI's working directory with the returned JSON. Do not launch the harness if preparation fails or the stream ends before launch.
+- **S2.44** After saving the slice definition and before logging the harness prompt, log `Saved slice definition to "<path>". Task: <id>`. Do not log the definition contents.

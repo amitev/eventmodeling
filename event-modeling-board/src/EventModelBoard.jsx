@@ -2017,6 +2017,7 @@ function Board() {
               .filter((chapter) => chapter.data.context === context.id)
               .map((chapter) => ({
                 id: chapter.id,
+                contextId: context.id,
                 title: filterId ? chapter.data.name : `${context.name} / ${chapter.data.name}`,
                 slices: slices(nodes, chapter.id).map((slice) => ({ id: slice.id, name: slice.data.name })),
               })))}

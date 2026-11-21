@@ -7,7 +7,7 @@ async function request(path, options) {
   throw new Error(detail?.error || `HTTP ${response.status}`);
 }
 
-// { tasks, builders, add(sliceId, sliceName, builder), remove(id) } for the Agent cockpit (R14).
+// { tasks, builders, add(task), remove(id) } for the Agent cockpit (R14).
 export function useBuildQueue(agents) {
   const [tasks, setTasks] = useState([]);
   const refreshNow = useRef(() => {});
@@ -45,10 +45,10 @@ export function useBuildQueue(agents) {
       refreshNow.current();
     }
   }, []);
-  const add = useCallback((sliceId, sliceName, builder) => change('/api/build-queue', {
+  const add = useCallback((task) => change('/api/build-queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sliceId, sliceName, builder }),
+    body: JSON.stringify(task),
   }), [change]);
   const remove = useCallback((id) => change(`/api/build-queue/${encodeURIComponent(id)}`, { method: 'DELETE' }), [change]);
 

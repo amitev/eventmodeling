@@ -54,8 +54,12 @@ JIRA integration
 - Create JIRA ticket from slices
 - Update JIRA status?
 
+Cockpit
+- Build log
+- Agent doesn't have permissions to build
+- Long slice titles
+
 Agentic
-- Run the agent from the CLI?
 - Ralph loop? - Agents should be like elves in a fairy tale. When you wake up - work is done. It sounds weird, but it matches pretty well.
 Not pushing work to agents, they pull it.
 - Invisible agents - What if an Agent gets notified what I´m doing? Why should I tell it to add examples? It should know. If an agent knows, I just added an Event to an Event Model - why wouldn´t it just add the examples? Silently.

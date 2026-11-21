@@ -18,13 +18,13 @@ export function createBuildQueue() {
     list: () => tasks.map(copy),
 
     // A done or failed task is replaced: the slice is built again, at the end of the queue.
-    add({ sliceId, sliceName, builder }) {
+    add({ contextId, chapterId, sliceId, sliceName, builder }) {
       const existing = tasks.find((task) => task.sliceId === sliceId);
       if (existing && !['done', 'failed'].includes(existing.status)) {
         throw new HttpError(409, `Slice "${sliceName}" is already in the build queue`);
       }
       if (existing) tasks.splice(tasks.indexOf(existing), 1);
-      const task = { id: randomUUID(), sliceId, sliceName, builder, status: 'queued', error: null };
+      const task = { id: randomUUID(), contextId, chapterId, sliceId, sliceName, builder, status: 'queued', error: null };
       tasks.push(task);
       return copy(task);
     },

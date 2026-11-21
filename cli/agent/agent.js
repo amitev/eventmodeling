@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { claude } from './harnesses/claude.js';
 import { copilot } from './harnesses/copilot.js';
@@ -57,6 +60,7 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
   console.log(`Agent connected to ${url.origin}.`);
 
   const children = new Set();
+  const connection = new AbortController();
   try {
     let pending = '';
     for await (const chunk of connectionChunks(response.body)) {
@@ -70,7 +74,8 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
           return;
         }
         if (event === 'run') {
-          runHarness(dialect, model, children);
+          console.log('Running harness check.');
+          runHarness(dialect, model, 'What model are you', children).catch((error) => console.error(error.message));
           continue;
         }
         const data = lines.find((line) => line.startsWith('data:'));
@@ -81,7 +86,7 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
           session.id = payload.id;
           url.searchParams.set('name', payload.name);
         } else if (event === 'build') {
-          buildSlice(url, session.id, payload);
+          buildSlice(url, session.id, payload, dialect, model, children, connection.signal);
         } else if (event === 'ping') {
           await acknowledgePing(url, payload);
         }
@@ -89,6 +94,7 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
     }
     throw new ConnectionError('Server closed the message stream');
   } finally {
+    connection.abort();
     for (const child of children) child.kill();
   }
 }
@@ -101,43 +107,90 @@ async function* connectionChunks(body) {
   }
 }
 
-function runHarness(dialect, model, children) {
-  const child = spawn(dialect.command, dialect.args(model), {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: true,
-  });
-  children.add(child);
-  let stdout = '';
-  let stderr = '';
-  let failedToStart = false;
-  child.stdout.setEncoding('utf8').on('data', (chunk) => { stdout += chunk; });
-  child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
-  child.once('error', (error) => {
-    failedToStart = true;
-    console.error(`Could not run ${dialect.label}: ${error.message}`);
-  });
-  child.once('close', (code, signal) => {
-    children.delete(child);
-    if (stdout) console.log(stdout.trimEnd());
-    if (stderr) console.error(stderr.trimEnd());
-    if (!failedToStart && code !== 0) {
-      console.error(`${dialect.label} ${signal ? `terminated by ${signal}` : `exited with code ${code}`}.`);
-    }
+function runHarness(dialect, model, prompt, children) {
+  console.log(`${dialect.label} prompt: ${prompt}`);
+  return new Promise((resolve, reject) => {
+    const child = spawn(dialect.command, dialect.args(model, prompt), {
+      cwd: process.cwd(),
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    children.add(child);
+    let stdout = '';
+    let stderr = '';
+    let processError;
+    child.stdout.setEncoding('utf8').on('data', (chunk) => { stdout += chunk; });
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    child.once('error', (error) => {
+      processError = error;
+    });
+    child.once('close', (code, signal) => {
+      children.delete(child);
+      if (stdout) console.log(`${dialect.label} stdout:\n${stdout.trimEnd()}`);
+      if (stderr) console.error(`${dialect.label} stderr:\n${stderr.trimEnd()}`);
+      if (processError) reject(new Error(`Could not run ${dialect.label}: ${processError.message}`));
+      else if (code !== 0) reject(new Error(`${dialect.label} ${signal ? `terminated by ${signal}` : `exited with code ${code}`}.`));
+      else resolve();
+    });
   });
 }
 
-const BUILD_DELAY_MS = Number(process.env.EM_BUILD_DELAY_MS ?? 10_000);
+async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signal) {
+  if (typeof sliceId !== 'string' || !/^[a-z0-9_-]+$/i.test(sliceId) ||
+      /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(sliceId)) {
+    throw new Error('Slice id is not safe as a file name');
+  }
+  if (typeof chapterId !== 'string' || !chapterId || chapterId === '.' || chapterId === '..') {
+    throw new Error('Invalid Chapter id');
+  }
+  const definitionUrl = new URL(`/api/model/chapters/${encodeURIComponent(chapterId)}`, url);
+  definitionUrl.searchParams.set('slice', sliceId);
+  const response = await fetch(definitionUrl, {
+    redirect: 'error',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Could not fetch slice definition: HTTP ${response.status}`);
+  }
+  const definition = await response.json();
+  if (definition?.id !== chapterId || definition.context !== contextId ||
+      !Array.isArray(definition.slices) || definition.slices.length !== 1 || definition.slices[0]?.id !== sliceId) {
+    throw new Error('Slice definition does not match the build task');
+  }
 
-async function buildSlice(url, agentId, { id, sliceName }) {
+  const definitionPath = path.join('.event-modeling', 'slices', sliceId);
+  const directory = path.dirname(definitionPath);
+  await mkdir(directory, { recursive: true });
+  const temp = path.join(directory, `.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temp, `${JSON.stringify(definition, null, 2)}\n`, { flag: 'wx', mode: 0o600, signal });
+    signal.throwIfAborted();
+    await rename(temp, definitionPath);
+  } finally {
+    await rm(temp, { force: true });
+  }
+  return definitionPath;
+}
+
+async function buildSlice(url, agentId, task, dialect, model, children, signal) {
+  const { id, contextId, chapterId, sliceId, sliceName } = task;
   let result = 'done';
   let error;
   try {
-    console.log(`Building slice "${sliceName}".`);
-    await delay(BUILD_DELAY_MS); // simulated work until builds run a harness
+    console.log(`Building slice "${sliceName}". Task: ${id}`);
+    const definitionPath = await saveSliceDefinition(url, task, signal);
+    signal.throwIfAborted();
+    console.log(`Saved slice definition to "${definitionPath}". Task: ${id}`);
+    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server.`;
+    await runHarness(dialect, model, prompt, children);
   } catch (e) {
+    if (signal.aborted) return;
     result = 'failed';
     error = e.message;
+    console.error(error);
   }
+  if (signal.aborted) return;
   try {
     const response = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
       method: 'POST',

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const cli = fileURLToPath(new URL('./index.js', import.meta.url));
+const copilotPermissions = ['--available-tools=view,create,edit,apply_patch,grep,glob', '--allow-tool=read,write'];
 
 function run(args, options = {}) {
   const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', ...options });
@@ -162,14 +163,18 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
 
   const run = await fetch(`${base}/agents/${firstId}/run`, { method: 'POST', signal: t.signal });
   assert.equal(run.status, 202);
-  while (!first.output.text.includes('"command":"claude"')) {
+  while (!first.output.text.match(/^\{"command":"claude".*\}\r?\n/m)) {
     assert.equal(first.child.exitCode, null, first.output.errors);
     await delay(20, undefined, { signal: t.signal });
   }
-  const invocation = JSON.parse(first.output.text.trim().split(/\r?\n/)[1]);
+  const invocation = JSON.parse(first.output.text.split(/\r?\n/).find((line) => line.startsWith('{')));
   assert.deepEqual(invocation, {
     command: 'claude',
-    args: ['-p', 'What model are you', '--model', 'vendor/model+A', '--output-format', 'json'],
+    args: [
+      '-p', 'What model are you', '--model', 'vendor/model+A', '--output-format', 'json',
+      '--allowedTools', 'Read', 'Write', 'Edit', 'Grep', 'Glob',
+      'Bash(curl http://localhost:**)', 'Bash(curl http://127.0.0.1:**)',
+    ],
     shell: false,
   });
   assert.equal(second.output.text.trim(), `Agent connected to http://localhost:${server.address().port}.`);
@@ -180,14 +185,15 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
     assert.equal(second.child.exitCode, null, second.output.errors);
     await delay(20, undefined, { signal: t.signal });
   }
-  assert.match(second.output.errors, /Harness test failure/);
+  assert.match(second.output.errors, /Copilot stderr:\r?\nHarness test failure/);
 
   const stop = await fetch(`${base}/agents/${firstId}`, { method: 'DELETE', signal: t.signal });
   assert.equal(stop.status, 204);
   assert.deepEqual(await first.closed, [0, null], first.output.errors);
   const connectedMessage = `Agent connected to http://localhost:${server.address().port}.`;
   assert.deepEqual(first.output.text.trim().split(/\r?\n/), [
-    connectedMessage, JSON.stringify(invocation), 'Agent stopped from the board.',
+    connectedMessage, 'Running harness check.', 'Claude prompt: What model are you',
+    'Claude stdout:', JSON.stringify(invocation), 'Agent stopped from the board.',
   ]);
   assert.equal(first.output.errors, '');
   assert.deepEqual(await waitForAgents(1), [secondSession]);
@@ -204,13 +210,13 @@ test('live CLI sessions acknowledge pings and stop independently', { timeout: 15
   assert.equal(automaticSession.harness, 'copilot');
   const copilotRun = await fetch(`${base}/agents/${automaticSession.id}/run`, { method: 'POST', signal: t.signal });
   assert.equal(copilotRun.status, 202);
-  while (!automatic.output.text.includes('"command":"copilot"')) {
+  while (!automatic.output.text.match(/^\{"command":"copilot".*\}\r?\n/m)) {
     assert.equal(automatic.child.exitCode, null, automatic.output.errors);
     await delay(20, undefined, { signal: t.signal });
   }
-  assert.deepEqual(JSON.parse(automatic.output.text.trim().split(/\r?\n/)[1]), {
+  assert.deepEqual(JSON.parse(automatic.output.text.split(/\r?\n/).find((line) => line.startsWith('{'))), {
     command: 'copilot',
-    args: ['-p', 'What model are you', '--model', 'model-c', '--output-format', 'json'],
+    args: ['-p', 'What model are you', '--model', 'model-c', '--output-format', 'json', ...copilotPermissions],
     shell: false,
   });
   const stopAutomatic = await fetch(`${base}/agents/${automaticSession.id}`, { method: 'DELETE', signal: t.signal });
@@ -283,12 +289,35 @@ test('build queue dispatches each slice once to its builder, one task at a time'
   const base = `http://localhost:${server.address().port}/api`;
   const api = (path, method = 'GET', body) => fetch(`${base}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(method === 'PUT' ? { 'If-Match': '*' } : {}) },
     body: body && JSON.stringify(body),
     signal: t.signal,
   });
   const queue = async () => (await api('/build-queue')).json();
-  const add = (sliceId, builder) => api('/build-queue', 'POST', { sliceId, sliceName: ` Slice ${sliceId} `, builder });
+  const add = (sliceId, builder) => api('/build-queue', 'POST', {
+    contextId: ' ctx ', chapterId: ' ch ', sliceId, sliceName: ` Slice ${sliceId} `, builder,
+  });
+  const context = { id: 'ctx', name: 'Test Context' };
+  const chapter = {
+    id: 'ch', name: 'Test Chapter', context: context.id, x: 0, y: 0,
+    connectsTo: [], lanes: [{ id: 'lane', name: 'Event', type: 'EVENT', color: 'none' }],
+    slices: ['s1', 's2'].map((id) => ({ id, name: `Slice ${id}`, width: 220, connectsTo: [], elements: [] })),
+  };
+  for (const [route, body] of [
+    ['/model/contexts', { contexts: [context] }],
+    ['/model/contexts/ctx', { ...context, chapters: [chapter] }],
+  ]) {
+    const response = await api(route, 'PUT', body);
+    assert.equal(response.status, 200, await response.text());
+  }
+
+  for (const [key, label] of [['contextId', 'Context'], ['chapterId', 'Chapter']]) {
+    const invalid = await api('/build-queue', 'POST', {
+      contextId: 'ctx', chapterId: 'ch', sliceId: 's0', sliceName: 'Slice s0', builder: 'Raw', [key]: ' ',
+    });
+    assert.equal(invalid.status, 400);
+    assert.deepEqual(await invalid.json(), { error: `${label} id is required` });
+  }
 
   const missing = await add('s0', 'Nobody');
   assert.equal(missing.status, 404);
@@ -323,7 +352,9 @@ test('build queue dispatches each slice once to its builder, one task at a time'
   assert.match((await duplicate.json()).error, /already in the build queue/);
 
   const first = await nextEvent('build');
-  assert.deepEqual({ sliceId: first.sliceId, sliceName: first.sliceName }, { sliceId: 's1', sliceName: 'Slice s1' });
+  assert.deepEqual(first, {
+    id: first.id, contextId: 'ctx', chapterId: 'ch', sliceId: 's1', sliceName: 'Slice s1',
+  });
   assert.deepEqual((await queue()).map(({ sliceId, builder, status }) => [sliceId, builder, status]),
     [['s1', 'Raw', 'running'], ['s2', 'Raw', 'queued']]);
   const [rawSession] = await (await api('/agents')).json();
@@ -342,9 +373,28 @@ test('build queue dispatches each slice once to its builder, one task at a time'
   assert.deepEqual((await queue()).map(({ sliceId, status }) => [sliceId, status]), [['s2', 'queued'], ['s1', 'queued']]);
   assert.equal((await api(`/build-queue/${second.id}`, 'DELETE')).status, 204);
 
-  // A real builder agent reconnecting under the same name picks up the requeued task.
-  const child = spawn(process.execPath, [cli, 'agent', '--name', 'Raw', '--model', 'm', '--agent-type', 'builder'], {
-    env: { ...process.env, PORT: String(server.address().port), EM_BUILD_DELAY_MS: '0' },
+  // Reconnect the builder with a stub harness so the test never runs an installed agent.
+  const agentCwd = fs.realpathSync(tempDir(t));
+  const definitionPath = path.join('.event-modeling', 'slices', 's1');
+  const prompt = `Build Slice s1 from Chapter ch of Context ctx. Read the slice definition from ${definitionPath}; do not read it from the server.`;
+  const preload = `data:text/javascript,${encodeURIComponent(`
+    import childProcess from 'node:child_process';
+    import { syncBuiltinESMExports } from 'node:module';
+    const spawn = childProcess.spawn;
+    let calls = 0;
+    childProcess.spawn = (command, args, options) => {
+      const script = 'console.log(JSON.stringify({ ...' + JSON.stringify({ command, args, shell: options.shell ?? false }) +
+        ', cwd: process.cwd(), definition: JSON.parse(require("node:fs").readFileSync(' +
+        JSON.stringify(${JSON.stringify(definitionPath)}) + ', "utf8")) })); process.exitCode = ' + (calls++ === 0 ? 0 : 7);
+      return spawn(process.execPath, ['-e', script], options);
+    };
+    syncBuiltinESMExports();
+  `)}`;
+  const child = spawn(process.execPath, [
+    '--import', preload, cli, 'agent', '--name', 'Raw', '--model', 'm', '--agent-type', 'builder', '--harness', 'copilot',
+  ], {
+    cwd: agentCwd,
+    env: { ...process.env, PORT: String(server.address().port) },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const closed = once(child, 'close');
@@ -355,11 +405,36 @@ test('build queue dispatches each slice once to its builder, one task at a time'
   let output = '';
   child.stdout.setEncoding('utf8').on('data', (chunk) => { output += chunk; });
   const isDone = async () => (await queue()).some(({ sliceId, status }) => sliceId === 's1' && status === 'done');
-  while (!(await isDone())) await delay(20, undefined, { signal: t.signal });
-  assert.match(output, /Building slice "Slice s1"\./);
+  const harnessOutput = () => output.split('\n').slice(0, -1).find((line) => line.startsWith('{'));
+  while (!(await isDone()) || !harnessOutput()) await delay(20, undefined, { signal: t.signal });
   const [doneTask] = await queue();
+  assert.deepEqual(output.trim().split(/\r?\n/).slice(1, 5), [
+    `Building slice "Slice s1". Task: ${doneTask.id}`,
+    `Saved slice definition to "${definitionPath}". Task: ${doneTask.id}`,
+    `Copilot prompt: ${prompt}`,
+    'Copilot stdout:',
+  ]);
+  assert.deepEqual(JSON.parse(harnessOutput()), {
+    command: 'copilot',
+    args: ['-p', prompt, '--model', 'm', '--output-format', 'json', ...copilotPermissions],
+    shell: false,
+    cwd: agentCwd,
+    definition: { ...chapter, slices: [chapter.slices[0]] },
+  });
   assert.equal((await api(`/build-queue/${doneTask.id}`, 'DELETE')).status, 409);
   assert.equal((await add('s1', 'Raw')).status, 201);
+  let failedTask;
+  while (!(failedTask = (await queue()).find(({ status }) => status === 'failed'))) {
+    await delay(20, undefined, { signal: t.signal });
+  }
+  assert.equal(failedTask.error, 'Copilot exited with code 7.');
+  assert.equal((await add('missing', 'Raw')).status, 201);
+  let missingTask;
+  while (!(missingTask = (await queue()).find(({ sliceId, status }) => sliceId === 'missing' && status === 'failed'))) {
+    await delay(20, undefined, { signal: t.signal });
+  }
+  assert.equal(missingTask.error, 'Could not fetch slice definition: HTTP 404');
+  assert.ok(!output.includes('Copilot prompt: Build Slice missing'));
 });
 
 test('init installs skills in its default or custom target without starting a server', (t) => {
