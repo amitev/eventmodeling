@@ -6,7 +6,7 @@ Technology-neutral base. The generated skill's Steps 1, 2 and 5 come from here; 
 
 - `name`: as the user chose (builder topic 14), but do not include a technology name (for example, use `implement-state-change`, not `implement-state-change-springboot`). `description`: technology-neutral; describe what it implements, based on the type file's "Description seed", and match broad requests such as "Build slice X" or "Build the slice in Chapter Y". Tell the skill to identify the requested slice and its type from the model. Include "Use for ..." prompt examples and "Not for ..." with excluded slice types, but do not name sibling skills. Technology decisions belong in the skill body or shared decisions file, not its name or description.
 - First line of the body: `Read eventmodeling-core-rules first. Endpoints: [../em-board-api.md](../em-board-api.md) (base URL http://localhost:3300). Reads only: this skill never changes the model.` Then, if a shared decisions file exists, a link to it.
-- Second line: `**Model access:** the model is read only through the API ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.`
+- Second line: ``**Model access:** find slices through the API ([../em-board-api.md](../em-board-api.md)); read the requested slice definition from `.em/slices/<sliceId>.json`. Never fetch that definition from the server or write model files.``
 
 Generated skills are **backend only**: no UI code, no Screen mockup use.
 
@@ -20,17 +20,15 @@ Put this rule in every generated skill, as its own section before Step 1:
 2. Check the outline's slice `type` is the one of the type file. Another type: stop and name the right sibling skill. `null`: stop and report that the slice is incomplete.
 3. Use the stack fixed by the builder's decisions. If a required implementation detail is not covered, stop and name it as missing information.
 4. Check the dependencies the slice needs exist (see Scope above) before writing any file. Missing: stop with the error.
-5. Proceed only when the target, model information, stack decisions and dependencies are sufficient. Fetch and analyze the slice before writing any code. If a gap is found at any point, stop without code changes and report the missing information.
+5. Proceed only when the target, model information, stack decisions and dependencies are sufficient. Read and analyze the slice definition before writing any code. If a gap is found at any point, stop without code changes and report the missing information.
 
-## Step 2 — Fetch the slice
+## Step 2 — Read the slice definition
 
-```powershell
-Invoke-RestMethod "http://localhost:3300/api/model/chapters/<chapterId>?slice=<sliceId>&screenContent=false"
-```
+Read `.em/slices/<sliceId>.json`, supplied by the agent before the build. Do not fetch the slice definition from the server.
 
-Read Chapter metadata and lanes from `chapter`, Context metadata from `context`, and the requested slice from `slices[0]`. Print a projection, not the whole response (`model-navigation`).
+Read Chapter metadata and lanes from `chapter`, Context metadata from `context`, and the requested slice from `slices[0]`. Print a projection, not the whole definition (`model-navigation`).
 
-- Always call with `screenContent=false` (never `true`): the skills are backend only and never use the Screen's HTML.
+- Ignore Screen HTML in the definition: the skills are backend only and never use it.
 - Linked copies (`copyOf`) hold no content: read the original with `GET /api/model/elements/<copyOf>`.
 - Chapter, lane and every element type that supports `info`, and the `NOTES` elements of the slice (Spec lane; they may hold implementation details, among other things): implementation details (formats, limits, integrations). Read them all; they bind the code. Do not limit element `info` to translation elements. A red Note is unresolved information: stop and report it; do not guess or ask.
 

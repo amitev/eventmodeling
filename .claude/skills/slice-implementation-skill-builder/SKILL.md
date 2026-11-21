@@ -6,13 +6,13 @@ disable-model-invocation: true
 
 # Slice Implementation Skill Builder
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. **Every generated skill must state this rule.**
+**Builder model access:** API only ([../em-board-api.md](../em-board-api.md)); never read or write local model files. Generated skills read the requested slice definition from `.em/slices/<sliceId>.json`, supplied by the agent, and never write model files.
 
-Generate **three backend-only skills**: state change, state read, automation (includes translation). **No UI/Screen/view/form/mockup code.** `reference/` defines technology-neutral slice meaning/API reads; add confirmed technology. Read `eventmodeling-core-rules` first.
+Generate **three backend-only skills**: state change, state read, automation (includes translation). **No UI/Screen/view/form/mockup code.** `reference/` defines technology-neutral slice meaning and API reads; add confirmed technology. Read `eventmodeling-core-rules` first.
 
 | File | Holds |
 |---|---|
-| [reference/common.md](reference/common.md) | frontmatter, find/fetch slice (`GET /chapters/:id?slice=`), report |
+| [reference/common.md](reference/common.md) | frontmatter, find/read slice definition, report |
 | [reference/state-change.md](reference/state-change.md) | Screen → Command → Event: what to read, what to implement |
 | [reference/state-read.md](reference/state-read.md) | Event(s) → Read Model → Screen: what to read, what to implement |
 | [reference/automation.md](reference/automation.md) | Event → Read Model → Processor → Command → Event, and translation: what to read, what to implement |
@@ -61,7 +61,7 @@ Show confirmed answers by topic, "not needed" and open topics. Ask approval/corr
 
 Each generated skill has **five steps**. Present per-skill plan, **confirm before writing**:
 - Full paths of files created/replaced.
-- Steps 1/2/3/5 (identify/fetch/read/report) from `reference/common.md` + type file; adjust only stack-dependent reporting; **Step 1.3 names confirmed stack**.
+- Steps 1/2/3/5 (identify/read/analyze/report) from `reference/common.md` + type file; adjust only stack-dependent reporting; **Step 1.3 names confirmed stack**.
 - Step 4 "Implement": concrete files/locations/names/contents, short templates/examples from confirmed decisions only, commands.
 
 ## Step 5 — Write

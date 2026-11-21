@@ -28,6 +28,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A3.3** Keep skills concise and token-efficient without losing full intent, scope, triggers or constraints.
 - **A3.4** Orchestrator skills delegate owned procedures to task-specific skills instead of restating them.
 - **A3.5** Every skill edit requires a token-efficiency review before completion: remove repetition/filler, reuse shared procedures/defaults and preserve full intent, scope, triggers and constraints. Fix in the same edit without waiting for user feedback.
+- **A3.6** Generated slice-implementation skills read the requested definition from `.em/slices/<sliceId>.json` (S2.43), not by fetching the definition from the server.
 
 ## 4. Walkthrough
 

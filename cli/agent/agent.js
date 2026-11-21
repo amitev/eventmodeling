@@ -160,7 +160,7 @@ async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signa
     throw new Error('Slice definition does not match the build task');
   }
 
-  const definitionPath = path.join('.event-modeling', 'slices', sliceId);
+  const definitionPath = path.join('.em', 'slices', `${sliceId}.json`);
   const directory = path.dirname(definitionPath);
   await mkdir(directory, { recursive: true });
   const temp = path.join(directory, `.${randomUUID()}.tmp`);
