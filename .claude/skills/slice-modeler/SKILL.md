@@ -5,7 +5,7 @@ description: Model a slice, workflow or process with atomic structure creation, 
 
 # Slice Modeler
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `em-connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
 

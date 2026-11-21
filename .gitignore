@@ -5,7 +5,7 @@ node_modules/
 dist/
 cli/board/public/
 
-.event-modeling/
+.em/
 
 # Logs
 npm-debug.log*

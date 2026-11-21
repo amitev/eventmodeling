@@ -5,7 +5,7 @@ description: Shared rules for elements, names, slices, flow and anti-patterns. O
 
 # Event Modeling — Core Rules
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`.
 
 Applies to **every board task**. Read once per session; individual skills add task-specific rules.
 

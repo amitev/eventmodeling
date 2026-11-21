@@ -5,7 +5,7 @@ description: Add/remove API arrows; covers allowed pairs, direction, auto-arrows
 
 # Connections (arrows)
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (elements, Connections Read Forward). Use `model-navigation` for lookups, `element-fields` for field copying. Do not guess rules.
 

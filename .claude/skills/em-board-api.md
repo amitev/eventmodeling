@@ -4,7 +4,7 @@ Base: `http://localhost:3300/api/model` (CLI `npx em-cli board`, port option `--
 
 ## Agent rules and storage
 
-- **Use only the API. Never read, create, edit or delete files in `<cwd>/.event-modeling/model/`. Use atomic, board-validated editing endpoints, not whole-Context pushes.**
+- **Use only the API. Never read, create, edit or delete files in `<cwd>/.em/model/`. Use atomic, board-validated editing endpoints, not whole-Context pushes.**
 - Storage: `contexts.yaml` = ordered `[{ id, name, info?, file }]`; first Context is Default. Each `<file>` (e.g. `backoffice.yaml`) = `{ id, name, tasks?, chapters }`, slices inline. Chapter `context` must reference a listed Context id; Tasks live in that Context file.
 - Every write compacts all `SCREEN` `html`.
 - Board auto-pulls server changes, after any in-flight sync. It shows a notice if the pull replaces unpushed edits.

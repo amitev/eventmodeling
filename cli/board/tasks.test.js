@@ -144,7 +144,7 @@ test('Tasks persist through CRUD, filtering, board round trips, pushes and Conte
   await request('PATCH', `/contexts/${first.id}`, { name: 'Renamed' });
   const restarted = (await new ModelStore(root).pull()).data;
   assert.deepEqual(restarted.contexts[0].tasks, [done, general]);
-  const directory = path.join(root, '.event-modeling', 'model');
+  const directory = path.join(root, '.em', 'model');
   const metadata = loadYaml(await fs.readFile(path.join(directory, 'contexts.yaml'), 'utf8'));
   assert.ok(metadata.every((context) => !('tasks' in context)));
   const doc = loadYaml(await fs.readFile(path.join(directory, 'renamed.yaml'), 'utf8'));

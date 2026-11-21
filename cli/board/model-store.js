@@ -8,7 +8,7 @@ import { HttpError } from './http-error.js';
 import { byPosition, canonical, orderedTask, validateModel, validateTasks } from './model-rules.js';
 
 export { HttpError };
-export const DATA_DIR = '.event-modeling';
+export const DATA_DIR = '.em';
 export const CONTEXTS_FILE = 'contexts.yaml';
 
 const ILLEGAL = /[\\/:*?"<>|\u0000-\u001f]/;
@@ -76,7 +76,7 @@ function checkContextTasks(doc) {
   }, 'tasks');
 }
 
-// The board kept under <root>/.event-modeling/model/:
+// The board kept under <root>/.em/model/:
 //   contexts.yaml        the ordered Contexts [{ id, name, file }]
 //   <context>.yaml       one Context { id, name, tasks?, chapters: [Chapter] }, slices inline
 // A Context is identified by its id inside the file, so a renamed Context (new `file`) replaces its old file.

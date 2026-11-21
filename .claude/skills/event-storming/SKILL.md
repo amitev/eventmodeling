@@ -5,7 +5,7 @@ description: Facilitate event storming from questions, text or documents: build 
 
 # Event Storming
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.event-modeling/`. Paths below: `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` once/session first (Events, causality). Use `naming`, `chapter-setup`, `em-edit-and-delete`, `model-navigation`; hand-over adds `slice-modeler`, `element-fields`, `em-connections`, `html-screen`, `scenarios`.
 

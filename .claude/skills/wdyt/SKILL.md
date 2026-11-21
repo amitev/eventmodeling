@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # WDYT — What Do You Think?
 
-**API only:** [API reference](../em-board-api.md). Never read/write/delete `.event-modeling/` files, including `contexts.yaml`.
+**API only:** [API reference](../em-board-api.md). Never read/write/delete `.em/model/` files, including `contexts.yaml`.
 
 > **Before doing anything else**, ...
 

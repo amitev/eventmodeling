@@ -5,7 +5,7 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 
 # Model Navigation (cheap reads)
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)); never read model files in `.event-modeling/` directly. Reads change nothing. Paths below are relative to `http://localhost:3300/api/model`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)); never read model files in `.em/model/` directly. Reads change nothing. Paths below are relative to `http://localhost:3300/api/model`.
 
 ## Principles
 

@@ -13,7 +13,7 @@ Main technologies that are used:
 
 The Agent and LLM should NOT assume anything, bur rather ask for clarification and confirmation.
 
-The Agent and LLM must NOT edit files in `.event-modeling/model/` manually. Use the SKILLs and the server API.
+The Agent and LLM must NOT edit files in `.em/model/` manually. Use the SKILLs and the server API.
 
 All (without any exception) the requirements and learnings during the implementation are documented in `spec/`. The specification is updated with every change so that it stays relevant.
 
@@ -49,7 +49,7 @@ When a skill refers to another skill, use its name in backticks (e.g. `element-f
 - `event-modeling-board/`: the board (Vite + React app). `index.html`, `vite.config.js` and `src/`. Builds into `cli/board/public/`.
 - `cli/`: `index.js` dispatches CLI commands (`npx em-cli`); `init.js` installs skills.
 - `cli/agent/`: `agent.js` owns the agent client; `harnesses/` holds Claude and Copilot dialects.
-- `cli/board/`: the HTTP server hosting the built board. `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `agent-api.js`: agent sessions, controls and build-queue routes. `build-queue.js`: in-memory build-queue state. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.event-modeling/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
+- `cli/board/`: the HTTP server hosting the built board. `app.js`: `createServer()`. `api.js`: the `/api` routes, the revision headers and the event stream. `agent-api.js`: agent sessions, controls and build-queue routes. `build-queue.js`: in-memory build-queue state. `model-store.js`: `ModelStore`, `contexts.yaml` and the Context files (Chapters and slices inline) in `.em/model/`, the revision and `edit()`/`read()`. `model-edit.js`: the editing API (S4): the operations and `ROUTES`. `model-rules.js`: the board's rules for the server (lane types, flows, `validateModel()`, `canonical()`). `http-error.js`: `HttpError`. `html-compact.js`: `compactHtml()`, which shrinks Screen HTML on push (S3.10).
 
 Board code, all in `event-modeling-board/src/`:
 

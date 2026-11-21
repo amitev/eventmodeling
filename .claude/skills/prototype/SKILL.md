@@ -4,7 +4,7 @@ description: Build/update a clickable one-Context prototype in `/prototype` with
 disable-model-invocation: true
 ---
 
-**Model access:** API only ([../em-board-api.md](../em-board-api.md)); board read-only for this skill. Never read, create, edit or delete files in `.event-modeling/`.
+**Model access:** API only ([../em-board-api.md](../em-board-api.md)); board read-only for this skill. Never read, create, edit or delete files in `.em/model/`.
 
 Clarification: Posting the questions means reporting.
 
