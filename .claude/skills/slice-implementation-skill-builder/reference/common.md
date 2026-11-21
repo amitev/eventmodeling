@@ -12,7 +12,7 @@ Generated skills are **backend only**: no UI code, no Screen mockup use.
 
 Put this rule in every generated skill, as its own section before Step 1:
 
-> **Scope:** implement only the requested slice. No other slice may be affected: do not change, move or delete code of other slices, and do not create what another slice owns (e.g. a database table, a queue, a shared type, another slice's Event or Read Model). Shared code the decisions name is used, not changed. If something the slice depends on is missing (a table, a queue, an Event type, a configuration, a library), **stop with an error** that names what is missing and which slice should provide it. Write nothing, do not create it, do not work around it. A red Note, unclear required `info` or conflicting scenarios blocks the slice: stop and report before code changes. If a required business rule has no scenario, report the gap and continue only with independent implementable behavior; never invent the rule. Never ask the user for clarification. Complete discovery and gap analysis before writing code.
+> **Scope:** implement only the requested slice. No other slice may be affected: do not change, move or delete code of other slices, and do not create what another slice owns (e.g. a database table, a queue, a shared type, another slice's Event or Read Model). Shared code the decisions name is used, not changed. If something the slice depends on is missing (a table, a queue, an Event type, a configuration, a library), **stop with an error** that names what is missing and which slice should provide it. Write nothing, do not create it, do not work around it. Missing or unclear model information (a required behavior with no specified outcome, a red Note, unclear `info`) also blocks implementation: stop and list the missing information. An absent `SCENARIOS` element or empty scenario set is not, by itself, a blocker. Implement behavior clear from the model structure, fields and connections; do not invent business rules. Stop only when you can identify a required behavior that cannot be determined from the model, and report that behavior rather than merely noting that scenarios are absent. Never ask the user for clarification. Complete all discovery and gap analysis before the first code write; if any required information is missing or ambiguous, make no code changes.
 
 ## Step 1 — Preflight (no questions)
 
@@ -20,7 +20,7 @@ Put this rule in every generated skill, as its own section before Step 1:
 2. Check the outline's slice `type` is the one of the type file. Another type: stop and name the right sibling skill. `null`: stop and report that the slice is incomplete.
 3. Use the stack fixed by the builder's decisions. If a required implementation detail is not covered, stop and name it as missing information.
 4. Check the dependencies the slice needs exist (see Scope above) before writing any file. Missing: stop with the error.
-5. Proceed only when the target, required stack details and dependencies are sufficient. Fetch and analyze the slice before writing code. For a required business rule with no scenario, report the gap and continue only with independent behavior. If a contradiction, red Note, unclear required `info` or other missing required stack/model detail blocks the slice, stop without code changes and report it.
+5. Proceed only when the target, model information, stack decisions and dependencies are sufficient. Fetch and analyze the slice before writing any code. If a gap is found at any point, stop without code changes and report the missing information.
 
 ## Step 2 — Fetch the slice
 
@@ -36,11 +36,11 @@ Read Chapter metadata and lanes from `chapter`, Context metadata from `context`,
 
 Every field has `name`, `type`, flags (`list`, `generated`, `pii`, ...) and, for `object`, children. Field names are kept exactly. `connectsTo` lists the arrows out of an element; parents are the elements whose `connectsTo` holds its id.
 
-## Scenario contract and tests (copy into every generated skill)
+## Scenario-driven tests and fallback tests (copy into every generated skill)
 
-Read every scenario's `name`, `description`, `given`, `when`, `then`, `error` and example data before implementation. Treat their combined requirements as binding: satisfy every scenario and cover it in tests. Apply `description` requirements alongside GWT and example data, not only as test labels. Do not invent unstated requirements or silently skip, weaken or prioritize a scenario. If a description conflicts with its GWT/example data, or scenarios conflict for the same relevant conditions, stop and report before code changes. Different outcomes for different conditions are not conflicts.
+Read each scenario's `name`, `description`, `given`, `when`, `then`, `error` and example data before implementing tests. Apply requirements stated in `description` to test setup, actions and assertions; never use it only as a label/comment or ignore it because GWT has example values. Do not invent unstated requirements. Ambiguous descriptions or conflicts with GWT/example data block implementation: stop and report before code changes, never choose one silently.
 
-No scenarios alone does not block implementation. If a required behavior cannot be derived from other explicit model facts, report that gap and continue with independent implementable behavior; do not invent the missing rule.
+When scenarios are absent, do not stop for that reason alone. Add focused tests for behavior directly specified by the model, using synthetic, type-correct fixture values; do not present these as modeled scenarios or make them imply business rules. If a necessary expected outcome is not specified by the model, report that specific gap only when it prevents implementation.
 
 ## Step 5 — Report
 

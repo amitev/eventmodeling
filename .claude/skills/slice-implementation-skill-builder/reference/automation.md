@@ -14,17 +14,17 @@ Both share one shape: a todo list (Read Model) feeds a Processor, which issues a
 | `PROCESSOR` element | the automation's name: it takes todo items and issues the Command. No fields of its own: it passes the Read Model's fields on; its `info` gives implementation constraints |
 | `COMMAND` element (arrow Processor → Command) | the action: `fields` (`generated` ones are filled by the system) and `info` implementation constraints |
 | `EVENT` elements after the Command | the facts recorded; these Events **close** the item they belong to (automation); each Event's `info` gives implementation constraints |
-| `SCENARIOS` element in the Spec lane | Command scenarios: `name`, `description`, `given`, `when`, `then`, `error` and example data; description supplies test requirements too |
+| `SCENARIOS` element in the Spec lane, if present | Command scenarios: `name`, `description`, `given`, `when`, `then`, `error` and example data; description supplies test requirements too |
 | Translation only: the Integration-lane element | the external Event/Read Model: its fields are the source data; the lane's `info` (the system, how it reaches us: format, delivery, ordering, retention, authentication) and the element's `info` bind the code; if required information is missing, stop and report it |
 
 ## Step 4 — Implement (neutral part)
 
 1. **Todo query**: a projection of the opening Events (and, for an automation, the closing ones). Read `isList` (omitted = `false`); if it conflicts with the todo-list query, stop and report, never change the model. Each item's fields match the Read Model's fields; no outer list field for multiple items. Unclear closing, ordering or retry rule: stop and report.
 2. **Processor**: for each open item, issues the Command with the item's fields. A repeat or crash must not duplicate the action.
-3. **Command handler**: decides and records the Events as the Scenarios say (as `state-change.md`, Step 4).
+3. **Command handler**: use scenarios when present to determine business decisions and refusals, as in `state-change.md`, Step 4. If behavior is fully specified by the model structure and fields (for example, direct field mapping to an Event), implement it without requiring a scenario. Do not invent business rules. Stop only when a specific required behavior cannot be determined from any model information; report that behavior, not merely the absence of scenarios.
 4. **Translation only**: the external Event is **first stored as an internal Event** (the Command's Event, in this domain's language); only that Event feeds read models. Never feed another Read Model from the external Event. The todo list is never closed (as modelled); if required translation information is unclear, stop and report it.
-5. **Tests**: scenarios for the Command using the common scenario-test rule; one for the todo list (Events in, items out); one Processor run (item in, Command issued). Apply relevant scenario-description requirements to these checks too.
+5. **Tests**: add one Command test per scenario when scenarios are present, using the common scenario-test rule; add one for the todo list (Events in, items out) and one Processor run (item in, Command issued). If there are no scenarios, test behavior directly specified by the model with synthetic, type-correct fixture values; do not make fixtures imply unstated business rules. Apply relevant scenario-description requirements to tests when scenarios are present.
 
 ## Gaps to report
 
-Unclear closing rule, fields with no source, missing `info` (external system, schedule): stop and report the missing information; do not ask.
+Unclear closing rule, fields with no source, or missing `info` (external system, schedule): stop and report the missing information; do not ask. A specific required behavior that remains unspecified also blocks implementation; absence of scenarios alone does not.
