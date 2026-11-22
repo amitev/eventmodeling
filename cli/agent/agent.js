@@ -217,7 +217,7 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
     const definitionPath = await saveSliceDefinition(url, task, signal);
     signal.throwIfAborted();
     console.log(`Saved slice definition to "${definitionPath}". Task: ${id}`);
-    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server. Return exactly one XML response with the following structure: <build><success>true|false</success><response>Explanation of what you did</response></build>. Set success to true only if the slice was fully implemented; otherwise set it to false and explain the incomplete work or blocker in response. Return no Markdown fences or text outside the XML.`;
+    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server. Return exactly one XML response with the following structure: <build><success>true|false</success><response>Explanation of what you did</response></build>. Set success to true if the slice is already fully implemented with all requirements met, or if you successfully completed the implementation. Set success to false only if there is incomplete work or a blocker preventing completion; if you encounter a failure, undo all your changes before returning false and explain the issue in response. Return no Markdown fences or text outside the XML.`;
     const output = await runHarness(dialect, model, prompt, children);
     const buildResponse = parseBuildResponse(dialect, output);
     result = buildResponse.status;
