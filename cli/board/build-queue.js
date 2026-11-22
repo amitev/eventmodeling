@@ -24,7 +24,7 @@ export function createBuildQueue() {
         throw new HttpError(409, `Slice "${sliceName}" is already in the build queue`);
       }
       if (existing) tasks.splice(tasks.indexOf(existing), 1);
-      const task = { id: randomUUID(), contextId, chapterId, sliceId, sliceName, builder, status: 'queued', error: null };
+      const task = { id: randomUUID(), contextId, chapterId, sliceId, sliceName, builder, status: 'queued', error: null, startedAt: null, completedAt: null, cost: null, currency: null };
       tasks.push(task);
       return copy(task);
     },
@@ -43,15 +43,23 @@ export function createBuildQueue() {
       const task = tasks.find((candidate) => candidate.status === 'queued' && same(candidate.builder, builder));
       if (!task) return null;
       task.status = 'running';
+      task.startedAt = new Date().toISOString();
       return copy(task);
     },
 
-    finish(id, builder, error) {
+    finish(id, builder, error, cost, currency) {
       const task = find(id);
       if (task.status !== 'running' || !same(task.builder, builder)) {
         throw new HttpError(409, 'Build task is not running on this agent');
       }
-      Object.assign(task, error === undefined ? { status: 'done' } : { status: 'failed', error });
+      const completedAt = new Date().toISOString();
+      Object.assign(task, error === undefined ? { status: 'done', completedAt } : { status: 'failed', error, completedAt });
+      if (cost !== undefined && cost !== null) {
+        task.cost = cost;
+      }
+      if (currency !== undefined && currency !== null) {
+        task.currency = currency;
+      }
     },
 
     release(builder) {

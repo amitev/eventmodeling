@@ -7,6 +7,22 @@ const STATUS = { queued: 'Queued', running: 'In progress', done: 'Done', failed:
 const buildable = (task) => !task || task.status === 'done' || task.status === 'failed';
 const removable = (task) => task?.status === 'queued' || task?.status === 'failed';
 
+function formatDuration(startedAt, completedAt) {
+  if (!startedAt || !completedAt) return 'N/A';
+  const start = new Date(startedAt);
+  const end = new Date(completedAt);
+  const seconds = Math.round((end - start) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes}m`;
+}
+
+function formatCost(cost, currency) {
+  if (!cost && cost !== 0) return 'N/A';
+  const prefix = currency === 'USD' ? '$' : '';
+  return `${prefix}${cost.toFixed(2)}`;
+}
+
 // Menu of builders with their robot heads. Fixed position escapes the dialog's overflow clipping;
 // .tasks-dialog must not have a transform, or it becomes the menu's containing block.
 function BuilderMenu({ builders, label, text, disabled, onBuild }) {
@@ -109,7 +125,6 @@ function SliceTile({ slice, task, selected, onSelect, onRemove }) {
         <strong>{slice.name}</strong>
       </div>
       <div className="cockpit-slice-status">{task ? STATUS[status] : 'Not queued'}</div>
-      {task?.error && <div className="cockpit-slice-error">{task.error}</div>}
       <div className="cockpit-slice-actions">
         {removable(task) && <button type="button" onClick={() => onRemove([slice])}>Remove</button>}
       </div>
@@ -131,6 +146,10 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
   const selection = allSlices.filter((slice) => picked.has(slice.id));
   const toBuild = selection.filter((slice) => buildable(tasks.get(slice.id)));
   const toRemove = selection.filter((slice) => removable(tasks.get(slice.id)));
+
+  // Build log: show only when exactly one failed slice is selected
+  const selectedFailedSlice = selection.length === 1 && selection[0] && tasks.get(selection[0].id)?.status === 'failed' ? selection[0] : null;
+  const selectedFailedTask = selectedFailedSlice ? tasks.get(selectedFailedSlice.id) : null;
 
   const select = (chapter, slice, e) => {
     const ids = chapter.slices.map((s) => s.id);
@@ -160,8 +179,11 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
     }
     if (failures.length) setError(`Could not ${verb} ${failures.join('; ')}`);
   };
-  const build = (list, builder) => each('build', list, ({ contextId, chapterId, id, name }) =>
-    queue.add({ contextId, chapterId, sliceId: id, sliceName: name, builder }));
+  const build = async (list, builder) => {
+    await each('build', list, ({ contextId, chapterId, id, name }) =>
+      queue.add({ contextId, chapterId, sliceId: id, sliceName: name, builder }));
+    setPicked(new Set());
+  };
   const remove = (list) => each('remove', list, (slice) => queue.remove(tasks.get(slice.id).id));
 
   return createPortal(
@@ -169,7 +191,7 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
       ref={popup}
       tabIndex={-1}
       className="tasks-dialog agent-cockpit"
-      style={{ top, height: `min(80vh, calc(100vh - ${top + 8}px))` }}
+      style={{ top, height: `calc(100vh - ${top + 20}px)` }}
       role="dialog"
       aria-modal="false"
       aria-label="Agent cockpit"
@@ -178,32 +200,46 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="info-title tasks-title"><span>Agent cockpit</span></div>
-      <div className="cockpit-bulk">
-        <BuildControl builders={queue.builders} label="Build selected slices" count={toBuild.length} onBuild={(builder) => build(toBuild, builder)} />
-        <button type="button" disabled={!toRemove.length} onClick={() => remove(toRemove)}>{`Remove (${toRemove.length})`}</button>
-        <button type="button" disabled={!selection.length} onClick={() => setPicked(new Set())}>Clear</button>
-        <span className="cockpit-count">{selection.length} selected</span>
-      </div>
-      {error && <div className="tasks-error" role="alert">{error}</div>}
-      <div className="tasks-body">
-        {chapters.length ? chapters.map((chapter) => (
-          <section key={chapter.id} className="cockpit-chapter">
-            <h3>{chapter.title}</h3>
-            <ul className="cockpit-slices" aria-multiselectable="true">
-              {chapter.slices.map((slice) => (
-                <SliceTile
-                  key={slice.id}
-                  slice={slice}
-                  task={tasks.get(slice.id)}
-                  selected={picked.has(slice.id)}
-                  onSelect={(e) => select(chapter, slice, e)}
-                  onRemove={remove}
-                />
-              ))}
-            </ul>
-          </section>
-        )) : <p>No Chapters.</p>}
+      <div className="cockpit-wrapper">
+        <div className="cockpit-main">
+          <div className="info-title tasks-title"><span>Agent cockpit</span></div>
+          <div className="cockpit-bulk">
+            <BuildControl builders={queue.builders} label="Build selected slices" count={toBuild.length} onBuild={(builder) => build(toBuild, builder)} />
+            <button type="button" disabled={!toRemove.length} onClick={() => remove(toRemove)}>{`Remove (${toRemove.length})`}</button>
+            <button type="button" disabled={!selection.length} onClick={() => setPicked(new Set())}>Clear</button>
+            <span className="cockpit-count">{selection.length} selected</span>
+          </div>
+          {error && <div className="tasks-error" role="alert">{error}</div>}
+          <div className="tasks-body">
+            {chapters.length ? chapters.map((chapter) => (
+              <section key={chapter.id} className="cockpit-chapter">
+                <h3>{chapter.title}</h3>
+                <ul className="cockpit-slices" aria-multiselectable="true">
+                  {chapter.slices.map((slice) => (
+                    <SliceTile
+                      key={slice.id}
+                      slice={slice}
+                      task={tasks.get(slice.id)}
+                      selected={picked.has(slice.id)}
+                      onSelect={(e) => select(chapter, slice, e)}
+                      onRemove={remove}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )) : <p>No Chapters.</p>}
+          </div>
+        </div>
+        {selectedFailedTask && (
+          <div className="cockpit-build-log">
+            <h3>Build log</h3>
+            <div className="build-log-info">
+              <div>Duration: {formatDuration(selectedFailedTask.startedAt, selectedFailedTask.completedAt)}</div>
+              <div>Cost: {formatCost(selectedFailedTask.cost, selectedFailedTask.currency)}</div>
+            </div>
+            <div className="build-log-content">{selectedFailedTask.error}</div>
+          </div>
+        )}
       </div>
     </div>,
     document.body

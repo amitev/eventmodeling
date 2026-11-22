@@ -122,7 +122,9 @@ export function agentApi() {
       const session = liveSession(req.params.id);
       const error = result === 'failed'
         ? (typeof req.body?.error === 'string' && req.body.error.trim()) || 'Build failed' : undefined;
-      queue.finish(req.params.taskId, session.name, error);
+      const cost = typeof req.body?.cost === 'number' ? req.body.cost : undefined;
+      const currency = typeof req.body?.currency === 'string' ? req.body.currency : undefined;
+      queue.finish(req.params.taskId, session.name, error, cost, currency);
       res.status(204).end();
       dispatch(session.name);
     };

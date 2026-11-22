@@ -57,6 +57,9 @@ JIRA integration
 README
 - clean up. it lost its purpose
 
+Guardrails
+- config file with the guardrails that should be run
+
 API
 - load slice should include context and chapter info
 

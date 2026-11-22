@@ -130,9 +130,40 @@ function runHarness(dialect, model, prompt, children) {
       if (stderr) console.error(`${dialect.label} stderr:\n${stderr.trimEnd()}`);
       if (processError) reject(new Error(`Could not run ${dialect.label}: ${processError.message}`));
       else if (code !== 0) reject(new Error(`${dialect.label} ${signal ? `terminated by ${signal}` : `exited with code ${code}`}.`));
-      else resolve();
+      else resolve(stdout);
     });
   });
+}
+
+export function parseBuildResponse(dialect, output) {
+  const parsed = dialect.parseResponse(output);
+  const xmlMatch = parsed.result.match(/<build>([\s\S]*?)<\/build>/);
+  if (!xmlMatch) {
+    throw new Error('Invalid build response: expected <build>...</build> XML');
+  }
+  const xmlContent = xmlMatch[1];
+  
+  const successMatch = xmlContent.match(/<success>(.*?)<\/success>/);
+  const responseMatch = xmlContent.match(/<response>([\s\S]*?)<\/response>/);
+  
+  if (!successMatch || !responseMatch) {
+    throw new Error('Invalid build response: missing <success> or <response> tags');
+  }
+  
+  const successStr = successMatch[1].trim().toLowerCase();
+  if (successStr !== 'true' && successStr !== 'false') {
+    throw new Error('Invalid build response: <success> must be "true" or "false"');
+  }
+  
+  const response = responseMatch[1].trim();
+  if (!response) {
+    throw new Error('Invalid build response: <response> must be non-empty text');
+  }
+  
+  const success = successStr === 'true';
+  const status = success ? 'done' : 'failed';
+  const error = success ? undefined : response;
+  return { status, error, cost: parsed.cost, currency: parsed.currency, durationMs: parsed.durationMs };
 }
 
 async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signal) {
@@ -178,13 +209,25 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
   const { id, contextId, chapterId, sliceId, sliceName } = task;
   let result = 'done';
   let error;
+  let cost;
+  let currency;
+  let durationMs;
   try {
     console.log(`Building slice "${sliceName}". Task: ${id}`);
     const definitionPath = await saveSliceDefinition(url, task, signal);
     signal.throwIfAborted();
     console.log(`Saved slice definition to "${definitionPath}". Task: ${id}`);
-    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server.`;
-    await runHarness(dialect, model, prompt, children);
+    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server. Return exactly one XML response with the following structure: <build><success>true|false</success><response>Explanation of what you did</response></build>. Set success to true only if the slice was fully implemented; otherwise set it to false and explain the incomplete work or blocker in response. Return no Markdown fences or text outside the XML.`;
+    const output = await runHarness(dialect, model, prompt, children);
+    const buildResponse = parseBuildResponse(dialect, output);
+    result = buildResponse.status;
+    error = buildResponse.error;
+    cost = buildResponse.cost;
+    currency = buildResponse.currency;
+    durationMs = buildResponse.durationMs;
+    if (error) {
+      console.error(error);
+    }
   } catch (e) {
     if (signal.aborted) return;
     result = 'failed';
@@ -193,10 +236,14 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
   }
   if (signal.aborted) return;
   try {
+    const body = error === undefined ? {} : { error };
+    if (cost !== undefined && cost !== null) body.cost = cost;
+    if (currency !== undefined) body.currency = currency;
+    if (durationMs !== undefined && durationMs !== null) body.durationMs = durationMs;
     const response = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(error === undefined ? {} : { error }),
+      body: JSON.stringify(body),
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
     });
