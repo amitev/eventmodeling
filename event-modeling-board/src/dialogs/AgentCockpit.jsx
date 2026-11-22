@@ -147,9 +147,9 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
   const toBuild = selection.filter((slice) => buildable(tasks.get(slice.id)));
   const toRemove = selection.filter((slice) => removable(tasks.get(slice.id)));
 
-  // Build log: show only when exactly one failed slice is selected
-  const selectedFailedSlice = selection.length === 1 && selection[0] && tasks.get(selection[0].id)?.status === 'failed' ? selection[0] : null;
-  const selectedFailedTask = selectedFailedSlice ? tasks.get(selectedFailedSlice.id) : null;
+  // Build log: show when exactly one slice with a completed build is selected
+  const selectedCompletedSlice = selection.length === 1 && selection[0] && ['done', 'failed'].includes(tasks.get(selection[0].id)?.status) ? selection[0] : null;
+  const selectedCompletedTask = selectedCompletedSlice ? tasks.get(selectedCompletedSlice.id) : null;
 
   const select = (chapter, slice, e) => {
     const ids = chapter.slices.map((s) => s.id);
@@ -230,14 +230,16 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
             )) : <p>No Chapters.</p>}
           </div>
         </div>
-        {selectedFailedTask && (
+        {selectedCompletedTask && (
           <div className="cockpit-build-log">
             <h3>Build log</h3>
             <div className="build-log-info">
-              <div>Duration: {formatDuration(selectedFailedTask.startedAt, selectedFailedTask.completedAt)}</div>
-              <div>Cost: {formatCost(selectedFailedTask.cost, selectedFailedTask.currency)}</div>
+              <div>Duration: {formatDuration(selectedCompletedTask.startedAt, selectedCompletedTask.completedAt)}</div>
+              <div>Cost: {formatCost(selectedCompletedTask.cost, selectedCompletedTask.currency)}</div>
             </div>
-            <div className="build-log-content">{selectedFailedTask.error}</div>
+            {selectedCompletedTask.status === 'failed' && (
+              <div className="build-log-content">{selectedCompletedTask.error}</div>
+            )}
           </div>
         )}
       </div>
