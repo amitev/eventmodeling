@@ -60,6 +60,23 @@ export function createBuildQueue() {
       if (currency !== undefined && currency !== null) {
         task.currency = currency;
       }
+      
+      // If task failed, block and remove all other queued tasks from the same context
+      if (error !== undefined) {
+        const contextId = task.contextId;
+        const toRemove = tasks.filter(
+          (t) => t.contextId === contextId && t.id !== id && t.status === 'queued'
+        );
+        toRemove.forEach((t) => {
+          t.status = 'blocked';
+          t.completedAt = completedAt;
+          t.error = `Blocked: another slice in this context failed`;
+        });
+        // Remove blocked tasks from the queue
+        toRemove.forEach((t) => {
+          tasks.splice(tasks.indexOf(t), 1);
+        });
+      }
     },
 
     release(builder) {

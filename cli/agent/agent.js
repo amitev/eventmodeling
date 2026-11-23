@@ -1,13 +1,15 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { claude } from './harnesses/claude.js';
 import { copilot } from './harnesses/copilot.js';
 
 class ConnectionError extends Error {}
 const HARNESSES = new Map([['claude', claude], ['copilot', copilot]]);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function runAgent({ port, name, model, agentType, harness = 'claude' }) {
   const dialect = HARNESSES.get(harness);
@@ -191,7 +193,7 @@ async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signa
     throw new Error('Slice definition does not match the build task');
   }
 
-  const definitionPath = path.join('.em', 'slices', `${sliceId}.json`);
+  const definitionPath = path.join('.em', '.slices', `${sliceId}.json`);
   const directory = path.dirname(definitionPath);
   await mkdir(directory, { recursive: true });
   const temp = path.join(directory, `.${randomUUID()}.tmp`);
@@ -217,7 +219,14 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
     const definitionPath = await saveSliceDefinition(url, task, signal);
     signal.throwIfAborted();
     console.log(`Saved slice definition to "${definitionPath}". Task: ${id}`);
-    const prompt = `Build Slice ${sliceId} from Chapter ${chapterId} of Context ${contextId}. Read the slice definition from ${definitionPath}; do not read it from the server. Return exactly one XML response with the following structure: <build><success>true|false</success><response>Explanation of what you did</response></build>. Set success to true if the slice is already fully implemented with all requirements met, or if you successfully completed the implementation. Set success to false only if there is incomplete work or a blocker preventing completion; if you encounter a failure, undo all your changes before returning false and explain the issue in response. Return no Markdown fences or text outside the XML.`;
+    
+    const promptTemplate = await readFile(path.join(__dirname, 'build-slice-prompt.md'), 'utf8');
+    const prompt = promptTemplate
+      .replace('{sliceId}', sliceId)
+      .replace('{chapterId}', chapterId)
+      .replace('{contextId}', contextId)
+      .replace('{definitionPath}', definitionPath);
+    
     const output = await runHarness(dialect, model, prompt, children);
     const buildResponse = parseBuildResponse(dialect, output);
     result = buildResponse.status;
