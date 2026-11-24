@@ -105,7 +105,8 @@ if (command === undefined || values.help) {
 if (command === 'init') {
   if (values.target === '') fail('--target needs a folder');
   try {
-    const { dir, version, installed, removed } = installSkills({ target: values.target });
+    const { dir, version, installed, removed, actions } = installSkills({ target: values.target });
+    for (const action of actions) console.log(action);
     console.log(`Installed ${installed.length} skill entries (version ${version}) in ${dir}`);
     if (removed.length) console.log(`Removed: ${removed.join(', ')}`);
   } catch (e) {

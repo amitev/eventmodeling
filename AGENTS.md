@@ -19,6 +19,7 @@ All (without any exception) the requirements and learnings during the implementa
 
 - [Board requirements](spec/MODELING_BOARD.md): contains only requirements related to the board (`event-modeling-board/`).
 - [Server requirements](spec/SERVER.md): HTTP server and shared CLI requirements (`cli/board/`, `cli/index.js`).
+- [CLI requirements](spec/CLI.md): `init` CLI command (`cli/init.js`).
 - [Agent requirements](spec/AGENT.md): `agent` CLI command and its server connection.
 - [Skills requirements](spec/SKILLS.md): requirements and learnings for skills and agent workflows, not board or server behavior.
 

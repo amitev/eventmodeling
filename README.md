@@ -88,7 +88,7 @@ Each connected CLI appears as a robot icon in the board header; the same name al
 
 Click **Run Claude** or **Run Copilot** in an agent's hover card to run its configured harness with `-p "What model are you" --model <configured model> --output-format json`. The selected CLI must be installed, authenticated and on the agent's PATH. Harness checks and builds run from the folder where you started `em-cli agent`. The agent terminal logs each harness check or build task and its prompt, then prints harness stdout and stderr after exit. Keep the server on localhost: anyone who can reach it can trigger this command.
 
-Both harnesses get file read, write, edit, grep and glob permissions. Claude also gets curl command rules for `http://localhost:` and `http://127.0.0.1:`. Copilot gets file tools only.
+Both harnesses get file read, write, edit, grep and glob permissions. Claude also gets curl command rules for `http://localhost:` and `http://127.0.0.1:`; `init` writes them to `.claude/settings.json`, so run `init` in the folder where you start `em-cli agent`. Copilot gets file tools only.
 
 Builder agents build slices from the build queue. Open the header **Agent cockpit** to see every Chapter of the current Context with its slices, colored by build status: not queued, queued, in progress, done or failed. A slice with a task shows its builder's robot icon. Select slices and use **Build** in the bar on top to queue the ones that are not queued, done or failed; with several builders, pick one. Selected slices enter the queue in cockpit order: Chapters top to bottom, slices left to right. Remove queued or failed slices from their tile or the bar. Click a slice to add it to or remove it from the selection, Shift+click to add a range within a Chapter. A slice has at most one task. Each builder runs one task at a time with its configured harness, using `Build Slice <slice id> from Chapter <chapter id> of Context <context id>`. It must return `{"success": <boolean>, "response": "<explanation>"}`; `false`, an invalid response, or a nonzero harness exit marks the task failed (red in the cockpit). The queue is kept in memory and lost on server restart. A disconnected builder's running task returns to the queue and resumes when an agent with the same name reconnects.
 
@@ -102,7 +102,7 @@ Press Ctrl+C to disconnect. On connection failure or unexpected disconnect, `age
 npx em-cli@latest init
 ```
 
-Creates `.em/` and copies the packaged skills and `em-board-api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
+Creates `.em/`, adds `.em/.slices` to `.gitignore`, adds the Claude permissions to `.claude/settings.json` (existing settings are kept) and copies the packaged skills and `em-board-api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
 
 ## Develop
 
