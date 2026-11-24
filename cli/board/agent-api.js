@@ -124,7 +124,8 @@ export function agentApi() {
         ? (typeof req.body?.error === 'string' && req.body.error.trim()) || 'Build failed' : undefined;
       const cost = typeof req.body?.cost === 'number' ? req.body.cost : undefined;
       const currency = typeof req.body?.currency === 'string' ? req.body.currency : undefined;
-      queue.finish(req.params.taskId, session.name, error, cost, currency);
+      const response = typeof req.body?.response === 'string' && req.body.response.trim() ? req.body.response.trim() : undefined;
+      queue.finish(req.params.taskId, session.name, error, cost, currency, response);
       res.status(204).end();
       dispatch(session.name);
     };

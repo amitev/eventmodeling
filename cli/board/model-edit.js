@@ -403,6 +403,37 @@ function search(model, { query }) {
   return found;
 }
 
+function readModelDependencies(ix, slice) {
+  const dependencies = new Map();
+  for (const element of slice.elements) {
+    if (element.type !== 'READ_MODEL') continue;
+    const originalId = element.copyOf ?? element.id;
+    if (!dependencies.has(originalId)) dependencies.set(originalId, new Map());
+  }
+  for (const source of ix.elements.values()) {
+    if (source.element.type !== 'EVENT') continue;
+    const original = source.element.copyOf ? ix.elements.get(source.element.copyOf) : source;
+    if (original.slice.id === slice.id) continue;
+    for (const targetId of source.element.connectsTo) {
+      const target = ix.elements.get(targetId).element;
+      const events = dependencies.get(target.copyOf ?? target.id);
+      if (!events || events.has(original.element.id)) continue;
+      const { id, name, type, fields = [], info } = original.element;
+      const context = ix.contexts.get(original.chapter.context);
+      events.set(id, {
+        context: { id: context.id, name: context.name },
+        chapter: { id: original.chapter.id, name: original.chapter.name },
+        slice: { id: original.slice.id, name: original.slice.name },
+        event: { id, name, type, fields: structuredClone(fields), ...(info === undefined ? {} : { info }) },
+      });
+    }
+  }
+  return slice.elements.filter((element) => element.type === 'READ_MODEL').map((element) => ({
+    readModelId: element.id,
+    events: [...dependencies.get(element.copyOf ?? element.id).values()],
+  }));
+}
+
 function getChapter(model, { params, query }) {
   const { screenContent = 'true', slice } = query;
   if (screenContent !== 'true' && screenContent !== 'false') throw bad('screenContent must be true or false');
@@ -419,7 +450,12 @@ function getChapter(model, { params, query }) {
   if (slice === undefined) return chapter;
   const { slices, ...chapterDetails } = chapter;
   const { id, name, info } = found(ix.contexts, chapter.context, 'context');
-  return { chapter: chapterDetails, context: { id, name, ...(info === undefined ? {} : { info }) }, slices };
+  return {
+    chapter: chapterDetails,
+    context: { id, name, ...(info === undefined ? {} : { info }) },
+    slices,
+    readModelDependencies: readModelDependencies(ix, slices[0]),
+  };
 }
 
 // ---------- Contexts ----------

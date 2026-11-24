@@ -587,7 +587,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R13.7** Card shows relative age and local time of the last acknowledged ping, or **Not yet**. Connectivity: `pending` before first acknowledgment, `alive` for age under 65 seconds, `unresponsive` otherwise.
 - **R13.8** **Cancel run** stays disabled until cancellation is supported. **Stop agent** stops only that session; remove its icon when the server accepts the stop or reports it gone. Show other failures in the card.
 - **R13.9** Agent icons use the header's spare width. Scroll horizontally on overflow; connecting agents does not increase header height.
-- **R13.10** Each agent card offers **Run Claude** or **Run Copilot** for its configured harness, for modeler and builder. Send only to that session; show send errors or acceptance with output location (agent console). Disable while sending or stopping; acceptance does not mean execution succeeded.
+- **R13.10** Not used (was: **Run Claude**/**Run Copilot** button on the agent card). The server route stays (S2.30).
 
 ## 14. Agent cockpit
 
@@ -601,6 +601,8 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R14.8** Click a tile (not its controls) toggles it; other selected tiles stay selected. No Ctrl+click. Sets the range anchor. Shift+click adds the range from the anchor to the clicked tile, within the anchor's Chapter, to the selection; never deselects. In another Chapter or without anchor it acts as a click. Selected tiles have a blue outline. Selection clears when the cockpit closes; not an undo step.
 - **R14.9** Bar above the Chapters, left-aligned: `Build (<n>)`, `Remove (<n>)`, **Clear**, then `<n> selected`. Build applies to selected tiles not queued, done or failed (no separate retry or rebuild); Remove to selected queued or failed tiles; others are skipped. Disabled when the count is 0. Build adds the slices one at a time in cockpit order (Chapters top to bottom, slices left to right), so they enter the queue in that order. Build with one builder: builds with it; none: disabled, tooltip `No builder agent connected`; several: `Build (<n>) with...` menu under its button, listing builders, each with its robot icon (R13.4 color) and name; Esc, outside click or scroll closes it.
 - **R14.10** Build sends each slice's own Context, Chapter and slice IDs in its queue request ([S2.38](./AGENT.md#build-queue)).
+- **R14.11** Selecting one done, failed or blocked slice shows a build log under the Chapters: duration, cost, and the task's `error` (failed, blocked) or `response` (done).
+- **R14.12** Build log text has a top-right copy button, visible on hover or keyboard focus. Overlay it without shifting text. Copy the full displayed response or error; show clipboard failures in the cockpit.
 
 ## Out of scope for now
 

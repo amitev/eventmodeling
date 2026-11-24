@@ -71,7 +71,7 @@ Use `em-cli --help` for commands or `em-cli <command> --help` for command option
 | `agent` | `--agent-type <type>` | Required | `modeler` or `builder` |
 | `agent` | `--harness <name>` | `claude` | `claude` (Claude Code) or `copilot` (Copilot CLI) |
 | `agent` | `-p`, `--port <port>` | `PORT` env, else `3300` | Board server port on localhost |
-| `agent` | `-v`, `--verbose` | Off | Also log the harness's raw output |
+| `agent` | `-v`, `--verbose` | Off | Also log the prompt and the response; `-vv` (or repeated) also logs the raw harness output |
 | All | `-h`, `--help` | | Show command usage |
 
 Example: `npx em-cli board --port 8080 --host 0.0.0.0`
@@ -87,7 +87,7 @@ Omit `--name` to pick an unused Austrian composer surname, for example `npx em-c
 
 Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until cancellation is supported.
 
-Click **Run Claude** or **Run Copilot** in an agent's hover card to run its configured harness with `-p "What model are you" --model <configured model> --output-format json`. The selected CLI must be installed, authenticated and on the agent's PATH. Harness checks and builds run from the folder where you started `em-cli agent`. The agent terminal logs each harness check or build task and its prompt, then prints harness stdout and stderr after exit. Keep the server on localhost: anyone who can reach it can trigger this command.
+The board has no button for the harness check; `POST /api/agents/:id/run` (S2.30) remains. Harness builds run from the folder where you started `em-cli agent`. The agent terminal logs each build task and its prompt, then prints harness output and stderr after exit. Keep the server on localhost: anyone who can reach it can trigger harness runs.
 
 Both harnesses get file read, write, edit, grep and glob permissions. Claude also gets curl command rules for `http://localhost:` and `http://127.0.0.1:`, and rules for `gradle`, `./gradlew`, `gradlew` and `gradlew.bat`; `init` writes them to `.claude/settings.json`, so run `init` in the folder where you start `em-cli agent`. Copilot gets file tools only.
 

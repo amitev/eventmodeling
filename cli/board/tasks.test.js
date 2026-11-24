@@ -96,6 +96,63 @@ test('one compact batch builds and verifies a new Chapter without echoing HTML o
   assert.match(stored.slices[0].elements.find((e) => e.id === screen).html, /Review your plan/);
 });
 
+test('slice build info resolves and deduplicates external Event dependencies of Read Models', async (t) => {
+  const { request, context, chapter } = await setup(t);
+  const ctx = await context('Sales');
+  const source = await chapter(ctx.id, 'Orders');
+  const target = await chapter(ctx.id, 'Reports');
+  const lane = (ch, type) => ch.lanes.find((entry) => entry.type === type).id;
+  const element = (slice, lane, content) =>
+    request('POST', '/elements', { slice, lane, autoConnect: false, ...content }, 201);
+  const event = await element(source.slices[0].id, lane(source, 'EVENT'), {
+    type: 'EVENT', name: 'Order Placed', info: 'Order accepted',
+    fields: [{ name: 'order', type: 'object', fields: [{ name: 'id' }] }],
+  });
+  const readModel = await element(target.slices[0].id, lane(target, 'INTERACTION'), {
+    type: 'READ_MODEL', name: 'Order Summary',
+  });
+  const unused = await element(target.slices[0].id, lane(target, 'INTERACTION'), {
+    type: 'READ_MODEL', name: 'Other Summary',
+  });
+  const eventCopy = await element(target.slices[0].id, lane(target, 'EVENT'), { copyOf: event.id });
+  const localEvent = await element(target.slices[0].id, lane(target, 'EVENT'), {
+    type: 'EVENT', name: 'Report Viewed',
+  });
+  const otherSlice = await request('POST', `/chapters/${target.id}/slices`, { name: 'View Summary' }, 201);
+  const readModelCopy = await element(otherSlice.id, lane(target, 'INTERACTION'), { copyOf: readModel.id });
+  for (const [from, to] of [
+    [event.id, readModel.id], [eventCopy.id, readModelCopy.id], [localEvent.id, readModel.id],
+  ]) {
+    await request('POST', '/connections', { from, to }, 201);
+  }
+  const storedEvent = await request('GET', `/elements/${event.id}`);
+  const dependency = {
+    context: { id: ctx.id, name: ctx.name },
+    chapter: { id: source.id, name: source.name },
+    slice: { id: source.slices[0].id, name: source.slices[0].name },
+    event: { id: event.id, name: event.name, type: 'EVENT', fields: storedEvent.fields, info: event.info },
+  };
+  const result = await request('GET', `/chapters/${target.id}?slice=${target.slices[0].id}`);
+  assert.deepEqual(result.readModelDependencies, [
+    { readModelId: readModel.id, events: [dependency] },
+    { readModelId: unused.id, events: [] },
+  ]);
+  const copyResult = await request('GET', `/chapters/${target.id}?slice=${otherSlice.id}`);
+  assert.deepEqual(copyResult.readModelDependencies[0], {
+    readModelId: readModelCopy.id,
+    events: [dependency, {
+      context: { id: ctx.id, name: ctx.name },
+      chapter: { id: target.id, name: target.name },
+      slice: { id: target.slices[0].id, name: target.slices[0].name },
+      event: { id: localEvent.id, name: localEvent.name, type: 'EVENT', fields: [] },
+    }],
+  });
+  const sourceResult = await request('GET', `/chapters/${source.id}?slice=${source.slices[0].id}`);
+  assert.deepEqual(sourceResult.readModelDependencies, []);
+  const fullChapter = await request('GET', `/chapters/${target.id}`);
+  assert.equal(Object.hasOwn(fullChapter, 'readModelDependencies'), false);
+});
+
 test('failed batch verification or Chapter alias collision leaves no writes', async (t) => {
   const { request, context } = await setup(t);
   const existing = await context('Existing');

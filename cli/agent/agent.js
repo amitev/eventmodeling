@@ -11,10 +11,10 @@ class ConnectionError extends Error {}
 const HARNESSES = new Map([['claude', claude], ['copilot', copilot]]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-let verbose = false;
+let verbosity = 0;
 
-export async function runAgent({ port, name, model, agentType, harness = 'claude', verbose: verboseLog = false }) {
-  verbose = verboseLog;
+export async function runAgent({ port, name, model, agentType, harness = 'claude', verbosity: level = 0 }) {
+  verbosity = level;
   const dialect = HARNESSES.get(harness);
   if (!dialect) throw new Error('Harness must be claude or copilot');
   const url = new URL(`http://localhost:${port}/api/agent/events`);
@@ -112,20 +112,25 @@ async function* connectionChunks(body) {
   }
 }
 
-// Dialects with `summarize` log a readable summary (plus the raw output when verbose); an unparsable output is logged raw.
+// Logs duration and price; from level 1 also the response, from level 2 the raw output. An unparsable output is logged raw.
 function logOutput(dialect, stdout) {
   const raw = `stdout:\n${stdout.trimEnd()}`;
-  if (!dialect.summarize) return raw;
   try {
-    const summary = dialect.summarize(stdout);
-    return verbose ? `${summary}\n${raw}` : summary;
+    const { result, cost, durationMs } = dialect.parseResponse(stdout);
+    const lines = [
+      `duration: ${durationMs === null ? 'n/a' : `${(durationMs / 1000).toFixed(1)} s`}`,
+      `price: ${cost === null ? 'n/a' : `$${cost.toFixed(4)}`}`,
+    ];
+    if (verbosity >= 1) lines.push(`response:\n${result.trimEnd()}`);
+    if (verbosity >= 2) lines.push(raw);
+    return lines.join('\n');
   } catch {
     return raw;
   }
 }
 
 function runHarness(dialect, model, prompt, children) {
-  console.log(`${dialect.label} prompt: ${prompt}`);
+  if (verbosity >= 1) console.log(`${dialect.label} prompt: ${prompt}`);
   return new Promise((resolve, reject) => {
     const child = spawn(dialect.command, dialect.args(model, prompt), {
       cwd: process.cwd(),
@@ -180,7 +185,7 @@ export function parseBuildResponse(dialect, output) {
   const success = successStr === 'true';
   const status = success ? 'done' : 'failed';
   const error = success ? undefined : response;
-  return { status, error, cost: parsed.cost, currency: parsed.currency, durationMs: parsed.durationMs };
+  return { status, error, response, cost: parsed.cost, currency: parsed.currency, durationMs: parsed.durationMs };
 }
 
 async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signal) {
@@ -226,6 +231,7 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
   const { id, contextId, chapterId, sliceId, sliceName } = task;
   let result = 'done';
   let error;
+  let response;
   let cost;
   let currency;
   let durationMs;
@@ -237,15 +243,16 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
     
     const promptTemplate = await readFile(path.join(__dirname, 'build-slice-prompt.md'), 'utf8');
     const prompt = promptTemplate
-      .replace('{sliceId}', sliceId)
-      .replace('{chapterId}', chapterId)
-      .replace('{contextId}', contextId)
-      .replace('{definitionPath}', definitionPath);
+      .replaceAll('{sliceId}', sliceId)
+      .replaceAll('{chapterId}', chapterId)
+      .replaceAll('{contextId}', contextId)
+      .replaceAll('{definitionPath}', definitionPath);
     
     const output = await runHarness(dialect, model, prompt, children);
     const buildResponse = parseBuildResponse(dialect, output);
     result = buildResponse.status;
     error = buildResponse.error;
+    response = buildResponse.response;
     cost = buildResponse.cost;
     currency = buildResponse.currency;
     durationMs = buildResponse.durationMs;
@@ -261,18 +268,19 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
   if (signal.aborted) return;
   try {
     const body = error === undefined ? {} : { error };
+    if (response !== undefined) body.response = response;
     if (cost !== undefined && cost !== null) body.cost = cost;
     if (currency !== undefined) body.currency = currency;
     if (durationMs !== undefined && durationMs !== null) body.durationMs = durationMs;
-    const response = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
+    const reported = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
     });
-    await response.body?.cancel();
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    await reported.body?.cancel();
+    if (!reported.ok) throw new Error(`HTTP ${reported.status}`);
   } catch (e) {
     console.error(`Could not report build of slice "${sliceName}": ${e.message}`);
   }

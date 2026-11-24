@@ -45,7 +45,7 @@ Options:
       --agent-type <type> Agent type: modeler or builder (required)
       --harness <name> Harness: claude or copilot (default claude)
   -p, --port <port>  Board server port on localhost (default: PORT environment variable, else 3300)
-  -v, --verbose      Also log the harness's raw output
+  -v, --verbose      Also log the prompt and the response; repeat (-vv) for the raw harness output
   -h, --help         Show this help
 `;
 
@@ -90,7 +90,7 @@ try {
         model: { type: 'string' },
         'agent-type': { type: 'string' },
         harness: { type: 'string', default: 'claude' },
-        verbose: { type: 'boolean', short: 'v', default: false },
+        verbose: { type: 'boolean', short: 'v', multiple: true, default: [] },
       } : {}),
       help: { type: 'boolean', short: 'h', default: false },
     },
@@ -131,7 +131,7 @@ if (command === 'agent') {
   if (!['modeler', 'builder'].includes(agentType)) fail('--agent-type must be modeler or builder');
   const harness = values.harness;
   if (!['claude', 'copilot'].includes(harness)) fail('--harness must be claude or copilot');
-  await runAgent({ port, name, model, agentType, harness, verbose: values.verbose });
+  await runAgent({ port, name, model, agentType, harness, verbosity: Math.min(values.verbose.length, 2) });
 } else {
   startBoard();
 }

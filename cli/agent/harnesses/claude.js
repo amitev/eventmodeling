@@ -14,17 +14,9 @@ function parseResponse(stdout) {
   };
 }
 
-function summarize(stdout) {
-  const { result, cost, durationMs } = parseResponse(stdout);
-  const seconds = durationMs === null ? 'n/a' : `${(durationMs / 1000).toFixed(1)} s`;
-  const price = cost === null ? 'n/a' : `$${cost.toFixed(4)}`;
-  return `duration: ${seconds}\nprice: ${price}\nresponse:\n${result.trimEnd()}`;
-}
-
 export const claude = {
   label: 'Claude',
   command: 'claude',
   parseResponse,
-  summarize,
   args: (model, prompt) => ['-p', prompt, '--model', model, '--output-format', 'json'],
 };

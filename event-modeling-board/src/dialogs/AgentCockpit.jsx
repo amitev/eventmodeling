@@ -150,6 +150,17 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
   // Build log: show when exactly one slice with a completed build is selected
   const selectedCompletedSlice = selection.length === 1 && selection[0] && ['done', 'failed', 'blocked'].includes(tasks.get(selection[0].id)?.status) ? selection[0] : null;
   const selectedCompletedTask = selectedCompletedSlice ? tasks.get(selectedCompletedSlice.id) : null;
+  const buildLogText = selectedCompletedTask?.status === 'done'
+    ? selectedCompletedTask.response : selectedCompletedTask?.error;
+
+  const copyBuildLog = async () => {
+    setError('');
+    try {
+      await navigator.clipboard.writeText(buildLogText);
+    } catch (err) {
+      setError(`Could not copy build response: ${err.message}`);
+    }
+  };
 
   const select = (chapter, slice, e) => {
     const ids = chapter.slices.map((s) => s.id);
@@ -237,8 +248,22 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
               <div>Duration: {formatDuration(selectedCompletedTask.startedAt, selectedCompletedTask.completedAt)}</div>
               <div>Cost: {formatCost(selectedCompletedTask.cost, selectedCompletedTask.currency)}</div>
             </div>
-            {(selectedCompletedTask.status === 'failed' || selectedCompletedTask.status === 'blocked') && (
-              <div className="build-log-content">{selectedCompletedTask.error}</div>
+            {buildLogText && (
+              <div className="build-log-response">
+                <div className="build-log-content">{buildLogText}</div>
+                <button
+                  type="button"
+                  className="build-log-copy"
+                  title="Copy response"
+                  aria-label="Copy response"
+                  onClick={copyBuildLog}
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="5.5" y="5.5" width="8" height="8" rx="1" />
+                    <path d="M10.5 3.5v-1h-8v8h1" />
+                  </svg>
+                </button>
+              </div>
             )}
           </div>
         )}
