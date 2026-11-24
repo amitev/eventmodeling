@@ -15,7 +15,12 @@ export function createBuildQueue() {
   }
 
   return {
-    list: () => tasks.map(copy),
+    list: (sliceTimestamps = new Map()) => tasks.map((task) => {
+      const current = sliceTimestamps.get(task.sliceId);
+      const changed = ['done', 'failed'].includes(task.status) &&
+        task.sliceUpdatedAt !== null && current !== undefined && current !== task.sliceUpdatedAt;
+      return changed ? { ...task, status: 'changed', buildStatus: task.status } : copy(task);
+    }),
 
     // A done or failed task is replaced: the slice is built again, at the end of the queue.
     add({ contextId, chapterId, sliceId, sliceName, builder }) {
@@ -24,7 +29,7 @@ export function createBuildQueue() {
         throw new HttpError(409, `Slice "${sliceName}" is already in the build queue`);
       }
       if (existing) tasks.splice(tasks.indexOf(existing), 1);
-      const task = { id: randomUUID(), contextId, chapterId, sliceId, sliceName, builder, status: 'queued', error: null, response: null, startedAt: null, completedAt: null, cost: null, currency: null };
+      const task = { id: randomUUID(), contextId, chapterId, sliceId, sliceName, builder, status: 'queued', error: null, response: null, startedAt: null, completedAt: null, cost: null, currency: null, sliceUpdatedAt: null };
       tasks.push(task);
       return copy(task);
     },
@@ -47,7 +52,7 @@ export function createBuildQueue() {
       return copy(task);
     },
 
-    finish(id, builder, error, cost, currency, response) {
+    finish(id, builder, error, cost, currency, response, sliceUpdatedAt) {
       const task = find(id);
       if (task.status !== 'running' || !same(task.builder, builder)) {
         throw new HttpError(409, 'Build task is not running on this agent');
@@ -55,6 +60,7 @@ export function createBuildQueue() {
       const completedAt = new Date().toISOString();
       Object.assign(task, error === undefined ? { status: 'done', completedAt } : { status: 'failed', error, completedAt });
       task.response = response ?? null;
+      task.sliceUpdatedAt = sliceUpdatedAt ?? null;
       if (cost !== undefined && cost !== null) {
         task.cost = cost;
       }

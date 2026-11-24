@@ -31,19 +31,20 @@ Rule IDs retain their original numbers.
 
 ## Build queue
 
-- **S2.36** Server keeps one in-memory build queue: tasks `{ id, contextId, chapterId, sliceId, sliceName, builder, status, error, response }` in add order. `status`: `queued`, `running`, `done` or `failed`; `error`: text when failed, else `null`; `response`: the harness's `response` text of a finished build (done or failed), else `null`. A `sliceId` has at most one task. Done tasks stay as the slice's last result. Lost on server restart.
+- **S2.36** Server keeps one in-memory build queue: tasks `{ id, contextId, chapterId, sliceId, sliceName, builder, status, error, response, sliceUpdatedAt }` in add order. Stored `status`: `queued`, `running`, `done` or `failed`; `error`: text when failed, else `null`; `response`: the harness's `response` text of a finished build (done or failed), else `null`. `sliceUpdatedAt` holds the built definition's slice `updatedAt`, not queue or completion time; `null` until reported. A `sliceId` has at most one task. Done tasks stay as the slice's last result. Lost on server restart.
 - **S2.37** Each builder runs at most one task. Server starts the builder's first `queued` task and sends it as `build` event `{ id, contextId, chapterId, sliceId, sliceName }` on: builder connect, task added for it, its previous task finished.
 - **S2.38** Routes:
 
 | Route | Body | Result |
 | --- | --- | --- |
-| `GET /api/build-queue` | | Tasks (S2.36), `Cache-Control: no-store` |
+| `GET /api/build-queue` | | Tasks (S2.36), `Cache-Control: no-store`; changed build inputs follow S2.46 |
 | `POST /api/build-queue` | `{ contextId, chapterId, sliceId, sliceName, builder }` | 201 task. Trim values; blank or missing: 400. `builder` matches a live `builder` session ignoring case, stored with its session name; none: 404. Slice with a `queued` or `running` task: 409; a `done` or `failed` task is replaced by a new one at the end |
 | `DELETE /api/build-queue/:id` | | 204. Only `queued` or `failed`; else 409 |
-| `POST /api/agents/:id/tasks/:taskId/done` | `{ response? }` | 204; task `done`, `response` stored |
-| `POST /api/agents/:id/tasks/:taskId/failed` | `{ error?, response? }` | 204; task `failed`, `error` defaults to `Build failed` |
+| `POST /api/agents/:id/tasks/:taskId/done` | `{ response?, sliceUpdatedAt? }` | 204; task `done`, `response` and input timestamp stored |
+| `POST /api/agents/:id/tasks/:taskId/failed` | `{ error?, response?, sliceUpdatedAt? }` | 204; task `failed`, `error` defaults to `Build failed`; input timestamp stored |
 
   Unknown task or session: 404. `done`/`failed` for a task not running on that session: 409.
+- **S2.46** Report the `updatedAt` from S2.43's saved definition as `sliceUpdatedAt` on success or failure after preparation. If supplied, require a non-negative safe integer; otherwise 400. Queue reads compare it with the current stored slice timestamp, including dependency changes (SERVER.md S3.16). A differing timestamp on a done/failed task returns `status: "changed"` and `buildStatus: "done" | "failed"` without changing its stored outcome, timestamp, response, error, cost or timing. Queued/running tasks and unknown timestamps are not Changed. Changed results remain rebuildable; removal follows the original outcome.
 - **S2.39** Builder disconnect or stop puts its running task back to `queued`, still assigned to the same name; it resumes when that name reconnects.
 - **S2.40** On `build`, log `Building slice "<sliceName>". Task: <id>`. After S2.43, run the harness as in S2.31. Require exactly `{"success": <boolean>, "response": "<explanation>"}` as the harness response, with no extra fields or surrounding text. `success: true` reports `done`; `false` reports `failed` with `error` set to `response`. Both also send `response`. Invalid responses and fetch, write or harness failures report `failed`. The prompt identifies the slice and Chapter/Context, tells the harness to read `.em/slices/<sliceId>.json` and not the server, and defines the response contract. Log build and reporting errors to stderr.
 - **S2.41** Before spawning a harness, log its name and prompt to the agent terminal from level 1 (S2.45). After exit, log nonempty stdout as S2.45 and stderr always, with separate harness and stream headers (S2.34).

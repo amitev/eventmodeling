@@ -342,6 +342,18 @@ function Board() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.defaultPrevented || e.repeat || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey ||
+          e.key.toLowerCase() !== 'c' || modalOpen.current) return;
+      const target = e.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      e.preventDefault();
+      setBuildQueueOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // Ctrl+H switches the high level view on and off; Esc switches it off.
   useEffect(() => {
     const onKey = (e) => {
@@ -1397,7 +1409,7 @@ function Board() {
     }
     // Other overview hotkeys: only V (view) and Shift+F (fit).
     if (overview && !(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'f') && !(!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'v')) return;
-    // '+' needs Shift on most layouts; with Shift, ←/→ resize, C compacts and Delete/Backspace
+    // '+' needs Shift on most layouts; with Shift, ←/→ resize and Delete/Backspace
     // delete the slice (slice operations use Shift, Cell operations do not).
     const withShift =
       e.key === '+' ||
@@ -1407,8 +1419,7 @@ function Board() {
       e.key === 'Backspace' ||
       e.key.toLowerCase() === 'i' ||
       e.key.toLowerCase() === 'e' ||
-      e.key.toLowerCase() === 'a' ||
-      e.key.toLowerCase() === 'c';
+      e.key.toLowerCase() === 'a';
     // Ctrl+←/→ moves the slice.
     const moveKey =
       e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
@@ -1543,11 +1554,6 @@ function Board() {
           return { ...n, data: flowEnd ? rest : { ...rest, flowEnd: true } };
         })
       );
-      return;
-    }
-    if (e.shiftKey && e.key.toLowerCase() === 'c') {
-      e.preventDefault();
-      compactChapter(selectedCell.chapterId, selectedCell.sliceId);
       return;
     }
     if (e.shiftKey && e.key.toLowerCase() === 'i') {
@@ -1798,8 +1804,9 @@ function Board() {
           ref={buildQueueButtonRef}
           className="tasks-button keep"
           onClick={() => setBuildQueueOpen((open) => !open)}
-          title={`Agent cockpit (${activeBuilds} active)`}
+          title={`Agent cockpit (${activeBuilds} active) (Shift+C)`}
           aria-label={`Agent cockpit (${activeBuilds} active)`}
+          aria-keyshortcuts="Shift+C"
           aria-haspopup="dialog"
           aria-expanded={buildQueueOpen}
         >

@@ -224,7 +224,7 @@ async function saveSliceDefinition(url, { contextId, chapterId, sliceId }, signa
   } finally {
     await rm(temp, { force: true });
   }
-  return definitionPath;
+  return { definitionPath, sliceUpdatedAt: definition.slices[0].updatedAt };
 }
 
 async function buildSlice(url, agentId, task, dialect, model, children, signal) {
@@ -235,9 +235,12 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
   let cost;
   let currency;
   let durationMs;
+  let sliceUpdatedAt;
   try {
     console.log(`Building slice "${sliceName}". Task: ${id}`);
-    const definitionPath = await saveSliceDefinition(url, task, signal);
+    const definition = await saveSliceDefinition(url, task, signal);
+    const { definitionPath } = definition;
+    sliceUpdatedAt = definition.sliceUpdatedAt;
     signal.throwIfAborted();
     console.log(`Saved slice definition to "${definitionPath}". Task: ${id}`);
     
@@ -272,6 +275,7 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
     if (cost !== undefined && cost !== null) body.cost = cost;
     if (currency !== undefined) body.currency = currency;
     if (durationMs !== undefined && durationMs !== null) body.durationMs = durationMs;
+    if (sliceUpdatedAt !== undefined) body.sliceUpdatedAt = sliceUpdatedAt;
     const reported = await fetch(new URL(`/api/agents/${encodeURIComponent(agentId)}/tasks/${encodeURIComponent(id)}/${result}`, url), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

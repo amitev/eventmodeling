@@ -24,7 +24,7 @@ export function modelApi(store) {
   const router = express.Router();
   router.use(express.json({ limit: '50mb' }));
 
-  router.use(agentApi());
+  router.use(agentApi(store));
 
   router.get('/model', async (req, res) => {
     const { data, revision } = await store.pull();

@@ -5,7 +5,7 @@ import { createBuildQueue } from './build-queue.js';
 
 const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler'];
 
-export function agentApi() {
+export function agentApi(store) {
   const router = express.Router();
   const sessions = new Map();
   const queue = createBuildQueue();
@@ -125,7 +125,11 @@ export function agentApi() {
       const cost = typeof req.body?.cost === 'number' ? req.body.cost : undefined;
       const currency = typeof req.body?.currency === 'string' ? req.body.currency : undefined;
       const response = typeof req.body?.response === 'string' && req.body.response.trim() ? req.body.response.trim() : undefined;
-      queue.finish(req.params.taskId, session.name, error, cost, currency, response);
+      const sliceUpdatedAt = req.body?.sliceUpdatedAt;
+      if (sliceUpdatedAt !== undefined && (!Number.isSafeInteger(sliceUpdatedAt) || sliceUpdatedAt < 0)) {
+        throw new HttpError(400, 'sliceUpdatedAt must be a non-negative safe integer');
+      }
+      queue.finish(req.params.taskId, session.name, error, cost, currency, response, sliceUpdatedAt);
       res.status(204).end();
       dispatch(session.name);
     };
@@ -133,8 +137,13 @@ export function agentApi() {
   router.post('/agents/:id/tasks/:taskId/done', finishTask('done'));
   router.post('/agents/:id/tasks/:taskId/failed', finishTask('failed'));
 
-  router.get('/build-queue', (req, res) => {
-    res.set('Cache-Control', 'no-store').json(queue.list());
+  router.get('/build-queue', async (req, res) => {
+    const tasks = queue.list();
+    const sliceTimestamps = tasks.some((task) => ['done', 'failed'].includes(task.status) && task.sliceUpdatedAt !== null)
+      ? await store.read((model) => new Map(model.chapters.flatMap((chapter) =>
+        chapter.slices.map((slice) => [slice.id, slice.updatedAt]))))
+      : new Map();
+    res.set('Cache-Control', 'no-store').json(queue.list(sliceTimestamps));
   });
 
   router.post('/build-queue', (req, res) => {

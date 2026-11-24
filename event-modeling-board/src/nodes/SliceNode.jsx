@@ -95,7 +95,7 @@ export function SliceNode({ id, data }) {
   const history = useContext(HistoryContext);
   const zoom = useStore((s) => s.transform[2]);
   const [lift, setLift] = useState(null); // while dragging: how far the header is from its place, in px
-  const { addSliceAfter, removeSlice, selectCell, activate } = useContext(BoardActions);
+  const { addSliceAfter, removeSlice, selectCell, activate, compactChapter } = useContext(BoardActions);
 
   const startReorder = (e) => {
     if (e.button !== 0) return;
@@ -230,6 +230,18 @@ export function SliceNode({ id, data }) {
             </svg>
           </button>
           <CopyContextButton sliceId={id} className="slice-add" />
+          <button
+            type="button"
+            className="slice-add nodrag"
+            title="Compact this slice"
+            aria-label="Compact this slice"
+            onDoubleClick={(e) => e.stopPropagation()}
+            onClick={() => compactChapter(getNodes().find((n) => n.id === id).parentId, id)}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <path d="M0.5 5H9.5M2.5 3L0.5 5L2.5 7M7.5 3L9.5 5L7.5 7" />
+            </svg>
+          </button>
           <button
             className={`slice-add nodrag${data.flowEnd ? ' active' : ''}`}
             title={data.flowEnd ? 'Flow end: remove the mark (Shift+E)' : 'Flow end: mark this slice as the end of a flow, e.g. to separate use cases in one Chapter without a new Chapter (Shift+E)'}

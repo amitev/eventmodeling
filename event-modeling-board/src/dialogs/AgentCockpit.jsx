@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { RobotIcon } from '../AgentIcons.jsx';
 import { useBelowHeader, useModalFocus, useOutsideClose } from './popup.js';
 
-const STATUS = { queued: 'Queued', running: 'In progress', done: 'Done', failed: 'Failed', blocked: 'Blocked' };
-const buildable = (task) => !task || task.status === 'done' || task.status === 'failed';
-const removable = (task) => task?.status === 'queued' || task?.status === 'failed';
+const STATUS = { queued: 'Queued', running: 'In progress', done: 'Done', failed: 'Failed', blocked: 'Blocked', changed: 'Changed' };
+const buildable = (task) => !task || ['done', 'failed', 'changed'].includes(task.status);
+const removable = (task) => task?.status === 'queued' || (task?.buildStatus ?? task?.status) === 'failed';
 
 function formatDuration(startedAt, completedAt) {
   if (!startedAt || !completedAt) return 'N/A';
@@ -148,9 +148,9 @@ export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose })
   const toRemove = selection.filter((slice) => removable(tasks.get(slice.id)));
 
   // Build log: show when exactly one slice with a completed build is selected
-  const selectedCompletedSlice = selection.length === 1 && selection[0] && ['done', 'failed', 'blocked'].includes(tasks.get(selection[0].id)?.status) ? selection[0] : null;
+  const selectedCompletedSlice = selection.length === 1 && selection[0] && ['done', 'failed', 'blocked', 'changed'].includes(tasks.get(selection[0].id)?.status) ? selection[0] : null;
   const selectedCompletedTask = selectedCompletedSlice ? tasks.get(selectedCompletedSlice.id) : null;
-  const buildLogText = selectedCompletedTask?.status === 'done'
+  const buildLogText = (selectedCompletedTask?.buildStatus ?? selectedCompletedTask?.status) === 'done'
     ? selectedCompletedTask.response : selectedCompletedTask?.error;
 
   const copyBuildLog = async () => {
