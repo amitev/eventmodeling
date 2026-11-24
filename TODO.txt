@@ -41,6 +41,7 @@ Export
 - Generate diagrams - story telling, BPMN, etc.
 
 Prototypes
+- TEST it again before DEMO
 - Just zoom in on the interesting part of the model and ask the agent to build a prototype. No need to tell it for what - it´ll know. The Prototype implements the Business Logic as defined in the Event Model. It takes only a few minutes - and every change is incremental from there.
 
 Local undo/redo
@@ -64,7 +65,6 @@ API
 - load slice should include context and chapter info
 
 Cockpit
-- Build log
 - Agent doesn't have permissions to build
 - Long slice titles
 

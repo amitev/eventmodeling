@@ -11,7 +11,10 @@ class ConnectionError extends Error {}
 const HARNESSES = new Map([['claude', claude], ['copilot', copilot]]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function runAgent({ port, name, model, agentType, harness = 'claude' }) {
+let verbose = false;
+
+export async function runAgent({ port, name, model, agentType, harness = 'claude', verbose: verboseLog = false }) {
+  verbose = verboseLog;
   const dialect = HARNESSES.get(harness);
   if (!dialect) throw new Error('Harness must be claude or copilot');
   const url = new URL(`http://localhost:${port}/api/agent/events`);
@@ -109,6 +112,18 @@ async function* connectionChunks(body) {
   }
 }
 
+// Dialects with `summarize` log a readable summary (plus the raw output when verbose); an unparsable output is logged raw.
+function logOutput(dialect, stdout) {
+  const raw = `stdout:\n${stdout.trimEnd()}`;
+  if (!dialect.summarize) return raw;
+  try {
+    const summary = dialect.summarize(stdout);
+    return verbose ? `${summary}\n${raw}` : summary;
+  } catch {
+    return raw;
+  }
+}
+
 function runHarness(dialect, model, prompt, children) {
   console.log(`${dialect.label} prompt: ${prompt}`);
   return new Promise((resolve, reject) => {
@@ -128,7 +143,7 @@ function runHarness(dialect, model, prompt, children) {
     });
     child.once('close', (code, signal) => {
       children.delete(child);
-      if (stdout) console.log(`${dialect.label} stdout:\n${stdout.trimEnd()}`);
+      if (stdout) console.log(`${dialect.label} ${logOutput(dialect, stdout)}`);
       if (stderr) console.error(`${dialect.label} stderr:\n${stderr.trimEnd()}`);
       if (processError) reject(new Error(`Could not run ${dialect.label}: ${processError.message}`));
       else if (code !== 0) reject(new Error(`${dialect.label} ${signal ? `terminated by ${signal}` : `exited with code ${code}`}.`));

@@ -25,6 +25,7 @@ export const SETTINGS_FILE = path.join('.claude', 'settings.json');
 export const CLAUDE_PERMISSIONS = [
   'Read', 'Write', 'Edit', 'Grep', 'Glob',
   'Bash(curl http://localhost:**)', 'Bash(curl http://127.0.0.1:**)',
+  'Bash(gradle:*)', 'Bash(./gradlew:*)', 'Bash(gradlew:*)', 'Bash(gradlew.bat:*)',
 ];
 
 // Adds the missing CLAUDE_PERMISSIONS to `permissions.allow` of `<cwd>/.claude/settings.json`, keeping everything else.
