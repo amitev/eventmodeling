@@ -20,7 +20,7 @@ function formatDuration(startedAt, completedAt) {
 function formatCost(cost, currency) {
   if (!cost && cost !== 0) return 'N/A';
   const prefix = currency === 'USD' ? '$' : '';
-  return `${prefix}${cost.toFixed(2)}`;
+  return `${prefix}${cost.toFixed(3)}`;
 }
 
 // Menu of builders with their robot heads. Fixed position escapes the dialog's overflow clipping;
