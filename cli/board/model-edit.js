@@ -28,6 +28,7 @@ import {
   isWebUrl,
   orderedField,
   randomId,
+  readModelEventSources,
   snapUp,
 } from './model-rules.js';
 
@@ -363,6 +364,7 @@ function outline(model, { query }) {
           slices: ch.slices.map((s) => ({
             id: s.id,
             name: s.name,
+            ...(s.updatedAt === undefined ? {} : { updatedAt: s.updatedAt }),
             type: s.type,
             ...(s.flowEnd ? { flowEnd: true } : {}),
             width: s.width,
@@ -404,33 +406,21 @@ function search(model, { query }) {
 }
 
 function readModelDependencies(ix, slice) {
-  const dependencies = new Map();
-  for (const element of slice.elements) {
-    if (element.type !== 'READ_MODEL') continue;
-    const originalId = element.copyOf ?? element.id;
-    if (!dependencies.has(originalId)) dependencies.set(originalId, new Map());
-  }
-  for (const source of ix.elements.values()) {
-    if (source.element.type !== 'EVENT') continue;
-    const original = source.element.copyOf ? ix.elements.get(source.element.copyOf) : source;
-    if (original.slice.id === slice.id) continue;
-    for (const targetId of source.element.connectsTo) {
-      const target = ix.elements.get(targetId).element;
-      const events = dependencies.get(target.copyOf ?? target.id);
-      if (!events || events.has(original.element.id)) continue;
-      const { id, name, type, fields = [], info } = original.element;
-      const context = ix.contexts.get(original.chapter.context);
-      events.set(id, {
-        context: { id: context.id, name: context.name },
-        chapter: { id: original.chapter.id, name: original.chapter.name },
-        slice: { id: original.slice.id, name: original.slice.name },
-        event: { id, name, type, fields: structuredClone(fields), ...(info === undefined ? {} : { info }) },
-      });
-    }
-  }
+  const dependencies = readModelEventSources(ix.elements);
   return slice.elements.filter((element) => element.type === 'READ_MODEL').map((element) => ({
     readModelId: element.id,
-    events: [...dependencies.get(element.copyOf ?? element.id).values()],
+    events: [...(dependencies.get(element.copyOf ?? element.id)?.values() ?? [])]
+      .filter((source) => source.slice.id !== slice.id)
+      .map((source) => {
+        const { id, name, type, fields = [], info } = source.element;
+        const context = ix.contexts.get(source.chapter.context);
+        return {
+          context: { id: context.id, name: context.name },
+          chapter: { id: source.chapter.id, name: source.chapter.name },
+          slice: { id: source.slice.id, name: source.slice.name },
+          event: { id, name, type, fields: structuredClone(fields), ...(info === undefined ? {} : { info }) },
+        };
+      }),
   }));
 }
 
@@ -1186,8 +1176,9 @@ export function findRoute(method, path) {
 
 // Runs a route on `model` and returns { status, body }. The model is put in canonical order first,
 // so the result shows items as they are stored.
-export function execute(model, { route, params }, query, requestBody) {
+export function execute(model, { route, params }, query, requestBody, stamp) {
   const out = route.run(model, { params, query, body: requestBody });
   canonical(model);
+  if (stamp) stamp();
   return { status: route.status, body: structuredClone(typeof out === 'function' ? out(model) : out) };
 }

@@ -87,7 +87,7 @@ export function modelApi(store) {
     if (!hit.route.write) {
       return res.json(await store.read((model) => execute(model, hit, req.query, req.body).body));
     }
-    const { result, revision } = await store.edit((model) => execute(model, hit, req.query, req.body), ifMatch(req));
+    const { result, revision } = await store.edit((model, stamp) => execute(model, hit, req.query, req.body, stamp), ifMatch(req));
     res.set('ETag', etag(revision)).status(result.status).json(result.body);
   });
 

@@ -1,11 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
 import { clearScreenHighlights, extractHighlights, htmlStructure } from './html-highlights.js';
 import { HttpError } from './http-error.js';
-import { byPosition, canonical, orderedTask, validateModel, validateTasks } from './model-rules.js';
+import { byPosition, canonical, ordered, orderedTask, readModelEventSources, validateModel, validateTasks } from './model-rules.js';
 
 export { HttpError };
 export const DATA_DIR = '.em';
@@ -56,6 +57,62 @@ function compactScreens(chapter) {
 }
 
 const yaml = (data) => dump(data, { noRefs: true, lineWidth: -1 });
+
+function sliceStates(model) {
+  const elements = new Map();
+  for (const chapter of model.chapters) {
+    for (const slice of chapter.slices) {
+      for (const element of slice.elements ?? []) elements.set(element.id, { element, slice, chapter });
+    }
+  }
+  const original = (element) => elements.get(element.copyOf ?? element.id);
+  const dependencies = readModelEventSources(elements);
+  const states = new Map();
+  for (const chapter of model.chapters) {
+    const { slices, ...chapterDetails } = chapter;
+    const context = model.contexts.find((entry) => entry.id === chapter.context);
+    slices.forEach((slice, index) => {
+      const { updatedAt, ...content } = slice;
+      const references = new Map();
+      for (const element of slice.elements ?? []) {
+        if (element.copyOf && original(element)) references.set(element.copyOf, original(element));
+        if (element.type === 'READ_MODEL') {
+          for (const [id, event] of dependencies.get(element.copyOf ?? element.id) ?? []) {
+            if (event.slice.id !== slice.id) references.set(id, event);
+          }
+        }
+      }
+      states.set(slice.id, {
+        updatedAt,
+        content: structuredClone({
+          slice: content, index, chapter: chapterDetails,
+          context: context && { id: context.id, name: context.name, info: context.info },
+          references: [...references].sort(([a], [b]) => a.localeCompare(b)).map(([id, source]) => ({
+            id, element: source.element,
+            slice: { id: source.slice.id, name: source.slice.name },
+            chapter: { id: source.chapter.id, name: source.chapter.name, context: source.chapter.context },
+          })),
+        }),
+      });
+    });
+  }
+  return states;
+}
+
+function updateSliceTimestamps(before, model) {
+  const after = sliceStates(model);
+  const now = Date.now();
+  for (const chapter of model.chapters) {
+    for (const slice of chapter.slices) {
+      const previous = before.get(slice.id);
+      const unchanged = previous && isDeepStrictEqual(previous.content, after.get(slice.id).content);
+      const previousTime = Number.isSafeInteger(previous?.updatedAt) && previous.updatedAt >= 0 ? previous.updatedAt : 0;
+      slice.updatedAt = unchanged && previousTime > 0 ? previousTime : Math.max(now, previousTime + 1);
+      if (!Number.isSafeInteger(slice.updatedAt)) throw new HttpError(400, `Slice "${slice.id}": updatedAt exceeds the safe integer range`);
+    }
+    chapter.slices = chapter.slices.map((slice) => ordered(slice, ['id', 'name', 'updatedAt']));
+  }
+}
 
 function checkContextTasks(doc) {
   if (doc.tasks === undefined) return;
@@ -203,7 +260,14 @@ export class ModelStore {
   edit(fn, ifMatch) {
     return this.#mutate(ifMatch, async () => {
       const model = await this.#loadModel();
-      const result = fn(model);
+      const before = sliceStates(model);
+      let stamped = false;
+      const stamp = () => {
+        updateSliceTimestamps(before, model);
+        stamped = true;
+      };
+      const result = fn(model, stamp);
+      if (!stamped) stamp();
       try {
         validateModel(model);
       } catch (e) {
@@ -295,8 +359,22 @@ export class ModelStore {
     if (files.size !== list.length) throw new HttpError(409, 'Two contexts have the same file name');
     const keep = new Set(list.map((c) => c.id));
     return this.#mutate(ifMatch, async () => {
+      const documents = [];
+      for (const entry of await this.#scan()) {
+        const doc = await this.#readContextFile(entry.path, false);
+        if (doc) documents.push({ ...entry, doc, text: yaml(doc) });
+      }
+      const before = sliceStates({
+        contexts: (await this.#readContexts(false)) ?? [],
+        chapters: documents.flatMap(({ doc }) => doc.chapters),
+      });
+      const retained = documents.filter(({ doc }) => keep.has(doc.id));
+      updateSliceTimestamps(before, { contexts: list, chapters: retained.flatMap(({ doc }) => doc.chapters) });
       await fs.mkdir(this.#model, { recursive: true });
       await this.#write(path.join(this.#model, CONTEXTS_FILE), yaml(list));
+      for (const { path: file, doc, text } of retained) {
+        if (yaml(doc) !== text) await this.#write(file, yaml(doc));
+      }
       let removed = 0;
       for (const entry of await this.#scan()) {
         const doc = await this.#readContextFile(entry.path, false);
@@ -331,7 +409,8 @@ export class ModelStore {
     checkContextTasks(context);
 
     return this.#mutate(ifMatch, async () => {
-      const stored = (await this.#readContexts(false))?.find((c) => c.id === id);
+      const contexts = (await this.#readContexts(false)) ?? [];
+      const stored = contexts.find((c) => c.id === id);
       if (!stored) throw new HttpError(409, `Unknown context "${id}": push the contexts first`);
       if (stored.name !== context.name) {
         throw new HttpError(409, `Context "${id}" is named "${stored.name}": push the contexts first`);
@@ -339,9 +418,11 @@ export class ModelStore {
       const fileName = stored.file;
       const target = path.join(this.#model, fileName);
       const stale = [];
+      const documents = [];
       for (const entry of await this.#scan()) {
         const doc = await this.#readContextFile(entry.path, false);
         if (!doc) continue;
+        documents.push({ ...entry, doc, text: yaml(doc) });
         const sameFile = sameName(entry.file, fileName);
         if (doc.id === id) {
           if (!sameFile) stale.push(entry.path);
@@ -349,12 +430,19 @@ export class ModelStore {
           throw new HttpError(409, `${this.#relative(entry.path)} already holds another context`);
         }
       }
-      await fs.mkdir(this.#model, { recursive: true });
-      await this.#write(target, yaml({
+      const before = sliceStates({ contexts, chapters: documents.flatMap(({ doc }) => doc.chapters) });
+      const next = {
         id, name: context.name,
         ...(context.tasks?.length ? { tasks: context.tasks.map(orderedTask) } : {}),
         chapters: chapters.map(compactScreens),
-      }));
+      };
+      const others = documents.filter(({ doc }) => doc.id !== id);
+      updateSliceTimestamps(before, { contexts, chapters: [...others.flatMap(({ doc }) => doc.chapters), ...next.chapters] });
+      await fs.mkdir(this.#model, { recursive: true });
+      await this.#write(target, yaml(next));
+      for (const { path: file, doc, text } of others) {
+        if (yaml(doc) !== text) await this.#write(file, yaml(doc));
+      }
       for (const old of stale) await fs.rm(old, { force: true });
       return { path: this.#relative(target) };
     });

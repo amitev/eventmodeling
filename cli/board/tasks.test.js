@@ -151,6 +151,58 @@ test('slice build info resolves and deduplicates external Event dependencies of 
   assert.deepEqual(sourceResult.readModelDependencies, []);
   const fullChapter = await request('GET', `/chapters/${target.id}`);
   assert.equal(Object.hasOwn(fullChapter, 'readModelDependencies'), false);
+
+  const unrelated = await chapter(ctx.id, 'Unrelated');
+  const before = [sourceResult.slices[0].updatedAt, result.slices[0].updatedAt, copyResult.slices[0].updatedAt];
+  assert.ok(before.every((value) => Number.isSafeInteger(value) && value > 0));
+  t.mock.method(Date, 'now', () => 1);
+  await request('PATCH', `/elements/${event.id}`, { info: 'Updated contract' });
+  const changedSource = await request('GET', `/chapters/${source.id}`);
+  const changedTarget = await request('GET', `/chapters/${target.id}`);
+  assert.ok(changedSource.slices[0].updatedAt > before[0]);
+  assert.ok(changedTarget.slices[0].updatedAt > before[1]);
+  assert.ok(changedTarget.slices[1].updatedAt > before[2]);
+  assert.equal(changedSource.slices[0].updatedAt, before[0] + 1);
+  assert.equal((await request('GET', `/chapters/${unrelated.id}`)).slices[0].updatedAt, unrelated.slices[0].updatedAt);
+  await request('PATCH', `/elements/${event.id}`, { info: 'Updated contract' });
+  assert.deepEqual(await request('GET', `/chapters/${target.id}`), changedTarget);
+  assert.deepEqual(await request('GET', `/chapters/${source.id}`), changedSource);
+});
+
+test('slice timestamps are server owned, survive round trips and update dependencies across Context pushes', async (t) => {
+  const { root, request, context, chapter } = await setup(t);
+  const first = await context('Sales');
+  const second = await context('Reports');
+  const source = await chapter(first.id, 'Orders');
+  const target = await chapter(second.id, 'Summary');
+  const event = await request('POST', '/elements', {
+    slice: source.slices[0].id, lane: source.lanes.find((l) => l.type === 'EVENT').id,
+    type: 'EVENT', name: 'Order Placed', autoConnect: false,
+  }, 201);
+  const readModel = await request('POST', '/elements', {
+    slice: target.slices[0].id, lane: target.lanes.find((l) => l.type === 'INTERACTION').id,
+    type: 'READ_MODEL', name: 'Order Summary', autoConnect: false,
+  }, 201);
+  await request('POST', '/connections', { from: event.id, to: readModel.id }, 201);
+  const before = await request('GET', '');
+  const board = parseBoard(JSON.stringify(before));
+  assert.deepEqual(serialize(board.nodes, board.edges, board.contexts), before);
+  const sourceChapter = before.chapters.find((ch) => ch.id === source.id);
+  const targetChapter = before.chapters.find((ch) => ch.id === target.id);
+  const oldSourceTime = sourceChapter.slices[0].updatedAt;
+  const oldTargetTime = targetChapter.slices[0].updatedAt;
+  sourceChapter.slices[0].updatedAt = Number.MAX_SAFE_INTEGER;
+  await request('PUT', `/contexts/${first.id}`, { ...first, chapters: [sourceChapter] }, 200, '*');
+  assert.equal((await request('GET', `/chapters/${source.id}`)).slices[0].updatedAt, oldSourceTime);
+  sourceChapter.slices[0].elements[0].info = 'Revised payload';
+  await request('PUT', `/contexts/${first.id}`, { ...first, chapters: [sourceChapter] }, 200, '*');
+  const updatedSource = await request('GET', `/chapters/${source.id}`);
+  const updatedTarget = await request('GET', `/chapters/${target.id}`);
+  assert.ok(updatedSource.slices[0].updatedAt > oldSourceTime);
+  assert.ok(updatedTarget.slices[0].updatedAt > oldTargetTime);
+  const reloaded = await new ModelStore(root).read((model) => model);
+  assert.equal(reloaded.chapters.find((ch) => ch.id === target.id).slices[0].updatedAt, updatedTarget.slices[0].updatedAt);
+  await request('PATCH', `/slices/${target.slices[0].id}`, { updatedAt: 1 }, 400);
 });
 
 test('failed batch verification or Chapter alias collision leaves no writes', async (t) => {

@@ -97,6 +97,7 @@ export function serialize(nodes, edges, contexts) {
         slices: chapterSlices.map((sl) => ({
           id: sl.id,
           name: sl.data.name,
+          ...(sl.data.updatedAt === undefined ? {} : { updatedAt: sl.data.updatedAt }),
           ...(sl.data.info ? { info: sl.data.info } : {}),
           ...(sl.data.flowEnd ? { flowEnd: true } : {}),
           type: sliceType(bySlice.get(sl.id).map(({ n, lane }) => ({ kind: n.data.kind, lane: lane.data.type }))),
@@ -401,9 +402,12 @@ export function parseBoard(text) {
     let cursor = SLICE_MIN_X;
     c.slices.forEach((sl, si) => {
       const sp = `${cp}.slices[${si}]`;
-      object(sl, ['id', 'name', 'type', 'width', 'connectsTo', 'elements'], sp, ['info', 'flowEnd']);
+      object(sl, ['id', 'name', 'type', 'width', 'connectsTo', 'elements'], sp, ['info', 'flowEnd', 'updatedAt']);
       claim(sl.id, 'slice', at(sp, 'id'));
       name(sl.name, at(sp, 'name'));
+      if (hasKey(sl, 'updatedAt') && (!Number.isSafeInteger(sl.updatedAt) || sl.updatedAt < 0)) {
+        fail(at(sp, 'updatedAt'), 'must be a non-negative safe integer');
+      }
       // The type is worked out from the elements (R5b): the stored value is only checked to be valid.
       if (sl.type !== null && !SLICE_TYPES.includes(sl.type)) {
         fail(at(sp, 'type'), `must be null or one of ${SLICE_TYPES.join(', ')}`);
@@ -418,7 +422,9 @@ export function parseBoard(text) {
       links.push({ owner: sl.id, chapter: c.id, kind: 'chapter', path: at(sp, 'connectsTo'), ids: sl.connectsTo });
       list(sl.elements, at(sp, 'elements'));
       const width = sl.width;
-      nodes.push(makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info, sl.flowEnd));
+      const sliceNode = makeSlice(sl.id, cursor, width, sl.name, c.id, sl.info, sl.flowEnd);
+      if (hasKey(sl, 'updatedAt')) sliceNode.data.updatedAt = sl.updatedAt;
+      nodes.push(sliceNode);
 
       const specCells = new Set(); // Spec lanes already holding an element in this slice
       sl.elements.forEach((el, ei) => {

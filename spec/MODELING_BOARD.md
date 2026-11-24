@@ -448,7 +448,7 @@ The board file is the single, complete description of a board, written and read 
   - `connectsTo`: the ids of the Chapters this Chapter has an arrow to (R6.7);
   - `lanes`: the lanes from top to bottom, each with `id`, `name`, `type` (`ACTOR`, `INTERACTION`, `EVENT`, `INTEGRATION` or `SPEC`), optional `info` and `color`;
   - `slices`: the slices from left to right.
-- **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `info`, optional `flowEnd`, `type`, `width`, `connectsTo`, `elements`. `flowEnd` is `true` for a Flow end slice (R5.21), otherwise left out. `type` is the slice type (R5b.1), worked out on export: `"STATE_CHANGE"`, `"STATE_READ"`, `"AUTOMATION"`, `"TRANSLATION"` or `null`. `connectsTo` lists target Chapter ids (R6.7). `elements` lists the elements in that slice; an element is listed under exactly one slice (R5.13).
+- **R6.4** Each slice has exactly these fields, in order: `id`, `name`, optional `updatedAt`, optional `info`, optional `flowEnd`, `type`, `width`, `connectsTo`, `elements`. Preserve `updatedAt` through save, export and import: a non-negative safe integer, set by the server (SERVER.md S3.16); absent before first server write. `flowEnd` is `true` for a Flow end slice (R5.21), otherwise left out. `type` is the slice type (R5b.1), worked out on export: `"STATE_CHANGE"`, `"STATE_READ"`, `"AUTOMATION"`, `"TRANSLATION"` or `null`. `connectsTo` lists target Chapter ids (R6.7). `elements` lists the elements in that slice; an element is listed under exactly one slice (R5.13).
 - **R6.5** Each element has exactly these fields, in this order:
   - `id`;
   - `type`: `SCREEN`, `COMMAND`, `READ_MODEL`, `EVENT`, `PROCESSOR`, `SCENARIOS` or `NOTES`;

@@ -98,10 +98,27 @@ export const byPosition = (a, b) => {
   return n(a.x) - n(b.x) || n(a.y) - n(b.y) || compareIds(a.id, b.id);
 };
 
+// `elements` maps ids to { element, slice, chapter }; connections on copies use their originals.
+export function readModelEventSources(elements) {
+  const dependencies = new Map();
+  for (const source of elements.values()) {
+    if (source.element.type !== 'EVENT') continue;
+    for (const id of source.element.connectsTo ?? []) {
+      const target = elements.get(id)?.element;
+      if (target?.type !== 'READ_MODEL') continue;
+      const key = target.copyOf ?? target.id;
+      if (!dependencies.has(key)) dependencies.set(key, new Map());
+      const event = source.element.copyOf ? elements.get(source.element.copyOf) : source;
+      if (event) dependencies.get(key).set(event.element.id, event);
+    }
+  }
+  return dependencies;
+}
+
 const KEYS = {
   chapter: ['id', 'name', 'info', 'context', 'x', 'y', 'connectsTo', 'lanes', 'slices'],
   lane: ['id', 'name', 'type', 'info', 'color'],
-  slice: ['id', 'name', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
+  slice: ['id', 'name', 'updatedAt', 'info', 'flowEnd', 'type', 'width', 'connectsTo', 'elements'],
   element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'isList', 'html', 'url', 'highlights', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
   copy: ['id', 'type', 'lane', 'copyOf', 'highlights', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
@@ -266,6 +283,9 @@ export function validateModel({ contexts, chapters }) {
     c.slices.forEach((s, si) => {
       const sp = `${cp}.slices[${si}]`;
       claim(s.id, 'slice', `${sp}.id`);
+      if (s.updatedAt !== undefined && (!Number.isSafeInteger(s.updatedAt) || s.updatedAt < 0)) {
+        fail(`${sp}.updatedAt`, 'must be a non-negative safe integer');
+      }
       if (!isText(s.name)) fail(`${sp}.name`, 'must not be empty');
       if (s.info !== undefined && !isText(s.info)) fail(`${sp}.info`, 'must be left out when empty');
       if (s.flowEnd !== undefined && s.flowEnd !== true) fail(`${sp}.flowEnd`, 'must be true, or left out');
