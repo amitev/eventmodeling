@@ -146,8 +146,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: var(--kind-color); border-bottom: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px 3px 0 0;
   padding: 4px 8px; font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.8);
 }
-.sticky:is(:not(.copy), .read_model) .sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; }
-.sticky:is(:not(.copy), .read_model) .sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sticky:is(:not(.copy), .read_model, .compact) .sticky-header .title { display: flex; flex: 1; min-width: 0; white-space: nowrap; line-height: 16px; font-weight: 600; }
+.sticky:is(:not(.copy), .read_model, .compact) .sticky-header .title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sticky:not(.copy) .sticky-header .title { cursor: pointer; }
 .sticky-header .title-list { display: flex; flex: none; align-items: center; margin-left: 3px; line-height: 1; transform: translateY(-1px); }
 .sticky-header .title.empty { font-weight: 400; font-style: italic; opacity: 0.35; }
@@ -157,6 +157,16 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   outline: 1px solid rgba(0, 0, 0, 0.45); outline-offset: 2px; /* no layout space */
 }
 .sticky .sticky-body { flex: 1; background: #fff; border-radius: 0 0 3px 3px; padding: 6px 8px 8px; }
+.sticky.compact .sticky-body { display: none; }
+.sticky.compact .sticky-header {
+  position: relative; flex: 1; justify-content: center; padding: 4px 20px;
+  border-bottom: 0; border-radius: 3px; text-align: center; font-size: 22px;
+}
+.sticky.compact .sticky-header .title { justify-content: center; white-space: normal; line-height: 26px; }
+.sticky.compact .sticky-header .title-name { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.sticky.compact .sticky-header .title-list { display: none; }
+.sticky.compact .sticky-header .title-input { height: 26px; line-height: 26px; text-align: center; }
+.sticky.compact .sticky-header .copy-mark { position: absolute; left: 4px; margin: 0; }
 .sticky textarea {
   width: 100%; box-sizing: border-box; min-height: 48px; resize: none;
   font: inherit; font-weight: 600; background: rgba(255, 255, 255, 0.7); border: 1px solid #666;

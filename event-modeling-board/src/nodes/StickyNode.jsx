@@ -35,6 +35,9 @@ export function StickyNode({ id, data, selected }) {
   }, [editingTitle]);
 
   const isScreen = data.kind === 'screen';
+  const compact = useStore((s) =>
+    (data.kind === 'command' || data.kind === 'event' || data.kind === 'read_model') && s.transform[2] < 0.5
+  );
   // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
   const width = useStore((s) => {
     const me = s.nodeLookup.get(id);
@@ -90,7 +93,7 @@ export function StickyNode({ id, data, selected }) {
   useLayoutEffect(() => {
     const el = bodyRef.current;
     setScrolls(!!el && el.scrollHeight > el.clientHeight);
-  }, [shown.fields]);
+  }, [shown.fields, compact]);
 
   useEffect(() => {
     if (titleEditId !== id) return;
@@ -282,7 +285,7 @@ export function StickyNode({ id, data, selected }) {
         </>
       )}
     <div
-      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${isOriginalOfSelectedCopy ? ' copy-origin-selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
+      className={`sticky ${data.kind} ${isCopy ? 'copy' : ''} ${selected ? 'selected' : ''}${compact ? ' compact' : ''}${isOriginalOfSelectedCopy ? ' copy-origin-selected' : ''}${zoomable ? ' zoomable' : ''}${zoomable && grown ? ' grown' : ''}`}
       onPointerEnter={zoomable ? startGrowing : undefined}
       onPointerLeave={zoomable ? stopGrowing : undefined}
       onPointerDown={zoomable ? stopGrowing : undefined}
