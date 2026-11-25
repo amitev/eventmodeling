@@ -33,10 +33,19 @@ function problem(fields) {
   return null;
 }
 
+function fieldShape(field) {
+  const flags = FIELD_FLAGS.filter(({ key }) => field[key]).map(({ label }) => label.toLowerCase());
+  const type = `${field.type ?? 'string'}${field.list ? '[]' : ''}`;
+  const nested = field.type === OBJECT
+    ? ` { ${(field.fields ?? []).map((child) => `${child.name}: ${fieldShape(child)}`).join(', ')} }`
+    : '';
+  return [type, ...flags].join(' · ') + nested;
+}
+
 // Edits a copy of the draft: fn gets the list that holds the field at `path`.
 const listAt = (root, path) => path.reduce((list, i) => list[i].fields, root);
 
-function FieldRows({ fields, path, edit, counter }) {
+function FieldRows({ fields, path, edit, counter, sourceNames }) {
   const add = () =>
     edit((root) => {
       listAt(root, path).push({ ...newField(), _k: ++counter.current, _new: path.length === 0, _propagate: true });
@@ -46,6 +55,9 @@ function FieldRows({ fields, path, edit, counter }) {
       {fields.map((f, i) => {
         const here = [...path, i];
         const set = (patch) => edit((root) => Object.assign(listAt(root, path)[i], patch));
+        const unlink = () => edit((root) => listAt(root, path).splice(i, 1));
+        const sourceId = f.inheritedFrom?.elementId;
+        const sourceName = sourceNames.get(sourceId) ?? sourceId;
         return (
           <div key={f._k} className="field-item">
             <div className="field-row">
@@ -96,17 +108,22 @@ function FieldRows({ fields, path, edit, counter }) {
               </label>
               <button
                 type="button"
-                className="f-rm"
-                title="Remove the field"
-                aria-label="Remove the field"
-                onClick={() => edit((root) => listAt(root, path).splice(i, 1))}
+                className={`f-rm${sourceId ? ' f-unlink' : ''}`}
+                title={sourceId ? 'Unlink and remove this inherited field; the source is unchanged' : 'Remove the field'}
+                aria-label={sourceId ? `Unlink inherited field ${f.name}` : 'Remove the field'}
+                onClick={unlink}
               >
-                ×
+                {sourceId ? 'Unlink' : '×'}
               </button>
             </div>
+            {sourceId && (
+              <div className="field-lineage" title={`Source element id: ${sourceId}`}>
+                Inherited from {sourceName} · {f.inheritedFrom.fieldPath.join('.')}
+              </div>
+            )}
             {f.type === OBJECT && (
               <div className="field-children">
-                <FieldRows fields={f.fields ?? []} path={here} edit={edit} counter={counter} />
+                <FieldRows fields={f.fields ?? []} path={here} edit={edit} counter={counter} sourceNames={sourceNames} />
               </div>
             )}
           </div>
@@ -154,7 +171,7 @@ export function useFieldsDraft(initial, parent) {
   return { fields, error, edit, counter, getFromParent, validate };
 }
 
-export function FieldsEditor({ title, draft, parent }) {
+export function FieldsEditor({ title, draft, parent, parentConflicts = [], sourceNames = new Map() }) {
   const { fields, error, edit, counter, getFromParent } = draft;
   return (
     <div className="fields-editor">
@@ -170,6 +187,18 @@ export function FieldsEditor({ title, draft, parent }) {
           Get from parent
         </button>
       </div>
+      {parentConflicts.length > 0 && (
+        <div className="fields-conflicts" role="status">
+          {parentConflicts.map(({ name, sources, winnerId }) => (
+            <div key={name}>
+              <strong>{name}</strong>: {sources.map(({ sourceId, field }) =>
+                `${sourceNames.get(sourceId) ?? sourceId} (${fieldShape(field)})`
+              ).join('; ')}.{' '}
+              {sourceNames.get(winnerId) ?? winnerId} wins by arrow order.
+            </div>
+          ))}
+        </div>
+      )}
       <div className="fields-body">
         <div className="field-row field-head">
           <span className="f-name">Name</span>
@@ -185,7 +214,7 @@ export function FieldsEditor({ title, draft, parent }) {
           </span>
           <span className="f-rm" />
         </div>
-        <FieldRows fields={fields} path={[]} edit={edit} counter={counter} />
+        <FieldRows fields={fields} path={[]} edit={edit} counter={counter} sourceNames={sourceNames} />
       </div>
       {error && <div className="fields-error" role="alert">{error}</div>}
     </div>
@@ -193,7 +222,7 @@ export function FieldsEditor({ title, draft, parent }) {
 }
 
 // The fields popup of an element (R9.3). onSave gets its fields and new fields to propagate.
-export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
+export function FieldsDialog({ title, initial, parent, parentConflicts, sourceNames, onSave, onClose }) {
   const draft = useFieldsDraft(initial, parent);
   const backdrop = useBackdropClose(onClose);
   const modal = useModalFocus();
@@ -218,7 +247,7 @@ export function FieldsDialog({ title, initial, parent, onSave, onClose }) {
   return createPortal(
     <div className="info-backdrop" {...backdrop}>
       <div ref={modal} tabIndex={-1} className="fields-dialog" role="dialog" aria-modal="true" aria-label="Fields">
-        <FieldsEditor title={title} draft={draft} parent={parent} />
+        <FieldsEditor title={title} draft={draft} parent={parent} parentConflicts={parentConflicts} sourceNames={sourceNames} />
         <div className="info-actions">
           <button type="button" className="primary" title="Save (Ctrl+S)" onClick={save}>
             Save

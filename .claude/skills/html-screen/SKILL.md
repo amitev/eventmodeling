@@ -87,7 +87,7 @@ Field: `{ name, type?, list?, id?, optional?, generated?, pii?, technical?, fiel
 - Read Model → Screen: use its fields, never invent.
 - User input → Command: `generated: false`.
 - Session/display-only calculations (current user, today, totals): `generated: true`.
-- Personal data: `pii: true`; identifiers: `id: true`.
+- Personal data: `pii: true`; identifier flag: `identifier: true`.
 - Apply the core completeness rule to Screens with incoming arrows; report gaps. Never mark user data generated to bypass it.
 
 **For a brand-new screen**

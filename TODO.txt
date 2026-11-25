@@ -23,7 +23,7 @@ Lanes
 Chapters
 
 Slices
-- Slice states (from Q&A1 1:16:00)
+- duplicate slice as a result of all copy elements
 
 Elements
 - Automatic name from previous element - too hard to do correctly.
@@ -65,7 +65,6 @@ API
 - load slice should include context and chapter info
 
 Cockpit
-- Agent doesn't have permissions to build
 - Long slice titles
 
 Agentic

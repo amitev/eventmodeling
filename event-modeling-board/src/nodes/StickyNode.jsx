@@ -2,6 +2,7 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Handle, NodeToolbar, Position, useReactFlow, useStore } from '@xyflow/react';
 import { DEFAULT_PROCESSOR_ICON, KINDS, PROCESSOR_ICONS, kindW } from '../model/model.js';
 import { fieldsOf, hasFields, mergeFields } from '../model/fields.js';
+import { ensureFieldIds, trackInheritedFields } from '../../../cli/board/field-inheritance.js';
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions, CopySelection } from '../state/BoardActions.js';
@@ -78,12 +79,22 @@ export function StickyNode({ id, data, selected }) {
   }));
   const copyConnectedFields = () => setNodes((ns) => {
     const byId = new Map(ns.map((n) => [n.id, n]));
+    const sourceFields = new Map();
     const incoming = getEdges().flatMap((edge) => {
       const source = edge.source === id ? byId.get(edge.target) : null;
-      return source?.data.kind === fieldSourceKind ? fieldsOf(byId, source) : [];
+      if (source?.data.kind !== fieldSourceKind) return [];
+      const sourceId = source.data.copyOf ?? source.id;
+      const fields = ensureFieldIds(fieldsOf(byId, source));
+      sourceFields.set(sourceId, fields);
+      return trackInheritedFields(fields, sourceId);
     });
     if (!incoming.length) return ns;
-    return ns.map((n) => n.id === id ? { ...n, data: { ...n.data, fields: mergeFields(n.data.fields, incoming) } } : n);
+    return ns.map((n) => {
+      if (sourceFields.has(n.id)) return { ...n, data: { ...n.data, fields: sourceFields.get(n.id) } };
+      return n.id === id
+        ? { ...n, data: { ...n.data, fields: mergeFields(n.data.fields, incoming) } }
+        : n;
+    });
   });
 
   // The fields scroll in the fixed-height body (R3.6c). `nowheel` makes the wheel scroll them, not zoom the board,

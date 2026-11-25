@@ -17,7 +17,7 @@ export const stripScripts = (html) =>
   html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '').replace(/<\/?script\b[^>]*>/gi, '');
 
 // Tab panels stay mounted to keep editor state across the Screen's drafts.
-export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialFields = [], parent = [], initialHighlights = [], initialTab = 'content', initialReading = false, previewOnly = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
+export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', initialFields = [], parent = [], parentConflicts = [], sourceNames = new Map(), initialHighlights = [], initialTab = 'content', initialReading = false, previewOnly = false, readOnly = false, highlightsReadOnly = readOnly, onSave, onCancel }) {
   const [content] = useState(() => extractHighlights(initial));
   const [text, setText] = useState(() => initialTab === 'content' ? beautifyHtml(content.html) : content.html);
   const [highlights, setHighlights] = useState(initialHighlights);
@@ -307,7 +307,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                 className="screen-editor-panel"
                 hidden={tab !== 'fields'}
               >
-                <FieldsEditor draft={fieldsDraft} parent={parent} />
+                <FieldsEditor draft={fieldsDraft} parent={parent} parentConflicts={parentConflicts} sourceNames={sourceNames} />
               </div>
             )}
           </div>

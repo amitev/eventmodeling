@@ -51,7 +51,7 @@ export const FLOWS_TO = {
 };
 
 export const FIELD_TYPES = ['string', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'uuid', 'object'];
-export const FIELD_FLAGS = ['id', 'optional', 'generated', 'pii', 'technical'];
+export const FIELD_FLAGS = ['identifier', 'optional', 'generated', 'pii', 'technical'];
 
 export const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const isText = (v) => typeof v === 'string' && v.trim() !== '';
@@ -122,7 +122,7 @@ const KEYS = {
   element: ['id', 'type', 'lane', 'name', 'info', 'icon', 'isList', 'html', 'url', 'highlights', 'markdown', 'color', 'fields', 'x', 'connectsTo', 'scenarios'],
   copy: ['id', 'type', 'lane', 'copyOf', 'highlights', 'x', 'connectsTo'],
   scenario: ['id', 'name', 'description', 'given', 'when', 'then', 'error'],
-  field: ['name', 'type', 'list', ...FIELD_FLAGS, 'fields'],
+  field: ['name', 'type', 'list', 'id', ...FIELD_FLAGS, 'inheritedFrom', 'fields'],
 };
 
 // The keys in the order of `keys` (those not set left out), then any others.
@@ -223,8 +223,9 @@ export function validateModel({ contexts, chapters }) {
   const links = [];
   const references = [];
   const copies = [];
+  const inheritedFields = [];
 
-  const fieldList = (v, path) => {
+  const fieldList = (v, path, ids = new Set()) => {
     if (!Array.isArray(v)) fail(path, 'must be a list');
     const names = new Set();
     v.forEach((f, i) => {
@@ -234,7 +235,34 @@ export function validateModel({ contexts, chapters }) {
       names.add(f.name);
       if (!FIELD_TYPES.includes(f.type)) fail(`${fp}.type`, `must be one of ${FIELD_TYPES.join(', ')}`);
       for (const k of ['list', ...FIELD_FLAGS]) if (typeof f[k] !== 'boolean') fail(`${fp}.${k}`, 'must be true or false');
-      if (f.type === 'object') fieldList(f.fields, `${fp}.fields`);
+      if (f.id !== undefined) {
+        if (!isText(f.id)) fail(`${fp}.id`, 'must be a non-empty text');
+        if (ids.has(f.id)) fail(`${fp}.id`, `duplicate field id "${f.id}"`);
+        ids.add(f.id);
+      }
+      if (f.inheritedFrom !== undefined) {
+        const source = f.inheritedFrom;
+        if (!isObject(source)) fail(`${fp}.inheritedFrom`, 'must be an object');
+        for (const key of Object.keys(source)) {
+          if (!['elementId', 'id', 'fieldPath'].includes(key)) fail(`${fp}.inheritedFrom.${key}`, 'is not allowed');
+        }
+        if (!isText(source.elementId)) fail(`${fp}.inheritedFrom.elementId`, 'must be a non-empty text');
+        if (!isText(source.id)) fail(`${fp}.inheritedFrom.id`, 'must be a non-empty text');
+        if (f.id !== source.id) fail(`${fp}.inheritedFrom.id`, 'must match the field id');
+        if (!Array.isArray(source.fieldPath) || !source.fieldPath.length) {
+          fail(`${fp}.inheritedFrom.fieldPath`, 'must be a non-empty list');
+        }
+        source.fieldPath.forEach((part, j) => {
+          if (!isText(part)) fail(`${fp}.inheritedFrom.fieldPath[${j}]`, 'must be a non-empty text');
+        });
+        inheritedFields.push({
+          path: `${fp}.inheritedFrom`,
+          sourceId: source.elementId,
+          fieldId: source.id,
+          fieldPath: source.fieldPath,
+        });
+      }
+      if (f.type === 'object') fieldList(f.fields, `${fp}.fields`, ids);
     });
   };
   const entry = (v, path, chapter, type) => {
@@ -389,6 +417,23 @@ export function validateModel({ contexts, chapters }) {
     if (!original) fail(path, `no element with id "${id}"`);
     if (original.copy) fail(path, `"${id}" is itself a copy`);
     if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
+  }
+  for (const { path, sourceId, fieldId, fieldPath } of inheritedFields) {
+    const source = elements.get(sourceId);
+    if (!source) fail(`${path}.elementId`, `no element with id "${sourceId}"`);
+    if (source.copy) fail(`${path}.elementId`, 'must refer to an original element');
+    if (!FIELD_HOLDERS.includes(source.type)) fail(`${path}.elementId`, 'must refer to an element with fields');
+    let fields = source.element.fields ?? [];
+    let field;
+    for (let i = 0; i < fieldPath.length; i++) {
+      field = fields.find((candidate) => candidate.name === fieldPath[i]);
+      if (!field) fail(`${path}.fieldPath`, `no source field named "${fieldPath[i]}"`);
+      if (i < fieldPath.length - 1) {
+        if (field.type !== 'object') fail(`${path}.fieldPath`, `"${fieldPath[i]}" is not an object field`);
+        fields = field.fields ?? [];
+      }
+    }
+    if (field.id !== fieldId) fail(`${path}.id`, 'does not match the source field at fieldPath');
   }
   const screenPaths = new Map();
   for (const { element, path } of elements.values()) {

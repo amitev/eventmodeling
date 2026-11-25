@@ -53,6 +53,53 @@ test('Chapter discovery omits board structure and supports Context filtering', a
   await request('GET', '/outline?detail=unknown', undefined, 400);
 });
 
+test('board format has no version field', () => {
+  const board = serialize([], [], [{ id: 'context', name: 'Default' }]);
+
+  assert.equal('version' in board, false);
+  assert.throws(() => parseBoard(JSON.stringify({ ...board, version: 1 })), /version: is not allowed/);
+});
+
+test('tracked field provenance must resolve to a source element', async (t) => {
+  const { request, context, chapter } = await setup(t);
+  const ctx = await context('Sales');
+  const ch = await chapter(ctx.id, 'Orders');
+  await request('POST', '/elements', {
+    slice: ch.slices[0].id,
+    lane: ch.lanes.find((lane) => lane.type === 'INTERACTION').id,
+    type: 'READ_MODEL',
+    name: 'Order Summary',
+    fields: [{
+      name: 'orderId',
+      id: 'field-1',
+      inheritedFrom: { elementId: 'missing-source', id: 'field-1', fieldPath: ['orderId'] },
+    }],
+    autoConnect: false,
+  }, 400);
+
+  const source = await request('POST', '/elements', {
+    slice: ch.slices[0].id,
+    lane: ch.lanes.find((lane) => lane.type === 'EVENT').id,
+    type: 'EVENT',
+    name: 'Order Placed',
+    fields: [{ name: 'orderId' }],
+    autoConnect: false,
+  }, 201);
+  const sourceFieldId = (await request('GET', `/elements/${source.id}`)).fields[0].id;
+  await request('POST', '/elements', {
+    slice: ch.slices[0].id,
+    lane: ch.lanes.find((lane) => lane.type === 'INTERACTION').id,
+    type: 'READ_MODEL',
+    name: 'Order Summary',
+    fields: [{
+      name: 'orderId',
+      id: sourceFieldId,
+      inheritedFrom: { elementId: source.id, id: sourceFieldId, fieldPath: ['missingField'] },
+    }],
+    autoConnect: false,
+  }, 400);
+});
+
 test('one compact batch builds and verifies a new Chapter without echoing HTML or examples', async (t) => {
   const { request } = await setup(t);
   const post = (path, body, as) => ({ method: 'POST', path, body, as });
@@ -94,6 +141,157 @@ test('one compact batch builds and verifies a new Chapter without echoing HTML o
   const stored = await request('GET', `/chapters/${ch}`);
   assert.equal(stored.slices[0].id, slice);
   assert.match(stored.slices[0].elements.find((e) => e.id === screen).html, /Review your plan/);
+});
+
+test('tracked fields follow source deletion, rename and type changes', async (t) => {
+  const { request, context, chapter } = await setup(t);
+  const ctx = await context('Sales');
+  const ch = await chapter(ctx.id, 'Orders');
+  const lane = (type) => ch.lanes.find((entry) => entry.type === (type === 'EVENT' ? 'EVENT' : 'INTERACTION')).id;
+  const element = (content) =>
+    request('POST', '/elements', {
+      slice: ch.slices[0].id,
+      lane: lane(content.type),
+      autoConnect: false,
+      ...content,
+    }, 201);
+  const source = await element({
+    type: 'EVENT',
+    name: 'Profile Updated',
+    fields: [{ name: 'profile', type: 'object', fields: [{ name: 'email' }, { name: 'name' }] }],
+  });
+  const target = await element({
+    type: 'READ_MODEL',
+    name: 'Profile',
+    fields: [{ name: 'legacy' }],
+  });
+  await request('POST', '/connections', { from: source.id, to: target.id }, 201);
+
+  const inherited = (await request('GET', `/elements/${target.id}`)).fields;
+  assert.deepEqual(inherited[1].inheritedFrom, {
+    elementId: source.id,
+    id: inherited[1].id,
+    fieldPath: ['profile'],
+  });
+  const sourceFields = (await request('GET', `/elements/${source.id}`)).fields;
+  sourceFields[0].fields = sourceFields[0].fields.filter((field) => field.name !== 'email');
+  await request('PATCH', `/elements/${source.id}`, { fields: sourceFields });
+
+  const updated = (await request('GET', `/elements/${target.id}`)).fields;
+  assert.deepEqual(updated.map((field) => field.name), ['legacy', 'profile']);
+  assert.deepEqual(updated[1].fields.map((field) => field.name), ['name']);
+
+  sourceFields[0].name = 'person';
+  await request('PATCH', `/elements/${source.id}`, { fields: sourceFields });
+  const renamed = (await request('GET', `/elements/${target.id}`)).fields;
+  assert.deepEqual(renamed.map((field) => field.name), ['legacy', 'person']);
+  assert.deepEqual(renamed[1].inheritedFrom.fieldPath, ['person']);
+  assert.deepEqual(renamed[1].fields[0].inheritedFrom.fieldPath, ['person', 'name']);
+
+  const sourceString = (await request('GET', `/elements/${source.id}`)).fields;
+  sourceString[0].type = 'string';
+  delete sourceString[0].fields;
+  await request('PATCH', `/elements/${source.id}`, { fields: sourceString });
+  const asString = (await request('GET', `/elements/${target.id}`)).fields[1];
+  assert.equal(asString.type, 'string');
+  assert.equal('fields' in asString, false);
+
+  let sourceObject = (await request('GET', `/elements/${source.id}`)).fields;
+  sourceObject[0].type = 'object';
+  sourceObject[0].fields = [{ name: 'address' }];
+  await request('PATCH', `/elements/${source.id}`, { fields: sourceObject });
+  const asObject = (await request('GET', `/elements/${target.id}`)).fields[1];
+  assert.equal(asObject.type, 'object');
+  assert.deepEqual(asObject.fields.map((field) => field.name), ['address']);
+  assert.deepEqual(asObject.fields[0].inheritedFrom, {
+    elementId: source.id,
+    id: asObject.fields[0].id,
+    fieldPath: ['person', 'address'],
+  });
+
+  sourceObject = (await request('GET', `/elements/${source.id}`)).fields;
+  sourceObject[0].list = true;
+  sourceObject[0].identifier = true;
+  sourceObject[0].optional = true;
+  sourceObject[0].generated = true;
+  sourceObject[0].pii = true;
+  sourceObject[0].technical = true;
+  sourceObject[0].fields[0].type = 'uuid';
+  sourceObject[0].fields.push({ name: 'city' });
+  await request('PATCH', `/elements/${source.id}`, { fields: sourceObject });
+
+  const allProperties = (await request('GET', `/elements/${target.id}`)).fields[1];
+  assert.equal(allProperties.list, true);
+  assert.equal(allProperties.identifier, true);
+  assert.equal(allProperties.optional, true);
+  assert.equal(allProperties.generated, true);
+  assert.equal(allProperties.pii, true);
+  assert.equal(allProperties.technical, true);
+  assert.equal(allProperties.fields[0].type, 'uuid');
+  assert.deepEqual(allProperties.fields.map((field) => field.name), ['address', 'city']);
+  assert.deepEqual(allProperties.fields[1].inheritedFrom, {
+    elementId: source.id,
+    id: allProperties.fields[1].id,
+    fieldPath: ['person', 'city'],
+  });
+
+  await request('DELETE', `/elements/${source.id}`);
+  assert.deepEqual((await request('GET', `/elements/${target.id}`)).fields.map((field) => field.name), ['legacy']);
+});
+
+test('whole-Context pushes remove fields inherited from deleted elements', async (t) => {
+  const { request, context, chapter } = await setup(t);
+  const sourceContext = await context('Source');
+  const targetContext = await context('Target');
+  const targetChapter = await chapter(targetContext.id, 'Summary');
+  const makeElements = async () => {
+    const sourceChapter = await chapter(sourceContext.id, 'Orders');
+    const source = await request('POST', '/elements', {
+      slice: sourceChapter.slices[0].id,
+      lane: sourceChapter.lanes.find((lane) => lane.type === 'EVENT').id,
+      type: 'EVENT',
+      name: 'Order Placed',
+      fields: [{ name: 'orderId' }],
+      autoConnect: false,
+    }, 201);
+    const target = await request('GET', `/elements/${targetElement.id}`);
+    await request('POST', '/connections', { from: source.id, to: target.id }, 201);
+  };
+  const targetElement = await request('POST', '/elements', {
+    slice: targetChapter.slices[0].id,
+    lane: targetChapter.lanes.find((lane) => lane.type === 'INTERACTION').id,
+    type: 'READ_MODEL',
+    name: 'Order Summary',
+    autoConnect: false,
+  }, 201);
+
+  await makeElements();
+  assert.deepEqual((await request('GET', `/elements/${targetElement.id}`)).fields.map((field) => field.name), ['orderId']);
+  const board = await request('GET', '');
+  const sourceChapters = board.chapters.filter((chapter) => chapter.context === sourceContext.id);
+  sourceChapters[0].slices[0].elements[0].fields[0].identifier = true;
+  await request('PUT', `/contexts/${sourceContext.id}`, {
+    id: sourceContext.id,
+    name: sourceContext.name,
+    chapters: sourceChapters,
+  }, 200, '*');
+  assert.equal((await request('GET', `/elements/${targetElement.id}`)).fields[0].identifier, true);
+
+  await request('PUT', `/contexts/${sourceContext.id}`, {
+    id: sourceContext.id,
+    name: sourceContext.name,
+    chapters: [],
+  }, 200, '*');
+  assert.deepEqual((await request('GET', `/elements/${targetElement.id}`)).fields ?? [], []);
+
+  await makeElements();
+  const contexts = (await request('GET', '')).contexts;
+  await request('PUT', '/contexts', {
+    contexts: contexts
+      .filter((item) => item.id !== sourceContext.id)
+      .map(({ id, name, info }) => ({ id, name, ...(info ? { info } : {}) })),
+  }, 200, '*');
+  assert.deepEqual((await request('GET', `/elements/${targetElement.id}`)).fields ?? [], []);
 });
 
 test('slice build info resolves and deduplicates external Event dependencies of Read Models', async (t) => {

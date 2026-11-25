@@ -179,7 +179,6 @@ export function serialize(nodes, edges, contexts) {
   });
   return {
     format: 'event-model',
-    version: 1,
     contexts: contexts.map((c) => ({
       id: c.id, name: c.name, ...(c.info ? { info: c.info } : {}),
       ...(c.tasks?.length ? { tasks: c.tasks.map(({ id, title, description, status, chapter }) => ({ id, title, description, status, chapter })) } : {}),
@@ -236,11 +235,10 @@ export function parseBoard(text) {
     throw new Error(`file: not valid JSON (${err.message})`);
   }
   if (isObject(data) && !hasKey(data, 'format')) {
-    fail('format', 'is missing (files in an earlier format are not supported)');
+    fail('format', 'is missing');
   }
-  object(data, ['format', 'version', 'contexts', 'chapters'], '');
+  object(data, ['format', 'contexts', 'chapters'], '');
   if (data.format !== 'event-model') fail('format', 'must be "event-model"');
-  if (data.version !== 1) fail('version', 'must be 1');
   list(data.contexts, 'contexts', true);
   list(data.chapters, 'chapters');
 
@@ -287,13 +285,13 @@ export function parseBoard(text) {
     });
   };
   // A list of fields (R9.6); `object` fields hold their own list. Names are unique per list.
-  const fieldList = (v, path) => {
+  const fieldList = (v, path, ids = new Set()) => {
     list(v, path);
     const names = new Set();
     return v.map((f, i) => {
       const fp = `${path}[${i}]`;
       const isObj = isObject(f) && f.type === OBJECT;
-      object(f, ['name', 'type', 'list', ...FIELD_FLAGS.map((x) => x.key), ...(isObj ? ['fields'] : [])], fp);
+      object(f, ['name', 'type', 'list', ...FIELD_FLAGS.map((x) => x.key), ...(isObj ? ['fields'] : [])], fp, ['id', 'inheritedFrom']);
       name(f.name, at(fp, 'name'));
       if (names.has(f.name)) fail(at(fp, 'name'), `field name "${f.name}" is used twice`);
       names.add(f.name);
@@ -301,13 +299,35 @@ export function parseBoard(text) {
       for (const k of ['list', ...FIELD_FLAGS.map((x) => x.key)]) {
         if (typeof f[k] !== 'boolean') fail(at(fp, k), 'must be true or false');
       }
+      let id;
+      if (f.id !== undefined) {
+        name(f.id, at(fp, 'id'));
+        if (ids.has(f.id)) fail(at(fp, 'id'), `duplicate field id "${f.id}"`);
+        ids.add(f.id);
+        id = f.id;
+      }
+      let inheritedFrom;
+      if (f.inheritedFrom !== undefined) {
+        object(f.inheritedFrom, ['elementId', 'id', 'fieldPath'], at(fp, 'inheritedFrom'));
+        name(f.inheritedFrom.elementId, at(at(fp, 'inheritedFrom'), 'elementId'));
+        name(f.inheritedFrom.id, at(at(fp, 'inheritedFrom'), 'id'));
+        if (id !== f.inheritedFrom.id) {
+          fail(at(at(fp, 'inheritedFrom'), 'id'), 'must match the field id');
+        }
+        list(f.inheritedFrom.fieldPath, at(at(fp, 'inheritedFrom'), 'fieldPath'));
+        if (!f.inheritedFrom.fieldPath.length) fail(at(at(fp, 'inheritedFrom'), 'fieldPath'), 'must not be empty');
+        f.inheritedFrom.fieldPath.forEach((part, j) => name(part, at(at(at(fp, 'inheritedFrom'), 'fieldPath'), j)));
+        inheritedFrom = structuredClone(f.inheritedFrom);
+      }
       const { name: n, type, list: isList } = f;
       return {
         name: n,
         type,
         list: isList,
         ...Object.fromEntries(FIELD_FLAGS.map(({ key }) => [key, f[key]])),
-        ...(isObj ? { fields: fieldList(f.fields, at(fp, 'fields')) } : {}),
+        ...(id ? { id } : {}),
+        ...(inheritedFrom ? { inheritedFrom } : {}),
+        ...(isObj ? { fields: fieldList(f.fields, at(fp, 'fields'), ids) } : {}),
       };
     });
   };

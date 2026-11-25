@@ -69,7 +69,17 @@ import { TasksDialog } from './dialogs/TasksDialog.jsx';
 import { AgentIcons } from './AgentIcons.jsx';
 import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
-import { hasFields, incompleteFieldTargets, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
+import {
+  hasFields,
+  incompleteFieldTargets,
+  inheritOnConnect,
+  parentFieldConflicts,
+  parentFields,
+  persistInheritedFieldIds,
+  propagateFields,
+  removeInheritedFieldsFromElements,
+  syncInheritedFieldChanges,
+} from './model/fields.js';
 import { HistoryContext, useHistory } from './state/history.js';
 import { kindOfKey, HotkeysDialog } from './dialogs/Hotkeys.jsx';
 import { BoardActions, CopySelection } from './state/BoardActions.js';
@@ -159,6 +169,14 @@ function Board() {
   const openTaskCount = useMemo(() => contexts.reduce((count, context) =>
     filterId && context.id !== filterId ? count : count + (context.tasks ?? []).filter((task) => task.status === 'Open').length,
   0), [contexts, filterId]);
+  const fieldSourceNames = useMemo(() => new Map(
+    nodes
+      .filter((node) => node.type === 'sticky')
+      .map((node) => {
+        const label = KINDS[node.data.kind]?.label ?? node.data.kind;
+        return [node.id, node.data.name ? `${label} — ${node.data.name}` : `${label} (${node.id})`];
+      })
+  ), [nodes]);
   useEffect(() => () => clearTimeout(edgeHoverTimer.current.timer), []);
   useEffect(() => {
     try {
@@ -510,7 +528,14 @@ function Board() {
         if (url) return { ...n, data: { ...data, url } };
         return { ...n, data: text.trim() ? { ...data, html: text } : data };
       });
-      return htmlCopy ? updated : propagateFields(updated, es, id, propagate);
+      if (htmlCopy) return updated;
+      const withSourceIds = persistInheritedFieldIds(updated, fields);
+      return syncInheritedFieldChanges(
+        propagateFields(withSourceIds, es, id, propagate),
+        id,
+        htmlNode.data.fields ?? [],
+        fields
+      );
     });
     if (cleared.length) setNotice(`HTML structure changed; cleared existing highlights on ${cleared.length} Screen(s).`);
     closeScreen();
@@ -518,14 +543,17 @@ function Board() {
   const saveFields = (fields, propagate) => {
     const id = fieldsId;
     const es = getEdges();
-    setNodes((ns) =>
-      propagateFields(
-        ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, fields } } : n)),
+    setNodes((ns) => {
+      const previous = ns.find((n) => n.id === id)?.data.fields ?? [];
+      const withSourceIds = persistInheritedFieldIds(ns, fields);
+      const updated = propagateFields(
+        withSourceIds.map((n) => (n.id === id ? { ...n, data: { ...n.data, fields } } : n)),
         es,
         id,
         propagate
-      )
-    );
+      );
+      return syncInheritedFieldChanges(updated, id, previous, fields);
+    });
     setFieldsId(null);
   };
   const focusChapter = (node) =>
@@ -705,6 +733,8 @@ function Board() {
       const kept = changes.filter(
         (c) => !(c.type === 'position' && isSliceId(c.id)) && !(c.type === 'select' && c.selected && isHiddenId(c.id))
       );
+      const removedIds = kept.filter((change) => change.type === 'remove').map((change) => change.id);
+      if (removedIds.length) setNodes(removeInheritedFieldsFromElements(current, removedIds));
       onNodesChange(kept);
       // Measured sizes arrive after render (e.g. a Screen widening for its mockup).
       if (kept.some((c) => c.type === 'dimensions')) {
@@ -739,7 +769,8 @@ function Board() {
     const ss = slices(nodes, slice.parentId);
     const i = ss.findIndex((s) => s.id === sliceId);
     const neighbour = ss[i - 1] ?? ss[i + 1]; // the previous slice, else the one that becomes first
-    setNodes(layoutSlices(nodes.filter((n) => !gone.has(n.id)), nodes));
+    const updated = removeInheritedFieldsFromElements(nodes, gone);
+    setNodes(layoutSlices(updated.filter((n) => !gone.has(n.id)), nodes));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
     setActiveId(slice.parentId);
     const top = lanesOf(nodes, slice.parentId)[0];
@@ -825,8 +856,9 @@ function Board() {
         return;
       const gone = new Set([laneId, ...doomed.map((n) => n.id)]);
       if (!confirmCopies(nodes, gone)) return;
+      const updated = removeInheritedFieldsFromElements(nodes, gone);
       setNodes(
-        nodes
+        updated
           .filter((n) => !gone.has(n.id))
           .map((n) =>
             mine(n) && (n.type === 'sticky' || n.type === 'lane') && n.position.y >= bottom
@@ -876,7 +908,8 @@ function Board() {
         return;
       const gone = new Set([chapterId, ...kids.map((n) => n.id)]);
       if (!confirmCopies(nodes, gone)) return;
-      setNodes(nodes.filter((n) => !gone.has(n.id)));
+      const updated = removeInheritedFieldsFromElements(nodes, gone);
+      setNodes(updated.filter((n) => !gone.has(n.id)));
       setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
       setContexts((cs) => cs.map((c) => c.tasks?.some((task) => task.chapter === chapterId)
         ? { ...c, tasks: c.tasks.map((task) => task.chapter === chapterId ? { ...task, chapter: null } : task) }
@@ -1366,7 +1399,8 @@ function Board() {
     if (!window.confirm(`Delete the ${inCell.length} element(s) in this Cell?`)) return;
     const gone = new Set(inCell.map((n) => n.id));
     if (!confirmCopies(ns, gone)) return;
-    setNodes(ns.filter((n) => !gone.has(n.id)));
+    const updated = removeInheritedFieldsFromElements(ns, gone);
+    setNodes(updated.filter((n) => !gone.has(n.id)));
     setEdges((es) => es.filter((e) => !gone.has(e.source) && !gone.has(e.target)));
   };
 
@@ -1624,7 +1658,7 @@ function Board() {
       const gone = new Set(getNodes().filter((n) => n.selected && n.type === 'sticky').map((n) => n.id));
       if (gone.size) {
         if (!confirmCopies(getNodes(), gone)) return;
-        setNodes((ns) => ns.filter((n) => !gone.has(n.id)));
+        setNodes((ns) => removeInheritedFieldsFromElements(ns, gone).filter((n) => !gone.has(n.id)));
         setEdges((es) => es.filter((x) => !gone.has(x.source) && !gone.has(x.target)));
         return;
       }
@@ -2089,6 +2123,8 @@ function Board() {
           initialInfo={htmlNode.data.info ?? ''}
           initialFields={htmlNode.data.fields ?? []}
           parent={parentFields(nodes, edges, htmlNode.id)}
+          parentConflicts={parentFieldConflicts(nodes, edges, htmlNode.id)}
+          sourceNames={fieldSourceNames}
           initialHighlights={htmlTarget.data.highlights ?? []}
           initialTab={initialHtmlTab}
           onSave={saveHtml}
@@ -2101,6 +2137,8 @@ function Board() {
           title={`Fields — ${KINDS[fieldsNode.data.kind].label}${fieldsNode.data.name ? ` — ${fieldsNode.data.name}` : ''}`}
           initial={fieldsNode.data.fields ?? []}
           parent={parentFields(nodes, edges, fieldsNode.id)}
+          parentConflicts={parentFieldConflicts(nodes, edges, fieldsNode.id)}
+          sourceNames={fieldSourceNames}
           onSave={saveFields}
           onClose={() => setFieldsId(null)}
         />

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
+import { removeInheritedFields, syncInheritedFields } from './field-inheritance.js';
 import { clearScreenHighlights, extractHighlights, htmlStructure } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import { byPosition, canonical, ordered, orderedTask, readModelEventSources, validateModel, validateTasks } from './model-rules.js';
@@ -38,6 +39,50 @@ export function contextFileName(name) {
 }
 
 const validSlices = (slices) => Array.isArray(slices) && slices.every((s) => isObject(s) && isText(s.id));
+
+function removeDeletedSourceFields(chapters, sourceIds) {
+  const elements = new Map(chapters.flatMap((chapter) =>
+    chapter.slices.flatMap((slice) => slice.elements.map((element) => [element.id, element]))
+  ));
+  for (const id of sourceIds) {
+    const current = [...elements].map(([elementId, element]) => ({
+      id: elementId,
+      fields: element.fields ?? [],
+    }));
+    for (const [targetId, fields] of removeInheritedFields(current, id)) {
+      const target = elements.get(targetId);
+      if (!target) continue;
+      if (fields.length) target.fields = fields;
+      else delete target.fields;
+    }
+  }
+}
+
+function syncChangedSourceFields(previousChapters, nextChapters) {
+  const previous = new Map(previousChapters.flatMap((chapter) =>
+    chapter.slices.flatMap((slice) => slice.elements.map((element) => [element.id, element]))
+  ));
+  const elements = new Map(nextChapters.flatMap((chapter) =>
+    chapter.slices.flatMap((slice) => slice.elements.map((element) => [element.id, element]))
+  ));
+  for (const [id, source] of previous) {
+    const updatedSource = elements.get(id);
+    if (!updatedSource || source.copyOf || updatedSource.copyOf) continue;
+    const before = source.fields ?? [];
+    const after = updatedSource.fields ?? [];
+    if (JSON.stringify(before) === JSON.stringify(after)) continue;
+    const current = [...elements].map(([elementId, element]) => ({
+      id: elementId,
+      fields: element.fields ?? [],
+    }));
+    for (const [targetId, fields] of syncInheritedFields(current, id, before, after)) {
+      const target = elements.get(targetId);
+      if (!target) continue;
+      if (fields.length) target.fields = fields;
+      else delete target.fields;
+    }
+  }
+}
 
 // A stored file name: a plain `.yaml` name that is not contexts.yaml.
 const validFile = (v) =>
@@ -369,6 +414,15 @@ export class ModelStore {
         chapters: documents.flatMap(({ doc }) => doc.chapters),
       });
       const retained = documents.filter(({ doc }) => keep.has(doc.id));
+      const removedSourceIds = documents
+        .filter(({ doc }) => !keep.has(doc.id))
+        .flatMap(({ doc }) => doc.chapters.flatMap((chapter) =>
+          chapter.slices.flatMap((slice) => slice.elements.map((element) => element.id))
+        ));
+      removeDeletedSourceFields(
+        retained.flatMap(({ doc }) => doc.chapters),
+        removedSourceIds
+      );
       updateSliceTimestamps(before, { contexts: list, chapters: retained.flatMap(({ doc }) => doc.chapters) });
       await fs.mkdir(this.#model, { recursive: true });
       await this.#write(path.join(this.#model, CONTEXTS_FILE), yaml(list));
@@ -437,7 +491,17 @@ export class ModelStore {
         chapters: chapters.map(compactScreens),
       };
       const others = documents.filter(({ doc }) => doc.id !== id);
-      updateSliceTimestamps(before, { contexts, chapters: [...others.flatMap(({ doc }) => doc.chapters), ...next.chapters] });
+      const nextChapters = [...others.flatMap(({ doc }) => doc.chapters), ...next.chapters];
+      const previousElementIds = new Set(documents.flatMap(({ doc }) => doc.chapters.flatMap((chapter) =>
+        chapter.slices.flatMap((slice) => slice.elements.map((element) => element.id))
+      )));
+      const nextElementIds = new Set(nextChapters.flatMap((chapter) =>
+        chapter.slices.flatMap((slice) => slice.elements.map((element) => element.id))
+      ));
+      const removedSourceIds = [...previousElementIds].filter((elementId) => !nextElementIds.has(elementId));
+      removeDeletedSourceFields(nextChapters, removedSourceIds);
+      syncChangedSourceFields(documents.flatMap(({ doc }) => doc.chapters), nextChapters);
+      updateSliceTimestamps(before, { contexts, chapters: nextChapters });
       await fs.mkdir(this.#model, { recursive: true });
       await this.#write(target, yaml(next));
       for (const { path: file, doc, text } of others) {
@@ -468,7 +532,6 @@ export class ModelStore {
       return {
         data: {
           format: 'event-model',
-          version: 1,
           contexts: contexts.map(({ id, name, info }) => ({
             id, name, ...(info ? { info } : {}),
             ...(taskLists.has(id) ? { tasks: taskLists.get(id) } : {}),

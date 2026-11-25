@@ -66,7 +66,7 @@ Header: Screen tabs, **Automations** only if `MODEL.processors` nonempty, **Scen
 6. No match: refuse **"No scenario covers this case"**, naming missing Given Events or mismatched field. Model gap; never invent behavior.
 
 **Read Models** `project(readModel, store)`: fold entries with id in `readModel.eventIds`, in store order. **Only Events with feeding arrows count**; worker completion without arrow never closes item (export warns).
-- Key: Read Model `id: true` fields also present on Event. No key: append-only rows; warn to mark id field.
+- Key: Read Model `identifier: true` fields also present on Event. No key: append-only rows; warn to mark an identifier.
 - Fields describe one result item. Use exported `isList` as the list/single-result hint; ask if documented behavior conflicts, never infer from field `list` or silently choose the first row. No outer `list: true` wrapper for multiple results; field `list` is only for a collection-valued attribute within one item.
 - `closingEventIds`: remove same-key row. Others: add/upsert same-key row, replacing same-named fields.
 - Translation feeds retain rows after translation; exporter excludes translation Processors' output Events from `closingEventIds` and missing-closing-arrow warnings. Uses outline's derived `TRANSLATION` type, not names; copies use original Processor's slice. Never add closing arrows or hide processed rows to simulate a queue.

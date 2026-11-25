@@ -19,7 +19,9 @@ Requirements and learnings for skills and agent workflows, not board or server b
 ## 2. Field editing
 
 - **A2.1** Skills follow Propagate's default (R9.4) through editing API S4.17/S4.20.
-- **A2.2** Existing-field edits, renames and removals need separate approval for downstream changes.
+- **A2.2** Source changes to any property of tracked fields, including nested fields, update inherited copies; removals and source-element deletion remove them. Untracked downstream fields stay.
+- **A2.3** API field copies preserve stable field ids and set `inheritedFrom` on every copied field, including nested fields. New top-level fields use Propagate (R9.4).
+- **A2.4** Skills preserve valid provenance, explain that Unlink removes the target field, retain tracked fields after arrow removal, warn about same-name parents and show the later UI winner; use outline order when API arrow order is unavailable.
 
 ## 3. Model validation
 

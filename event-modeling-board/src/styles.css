@@ -898,6 +898,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .fields-toolbar { display: flex; justify-content: flex-end; padding: 8px 14px; border-bottom: 1px solid #ddd; }
 .fields-editor .fields-parent { padding: 4px 12px; border: 1px solid #999; border-radius: 4px; background: #fff; cursor: pointer; }
 .fields-editor .fields-parent:disabled { opacity: 0.4; cursor: default; }
+.fields-conflicts { padding: 6px 14px; border-bottom: 1px solid #e3c66d; background: #fff7df; color: #614b13; font-size: 12px; }
 .fields-body { flex: 1; min-height: 0; overflow: auto; padding: 8px 14px 12px; }
 .fields-editor .field-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-width: 780px; }
 .fields-editor .field-head { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #667; }
@@ -907,6 +908,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .fields-editor .f-prop { flex: none; width: 76px; text-align: center; }
 .fields-editor .f-rm { flex: none; width: 24px; }
 .fields-editor button.f-rm { height: 24px; padding: 0; border: 1px solid #bbb; border-radius: 4px; background: #fff; cursor: pointer; }
+.fields-editor button.f-unlink { width: 64px; color: #8b2525; }
+.fields-editor .field-lineage { min-width: 780px; padding: 0 0 4px; color: #556; font-size: 11px; }
 .fields-editor .field-children { margin: 0 0 4px 18px; padding-left: 10px; border-left: 2px solid #e3e6ef; }
 .fields-editor .f-add { margin: 4px 0; padding: 2px 10px; border: 1px dashed #99a; border-radius: 4px; background: #fff; cursor: pointer; }
 .fields-error { padding: 6px 14px; color: #b00020; font-size: 13px; }

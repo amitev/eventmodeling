@@ -1,4 +1,10 @@
 import { compactHtml } from './html-compact.js';
+import {
+  ensureFieldIds,
+  removeInheritedFields,
+  syncInheritedFields,
+  trackInheritedFields,
+} from './field-inheritance.js';
 import { clearScreenHighlights, extractHighlights, highlightProblem, htmlStructure } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import {
@@ -133,18 +139,24 @@ function setOptional(item, key, v) {
 }
 
 // Fields (R9.6) with the defaults the board gives a new field.
-function fieldList(v, path = 'fields') {
+function fieldList(v, path = 'fields', ids = new Set()) {
   if (!Array.isArray(v)) throw bad(`${path} must be a list`);
   const names = new Set();
   return v.map((f, i) => {
     const p = `${path}[${i}]`;
     if (!isObject(f)) throw bad(`${p} must be an object`);
     for (const k of Object.keys(f)) {
-      if (!['name', 'type', 'list', ...FIELD_FLAGS, 'fields'].includes(k)) throw bad(`${p}: unknown field "${k}"`);
+      if (!['name', 'type', 'list', 'id', ...FIELD_FLAGS, 'inheritedFrom', 'fields'].includes(k)) throw bad(`${p}: unknown field "${k}"`);
     }
     const name = text(f.name, `${p}.name`);
     if (names.has(name)) throw bad(`${p}.name: field name "${name}" is used twice`);
     names.add(name);
+    let id;
+    if (f.id !== undefined) {
+      id = text(f.id, `${p}.id`);
+      if (ids.has(id)) throw bad(`${p}.id: duplicate field id "${id}"`);
+      ids.add(id);
+    }
     const type = f.type ?? 'string';
     if (!FIELD_TYPES.includes(type)) throw bad(`${p}.type must be one of ${FIELD_TYPES.join(', ')}`);
     const flags = {};
@@ -154,7 +166,28 @@ function fieldList(v, path = 'fields') {
       flags[k] = value;
     }
     if (type !== 'object' && f.fields !== undefined) throw bad(`${p}.fields: only an object field has fields`);
-    return orderedField({ name, type, ...flags, ...(type === 'object' ? { fields: fieldList(f.fields ?? [], `${p}.fields`) } : {}) });
+    let inheritedFrom;
+    if (f.inheritedFrom !== undefined) {
+      const source = f.inheritedFrom;
+      if (!isObject(source)) throw bad(`${p}.inheritedFrom must be an object`);
+      for (const k of Object.keys(source)) {
+        if (!['elementId', 'id', 'fieldPath'].includes(k)) throw bad(`${p}.inheritedFrom: unknown field "${k}"`);
+      }
+      const elementId = text(source.elementId, `${p}.inheritedFrom.elementId`);
+      const sourceId = text(source.id, `${p}.inheritedFrom.id`);
+      if (id !== sourceId) throw bad(`${p}.inheritedFrom.id must match id`);
+      if (!Array.isArray(source.fieldPath) || !source.fieldPath.length) {
+        throw bad(`${p}.inheritedFrom.fieldPath must be a non-empty list`);
+      }
+      const fieldPath = source.fieldPath.map((part, j) => text(part, `${p}.inheritedFrom.fieldPath[${j}]`));
+      inheritedFrom = { elementId, id: sourceId, fieldPath };
+    }
+    return orderedField({
+      name, type, ...flags,
+      ...(id ? { id } : {}),
+      ...(inheritedFrom ? { inheritedFrom } : {}),
+      ...(type === 'object' ? { fields: fieldList(f.fields ?? [], `${p}.fields`, ids) } : {}),
+    });
   });
 }
 
@@ -206,10 +239,14 @@ function inheritFields(model, from, to) {
     }
   }
   for (const src of sources(byId, edges, from.id)) {
-    const fields = fieldsOf(byId, src);
+    const source = src.copyOf ? byId.get(src.copyOf) : src;
+    const fields = ensureFieldIds(fieldsOf(byId, src), randomId);
     if (!fields.length) continue;
+    source.fields = fields;
     for (const dst of targets(byId, edges, to.id)) {
-      if (dst.id !== src.id) dst.fields = mergeFields(dst.fields, fields);
+      if (dst.id !== source.id) {
+        dst.fields = mergeFields(dst.fields, trackInheritedFields(fields, src.copyOf ?? src.id));
+      }
     }
   }
 }
@@ -291,12 +328,27 @@ function place(slice, lane, type, x, except) {
   return x;
 }
 
-// Removes the elements `ids`, their linked copies (R3.22), every arrow to them and the scenarios
-// that use them (R3.17). Returns what went.
+// Removes the elements `ids`, their linked copies and dependent tracked fields, arrows and
+// scenarios (R3.17, R3.22). Returns what went.
 function removeElements(model, ids) {
   const gone = new Set(ids);
   for (const c of model.chapters) {
     for (const s of c.slices) for (const e of s.elements) if (e.copyOf && gone.has(e.copyOf)) gone.add(e.id);
+  }
+  const elements = new Map(model.chapters.flatMap((chapter) =>
+    chapter.slices.flatMap((slice) => slice.elements.map((element) => [element.id, element]))
+  ));
+  for (const id of gone) {
+    const current = [...elements].map(([elementId, element]) => ({
+      id: elementId,
+      fields: element.fields ?? [],
+    }));
+    for (const [targetId, fields] of removeInheritedFields(current, id)) {
+      const target = elements.get(targetId);
+      if (!target) continue;
+      if (fields.length) target.fields = fields;
+      else delete target.fields;
+    }
   }
   const scenarios = [];
   const usesGone = (sc) => [...sc.given, ...(sc.when ? [sc.when] : []), ...sc.then].some((x) => gone.has(x.element));
@@ -739,7 +791,7 @@ function applyContent(el, p) {
   }
   if ('fields' in p) {
     only('fields', FIELD_HOLDERS);
-    const fields = p.fields === null ? [] : fieldList(p.fields);
+    const fields = p.fields === null ? [] : ensureFieldIds(fieldList(p.fields), randomId);
     if (fields.length) el.fields = fields;
     else delete el.fields;
   }
@@ -815,8 +867,17 @@ function patchElement(model, { params, body: b }) {
   }
   const contentChanged = 'html' in p || 'url' in p;
   const before = contentChanged ? htmlStructure(el.html) : null;
+  const previousFields = 'fields' in p ? structuredClone(el.fields ?? []) : null;
   const { highlights, ...content } = p;
   applyContent(el, content);
+  if (previousFields) {
+    const elements = [...ix.elements.values()].map(({ element }) => element);
+    for (const [id, fields] of syncInheritedFields(elements, el.id, previousFields, el.fields ?? [])) {
+      const target = ix.elements.get(id).element;
+      if (fields.length) target.fields = fields;
+      else delete target.fields;
+    }
+  }
   const cleared = contentChanged && before !== htmlStructure(el.html)
     ? clearScreenHighlights([...ix.elements.values()].map((item) => item.element), el.id) : [];
   if ('highlights' in p) applyContent(el, { highlights });
