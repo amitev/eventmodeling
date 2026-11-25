@@ -57,6 +57,8 @@ import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
 import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
 import { useConnectedAgents } from './state/agents.js';
 import { useBuildQueue } from './state/buildQueue.js';
+import { useModelingTasks } from './state/modelingTasks.js';
+import { ModelingTaskComposer, ModelingTasksDialog } from './dialogs/ModelingTasks.jsx';
 import { AgentCockpit } from './dialogs/AgentCockpit.jsx';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
@@ -66,7 +68,7 @@ import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
 import { MovieStrip } from './dialogs/MovieStrip.jsx';
 import { TasksDialog } from './dialogs/TasksDialog.jsx';
-import { AgentIcons } from './AgentIcons.jsx';
+import { AgentIcons, AgentTaskIcon } from './AgentIcons.jsx';
 import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
 import {
@@ -300,6 +302,8 @@ function Board() {
   const [selectedCell, setSelectedCell] = useState(null);
   const [cellMenu, setCellMenu] = useState(null);
   const closeCellMenu = useCallback(() => setCellMenu(null), []);
+  const [modelingTarget, setModelingTarget] = useState(null);
+  const [modelingTasksOpen, setModelingTasksOpen] = useState(false);
   // Nothing hidden stays selected: its Cell, or it, could still be acted on by a hotkey.
   useEffect(() => {
     if (!hiddenChapters.size) return;
@@ -334,6 +338,9 @@ function Board() {
   }, [buildQueueOpen, nodes, edges]);
   const { agents, removeAgent } = useConnectedAgents();
   const buildQueue = useBuildQueue(agents);
+  const modelingTasks = useModelingTasks();
+  const modelingTasksButtonRef = useRef(null);
+  const activeModelingTasks = modelingTasks.tasks.filter((task) => ['queued', 'running'].includes(task.status)).length;
   const activeBuilds = buildQueue.tasks.filter((task) => task.status === 'queued' || task.status === 'running').length;
   const tasksButtonRef = useRef(null);
   const buildQueueButtonRef = useRef(null);
@@ -356,7 +363,7 @@ function Board() {
   // The search box (R1e): whether it is open, and a counter that refocuses it on Ctrl+F.
   const [search, setSearch] = useState({ open: false, tick: 0 });
   const modalOpen = useRef(false);
-  modalOpen.current = scenarioOpen.current || helpOpen || !!cellMenu;
+  modalOpen.current = scenarioOpen.current || helpOpen || !!cellMenu || !!modelingTarget;
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return;
@@ -420,7 +427,7 @@ function Board() {
   const fullscreenAvailable = !!(document.fullscreenEnabled &&
     document.documentElement.requestFullscreen && document.exitFullscreen);
   const fullscreenPopupOpen = useRef(false);
-  fullscreenPopupOpen.current = modalOpen.current || tasksOpen || buildQueueOpen || search.open;
+  fullscreenPopupOpen.current = modalOpen.current || tasksOpen || buildQueueOpen || modelingTasksOpen || search.open;
   useEffect(() => {
     const keyboard = navigator.keyboard;
     const canLock = typeof keyboard?.lock === 'function' && typeof keyboard?.unlock === 'function';
@@ -1109,6 +1116,20 @@ function Board() {
     addLaneAfter,
     removeLane,
     removeChapter,
+    openModelingTask: (id) => {
+      if (overview) return;
+      const ns = getNodes();
+      const node = ns.find((item) => item.id === id);
+      const cell = node?.type === 'sticky' ? cellOfElement(ns, node) : null;
+      if (node?.type !== 'chapter' && !cell) {
+        setNotice('Could not open Agent Task: target no longer exists in a Cell.');
+        return;
+      }
+      setActiveId(node.type === 'chapter' ? node.id : cell.chapterId);
+      openModelingTask(node.type === 'chapter'
+        ? { type: 'chapter', chapterId: node.id }
+        : { type: 'element', ...cell, elementId: node.id });
+    },
   };
   const boardActions = useMemo(
     () => ({
@@ -1135,6 +1156,7 @@ function Board() {
         setInfoId(id);
       },
       openFields: (id) => !overview && setFieldsId(id),
+      openModelingTask: (id) => latest.current.openModelingTask(id),
       openHtml: (id) => {
         if (overview) return;
         setHtmlReading(false);
@@ -1435,7 +1457,7 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (cellMenu || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
+    if (cellMenu || modelingTarget || modelingTasksOpen || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step && !selectedCell && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
         !contextInfoId && !tasksOpen && !buildQueueOpen && !search.open &&
@@ -1682,7 +1704,7 @@ function Board() {
 
   // R5a.13: an enlarged Screen still targets its own Cell, not the Cell under its preview.
   const openCellMenu = (e, node) => {
-    if (overview || scenarioOpen.current || helpOpen) return;
+    if (overview || scenarioOpen.current || helpOpen || modelingTarget) return;
     if (node && !['sticky', 'lane'].includes(node.type)) return;
     const ns = getNodes();
     const element = node?.type === 'sticky' ? node : null;
@@ -1698,6 +1720,19 @@ function Board() {
     } else chooseCell(cell);
     setActiveId(cell.chapterId);
     setCellMenu({ cell, elementId: element?.id, x: e.clientX, y: e.clientY });
+  };
+
+  const openModelingTask = (scope) => {
+    const chapter = nodes.find((node) => node.id === scope.chapterId);
+    const context = contexts.find((item) => item.id === chapter.data.context);
+    const slice = nodes.find((node) => node.id === scope.sliceId);
+    const lane = nodes.find((node) => node.id === scope.laneId);
+    const element = nodes.find((node) => node.id === scope.elementId);
+    const label = [
+      context.name, chapter.data.name, slice?.data.name, lane && (lane.data.name || lane.data.type),
+      element && (element.data.name || KINDS[element.data.kind].label),
+    ].filter(Boolean).join(' / ');
+    setModelingTarget({ scope, label });
   };
 
   // Where the dragged elements were when the drag began, so a drop over no Cell can undo the move.
@@ -1722,6 +1757,7 @@ function Board() {
 
   const menuLane = cellMenu && nodes.find((n) => n.id === cellMenu.cell.laneId);
   const menuSlice = cellMenu && nodes.find((n) => n.id === cellMenu.cell.sliceId);
+  const menuElements = cellMenu ? cellElements(nodes, cellMenu.cell) : [];
   const menuPasteElement = clipboard.current && nodes.find((n) => n.id === clipboard.current);
   const menuCellFull = !!(menuLane && menuSlice && cellIsFull(nodes, menuLane, menuSlice));
   const menuCanPaste = !!menuPasteElement;
@@ -1840,6 +1876,18 @@ function Board() {
             <path d="M1.5 4l1.5 1.5L5.5 2.5M7 4h7M1.5 10l1.5 1.5L5.5 8.5M7 10h7M7 14h7" />
           </svg>
           <span className="task-count" aria-hidden="true">{openTaskCount}</span>
+        </button>
+        <button
+          ref={modelingTasksButtonRef}
+          className="tasks-button keep"
+          onClick={() => setModelingTasksOpen((open) => !open)}
+          title={`Agent Tasks (${activeModelingTasks} active)`}
+          aria-label={`Agent Tasks (${activeModelingTasks} active)`}
+          aria-haspopup="dialog"
+          aria-expanded={modelingTasksOpen}
+        >
+          <AgentTaskIcon />
+          <span className="task-count" aria-hidden="true">{activeModelingTasks}</span>
         </button>
         <button
           ref={buildQueueButtonRef}
@@ -1991,7 +2039,7 @@ function Board() {
           autoPanOnNodeDrag={false}
           disableKeyboardA11y
           snapGrid={[20, 20]}
-          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || screenInfo || scenariosViewId || movieId || selectedCell || cellMenu ? null : ['Backspace', 'Delete']}
+          deleteKeyCode={overview || scenarioEdit || fieldsId || htmlId || screenInfo || scenariosViewId || movieId || selectedCell || cellMenu || modelingTarget || modelingTasksOpen ? null : ['Backspace', 'Delete']}
           onBeforeDelete={async ({ nodes: doomed }) => confirmCopies(getNodes(), new Set(doomed.map((n) => n.id)))}
         >
           <CellHighlight cell={overview ? null : selectedCell} />
@@ -2034,6 +2082,9 @@ function Board() {
           pasteEnabled={menuPasteEnabled}
           pasteDisabledReason={menuPasteDisabledReason}
           laneType={menuLane.data.type}
+          onAgentTask={!cellMenu.elementId && menuElements.length === 0 ? () => openModelingTask({
+            type: 'cell', ...cellMenu.cell,
+          }) : undefined}
           onAdd={(kind) => addSticky(kind, { cell: cellMenu.cell })}
           onPaste={pasteCopy}
           onCopyContext={() => copyContext(cellMenu.elementId ? { elementId: cellMenu.elementId } : { sliceId: menuSlice.id })}
@@ -2042,6 +2093,16 @@ function Board() {
           onAddLane={(type) => addLaneAfter(menuLane.id, type)}
           onClose={closeCellMenu}
         />
+      )}
+      {modelingTarget && (
+        <ModelingTaskComposer
+          target={modelingTarget} agents={agents}
+          onSend={async (task) => { await modelingTasks.add(task); setModelingTasksOpen(true); }}
+          onClose={() => setModelingTarget(null)}
+        />
+      )}
+      {modelingTasksOpen && (
+        <ModelingTasksDialog queue={modelingTasks} buttonRef={modelingTasksButtonRef} headerRef={headerRef} onClose={() => setModelingTasksOpen(false)} />
       )}
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
       {tasksOpen && (

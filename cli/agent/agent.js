@@ -92,6 +92,9 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
           url.searchParams.set('name', payload.name);
         } else if (event === 'build') {
           buildSlice(url, session.id, payload, dialect, model, children, connection.signal);
+        } else if (event === 'modeling-task') {
+          if (url.searchParams.get('agentType') !== 'modeler') throw new Error('Builder received a modeling task');
+          modelTask(url, session.id, payload, dialect, model, children, connection.signal);
         } else if (event === 'ping') {
           await acknowledgePing(url, payload);
         }
@@ -287,6 +290,56 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
     if (!reported.ok) throw new Error(`HTTP ${reported.status}`);
   } catch (e) {
     console.error(`Could not report build of slice "${sliceName}": ${e.message}`);
+  }
+}
+
+export function parseModelingResponse(dialect, output) {
+  const { status, response } = parseBuildResponse(dialect, output);
+  return { status, response };
+}
+
+export function modelingPrompt(template, apiUrl, target, instruction) {
+  const values = { apiUrl, scope: JSON.stringify(target), instruction };
+  return template.replace(/\{(apiUrl|scope|instruction)\}/g, (_, key) => values[key]);
+}
+
+async function modelTask(url, agentId, task, dialect, model, children, signal) {
+  let status = 'failed';
+  let response;
+  let error;
+  const endpoint = `/api/agents/${encodeURIComponent(agentId)}/modeling-tasks/${encodeURIComponent(task.id)}`;
+  try {
+    console.log(`Modeling "${task.label}". Task: ${task.id}`);
+    const scoped = await fetch(new URL(`${endpoint}/scope`, url), {
+      redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+    });
+    if (!scoped.ok) {
+      const detail = await scoped.json();
+      throw new Error(detail.error || `Could not resolve modeling scope: HTTP ${scoped.status}`);
+    }
+    const target = await scoped.json();
+    const template = await readFile(path.join(__dirname, 'modeling-task-prompt.md'), 'utf8');
+    signal.throwIfAborted();
+    const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt);
+    const output = await runHarness(dialect, model, prompt, children);
+    ({ status, response } = parseModelingResponse(dialect, output));
+    if (status === 'failed') error = response;
+  } catch (e) {
+    if (signal.aborted) return;
+    response = error = e.message;
+    console.error(`Modeling task failed: ${error}`);
+  }
+  if (signal.aborted) return;
+  try {
+    const reported = await fetch(new URL(`${endpoint}/${status}`, url), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ response, ...(error === undefined ? {} : { error }) }),
+      redirect: 'error', signal: AbortSignal.timeout(5000),
+    });
+    await reported.body?.cancel();
+    if (!reported.ok) throw new Error(`HTTP ${reported.status}`);
+  } catch (e) {
+    console.error(`Could not report modeling task "${task.id}": ${e.message}`);
   }
 }
 

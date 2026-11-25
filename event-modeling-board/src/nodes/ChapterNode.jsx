@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { Handle, Position, useReactFlow, useStore } from '@xyflow/react';
 import { cleanName, filterNameInput } from '../model/names.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { chapterMetadataOf, CopyContextButton, InfoButton } from './parts.jsx';
+import { AgentTaskButton, chapterMetadataOf, CopyContextButton, InfoButton } from './parts.jsx';
 
 const NEW_CONTEXT = '__new-context__'; // value of the "+ New context..." dropdown entry
 
@@ -77,6 +77,7 @@ export function ChapterNode({ id, data }) {
           ))}
           <option value={NEW_CONTEXT}>+ New context...</option>
         </select>
+        <AgentTaskButton id={id} className="chapter-compact" />
         <CopyContextButton chapterId={id} className="chapter-compact" />
         <button
           className="chapter-compact nodrag"

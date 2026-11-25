@@ -6,6 +6,7 @@ import { chapterMetadata, LANE_COLORS, snap, stickyH, stickyW, stretchWidths } f
 import { HistoryContext } from '../state/history.js';
 import { ScreenFrame } from './ScreenFrame.jsx';
 import { BoardActions } from '../state/BoardActions.js';
+import { AgentTaskIcon } from '../AgentIcons.jsx';
 
 export function ColorPicker({ color, onChange, open, onOpenChange, disabled = false, label = 'Lane colour', allowNone = true, floating = false, swatchStyle }) {
   const ref = useRef(null);
@@ -195,6 +196,25 @@ export function InfoButton({ id, info, hotkey }) {
         <path d="M5 4.2V9" />
         <circle cx="5" cy="1.6" r="0.3" />
       </svg>
+    </button>
+  );
+}
+
+export function AgentTaskButton({ id, className = 'info-btn' }) {
+  const { openModelingTask } = useContext(BoardActions);
+  return (
+    <button
+      type="button"
+      className={`${className} nodrag`}
+      title="Agent Task"
+      aria-label="Agent Task"
+      onDoubleClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        openModelingTask(id);
+      }}
+    >
+      <AgentTaskIcon size={10} />
     </button>
   );
 }

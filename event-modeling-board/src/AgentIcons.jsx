@@ -21,6 +21,16 @@ export function RobotIcon({ name }) {
   );
 }
 
+export function AgentTaskIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 1.2v2M6.6 1.2h2.8" />
+      <rect x="2" y="3.2" width="12" height="11" rx="2.2" />
+      <path d="M2 8.2H.8M14 8.2h1.2M4.7 8.5l2.1 2.1 4.5-4.5" />
+    </svg>
+  );
+}
+
 function AgentCard({ agent, onStop, cardRef, position }) {
   const { id, name, model, agentType, lastPing, building } = agent;
   const [now, setNow] = useState(Date.now);

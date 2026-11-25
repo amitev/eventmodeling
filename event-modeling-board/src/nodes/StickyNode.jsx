@@ -6,7 +6,7 @@ import { ensureFieldIds, trackInheritedFields } from '../../../cli/board/field-i
 import { ScenariosCard } from '../scenarios/Scenarios.jsx';
 import { NotesCard } from './Notes.jsx';
 import { BoardActions, CopySelection } from '../state/BoardActions.js';
-import { chapterStretchWidths, CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
+import { AgentTaskButton, chapterStretchWidths, CopyButton, CopyContextButton, FieldList, FieldsButton, InfoButton, ScreenPreview } from './parts.jsx';
 import { ProcessorIcon } from '../ProcessorIcon.jsx';
 
 const ZOOM_DELAY_MS = 300;
@@ -122,9 +122,9 @@ export function StickyNode({ id, data, selected }) {
     update({ name: name.trim() });
   };
 
-  // The toolbar above a selected element: Copy and Info, the Fields and HTML mockup buttons where they
+  // The toolbar above a selected element: Agent Task, Copy and Info, Fields and HTML mockup buttons where they
   // apply, and Copy Context. It grows with zoom-in, from 24px buttons up to 28px (R1c.1a). A linked copy
-  // (R3.22) has Screen content/view buttons, and Notes and Scenarios only Copy Context.
+  // (R3.22) has Screen content/view buttons; Notes and Scenarios have Agent Task and Copy Context.
   const toolbarScale = useStore((s) => Math.min(28 / 24, Math.max(1, s.transform[2])));
   const contentButton = (
     <button
@@ -151,7 +151,7 @@ export function StickyNode({ id, data, selected }) {
     </button>
   );
   const copyContextButton = <CopyContextButton elementId={id} />;
-  // Notes and Scenarios have only Copy Context; Screen copies also have content/view buttons.
+  // Screen copies also have content/view buttons.
   const toolbar = (
     <NodeToolbar
       position={Position.Top}
@@ -160,6 +160,7 @@ export function StickyNode({ id, data, selected }) {
       className="element-toolbar nodrag nopan"
       style={{ '--tb-scale': toolbarScale, zIndex: 5 }}
     >
+      <AgentTaskButton id={id} />
       {data.kind === 'notes' || data.kind === 'scenarios' ? (
         copyContextButton
       ) : isCopy ? (

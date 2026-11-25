@@ -20,6 +20,7 @@ HTTP server that hosts the built board ([MODELING_BOARD.md](./MODELING_BOARD.md)
 - **S2.6** Missing board build: exit 1 with "Board build not found. Run "npm run build" first."
 - **S2.7** Port in use: exit 1 with "Port <port> is already in use."
 - **S2.8** The published package contains `cli/index.js`, `cli/init.js`, `cli/agent/agent.js`, `cli/agent/harnesses/`, board server modules in `cli/board/` (`app.js`, `api.js`, `agent-api.js`, `http-error.js`, `field-inheritance.js`, `model-edit.js`, `model-rules.js`, `model-store.js`, `html-compact.js`, `html-highlights.js`, `lane-colors.js`), `cli/board/public/` and `.claude/skills/`. Exclude tests. `prepack` runs the build.
+  - Include `cli/agent/modeling-task-prompt.md` and `cli/board/modeling-tasks.js` for AGENT.md S2.47-S2.52.
   - **Learning (implementation):** Rerun `npm link --force` after changing the bin entry path to refresh installed launchers.
 - **S2.9** `--dev`: serve only `/api` (S1.1 and S1.3 do not apply); skip the build check (S2.6). The board comes from the Vite dev server.
 S2.10–S2.13 moved to [CLI.md](./CLI.md); IDs unchanged.

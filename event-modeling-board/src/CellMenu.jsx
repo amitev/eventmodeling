@@ -5,10 +5,12 @@ import { useModalFocus } from './dialogs/popup.js';
 
 export function CellMenu({
   x, y, kinds, full, canRemove, canPaste, pasteEnabled, pasteDisabledReason, laneType,
+  onAgentTask,
   onAdd, onPaste, onCopyContext, onAddSlice, onRemoveSlice, onAddLane, onClose,
 }) {
   const menu = useModalFocus();
   const [position, setPosition] = useState({ left: x, top: y });
+  const hasAgentTask = !!onAgentTask;
 
   useLayoutEffect(() => {
     const el = menu.current;
@@ -18,7 +20,7 @@ export function CellMenu({
       top: Math.max(8, Math.min(y, window.innerHeight - height - 8)),
     });
     el.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
-  }, [menu, x, y]);
+  }, [menu, x, y, hasAgentTask]);
 
   useEffect(() => {
     const outside = (e) => {
@@ -65,6 +67,8 @@ export function CellMenu({
       onKeyDown={onKeyDown}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {hasAgentTask && <button type="button" role="menuitem" onClick={() => run(onAgentTask)}>Agent Task...</button>}
+      {hasAgentTask && <div className="cell-menu-separator" role="separator" />}
       {kinds.map((kind) => (
         <button
           key={kind}

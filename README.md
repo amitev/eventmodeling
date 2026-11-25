@@ -68,7 +68,7 @@ Use `em-cli --help` for commands or `em-cli <command> --help` for command option
 | `init` | `--target <dir>` | `.claude/skills` | Skills folder |
 | `agent` | `--name <name>` | Random Austrian composer | Display name on the board |
 | `agent` | `--model <model>` | Required | Model identifier sent to the server |
-| `agent` | `--agent-type <type>` | Required | `modeler` or `builder` |
+| `agent` | `--type <type>` | Required | `modeler` or `builder` |
 | `agent` | `--harness <name>` | `claude` | `claude` (Claude Code) or `copilot` (Copilot CLI) |
 | `agent` | `-p`, `--port <port>` | `PORT` env, else `3300` | Board server port on localhost |
 | `agent` | `-v`, `--verbose` | Off | Also log the prompt and the response; `-vv` (or repeated) also logs the raw harness output |
@@ -79,17 +79,21 @@ Example: `npx em-cli board --port 8080 --host 0.0.0.0`
 Start one CLI per terminal:
 
 ```sh
-npx em-cli agent --name frontend --model model-a --agent-type modeler
-npx em-cli agent --name backend --model model-b --agent-type builder --harness copilot
+npx em-cli agent --name frontend --model model-a --type modeler
+npx em-cli agent --name backend --model model-b --type builder --harness copilot
 ```
 
-Omit `--name` to pick an unused Austrian composer surname, for example `npx em-cli agent --model model-a --agent-type modeler`. If all six names are taken, supply a unique `--name`. Names are unique regardless of case or surrounding spaces and become available after disconnect. The predefined list is in [spec/AGENT.md](spec/AGENT.md#cli-and-sessions). `--model` and `--agent-type` stay required.
+Omit `--name` to pick an unused Austrian composer surname, for example `npx em-cli agent --model model-a --type modeler`. If all six names are taken, supply a unique `--name`. Names are unique regardless of case or surrounding spaces and become available after disconnect. The predefined list is in [spec/AGENT.md](spec/AGENT.md#cli-and-sessions). `--model` and `--type` stay required.
 
 Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until cancellation is supported.
 
 The board has no button for the harness check; `POST /api/agents/:id/run` (S2.30) remains. Harness builds run from the folder where you started `em-cli agent`. The agent terminal logs each build task and its prompt, then prints harness output and stderr after exit. Keep the server on localhost: anyone who can reach it can trigger harness runs.
 
 Both harnesses get file read, write, edit, grep and glob permissions. Claude also gets curl command rules for `http://localhost:` and `http://127.0.0.1:`, and rules for `gradle`, `./gradlew`, `gradlew` and `gradlew.bat`; `init` writes them to `.claude/settings.json`, so run `init` in the folder where you start `em-cli agent`. Copilot gets file tools only.
+
+Use the **Agent Task** robot/checkmark button on an element toolbar or Chapter handle to send Markdown instructions to a selected connected modeling agent. For an empty Cell, right-click and choose **Agent Task...**. No task action appears in element, Chapter or occupied Cell context menus. A Cell is one lane x slice, not the whole slice. Enter sends; Shift+Enter adds a line. The header **Agent Tasks** view shows queued/running tasks and finished agent responses. Tasks run one at a time per modeler, independently of builder tasks; history lasts until server restart. Disconnect returns running work to that modeler's queue.
+
+Modeling tasks use `cli/agent/modeling-task-prompt.md` and installed modeling skills. The modeler may read surrounding context but must edit only selected scope and report missing decisions or required outside-scope work. This is prompt-guided, not API-enforced. Copilot's file-only permissions stay unchanged: it cannot perform API modeling edits and should report that limitation. Use a Claude modeler for API editing.
 
 Builder agents build slices from the build queue. Open the header **Agent cockpit** to see every Chapter of the current Context with its slices, colored by build status: not queued, queued, in progress, done, failed or changed. A completed build turns purple **Changed** when its captured slice timestamp differs from the current one; selecting it still shows the previous build log. A slice with a task shows its builder's robot icon. Select slices and use **Build** in the bar on top to queue unbuilt slices or rebuild done, failed or changed slices; with several builders, pick one. Selected slices enter the queue in cockpit order: Chapters top to bottom, slices left to right. Remove queued or originally failed slices from their tile or the bar, including changed failures. Click a slice to add it to or remove it from the selection, Shift+click to add a range within a Chapter. A slice has at most one task. Each builder runs one task at a time with its configured harness, using `Build Slice <slice id> from Chapter <chapter id> of Context <context id>`. It must return `{"success": <boolean>, "response": "<explanation>"}`; `false`, an invalid response, or a nonzero harness exit marks the task failed (red in the cockpit). The queue is kept in memory and lost on server restart. A disconnected builder's running task returns to the queue and resumes when an agent with the same name reconnects.
 

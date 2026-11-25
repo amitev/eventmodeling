@@ -7,6 +7,7 @@ export const BoardActions = createContext({
   rememberCopy: () => {},
   copyContext: () => {},
   openInfo: () => {},
+  openModelingTask: () => {},
   openFields: () => {},
   openHtml: () => {},
   viewHtml: () => {},

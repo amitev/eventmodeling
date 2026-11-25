@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import express from 'express';
 import { HttpError } from './http-error.js';
 import { createBuildQueue } from './build-queue.js';
+import { createModelingTasks, resolveModelingScope } from './modeling-tasks.js';
 
 const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler'];
 
@@ -9,6 +10,7 @@ export function agentApi(store) {
   const router = express.Router();
   const sessions = new Map();
   const queue = createBuildQueue();
+  const modelingTasks = createModelingTasks();
 
   function liveSession(id) {
     const session = sessions.get(id);
@@ -29,6 +31,20 @@ export function agentApi(store) {
     if (!task) return;
     const { id, contextId, chapterId, sliceId, sliceName } = task;
     session.res.write(`event: build\ndata: ${JSON.stringify({ id, contextId, chapterId, sliceId, sliceName })}\n\n`);
+  }
+
+  function dispatchModeling(name) {
+    const session = [...sessions.values()].find((item) => item.agentType === 'modeler' &&
+      item.name.toLowerCase() === name.toLowerCase() && !item.res.destroyed && !item.res.writableEnded);
+    if (!session || session.res.writableNeedDrain) return;
+    const task = modelingTasks.next(session.name);
+    if (task) session.res.write(`event: modeling-task\ndata: ${JSON.stringify(task)}\n\n`);
+  }
+
+  function liveModeler(id) {
+    const session = liveSession(id);
+    if (session.agentType !== 'modeler') throw new HttpError(400, 'Only modeling agents can receive modeling tasks');
+    return session;
   }
 
   function text(value, message) {
@@ -77,6 +93,7 @@ export function agentApi(store) {
       if (sessions.get(id) === session) {
         sessions.delete(id);
         queue.release(name);
+        modelingTasks.release(name);
       }
     });
     sessions.set(id, session);
@@ -84,6 +101,7 @@ export function agentApi(store) {
     res.write(`event: welcome\ndata: ${JSON.stringify({ id, name })}\n\n`);
     ping();
     if (agentType === 'builder') dispatch(name);
+    else dispatchModeling(name);
   });
 
   router.get('/agents', (req, res) => {
@@ -100,6 +118,7 @@ export function agentApi(store) {
     session.nonce = null;
     session.lastPing = Date.now();
     res.status(204).end();
+    if (session.agentType === 'modeler') dispatchModeling(session.name);
   });
 
   router.post('/agents/:id/run', (req, res) => {
@@ -113,6 +132,7 @@ export function agentApi(store) {
     const session = liveSession(req.params.id);
     sessions.delete(req.params.id);
     queue.release(session.name);
+    modelingTasks.release(session.name);
     session.res.end('event: stop\ndata: {}\n\n');
     res.status(204).end();
   });
@@ -162,6 +182,40 @@ export function agentApi(store) {
     queue.remove(req.params.id);
     res.status(204).end();
   });
+
+  router.get('/modeling-tasks', (req, res) => {
+    res.set('Cache-Control', 'no-store').json(modelingTasks.list());
+  });
+
+  router.post('/modeling-tasks', async (req, res) => {
+    const agentId = text(req.body?.agentId, 'Modeling agent id is required');
+    const prompt = text(req.body?.prompt, 'Task prompt is required');
+    const target = await store.read((model) => resolveModelingScope(model, req.body?.scope));
+    const session = liveModeler(agentId);
+    const task = modelingTasks.add({ ...target, prompt, modeler: session.name });
+    res.status(201).json(task);
+    dispatchModeling(session.name);
+  });
+
+  router.get('/agents/:id/modeling-tasks/:taskId/scope', async (req, res) => {
+    const session = liveModeler(req.params.id);
+    const task = modelingTasks.assigned(req.params.taskId, session.name);
+    const target = await store.read((model) => resolveModelingScope(model, task.scope));
+    liveModeler(req.params.id);
+    modelingTasks.assigned(req.params.taskId, session.name);
+    res.set('Cache-Control', 'no-store').json(target);
+  });
+
+  for (const result of ['done', 'failed']) {
+    router.post(`/agents/:id/modeling-tasks/:taskId/${result}`, (req, res) => {
+      const session = liveModeler(req.params.id);
+      const response = text(req.body?.response, 'Agent response is required');
+      const error = result === 'failed' ? text(req.body?.error ?? response, 'Task error is required') : undefined;
+      modelingTasks.finish(req.params.taskId, session.name, response, error);
+      res.status(204).end();
+      dispatchModeling(session.name);
+    });
+  }
 
   return router;
 }

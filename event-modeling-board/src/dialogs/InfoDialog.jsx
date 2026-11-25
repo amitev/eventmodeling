@@ -107,7 +107,7 @@ const MARKDOWN_TOOLS = [
   },
 ];
 
-export function MarkdownEditor({ text, onChange, active = true, autoFocus = true }) {
+export function MarkdownEditor({ text, onChange, active = true, autoFocus = true, label = 'Info Markdown', onKeyDown, disabled = false }) {
   const area = useRef(null);
   const pending = useRef(null); // selection to restore after a helper button changed the text
 
@@ -187,7 +187,7 @@ export function MarkdownEditor({ text, onChange, active = true, autoFocus = true
         <button
           title="Undo (Ctrl+Z)"
           aria-label="Undo"
-          disabled={!history.current.past.length}
+          disabled={disabled || !history.current.past.length}
           onMouseDown={(e) => e.preventDefault()}
           onClick={undo}
         >
@@ -196,7 +196,7 @@ export function MarkdownEditor({ text, onChange, active = true, autoFocus = true
         <button
           title="Redo (Ctrl+Y)"
           aria-label="Redo"
-          disabled={!history.current.future.length}
+          disabled={disabled || !history.current.future.length}
           onMouseDown={(e) => e.preventDefault()}
           onClick={redo}
         >
@@ -209,6 +209,7 @@ export function MarkdownEditor({ text, onChange, active = true, autoFocus = true
               key={tool.title}
               title={tool.key ? `${tool.title} (Ctrl+${tool.key.toUpperCase()})` : tool.title}
               aria-label={tool.title}
+              disabled={disabled}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => apply(tool.edit)}
             >
@@ -223,7 +224,9 @@ export function MarkdownEditor({ text, onChange, active = true, autoFocus = true
         ref={area}
         className="info-editor"
         spellCheck={false}
-        aria-label="Info Markdown"
+        aria-label={label}
+        onKeyDown={onKeyDown}
+        disabled={disabled}
         placeholder="Markdown"
         value={text}
         onChange={(e) => change(e.target.value, true)}
