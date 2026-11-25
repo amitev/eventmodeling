@@ -16,7 +16,7 @@ import {
   sliceOf,
   membersOf,
 } from './model.js';
-import { hasUninheritedFields } from './fields.js';
+import { incompleteFieldTargets } from './fields.js';
 
 // Cache presentation, not endpoint positions: React Flow tracks geometry itself.
 export function createEdgeDisplay() {
@@ -24,10 +24,7 @@ export function createEdgeDisplay() {
   let previous = [];
   return (nodes, edges, hiddenChapters, overview) => {
     const byId = new Map(nodes.map((n) => [n.id, n]));
-    const incompleteTargets = new Set();
-    for (const id of new Set(edges.map((edge) => edge.target))) {
-      if (hasUninheritedFields(nodes, edges, id)) incompleteTargets.add(id);
-    }
+    const incompleteTargets = incompleteFieldTargets(nodes, edges);
     const hiddenNode = (n) => !!n && (hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId));
     const centreY = (n) => (byId.get(n.parentId)?.position.y ?? 0) + n.position.y + stickyH(n) / 2;
     const centreX = (n) => (byId.get(n.parentId)?.position.x ?? 0) + n.position.x + stickyW(n) / 2;

@@ -811,7 +811,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .cockpit-chapter h3 { margin: 0 0 8px; font-size: 14px; }
 .cockpit-slices { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
 .cockpit-slice {
-  display: flex; flex-direction: column; gap: 4px; width: 180px; box-sizing: border-box; padding: 8px;
+  position: relative; display: flex; flex-direction: column; gap: 4px; width: 180px; box-sizing: border-box; padding: 8px;
   border: 1px solid #ccd; border-left-width: 6px; border-radius: 4px; background: #f6f6f8; font-size: 12px;
 }
 .cockpit-slice.queued { border-color: #bc8500; background: #fff6df; }
@@ -823,6 +823,8 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .cockpit-agent { display: flex; flex: none; }
 .cockpit-agent svg { width: 20px; height: 20px; }
 .cockpit-slice-status { color: #556; }
+.cockpit-slice.has-warning .cockpit-slice-name { padding-right: 22px; }
+.cockpit-slice-warning { position: absolute; top: 8px; right: 8px; display: flex; color: #8a3b00; cursor: help; }
 .cockpit-slice-error { color: #b71c1c; overflow-wrap: anywhere; }
 .cockpit-slice-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
 .cockpit-slice-actions button {

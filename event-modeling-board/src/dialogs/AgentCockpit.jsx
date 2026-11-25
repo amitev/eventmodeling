@@ -111,7 +111,7 @@ function SliceTile({ slice, task, selected, onSelect, onRemove }) {
   const status = task?.status ?? 'none';
   return (
     <li
-      className={`cockpit-slice ${status}${selected ? ' selected' : ''}`}
+      className={`cockpit-slice ${status}${selected ? ' selected' : ''}${slice.fieldWarning ? ' has-warning' : ''}`}
       aria-selected={selected}
       onMouseDown={(e) => {
         if (e.shiftKey) e.preventDefault(); // no text selection on Shift+click
@@ -125,6 +125,21 @@ function SliceTile({ slice, task, selected, onSelect, onRemove }) {
         <strong>{slice.name}</strong>
       </div>
       <div className="cockpit-slice-status">{task ? STATUS[status] : 'Not queued'}</div>
+      {slice.fieldWarning && (
+        <span
+          className="cockpit-slice-warning"
+          role="img"
+          aria-label="Field consistency check failed"
+          title="Field consistency check failed"
+          tabIndex={0}
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 2 19 18H1Z" fill="#ffca28" stroke="currentColor" strokeLinejoin="round" />
+            <path d="M10 7v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="10" cy="15" r="1" fill="currentColor" />
+          </svg>
+        </span>
+      )}
       <div className="cockpit-slice-actions">
         {removable(task) && <button type="button" onClick={() => onRemove([slice])}>Remove</button>}
       </div>
@@ -132,7 +147,7 @@ function SliceTile({ slice, task, selected, onSelect, onRemove }) {
   );
 }
 
-// chapters: [{ id, contextId, title, slices: [{ id, name }] }] in board order.
+// chapters: [{ id, contextId, title, slices: [{ id, name, fieldWarning }] }] in board order.
 export function AgentCockpit({ chapters, queue, buttonRef, headerRef, onClose }) {
   const popup = useModalFocus();
   useOutsideClose(popup, onClose, buttonRef);

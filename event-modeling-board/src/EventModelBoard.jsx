@@ -69,7 +69,7 @@ import { TasksDialog } from './dialogs/TasksDialog.jsx';
 import { AgentIcons } from './AgentIcons.jsx';
 import { SearchBox } from './Search.jsx';
 import { CellMenu } from './CellMenu.jsx';
-import { hasFields, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
+import { hasFields, incompleteFieldTargets, inheritOnConnect, parentFields, propagateFields } from './model/fields.js';
 import { HistoryContext, useHistory } from './state/history.js';
 import { kindOfKey, HotkeysDialog } from './dialogs/Hotkeys.jsx';
 import { BoardActions, CopySelection } from './state/BoardActions.js';
@@ -307,6 +307,13 @@ function Board() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [buildQueueOpen, setBuildQueueOpen] = useState(false);
+  const fieldWarningSlices = useMemo(() => {
+    if (!buildQueueOpen) return new Set();
+    const incomplete = incompleteFieldTargets(nodes, edges);
+    const ss = slices(nodes);
+    return new Set(nodes.filter((node) => incomplete.has(node.id))
+      .map((node) => sliceOf(ss, node)?.id).filter(Boolean));
+  }, [buildQueueOpen, nodes, edges]);
   const { agents, removeAgent } = useConnectedAgents();
   const buildQueue = useBuildQueue(agents);
   const activeBuilds = buildQueue.tasks.filter((task) => task.status === 'queued' || task.status === 'running').length;
@@ -2026,7 +2033,9 @@ function Board() {
                 id: chapter.id,
                 contextId: context.id,
                 title: filterId ? chapter.data.name : `${context.name} / ${chapter.data.name}`,
-                slices: slices(nodes, chapter.id).map((slice) => ({ id: slice.id, name: slice.data.name })),
+                slices: slices(nodes, chapter.id).map((slice) => ({
+                  id: slice.id, name: slice.data.name, fieldWarning: fieldWarningSlices.has(slice.id),
+                })),
               })))}
           queue={buildQueue}
           buttonRef={buildQueueButtonRef}

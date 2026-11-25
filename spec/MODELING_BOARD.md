@@ -604,6 +604,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R14.11** Selecting one done, failed, blocked or changed slice shows a build log under the Chapters: duration, cost rounded to 3 decimal places, and the task's `error` (failed, blocked) or `response` (done). Changed keeps the previous build's log and uses `buildStatus` to choose response or error.
 - **R14.12** Build log text has a top-right copy button, visible on hover or keyboard focus. Overlay it without shifting text. Copy the full displayed response or error; show clipboard failures in the cockpit.
 - **R14.13** **Shift+C** opens Agent cockpit, with or without a selected Cell, including high level view. Ignore while typing, in a modal popup, with Ctrl/Cmd/Alt, or on key repeat. It never compacts a slice. List it under Board in hotkey help.
+- **R14.14** Show a warning triangle in the slice card's top-right corner when an element in it fails the same check that colors incoming arrows red. Tooltip and accessible label: `Field consistency check failed`. Keep names clear of the icon. Update with fields and connections; keep build status and actions unchanged.
 
 ## Out of scope for now
 

@@ -1,12 +1,36 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createEdgeDisplay } from './cells.js';
+import { incompleteFieldTargets } from './fields.js';
 
 const node = (id, kind, x, y, parentId = 'chapter') => ({
   id, type: 'sticky', parentId, position: { x, y }, data: { kind },
 });
 const edge = (source, target) => ({ id: `${source}-${target}`, source, target });
 const display = (nodes, edges) => createEdgeDisplay()(nodes, edges, new Set(), false);
+
+test('cockpit field warnings use the same targets as red arrows and clear when fields are supplied', () => {
+  const nodes = [node('source', 'event', 0, 0), node('target', 'read_model', 0, 220)];
+  nodes[1].data.fields = [{ name: 'orderId' }];
+  const edges = [edge('source', 'target')];
+  assert.deepEqual([...incompleteFieldTargets(nodes, edges)], ['target']);
+  assert.equal(display(nodes, edges)[0].style.stroke, '#ff0000');
+  nodes[0].data.fields = [{ name: 'orderId', generated: true }];
+  assert.equal(incompleteFieldTargets(nodes, edges).size, 0);
+  assert.notEqual(display(nodes, edges)[0].style?.stroke, '#ff0000');
+});
+
+test('field warnings exclude generated fields, linked copies and disconnected holders', () => {
+  const nodes = [
+    node('source', 'event', 0, 0), node('generated', 'command', 0, 220),
+    node('copy', 'read_model', 200, 220), node('alone', 'command', 400, 220),
+  ];
+  nodes[0].data.fields = [{ name: 'original' }];
+  nodes[1].data.fields = [{ name: 'id', generated: true }];
+  nodes[2].data.copyOf = 'source';
+  nodes[3].data.fields = [{ name: 'missing' }];
+  assert.equal(incompleteFieldTargets(nodes, [edge('source', 'generated'), edge('source', 'copy')]).size, 0);
+});
 
 test('off-axis Processor connections use icon sides and keep other endpoints vertical', () => {
   const nodes = [

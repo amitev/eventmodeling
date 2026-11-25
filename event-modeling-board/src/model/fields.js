@@ -114,6 +114,11 @@ export function hasUninheritedFields(nodes, edges, id) {
   return (target.data.fields ?? []).some((field) => !field.generated && !inherited.has(field.name));
 }
 
+export function incompleteFieldTargets(nodes, edges) {
+  return new Set([...new Set(edges.map((edge) => edge.target))]
+    .filter((id) => hasUninheritedFields(nodes, edges, id)));
+}
+
 // Copies `fields` to every element downstream of `fromId` (transitively, around loops too).
 export function propagateFields(nodes, edges, fromId, fields) {
   if (!fields.length) return nodes;
