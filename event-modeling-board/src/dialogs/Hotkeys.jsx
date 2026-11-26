@@ -23,6 +23,7 @@ const HOTKEYS = [
       ['Ctrl+F', 'Search elements by name'],
       ['Ctrl+H', 'High level view (Esc leaves it)'],
       ['Shift+A', 'Run Agent Task for the selected element, empty Cell, slice header or Chapter'],
+      ['Shift+T', 'Toggle Agent Tasks history'],
       ['Shift+C', 'Open Agent cockpit'],
       ['Shift+F', 'Fit view: show the whole board'],
       ['Esc', 'In app full screen: close popups first, otherwise exit (requires keyboard permission)'],

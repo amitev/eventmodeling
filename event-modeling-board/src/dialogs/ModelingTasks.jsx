@@ -91,7 +91,13 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
     <div
       ref={popup} className="tasks-dialog modeling-tasks" style={{ top, maxHeight: `calc(100vh - ${top + 8}px)` }}
       tabIndex={-1} role="dialog" aria-modal="false" aria-label="Agent Tasks"
-      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') onClose(); }}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape' || (!e.repeat && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 't')) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div className="info-title">Agent Tasks</div>
       {queue.error && <div className="tasks-error" role="alert">{queue.error}</div>}

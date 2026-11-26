@@ -1473,7 +1473,14 @@ function Board() {
   };
 
   cellKeys.current = (e) => {
-    if (cellMenu || modelingTarget || modelingTasksOpen || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
+    if (cellMenu || modelingTarget || infoId || helpOpen || scenarioEdit || fieldsId || htmlId || scenariosViewId || movieId) return;
+    if (!e.repeat && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 't') {
+      const target = e.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      e.preventDefault();
+      setModelingTasksOpen((open) => !open);
+      return;
+    }
     const step = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
     if (step && !selectedCell && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
         !contextInfoId && !tasksOpen && !buildQueueOpen && !search.open &&
@@ -1911,7 +1918,7 @@ function Board() {
           ref={modelingTasksButtonRef}
           className="tasks-button keep"
           onClick={() => setModelingTasksOpen((open) => !open)}
-          title={`Agent Tasks (${activeModelingTasks} active)`}
+          title={`Agent Tasks (${activeModelingTasks} active) (Shift+T)`}
           aria-label={`Agent Tasks (${activeModelingTasks} active)`}
           aria-haspopup="dialog"
           aria-expanded={modelingTasksOpen}

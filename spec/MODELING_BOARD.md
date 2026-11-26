@@ -614,6 +614,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R15.4** Modeling execution, retention and scope boundary follow AGENT.md S2.47-S2.52. Slice scope may create, edit and delete elements across its Cells and change that slice's name/width; no other slice metadata/structure. Warn when selected Copilot has only file tools. Composer/context menus block board hotkeys and deletion; Esc closes popup before global full-screen exit.
 - **R15.5** Header Agent Tasks button uses a 16px robot-head icon with checkmark face, no text. Tooltip and accessible label: `Agent Tasks (<count> active)`.
 - **R15.6** **Shift+A** starts Agent Task: explicit slice-header selection targets its slice, else exactly one selected element targets that element, else exactly one selected Chapter targets that Chapter, else an empty selected Cell targets that Cell. No action for occupied Cells without exactly one selected element or ambiguous selection. Replaces the Copy Context hotkey; its buttons remain. Ignore while typing, in overview, or while a popup/context menu is open. Not an undo step.
+- **R15.7** **Shift+T** toggles the Agent Tasks history dialog, including in high level view. Ignore while typing, on key repeat, when a modal popup or Cell context menu is open. Not an undo step.
 
 ## Out of scope for now
 
