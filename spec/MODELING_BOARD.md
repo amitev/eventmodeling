@@ -111,7 +111,7 @@ Business requirements agreed so far. They describe behaviour, not implementation
   - The same panel edits a Notes element's text (R3.19).
 - **R1c.4** The preview is rendered with `marked` (18.2.0); its HTML is always sanitised with DOMPurify, so scripts, event handlers and `javascript:` links never run. Links open in a new tab without access to the board.
 - **R1c.5** **Use of info.** Info is reserved mainly for implementation details: formats, limits, integrations, technical constraints. Not for source citations, summaries or traceability; summaries go in Notes (R3.18). A convention only: the board does not check it.
-- **R1c.6** **Copy Context.** Button (tooltip "Copy Context (Shift+A)") on the element toolbar (R1c.1a) and, as the first button of the slice's actions, in the slice header (R5.22) and the Chapter handle (before the movie strip button, R11.1). It puts one line of ids in the system clipboard: `Context <context id> Chapter <chapter id> Slice <slice id> Element <element id>`. The slice button and the key with no element selected omit ` Element <element id>`. The Chapter button omits ` Slice <slice id> Element <element id>`. A linked copy (R3.22) gives its own id. A notice shows the copied text, or says the copy failed. Key **Shift+A** (not while typing; with a Cell selected, R5a.11): one element selected (also by R5a.12) copies as the element button, else as the slice button. Not an undo step.
+- **R1c.6** **Copy Context.** Button (tooltip "Copy Context") on the element toolbar (R1c.1a) and, as the first button of the slice's actions, in the slice header (R5.22) and the Chapter handle (before the movie strip button, R11.1). It puts one line of ids in the system clipboard: `Context <context id> Chapter <chapter id> Slice <slice id> Element <element id>`. The slice button omits ` Element <element id>`. The Chapter button omits ` Slice <slice id> Element <element id>`. A linked copy (R3.22) gives its own id. A notice shows the copied text, or says the copy failed. Not an undo step.
 - **R1c.7** The Markdown panel's editor and preview text is 16px (line height 1.5).
 ## 1d. Hotkey help
 
@@ -393,7 +393,6 @@ A slice is a vertical band across all lanes that groups the elements of one piec
   - **Ctrl+←** / **Ctrl+→** move the Cell's slice one place left/right, swapping it with its neighbour, elements with it (R5.8); nothing at the first or last place; one undo step per press.
   - **Shift+I** opens the info of the Cell's slice (R1c.3).
   - **Shift+E** marks or unmarks the Cell's slice as a Flow end (R5.21); one undo step.
-  - **Shift+A** copies the Context (R1c.6).
   - **S, C, R or Q, E, P, N** add a Screen, Command, Read Model, Event, Processor or Notes element in the Cell, using R5a.10, with its automatic arrows (R4.8). In a Spec lane, which takes no Screen, **S** adds a Scenarios element instead.
   - **+** adds a slice right after the Cell's slice, as the slice's **+** does (R5.2a).
   - **Enter** opens the editor of a selected Notes element (R3.19), as does **E** (a Notes element only sits in a Spec lane, which takes no Event, so E adds nothing there); **V** and **R** open it in read mode (R3.18; R adds no Read Model there either); otherwise Enter edits the name of the Cell's left-most element (R3.4a), if any.
@@ -614,6 +613,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R15.3** Send queues task for chosen modeler and opens separate header **Agent Tasks** history. Report send failures in composer without losing text. History is non-modal below header, closes on Esc/outside click and shows scope, modeler, status, original prompt and agent response for success or failure. Show queue-load errors; do not hide retained history. Badge counts queued/running tasks. History remains available in high level view.
 - **R15.4** Modeling execution, retention and scope boundary follow AGENT.md S2.47-S2.52. Slice scope may create, edit and delete elements across its Cells and change that slice's name/width; no other slice metadata/structure. Warn when selected Copilot has only file tools. Composer/context menus block board hotkeys and deletion; Esc closes popup before global full-screen exit.
 - **R15.5** Header Agent Tasks button uses a 16px robot-head icon with checkmark face, no text. Tooltip and accessible label: `Agent Tasks (<count> active)`.
+- **R15.6** **Shift+A** starts Agent Task: explicit slice-header selection targets its slice, else exactly one selected element targets that element, else exactly one selected Chapter targets that Chapter, else an empty selected Cell targets that Cell. No action for occupied Cells without exactly one selected element or ambiguous selection. Replaces the Copy Context hotkey; its buttons remain. Ignore while typing, in overview, or while a popup/context menu is open. Not an undo step.
 
 ## Out of scope for now
 

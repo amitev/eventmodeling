@@ -300,6 +300,7 @@ function Board() {
   // The selected Cell, if any: { chapterId, laneId, sliceId }. Selection only: it is not
   // saved, exported or recorded for undo.
   const [selectedCell, setSelectedCell] = useState(null);
+  const [selectedSliceId, setSelectedSliceId] = useState(null);
   const [cellMenu, setCellMenu] = useState(null);
   const closeCellMenu = useCallback(() => setCellMenu(null), []);
   const [modelingTarget, setModelingTarget] = useState(null);
@@ -309,6 +310,7 @@ function Board() {
     if (!hiddenChapters.size) return;
     const hidden = (n) => hiddenChapters.has(n.id) || hiddenChapters.has(n.parentId);
     setSelectedCell((c) => (c && hiddenChapters.has(c.chapterId) ? null : c));
+    setSelectedSliceId((id) => (id && selectedCell && hiddenChapters.has(selectedCell.chapterId) ? null : id));
     setNodes((ns) => (ns.some((n) => n.selected && hidden(n)) ? ns.map((n) => (n.selected && hidden(n) ? { ...n, selected: false } : n)) : ns));
     const byId = new Map(getNodes().map((n) => [n.id, n]));
     const hiddenEdge = (e) => hidden(byId.get(e.source) ?? {}) || hidden(byId.get(e.target) ?? {});
@@ -404,7 +406,10 @@ function Board() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   useEffect(() => {
-    if (overview) setSelectedCell(null);
+    if (overview) {
+      setSelectedCell(null);
+      setSelectedSliceId(null);
+    }
   }, [overview]);
   const searchItems = useMemo(() => {
     if (!search.open) return [];
@@ -570,12 +575,14 @@ function Board() {
   const selectCellOf = (id) => {
     const ns = getNodes();
     const n = ns.find((m) => m.id === id);
+    setSelectedSliceId(null);
     setSelectedCell((n && cellOfElement(ns, n)) ?? null);
   };
 
   // Selects a Cell and, when it holds exactly one element, that element too (R5a.12). The
   // element is selected after the event: the canvas clears the selection when a click on it ends.
   const chooseCell = (cell) => {
+    setSelectedSliceId(null);
     setSelectedCell(cell);
     setTimeout(() => {
       setNodes((ns) => {
@@ -625,6 +632,7 @@ function Board() {
       setEdges(snap.edges.map((e) => (e.selected ? { ...e, selected: false } : e)));
       setContexts(snap.contexts);
       setSelectedCell(null);
+      setSelectedSliceId(null);
     },
     [setNodes, setEdges]
   );
@@ -1173,11 +1181,15 @@ function Board() {
       openMovie: setMovieId,
       titleEditId,
       clearTitleEdit: () => setTitleEditId(null),
-      clearCell: () => setSelectedCell(null),
+      clearCell: () => {
+        setSelectedSliceId(null);
+        setSelectedCell(null);
+      },
       addSliceAfter: (...args) => latest.current.addSliceAfter(...args),
       removeSlice: (...args) => latest.current.removeSlice(...args),
       selectCell: (cell) => {
         latest.current.chooseCell(cell);
+        setSelectedSliceId(cell.sliceId);
         setActiveId(cell.chapterId);
       },
       addLaneAfter: (...args) => latest.current.addLaneAfter(...args),
@@ -1594,15 +1606,26 @@ function Board() {
       }
       return;
     }
-    // Shift+A copies the Context, Chapter, Slice and (when one is selected) Element ids.
+    // Shift+A starts a modeling task for the active selection.
     if (e.shiftKey && e.key.toLowerCase() === 'a') {
-      const selected = getNodes().filter((n) => n.selected);
-      if (selected.length === 1 && selected[0].type === 'sticky') {
+      if (overview) return;
+      const ns = getNodes();
+      const selected = ns.filter((n) => n.selected);
+      const selectedEdges = getEdges().some((edge) => edge.selected);
+      if (selectedSliceId && selectedCell?.sliceId === selectedSliceId) {
         e.preventDefault();
-        copyContext({ elementId: selected[0].id });
-      } else if (selectedCell) {
+        openModelingTask({ type: 'slice', chapterId: selectedCell.chapterId, sliceId: selectedSliceId });
+      } else if (selected.length === 1 && selected[0].type === 'sticky') {
+        const cell = cellOfElement(ns, selected[0]);
+        if (!cell) return;
         e.preventDefault();
-        copyContext({ sliceId: selectedCell.sliceId });
+        openModelingTask({ type: 'element', ...cell, elementId: selected[0].id });
+      } else if (selected.length === 1 && selected[0].type === 'chapter') {
+        e.preventDefault();
+        openModelingTask({ type: 'chapter', chapterId: selected[0].id });
+      } else if (selected.length === 0 && !selectedEdges && selectedCell && cellElements(ns, selectedCell).length === 0) {
+        e.preventDefault();
+        openModelingTask({ type: 'cell', ...selectedCell });
       }
       return;
     }
@@ -1691,6 +1714,7 @@ function Board() {
       removeCellElements(selectedCell);
     } else if (e.key === 'Escape') {
       setSelectedCell(null);
+      setSelectedSliceId(null);
       setNodes((ns) => selectOnly(ns, null));
     }
   };
@@ -1703,6 +1727,7 @@ function Board() {
       setActiveId(cell.chapterId);
     } else {
       setSelectedCell(null);
+      setSelectedSliceId(null);
     }
   };
 
@@ -1719,6 +1744,7 @@ function Board() {
     e.preventDefault();
     e.stopPropagation();
     if (element) {
+      setSelectedSliceId(null);
       setSelectedCell(cell);
       setNodes((current) => selectOnly(current, element.id));
     } else chooseCell(cell);
@@ -1978,11 +2004,17 @@ function Board() {
             else if (node.type === 'slice') focusChapter(node); // its header selects a Cell itself
             else {
               if (node.type === 'sticky') selectCellOf(node.id);
-              else setSelectedCell(null);
+              else {
+                setSelectedSliceId(null);
+                setSelectedCell(null);
+              }
               focusChapter(node);
             }
           }}
-          onEdgeClick={() => setSelectedCell(null)}
+          onEdgeClick={() => {
+            setSelectedSliceId(null);
+            setSelectedCell(null);
+          }}
           onEdgeMouseEnter={(_, edge) => {
             const source = nodes.find((node) => node.id === edge.source);
             const target = nodes.find((node) => node.id === edge.target);
@@ -2013,6 +2045,7 @@ function Board() {
           onNodeDragStart={(_, node, dragged) => {
             historyApi.begin();
             rememberDrag(dragged ?? [node]);
+            setSelectedSliceId(null);
             setSelectedCell(null);
             focusChapter(node);
           }}

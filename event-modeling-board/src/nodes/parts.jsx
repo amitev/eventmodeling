@@ -281,7 +281,7 @@ export function CopyContextButton({ elementId, sliceId, chapterId, className = '
   return (
     <button
       className={`${className} nodrag`}
-      title="Copy Context (Shift+A)"
+      title="Copy Context"
       aria-label="Copy Context"
       onDoubleClick={(e) => e.stopPropagation()}
       onClick={(e) => {
