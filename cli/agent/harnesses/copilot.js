@@ -44,6 +44,8 @@ export const copilot = {
   parseResponse,
   args: (model, prompt) => [
     '-p', prompt, '--model', model, '--output-format', 'json',
-    '--available-tools=view,create,edit,apply_patch,grep,glob', '--allow-tool=read,write',
+    `--available-tools=view,create,edit,apply_patch,grep,glob,bash${process.platform === 'win32' ? ',powershell' : ''}`,
+    `--allow-tool=read,write,shell(curl)${process.platform === 'win32' ? ',shell(curl.exe)' : ''}`,
+    '--allow-url=localhost,127.0.0.1',
   ],
 };

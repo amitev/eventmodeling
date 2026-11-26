@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DATA_DIR } from './board/model-store.js';
+import { allowClaudePermissions } from './agent/harnesses/claude.js';
 
 export const SKILLS_DIR = fileURLToPath(new URL('../.claude/skills', import.meta.url));
 export const DEFAULT_TARGET = path.join('.claude', 'skills');
@@ -18,43 +19,6 @@ function readManifest(file) {
   } catch {
     return [];
   }
-}
-
-export const SETTINGS_FILE = path.join('.claude', 'settings.json');
-// Allow localhost curl URLs both immediately after curl and after curl options.
-export const CLAUDE_PERMISSIONS = [
-  'Read', 'Write', 'Edit', 'Grep', 'Glob',
-  'Bash(curl http://localhost*)',
-  'Bash(curl http://127.0.0.1*)',
-  'Bash(curl * http://localhost*)',
-  'Bash(curl * http://127.0.0.1*)',
-  'Bash(gradle:*)', 'Bash(./gradlew:*)', 'Bash(gradlew:*)', 'Bash(gradlew.bat:*)',
-];
-
-// Adds the missing CLAUDE_PERMISSIONS to `permissions.allow` of `<cwd>/.claude/settings.json`, keeping everything else.
-function allowClaudePermissions(cwd) {
-  const file = path.resolve(cwd, SETTINGS_FILE);
-  let settings = {};
-  if (fs.existsSync(file)) {
-    try {
-      settings = JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch {
-      throw new Error(`${SETTINGS_FILE} is not valid JSON.`);
-    }
-    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error(`${SETTINGS_FILE} must be a JSON object.`);
-  }
-  const permissions = settings.permissions ?? {};
-  const allow = permissions.allow ?? [];
-  if (typeof permissions !== 'object' || Array.isArray(permissions) || !Array.isArray(allow)) {
-    throw new Error(`${SETTINGS_FILE}: "permissions.allow" must be a list.`);
-  }
-  const missing = CLAUDE_PERMISSIONS.filter((p) => !allow.includes(p));
-  if (!missing.length) return null;
-  const created = !fs.existsSync(file);
-  settings.permissions = { ...permissions, allow: [...allow, ...missing] };
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
-  return `${created ? 'Created' : 'Patched'} ${SETTINGS_FILE}`;
 }
 
 const IGNORED_SLICES = '.em/.slices';
