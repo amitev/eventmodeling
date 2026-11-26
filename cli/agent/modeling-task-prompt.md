@@ -10,6 +10,7 @@ Selected target (authoritative IDs):
 
 Read the current target through the API before editing. You may read surrounding model context and dependencies. Changes must stay inside this scope:
 - `chapter`: selected Chapter and its contents, not its Context or other Chapters.
+- `slice`: all elements in the selected slice across every lane; you may create, edit and delete these elements. You may also change this slice's name and width. Do not change its flow-end mark, info, position/order, or the structure of slices/lanes, or touch other slices.
 - `cell`: starts empty; create and edit elements only in the selected `laneId` x `sliceId`, not lane/slice structure or other Cells. If already occupied before you start, stop and report failure.
 - `element`: only the selected element and its owned content, not siblings or shared originals.
 

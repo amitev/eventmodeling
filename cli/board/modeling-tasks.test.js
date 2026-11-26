@@ -39,6 +39,11 @@ test('scope validation rejects stale Cells, moved elements and extra target IDs'
   };
   const scope = { type: 'element', chapterId: 'c', sliceId: 's', laneId: 'l', elementId: 'e' };
   assert.equal(resolveModelingScope(model, scope).label, 'Sales / Orders / Order / Buyer / Place Order');
+  const sliceScope = { type: 'slice', chapterId: 'c', sliceId: 's' };
+  assert.equal(resolveModelingScope(model, sliceScope).label, 'Sales / Orders / Order');
+  assert.deepEqual(resolveModelingScope(model, sliceScope).scope, sliceScope);
+  assert.throws(() => resolveModelingScope(model, { ...sliceScope, laneId: 'l' }), /Invalid/);
+  assert.throws(() => resolveModelingScope(model, { ...sliceScope, sliceId: 'missing' }), /Scope slice not found/);
   assert.throws(() => resolveModelingScope(model, { ...scope, laneId: 'missing' }), /Cell not found/);
   assert.throws(() => resolveModelingScope(model, { ...scope, elementId: 'missing' }), /element not found/);
   assert.throws(() => resolveModelingScope(model, { type: 'chapter', chapterId: 'c', elementId: 'e' }), /Invalid/);

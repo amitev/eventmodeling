@@ -2,11 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { HttpError } from './http-error.js';
 
 export function resolveModelingScope(model, scope) {
-  if (!scope || !['chapter', 'cell', 'element'].includes(scope.type)) {
-    throw new HttpError(400, 'Scope type must be chapter, cell or element');
+  if (!scope || !['chapter', 'slice', 'cell', 'element'].includes(scope.type)) {
+    throw new HttpError(400, 'Scope type must be chapter, slice, cell or element');
   }
   const keys = {
     chapter: ['type', 'chapterId'],
+    slice: ['type', 'chapterId', 'sliceId'],
     cell: ['type', 'chapterId', 'sliceId', 'laneId'],
     element: ['type', 'chapterId', 'sliceId', 'laneId', 'elementId'],
   }[scope.type];
@@ -21,12 +22,15 @@ export function resolveModelingScope(model, scope) {
   let label = `${context.name} / ${chapter.name}`;
   if (scope.type !== 'chapter') {
     const slice = chapter.slices.find((item) => item.id === scope.sliceId);
+    if (!slice) throw new HttpError(404, 'Scope slice not found');
+    label += ` / ${slice.name}`;
+    if (scope.type === 'slice') return { scope: normalized, contextId: context.id, label };
     const lane = chapter.lanes.find((item) => item.id === scope.laneId);
-    if (!slice || !lane) throw new HttpError(404, 'Scope Cell not found');
+    if (!lane) throw new HttpError(404, 'Scope Cell not found');
     if (scope.type === 'cell' && slice.elements.some((item) => item.lane === lane.id)) {
       throw new HttpError(409, 'Cell must be empty for a modeling task; select an element instead');
     }
-    label += ` / ${slice.name} / ${lane.name || lane.type}`;
+    label += ` / ${lane.name || lane.type}`;
     if (scope.type === 'element') {
       const element = slice.elements.find((item) => item.id === scope.elementId && item.lane === lane.id);
       if (!element) throw new HttpError(404, 'Scope element not found in Cell');

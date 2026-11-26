@@ -1121,14 +1121,18 @@ function Board() {
       const ns = getNodes();
       const node = ns.find((item) => item.id === id);
       const cell = node?.type === 'sticky' ? cellOfElement(ns, node) : null;
-      if (node?.type !== 'chapter' && !cell) {
-        setNotice('Could not open Agent Task: target no longer exists in a Cell.');
+      if (!node || !['chapter', 'slice', 'sticky'].includes(node.type) || (node.type === 'sticky' && !cell)) {
+        setNotice('Could not open Agent Task: target no longer exists on the board.');
         return;
       }
-      setActiveId(node.type === 'chapter' ? node.id : cell.chapterId);
+      const chapterId = node.type === 'chapter' ? node.id
+        : node.type === 'slice' ? node.parentId : cell.chapterId;
+      setActiveId(chapterId);
       openModelingTask(node.type === 'chapter'
         ? { type: 'chapter', chapterId: node.id }
-        : { type: 'element', ...cell, elementId: node.id });
+        : node.type === 'slice'
+          ? { type: 'slice', chapterId, sliceId: node.id }
+          : { type: 'element', ...cell, elementId: node.id });
     },
   };
   const boardActions = useMemo(

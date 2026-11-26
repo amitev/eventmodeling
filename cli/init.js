@@ -24,7 +24,7 @@ export const SETTINGS_FILE = path.join('.claude', 'settings.json');
 // Keep the port colon literal; a trailing ":*" means a command-word prefix.
 export const CLAUDE_PERMISSIONS = [
   'Read', 'Write', 'Edit', 'Grep', 'Glob',
-  'Bash(curl http://localhost:**)', 'Bash(curl http://127.0.0.1:**)',
+  'Bash(curl http://localhost:*)', 'Bash(curl http://127.0.0.1:*)',
   'Bash(gradle:*)', 'Bash(./gradlew:*)', 'Bash(gradlew:*)', 'Bash(gradlew.bat:*)',
 ];
 

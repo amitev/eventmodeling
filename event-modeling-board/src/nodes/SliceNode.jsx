@@ -18,7 +18,7 @@ import {
 import { cleanName, filterNameInput } from '../model/names.js';
 import { HistoryContext } from '../state/history.js';
 import { BoardActions } from '../state/BoardActions.js';
-import { chapterMetadataOf, CopyContextButton, InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
+import { AgentTaskButton, chapterMetadataOf, CopyContextButton, InfoButton, useChapterDrag, useHorizontalDrag } from './parts.jsx';
 
 // A slice is a vertical band across all lanes: one end-to-end piece of behavior. It is not
 // selectable; clicking its header selects the top Cell of the slice.
@@ -218,6 +218,7 @@ export function SliceNode({ id, data }) {
           )}
         </div>
         <div className="slice-actions">
+          <AgentTaskButton id={id} className="slice-add" />
           <button
             className="slice-add slice-auto-name nodrag"
             title="Name from slice elements"
