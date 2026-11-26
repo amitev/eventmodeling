@@ -88,6 +88,8 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A11.9** Check HTTP status and error body.
 - **A11.10** Scripts may prepare/filter data, not replace curl when sufficient. Keep prescribed bundled analysis/export scripts.
 - **A11.11** All skills use `<cwd>/.em/.tmp/` for temporary files/folders; create as needed. Delete own temporary files after use; report leftovers if cleanup needs approval. Shared API docs own this rule.
+- **A11.12** All skills NEVER delete files/folders outside task working directory; resolve targets and reject `..`/symlink/junction escapes. Never change directories to evade this limit. Shared API docs own the rule.
+- **A11.13** Temporary-file cleanup: Bash `rm .em/.tmp/<file>`; Windows PowerShell `Remove-Item -LiteralPath .em\.tmp\<file>`. Inspected, task-owned files only; no extra targets outside `.em/.tmp/`.
 
 ## 12. Stressor analysis
 

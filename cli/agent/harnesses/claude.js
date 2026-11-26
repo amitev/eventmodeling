@@ -8,11 +8,13 @@ const CLAUDE_PERMISSIONS = [
   'Bash(curl http://127.0.0.1*)',
   'Bash(curl * http://localhost*)',
   'Bash(curl * http://127.0.0.1*)',
+  'Bash(rm .em/.tmp/*)',
   ...(process.platform === 'win32' ? [
     'PowerShell(curl *http://localhost*)',
     'PowerShell(curl *http://127.0.0.1*)',
     'PowerShell(curl.exe *http://localhost*)',
     'PowerShell(curl.exe *http://127.0.0.1*)',
+    'PowerShell(Remove-Item -LiteralPath .em\\.tmp\\*)',
   ] : []),
   'Bash(gradle:*)', 'Bash(./gradlew:*)', 'Bash(gradlew:*)', 'Bash(gradlew.bat:*)',
 ];

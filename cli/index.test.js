@@ -38,6 +38,39 @@ test('init ignores temporary folders without overwriting or duplicating existing
   }
 });
 
+test('init installs scoped cleanup approval and preserves existing settings', (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'em-init-permissions-'));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const sourceDir = path.join(cwd, 'source');
+  fs.mkdirSync(sourceDir);
+  fs.writeFileSync(path.join(sourceDir, 'skill.txt'), 'test');
+  fs.mkdirSync(path.join(cwd, '.claude'));
+  const file = path.join(cwd, '.claude', 'settings.json');
+  const original = {
+    env: { EXAMPLE: 'kept' },
+    permissions: { allow: ['Read'], deny: ['Bash(rm *)'] },
+  };
+  fs.writeFileSync(file, JSON.stringify(original));
+
+  installSkills({ cwd, sourceDir });
+  const text = fs.readFileSync(file, 'utf8');
+  const settings = JSON.parse(text);
+  assert.ok(settings.permissions.allow.includes('Bash(rm .em/.tmp/*)'));
+  assert.ok(settings.permissions.allow.includes('Read'));
+  assert.ok(!settings.permissions.allow.includes('Bash(rm *)'));
+  assert.equal(
+    settings.permissions.allow.includes('PowerShell(Remove-Item -LiteralPath .em\\.tmp\\*)'),
+    process.platform === 'win32',
+  );
+  assert.ok(!settings.permissions.allow.includes('PowerShell(Remove-Item *)'));
+  assert.deepEqual(settings.permissions.deny, original.permissions.deny);
+  assert.deepEqual(settings.env, original.env);
+
+  const rerun = installSkills({ cwd, sourceDir });
+  assert.equal(fs.readFileSync(file, 'utf8'), text);
+  assert.ok(!rerun.actions.some((action) => action.includes('settings.json')));
+});
+
 test('agent --type remains required and rejects invalid values and old flag', () => {
   for (const [args, message] of [
     [[], /--type must be modeler or builder/],
