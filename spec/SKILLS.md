@@ -27,7 +27,7 @@ Requirements and learnings for skills and agent workflows, not board or server b
 
 - **A3.1** `model-validation-checklist` complements `model-check` with a read-only semantic review of completed models; it reports evidence and never edits the board.
 - **A3.2** `model-validation-checklist`, `prototype`, `slice-implementation-skill-builder`, `to-event-model`, `stressor-analysis` and `wdyt` are slash-command only; they do not auto-activate.
-- **A3.3** Keep skills concise and token-efficient without losing full intent, scope, triggers or constraints.
+- **A3.3** Keep skills and shared API docs concise and token-efficient; preserve intent, scope, triggers, constraints and API contracts.
 - **A3.4** Orchestrator skills delegate owned procedures to task-specific skills instead of restating them.
 - **A3.5** Every skill edit requires a token-efficiency review before completion: remove repetition/filler, reuse shared procedures/defaults and preserve full intent, scope, triggers and constraints. Fix in the same edit without waiting for user feedback.
 - **A3.6** Generated slice-implementation skills read the requested definition from `.em/slices/<sliceId>.json` (S2.43), not by fetching the definition from the server.
@@ -80,6 +80,13 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A11.1** Batch ready writes with compact responses (S4.20/S4.24); retain required approvals, creation order and verification. Shared API reference owns response shape and mode choice.
 - **A11.2** Navigation uses resolved Screen metadata (S3.13) to check linked-copy mockup presence without fetching HTML.
 - **A11.3** Discover Contexts/Chapters with S4.25 when no structure is needed. Use S4.26 to build inside new Chapters in the same batch. Include ready HTML and scenarios; verify changed slices with S4.27. Read only missing evidence; use Chapter reads for multiple elements. Group unresolved requirements and approvals when possible.
+- **A11.4** All skills, including generated skills, use shared curl-first API rules (`curl.exe` in Windows PowerShell).
+- **A11.5** Use another HTTP client only when curl is unavailable or insufficient; state why.
+- **A11.6** Never switch clients to bypass approval refusal.
+- **A11.7** Serialize JSON safely; send `Content-Type: application/json`.
+- **A11.8** Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`; delete temporary payloads.
+- **A11.9** Check HTTP status and error body.
+- **A11.10** Scripts may prepare/filter data, not replace curl when sufficient. Keep prescribed bundled analysis/export scripts.
 
 ## 12. Stressor analysis
 

@@ -5,6 +5,8 @@ description: Create, edit, copy, reorder or delete Given/When/Then scenarios via
 
 # Given/When/Then Scenarios
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (Events, Commands, naming); use `model-navigation` for lookups, `element-fields` for fields. Do not guess rules.

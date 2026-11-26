@@ -5,6 +5,8 @@ description: Model a slice, workflow or process with atomic structure creation, 
 
 # Slice Modeler
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (types, lanes, naming, causality); lookups: `model-navigation`. Do not guess rules. Details: `chapter-setup` (structure), `em-connections`, `element-fields`, `html-screen` (mockups), `scenarios` (GWT).
@@ -84,7 +86,7 @@ Use Automation recipe/layout, plus ≥1 external Event/Read Model in **Integrati
 
 ## Step 2 — Write
 
-Prepare Step 3 before sending `POST /ops`; include ready HTML and scenarios using aliases. Use `compact: true` and `verify` (shared API reference). Build JSON with `ConvertTo-Json -Depth 20` or `JSON.stringify`. State-change structure example:
+Prepare Step 3 before sending `POST /ops`; include ready HTML and scenarios using aliases. Use `compact: true` and `verify` (shared API reference). State-change structure example:
 
 ```json
 { "compact": true, "verify": ["$s"], "ops": [

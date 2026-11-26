@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Model Validation Checklist
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read or edit files in `.em/model/`. Read `eventmodeling-core-rules` once per session. Use `model-navigation` for reads. Review is read-only except approved Task capture; never post comments.
 
 `model-check` provides the technical pass; this checklist judges business meaning and evidence the script cannot. Do not repeat its checks by hand or treat its candidates as automatic failures. For business questions during exploration, use `wdyt`.

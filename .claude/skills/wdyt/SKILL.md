@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # WDYT — What Do You Think?
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **API only:** [API reference](../em-board-api.md). Never read/write/delete `.em/model/` files, including `contexts.yaml`.
 
 > **Before doing anything else**, ...

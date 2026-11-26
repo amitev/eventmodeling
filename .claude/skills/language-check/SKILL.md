@@ -5,6 +5,8 @@ description: Check language across Chapters/Contexts for duplicate names, Comman
 
 # Language Check
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`.
 
 Read `eventmodeling-core-rules` and `naming` first; lookups: `model-navigation`. Unlike a Chapter-local `model-check` pass, compare **all Chapters and Contexts**. Check is read-only except approved Task capture.

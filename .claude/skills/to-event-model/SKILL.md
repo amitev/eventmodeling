@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Summarize a source into an event model
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Orchestrates modeling skills; owns **source ingestion, Chapter structure, element-to-source traceability**. Read `eventmodeling-core-rules` once/session first. Use `naming`, `model-navigation`, `chapter-setup`, `slice-modeler`, `em-connections`, `element-fields`, `html-screen`, `scenarios`, `model-check`, `em-edit-and-delete` for their tasks.

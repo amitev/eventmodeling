@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Stressor analysis
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([API reference](../em-board-api.md)); never read, create, edit or delete `.em/model/` files. Read `eventmodeling-core-rules` first; use `model-navigation` for lookups.
 
 Run a multi-turn chat loop, not an automatic board redesign. Use Markdown tables for results and `ask_user` for decisions; if unavailable, pause and report the missing capability. No hosted chat snippets, connection tokens, prompt queues or canvas links.

@@ -5,6 +5,8 @@ description: Design/render HTML/CSS on a new or existing Screen, optionally matc
 
 # HTML Screen Designer
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`. Lookups: `model-navigation`.
 
 > **DEFAULT SCREEN SKILL:** realistic HTML/CSS mockups (forms, tables, page layouts), not wireframes unless explicitly requested.
@@ -60,7 +62,7 @@ Guidelines:
 
 ## Step 4 — Write the HTML
 
-Build JSON with `ConvertTo-Json` or `JSON.stringify` (escape HTML quotes/newlines); send `Content-Type: application/json`.
+Send serialized JSON; preserve HTML quotes/newlines.
 
 **Updating an existing screen**
 

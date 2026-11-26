@@ -5,6 +5,8 @@ description: Read-only script maps `pii` fields across Screens/Commands/Events/R
 
 # PII Audit
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`.
 
 Read `eventmodeling-core-rules` first; lookups: `model-navigation`. Audit is read-only except approved Task capture; script reads model and prints results. Never re-derive it by reading fields yourself.

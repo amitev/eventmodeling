@@ -5,6 +5,8 @@ description: Choose/add a genuinely new capability when no slice exists. Use for
 
 # Add Next Slice
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 **Purpose:** choose plausible next capability, create brand-new slice with recipe's elements and real mockup matching Chapter's look.

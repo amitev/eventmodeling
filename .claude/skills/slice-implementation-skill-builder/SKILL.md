@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Slice Implementation Skill Builder
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Builder model access:** API only ([../em-board-api.md](../em-board-api.md)); never read or write local model files. Generated skills read the requested slice definition from `.em/slices/<sliceId>.json`, supplied by the agent, and never write model files.
 
 Generate **three backend-only skills**: state change, state read, automation (includes translation). **No UI/Screen/view/form/mockup code.** `reference/` defines technology-neutral slice meaning and API reads; add confirmed technology. Read `eventmodeling-core-rules` first.

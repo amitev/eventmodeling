@@ -5,6 +5,8 @@ description: Create, edit or remove Screen/Command/Event/Read Model fields via A
 
 # Element Fields
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation` for lookups. Do not guess rules.
@@ -50,7 +52,7 @@ Read `eventmodeling-core-rules` first (elements, lineage); use `model-navigation
 
 ## Step 3 — Write
 
-Multiple elements: one atomic `POST /ops`, one revision. Body `{"compact":true,"ops":[{"method":"PATCH","path":"/elements/<id>","body":{"fields":[...]}}]}`; response modes/checks: shared API reference. Build JSON with `ConvertTo-Json -Depth 10` or `JSON.stringify`.
+Multiple elements: one atomic `POST /ops`, one revision. Body `{"compact":true,"ops":[{"method":"PATCH","path":"/elements/<id>","body":{"fields":[...]}}]}`; response modes/checks: shared API reference.
 
 ### A. New element (with fields)
 

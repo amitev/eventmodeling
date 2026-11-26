@@ -5,6 +5,8 @@ description: Rename, edit, move or delete elements via API; check impact and con
 
 # Edit and Delete Elements
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)). Never read, create, edit or delete files in `.em/model/`. Paths below: `http://localhost:3300/api/model`.
 
 Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do not guess rules. Related: `element-fields`, `em-connections`, `scenarios`, `chapter-setup`.

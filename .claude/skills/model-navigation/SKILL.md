@@ -5,12 +5,14 @@ description: Efficiently read the model via API: choose endpoints, navigate outl
 
 # Model Navigation (cheap reads)
 
+Follow [HTTP request rules](../em-board-api.md#http-requests).
+
 **Model access:** API only ([../em-board-api.md](../em-board-api.md)); never read model files in `.em/model/` directly. Reads change nothing. Paths below are relative to `http://localhost:3300/api/model`.
 
 ## Principles
 
 1. **Read narrowly.** Never fetch the whole model (`GET /api/model`) for lookups. Pick the smallest read below; use `screenContent=false` unless reading mockups.
-2. **Filter before printing.** Use shell `curl` or PowerShell `Invoke-RestMethod`; select needed ids, names and properties in the same command, not the whole response.
+2. **Filter before printing.** Select needed ids, names and properties in the same command, not the whole response.
 3. **Reuse reads and write responses.** Read again only after outside changes or for missing evidence.
 4. **Look up ids, never recall them from memory.** Use search/outline. Names are not unique: ask which match, naming Chapters; never choose one.
 
@@ -61,7 +63,9 @@ Element: `{ id, type, name, lane, x, copyOf?, connectsTo }`.
 Print projections, not responses (PowerShell):
 
 ```powershell
-$o = Invoke-RestMethod "http://localhost:3300/api/model/outline?context=<id>"
+$response = curl.exe --silent --show-error --fail-with-body "http://localhost:3300/api/model/outline?context=<id>"
+if ($LASTEXITCODE -ne 0) { throw "Outline request failed: $response" }
+$o = $response | ConvertFrom-Json
 $o.chapters.slices | ForEach-Object { "$($_.id) $($_.type) $($_.name): " + (($_.elements | ForEach-Object { "$($_.type):$($_.name)" }) -join ', ') }
 ```
 

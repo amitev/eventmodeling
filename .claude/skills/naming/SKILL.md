@@ -5,6 +5,8 @@ description: Naming rules and valid/invalid examples for elements, scenarios, sl
 
 # Naming
 
+For API calls, follow [HTTP request rules](../em-board-api.md#http-requests).
+
 Standalone naming reference; definitions: `eventmodeling-core-rules` (Elements, Anti-Patterns). Use domain experts' business language, never machinery. Unsure: ask.
 
 ## Elements
