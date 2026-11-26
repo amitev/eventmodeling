@@ -435,13 +435,11 @@ export function validateModel({ contexts, chapters }) {
     }
     if (field.id !== fieldId) fail(`${path}.id`, 'does not match the source field at fieldPath');
   }
-  const screenPaths = new Map();
   for (const { element, path } of elements.values()) {
     if (!element.highlights) continue;
     const source = element.copyOf ? elements.get(element.copyOf).element : element;
     if (!source.html || source.url) fail(`${path}.highlights`, 'highlights require an HTML mockup');
-    if (!screenPaths.has(source.id)) screenPaths.set(source.id, new Set(inspectHtml(source.html).elements.map((e) => e.path)));
-    if (element.highlights.some(({ path: target }) => !screenPaths.get(source.id).has(target))) {
+    if (inspectHtml(source.html, element.highlights).selected.length !== element.highlights.length) {
       fail(`${path}.highlights`, 'highlight target is missing from the HTML');
     }
   }

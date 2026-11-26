@@ -50,6 +50,7 @@ Guidelines:
 - One standalone markup per Screen; **omit `<html>`, `<head>`, `<body>`**, server adds them.
 - Prefer inline styles (`style="..."`); small `<style>` block allowed. No CSS frameworks, CDN links or external files.
 - **Full width by default:** no outer fixed/max width or auto-centred narrow card. Use `width:100%` or block default, ordinary padding. Specific width only when user explicitly requests (e.g. mobile layout, 420px card). Inner layout may use grid/percentages/flex. Prefer realistic full-bleed background (e.g. light gray) over bare white form.
+- **Stable HTML ids:** give relevant field controls and highlightable targets (e.g. inputs, buttons/links, key displayed values) unique, semantic `id` attributes when applicable. Keep them stable; omit them on decorative wrappers. IDs survive compaction and anchor highlights across layout changes.
 - Server **removes on every write**; never rely on:
   - tags `script`, `noscript`, `title`, `meta`, `base`, `template`, `iframe`, `object`, `embed`, and `link` unless it is a stylesheet;
   - attributes `on*`, `data-*`, `aria-*`, `role`, `name`, `required`, `pattern`, `min/maxlength`, `autocomplete`, `autofocus`, `action`, `method`, `target`, `rel`, `title`, `tabindex`, `contenteditable`, `spellcheck`, `draggable`;

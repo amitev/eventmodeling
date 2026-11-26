@@ -5,7 +5,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { dump, load } from 'js-yaml';
 import { compactHtml } from './html-compact.js';
 import { removeInheritedFields, syncInheritedFields } from './field-inheritance.js';
-import { clearScreenHighlights, extractHighlights, htmlStructure } from './html-highlights.js';
+import { clearScreenHighlights, extractHighlights } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import { byPosition, canonical, ordered, orderedTask, readModelEventSources, validateModel, validateTasks } from './model-rules.js';
 
@@ -672,13 +672,12 @@ export class ModelStore {
       if (element.copyOf) {
         throw new HttpError(409, `Screen "${screenId}" is a linked copy: change its original "${element.copyOf}"`);
       }
-      const before = htmlStructure(element.html);
+      const before = element.html;
       const legacy = extractHighlights(element.html);
       if (element.highlights === undefined && legacy.highlights.length) element.highlights = legacy.highlights;
       element.html = compact;
       delete element.url;
-      const cleared = before !== htmlStructure(compact)
-        ? clearScreenHighlights(screens.map((s) => s.element), screenId) : [];
+      const cleared = clearScreenHighlights(screens.map((s) => s.element), screenId, before, compact);
       canonical(model);
       return { html: compact, ...(cleared.length ? { clearedHighlights: cleared } : {}) };
     });

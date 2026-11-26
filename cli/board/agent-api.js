@@ -211,7 +211,10 @@ export function agentApi(store) {
       const session = liveModeler(req.params.id);
       const response = text(req.body?.response, 'Agent response is required');
       const error = result === 'failed' ? text(req.body?.error ?? response, 'Task error is required') : undefined;
-      modelingTasks.finish(req.params.taskId, session.name, response, error);
+      const cost = typeof req.body?.cost === 'number' && Number.isFinite(req.body.cost) && req.body.cost >= 0
+        ? req.body.cost : null;
+      const currency = typeof req.body?.currency === 'string' ? req.body.currency : null;
+      modelingTasks.finish(req.params.taskId, session.name, response, error, cost, currency);
       res.status(204).end();
       dispatchModeling(session.name);
     });

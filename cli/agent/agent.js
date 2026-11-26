@@ -294,8 +294,8 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
 }
 
 export function parseModelingResponse(dialect, output) {
-  const { status, response } = parseBuildResponse(dialect, output);
-  return { status, response };
+  const { status, response, cost, currency } = parseBuildResponse(dialect, output);
+  return { status, response, cost, currency };
 }
 
 export function modelingPrompt(template, apiUrl, target, instruction) {
@@ -307,6 +307,8 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
   let status = 'failed';
   let response;
   let error;
+  let cost;
+  let currency;
   const endpoint = `/api/agents/${encodeURIComponent(agentId)}/modeling-tasks/${encodeURIComponent(task.id)}`;
   try {
     console.log(`Modeling "${task.label}". Task: ${task.id}`);
@@ -322,7 +324,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     signal.throwIfAborted();
     const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt);
     const output = await runHarness(dialect, model, prompt, children);
-    ({ status, response } = parseModelingResponse(dialect, output));
+    ({ status, response, cost, currency } = parseModelingResponse(dialect, output));
     if (status === 'failed') error = response;
   } catch (e) {
     if (signal.aborted) return;
@@ -333,7 +335,10 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
   try {
     const reported = await fetch(new URL(`${endpoint}/${status}`, url), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ response, ...(error === undefined ? {} : { error }) }),
+      body: JSON.stringify({
+        response, ...(error === undefined ? {} : { error }),
+        ...(typeof cost === 'number' ? { cost } : {}), ...(currency ? { currency } : {}),
+      }),
       redirect: 'error', signal: AbortSignal.timeout(5000),
     });
     await reported.body?.cancel();

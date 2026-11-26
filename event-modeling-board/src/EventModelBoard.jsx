@@ -62,7 +62,7 @@ import { ModelingTaskComposer, ModelingTasksDialog } from './dialogs/ModelingTas
 import { AgentCockpit } from './dialogs/AgentCockpit.jsx';
 import { cleanName } from './model/names.js';
 import { readSketch } from './model/sketch.js';
-import { highlightHtml, htmlStructure } from '../../cli/board/html-highlights.js';
+import { highlightHtml, retainHighlights } from '../../cli/board/html-highlights.js';
 import { InfoDialog } from './dialogs/InfoDialog.jsx';
 import { FieldsDialog } from './dialogs/FieldsDialog.jsx';
 import { HtmlDialog } from './dialogs/HtmlDialog.jsx';
@@ -522,14 +522,22 @@ function Board() {
   };
   const saveHtml = (text, url, info, highlights, fields, propagate) => {
     const id = htmlTarget.id;
-    const changed = !htmlCopy && htmlStructure(htmlNode.data.html) !== htmlStructure(url ? '' : text);
-    const cleared = changed ? nodes.filter((n) => (n.id === id || n.data.copyOf === id) && n.data.highlights?.length) : [];
+    const retained = new Map();
+    if (!htmlCopy) {
+      for (const n of nodes) {
+        if ((n.id === id || n.data.copyOf === id) && n.data.highlights?.length) {
+          retained.set(n.id, retainHighlights(htmlNode.data.html, url ? '' : text, n.data.highlights));
+        }
+      }
+    }
+    const cleared = nodes.filter((n) => retained.has(n.id) && retained.get(n.id).length !== n.data.highlights.length);
     const es = getEdges();
     setNodes((ns) => {
       const updated = ns.map((n) => {
-        if (changed && n.data.copyOf === id) {
+        if (retained.has(n.id) && n.data.copyOf === id) {
           const { highlights: _highlights, ...data } = n.data;
-          return { ...n, data };
+          const kept = retained.get(n.id);
+          return { ...n, data: kept.length ? { ...data, highlights: kept } : data };
         }
         if (n.id !== id) return n;
         const { highlights: _highlights, ...own } = n.data;
@@ -549,7 +557,7 @@ function Board() {
         fields
       );
     });
-    if (cleared.length) setNotice(`HTML structure changed; cleared existing highlights on ${cleared.length} Screen(s).`);
+    if (cleared.length) setNotice(`HTML changed; cleared affected highlights on ${cleared.length} Screen(s).`);
     closeScreen();
   };
   const saveFields = (fields, propagate) => {

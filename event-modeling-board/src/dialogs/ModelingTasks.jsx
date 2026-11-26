@@ -12,6 +12,17 @@ const STATUS_ICON = {
   failed: <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />,
 };
 
+function formatDuration({ startedAt, completedAt }) {
+  if (!startedAt || !completedAt) return 'Duration: N/A';
+  const seconds = Math.max(0, Math.round((Date.parse(completedAt) - Date.parse(startedAt)) / 1000));
+  return `Duration: ${seconds >= 60 ? `${Math.floor(seconds / 60)} min ${seconds % 60} s` : `${seconds} s`}`;
+}
+
+function formatCost({ cost, currency }) {
+  if (typeof cost !== 'number') return 'Cost: N/A';
+  return `Cost: ${currency === 'USD' ? '$' : ''}${cost.toFixed(3)}`;
+}
+
 function TaskStatusIcon({ status }) {
   const label = STATUS[status] ?? status;
   return (
@@ -228,7 +239,7 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
                     <TaskStatusIcon status={task.status} />
                     <strong>{task.label}</strong>
                   </summary>
-                  <div className="task-location">{task.scope.type} - {task.modeler}</div>
+                  <div className="task-location">{task.scope.type} - {task.modeler} - {formatDuration(task)} - {formatCost(task)}</div>
                   <div className="modeling-task-prompt">
                     <strong>Task prompt</strong>
                     <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} />

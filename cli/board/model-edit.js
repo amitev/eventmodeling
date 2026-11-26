@@ -5,7 +5,7 @@ import {
   syncInheritedFields,
   trackInheritedFields,
 } from './field-inheritance.js';
-import { clearScreenHighlights, extractHighlights, highlightProblem, htmlStructure } from './html-highlights.js';
+import { clearScreenHighlights, extractHighlights, highlightProblem } from './html-highlights.js';
 import { HttpError } from './http-error.js';
 import {
   DEFAULT_SLICE_WIDTH,
@@ -866,7 +866,7 @@ function patchElement(model, { params, body: b }) {
     if (el.highlights === undefined && content.highlights.length) el.highlights = content.highlights;
   }
   const contentChanged = 'html' in p || 'url' in p;
-  const before = contentChanged ? htmlStructure(el.html) : null;
+  const before = el.html;
   const previousFields = 'fields' in p ? structuredClone(el.fields ?? []) : null;
   const { highlights, ...content } = p;
   applyContent(el, content);
@@ -878,8 +878,8 @@ function patchElement(model, { params, body: b }) {
       else delete target.fields;
     }
   }
-  const cleared = contentChanged && before !== htmlStructure(el.html)
-    ? clearScreenHighlights([...ix.elements.values()].map((item) => item.element), el.id) : [];
+  const cleared = contentChanged
+    ? clearScreenHighlights([...ix.elements.values()].map((item) => item.element), el.id, before, el.html) : [];
   if ('highlights' in p) applyContent(el, { highlights });
   if ('slice' in p || 'lane' in p) {
     if (!('slice' in p && 'lane' in p)) throw bad('slice and lane come together');

@@ -89,4 +89,9 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A12.4** Retain baseline, selections, approvals and judgments across turns. Reassess changed evidence before writes; use revision guards. Apply only approved additions via `slice-modeler`, including its HTML/scenario checks.
 - **A12.5** Compare the same fresh stressors before/after using separate user judgments. Report acceptable/assessed and unknown counts; no runtime-resilience claim from model changes. No-new-element hits is a stopping heuristic, not proof.
 
+## 13. Screen HTML ids
+
+- **A13.1** `html-screen` adds unique, semantic `id` attributes to relevant field controls and highlightable targets when applicable; omit decorative wrappers.
+- **A13.2** Screen highlights prefer unique, non-empty HTML ids; structural paths are fallback.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).

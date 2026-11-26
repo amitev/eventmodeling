@@ -62,7 +62,7 @@ export function createModelingTasks() {
     add({ scope, contextId, label, prompt, modeler }) {
       const task = {
         id: randomUUID(), scope: { ...scope }, contextId, label, prompt, modeler,
-        status: 'queued', response: null, error: null, startedAt: null, completedAt: null,
+        status: 'queued', response: null, error: null, startedAt: null, completedAt: null, cost: null, currency: null,
       };
       tasks.push(task);
       return copy(task);
@@ -76,10 +76,10 @@ export function createModelingTasks() {
       return copy(task);
     },
     assigned: (id, name) => copy(assigned(id, name)),
-    finish(id, name, response, error) {
+    finish(id, name, response, error, cost = null, currency = null) {
       Object.assign(assigned(id, name), {
         status: error === undefined ? 'done' : 'failed',
-        response, error: error ?? null, completedAt: new Date().toISOString(),
+        response, error: error ?? null, cost, currency, completedAt: new Date().toISOString(),
       });
     },
     release(name) {

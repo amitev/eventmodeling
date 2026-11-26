@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useBackdropClose, useModalFocus } from './popup.js';
 import { URL_SANDBOX, isWebUrl } from '../model/mockup.js';
 import { beautifyHtml } from '../model/beautify.js';
-import { extractHighlights, htmlStructure, inspectHtml, toggleHighlight } from '../../../cli/board/html-highlights.js';
+import { extractHighlights, inspectHtml, retainHighlights, toggleHighlight } from '../../../cli/board/html-highlights.js';
 import { MarkdownEditor } from './InfoDialog.jsx';
 import { HighlightPreview } from './HtmlHighlight.jsx';
 import { ColorPicker } from '../nodes/parts.jsx';
@@ -58,8 +58,9 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
     return true;
   };
   const changeText = (value) => {
-    if (htmlStructure(value) !== highlightModel.structure) {
-      setHighlights([]);
+    const kept = retainHighlights(text, value, highlights);
+    if (kept.length !== highlights.length) {
+      setHighlights(kept);
       setStructureNotice(true);
     }
     setText(value);
@@ -358,7 +359,7 @@ export function HtmlDialog({ title, initial, initialUrl = '', initialInfo = '', 
                 {!usingUrl && <span>Choose colour, then click: recolour or toggle. None removes.</span>}
               </div>
             )}
-            {structureNotice && <div className="html-blocked-hint" role="status">HTML structure changed. Draft highlights were cleared; saving structural changes clears copies too.</div>}
+            {structureNotice && <div className="html-blocked-hint" role="status">HTML changed. Affected draft highlights were cleared; saving checks copies too. Stable ID targets are preserved.</div>}
             {highlightError && <div className="html-highlight-error" role="alert">{highlightError}</div>}
             {usingUrl && (
               <div className="html-blocked-hint">

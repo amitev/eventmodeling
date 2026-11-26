@@ -157,3 +157,32 @@ test('compact Screen writes omit HTML but retain cleared-highlight effects', asy
   assert.match(stored.html, /<section><input><\/section>/);
   assert.equal('highlights' in stored, false);
 });
+
+test('ID highlights persist across structure edits, copies, board round trips and restart', async (t) => {
+  const { root, request, first, second, original, copy } = await setup(t);
+  const byId = [{ id: 'entry', color: 'purple' }];
+  await request('PATCH', `/elements/${original.id}`, { highlights: byId });
+  await request('PATCH', `/elements/${copy.id}`, { highlights: [...byId, { path: 'body/main[1]/button[1]', color: 'blue' }] });
+  const changed = await request('PATCH', `/elements/${original.id}`, { html: '<section><button>Back</button><div><input id="entry"></div></section>' });
+  assert.deepEqual(changed.clearedHighlights, [copy.id]);
+  assert.deepEqual(changed.highlights, byId);
+  assert.deepEqual((await request('GET', `/elements/${copy.id}`)).highlights, byId);
+  const exported = await request('GET', '');
+  const board = parseBoard(JSON.stringify(exported));
+  assert.deepEqual(serialize(board.nodes, board.edges, board.contexts), exported);
+  assert.deepEqual((await new ModelStore(root).getScreen(second.id, copy.id)).highlights, byId);
+  for (const invalid of [
+    [{ id: 'missing', color: 'red' }],
+    [{ id: 'entry', path: 'body/section[1]/div[1]/input[1]', color: 'red' }],
+    [...byId, { path: 'body/section[1]/div[1]/input[1]', color: 'red' }],
+  ]) {
+    await request('PATCH', `/elements/${copy.id}`, { highlights: invalid }, 400);
+    assert.deepEqual((await request('GET', `/elements/${copy.id}`)).highlights, byId);
+  }
+  const moved = await request('PUT', `/contexts/${first.id}/screens/${original.id}/html`, { html: '<article><input id="entry"></article>' });
+  assert.equal('clearedHighlights' in moved, false);
+  assert.deepEqual((await request('GET', `/elements/${copy.id}`)).highlights, byId);
+  const duplicate = await request('PATCH', `/elements/${original.id}`, { html: '<input id="entry"><input id="entry">' });
+  assert.deepEqual(new Set(duplicate.clearedHighlights), new Set([original.id, copy.id]));
+  await request('PATCH', `/elements/${copy.id}`, { highlights: byId }, 400);
+});

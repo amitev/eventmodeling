@@ -578,14 +578,12 @@ export function parseBoard(text) {
     if (original.type !== type) fail(path, `"${id}" must be a ${type} element`);
   }
   const screenNodes = new Map(nodes.filter((n) => n.type === 'sticky').map((n) => [n.id, n]));
-  const screenPaths = new Map();
   for (const node of screenNodes.values()) {
     if (!node.data.highlights) continue;
     const source = node.data.copyOf ? screenNodes.get(node.data.copyOf) : node;
     const path = at(elements.get(node.id).path, 'highlights');
     if (!source.data.html || source.data.url) fail(path, 'highlights require an HTML mockup');
-    if (!screenPaths.has(source.id)) screenPaths.set(source.id, new Set(inspectHtml(source.data.html).elements.map((e) => e.path)));
-    if (node.data.highlights.some(({ path: target }) => !screenPaths.get(source.id).has(target))) {
+    if (inspectHtml(source.data.html, node.data.highlights).selected.length !== node.data.highlights.length) {
       fail(path, 'highlight target is missing from the HTML');
     }
   }

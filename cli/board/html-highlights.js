@@ -8,6 +8,8 @@ export const SOURCE_ATTRIBUTE = 'data-em-screen-source';
 
 const highlightClass = (color) => `${SELECTED}-${color}`;
 const isHighlightClass = (name) => name === SELECTED || LANE_COLORS.some((color) => name === highlightClass(color));
+const targetKey = (item) => item.id !== undefined ? `id:${item.id}` : item.path;
+const targetOf = (element) => element.id ? { id: element.id } : { path: element.path };
 
 function editSource(source, edits) {
   return edits.sort((a, b) => b.start - a.start).reduce(
@@ -33,11 +35,12 @@ export function highlightProblem(value) {
   if (!Array.isArray(value) || value.some((item) =>
     !item || typeof item !== 'object' || Array.isArray(item) ||
     Object.keys(item).length !== 2 ||
-    typeof item.path !== 'string' || !/^body(?:\/[A-Za-z][A-Za-z0-9:-]*\[[1-9]\d*\])+$/.test(item.path) ||
+    !(typeof item.id === 'string' && item.id.trim() && !('path' in item) ||
+      typeof item.path === 'string' && /^body(?:\/[A-Za-z][A-Za-z0-9:-]*\[[1-9]\d*\])+$/.test(item.path) && !('id' in item)) ||
     !LANE_COLORS.includes(item.color) || item.color === 'none')) {
-    return 'highlights must be a list of { path, color } using HTML element paths and lane colors other than none';
+    return 'highlights must be a list of { id, color } or { path, color } using HTML element targets and lane colors other than none';
   }
-  if (new Set(value.map((item) => item.path)).size !== value.length) return 'highlights must not contain duplicate paths';
+  if (new Set(value.map(targetKey)).size !== value.length) return 'highlights must not contain duplicate targets';
   return null;
 }
 
@@ -47,11 +50,14 @@ export function inspectHtml(source, highlights = []) {
   const styles = [];
   const seen = new Set();
   const structure = [];
-  const wanted = new Map(highlights.map(({ path, color }) => [path, color]));
+  const ids = new Map();
+  const wanted = new Map(highlights.map((item) => [targetKey(item), item.color]));
   let styleAt = 0;
   const visit = (node, path = '') => {
     if (node.tagName === 'body') path = 'body';
     const selectable = path && !DROP_TAGS.has(node.tagName) && !['style', 'link'].includes(node.tagName);
+    const id = node.attrs?.find((attr) => attr.name === 'id')?.value ?? '';
+    if (id && !DROP_TAGS.has(node.tagName)) ids.set(id, (ids.get(id) ?? 0) + 1);
     if (selectable) structure.push([path, node.attrs.find((attr) => attr.name === 'id')?.value ?? '']);
     const location = node.sourceCodeLocation;
     if (node.nodeName === '#documentType' && location) styleAt = location.endOffset;
@@ -65,7 +71,7 @@ export function inspectHtml(source, highlights = []) {
         elements.push({
           start: location.startOffset, end: location.endOffset, tag: node.tagName,
           path: selectable && path !== 'body' ? path : '',
-          classes, legacy: classes.some(isHighlightClass), selected: wanted.has(path), color: wanted.get(path), location,
+          id, classes, legacy: classes.some(isHighlightClass), location,
         });
       }
     }
@@ -77,6 +83,13 @@ export function inspectHtml(source, highlights = []) {
     });
   };
   visit(document);
+  for (const element of elements) {
+    if (!element.path || !element.id.trim() || ids.get(element.id) !== 1) element.id = '';
+    const key = wanted.has(targetKey(targetOf(element))) ? targetKey(targetOf(element)) : element.path;
+    element.selected = !!element.path && wanted.has(key);
+    element.color = wanted.get(key);
+    element.highlightKey = key;
+  }
   const selected = elements.filter((element) => element.selected);
   return { elements, selected, styles, styleAt, structure: JSON.stringify(structure) };
 }
@@ -109,18 +122,28 @@ export function extractHighlights(source = '') {
   if (!source.includes(SELECTED) && !source.includes(STYLE_ID)) return { html: source, highlights: [] };
   const model = inspectHtml(source);
   const highlights = model.elements.filter((element) => element.legacy && element.path).map((element) => ({
-    path: element.path,
+    ...targetOf(element),
     color: LANE_COLORS.find((color) => color !== 'none' && element.classes.includes(highlightClass(color))) ?? 'red',
   }));
   return { html: highlightHtml(source, [], false, model), highlights };
 }
 
-export function clearScreenHighlights(elements, originalId) {
+export function retainHighlights(before = '', after = '', highlights = []) {
+  const model = inspectHtml(after, highlights);
+  const sameStructure = htmlStructure(before) === model.structure;
+  const selected = new Set(model.selected.map((element) => element.highlightKey));
+  return highlights.filter((item) => (item.id !== undefined || sameStructure) && selected.has(targetKey(item)));
+}
+
+export function clearScreenHighlights(elements, originalId, before, after) {
   const cleared = [];
   for (const element of elements) {
     if ((element.id === originalId || element.copyOf === originalId) && element.highlights?.length) {
+      const kept = retainHighlights(before, after, element.highlights);
+      if (kept.length === element.highlights.length) continue;
       cleared.push(element.id);
-      delete element.highlights;
+      if (kept.length) element.highlights = kept;
+      else delete element.highlights;
     }
   }
   return cleared;
@@ -130,9 +153,9 @@ export function toggleHighlight(source, offset, highlights = [], color = 'red', 
   if (!LANE_COLORS.includes(color)) throw new Error('Choose a lane color for the highlight.');
   const element = model.elements.find((item) => item.start === offset && item.path);
   if (!element) throw new Error('The preview no longer matches the HTML. Wait for it to reload and try again.');
-  if (color === 'none' || element.color === color) return highlights.filter((item) => item.path !== element.path);
-  const highlight = { path: element.path, color };
+  if (color === 'none' || element.color === color) return highlights.filter((item) => targetKey(item) !== element.highlightKey);
+  const highlight = { ...targetOf(element), color };
   return element.selected
-    ? highlights.map((item) => item.path === element.path ? highlight : item)
+    ? highlights.map((item) => targetKey(item) === element.highlightKey ? highlight : item)
     : [...highlights, highlight];
 }
