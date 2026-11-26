@@ -107,7 +107,7 @@ Press Ctrl+C to disconnect. On connection failure or unexpected disconnect, `age
 npx em-cli@latest init
 ```
 
-Creates `.em/`, adds `.em/.slices` to `.gitignore`, adds the Claude permissions to `.claude/settings.json` (existing settings are kept) and copies the packaged skills and `em-board-api.md` to `.claude/skills/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
+Creates `.em/`, adds `.em/.slices` and `.em/.tmp` to `.gitignore`, adds the Claude permissions to `.claude/settings.json` (existing settings are kept) and copies the packaged skills and `em-board-api.md` to `.claude/skills/`. Skills put temporary files/folders in `.em/.tmp/`. Run it again after a new CLI version: it replaces the skills it installed before (removing those no longer shipped) and leaves your own skills alone. Local edits to the shipped skills are overwritten.
 
 ## Develop
 

@@ -5,8 +5,9 @@ Base: `http://localhost:3300/api/model` (`npx em-cli board`, `--port` override).
 ## HTTP requests
 
 - API reads/writes: prefer `curl` (`curl.exe` in Windows PowerShell). Other clients only if curl unavailable/insufficient; state why. Never switch clients to bypass denied approval.
-- Safely serialize JSON; send `Content-Type: application/json`. Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`; delete temporary payloads. Check HTTP status/error body.
+- Safely serialize JSON; send `Content-Type: application/json`. Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`. Check HTTP status/error body.
 - Scripts may prepare/filter data, not replace curl when sufficient. Keep prescribed bundled analysis/export scripts.
+- All skill temporary files/folders belong in `<cwd>/.em/.tmp/`; create as needed. Delete own temporary files after use; if cleanup needs approval, report leftovers.
 
 ## Agent rules and storage
 

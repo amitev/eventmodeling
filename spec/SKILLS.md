@@ -84,9 +84,10 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A11.5** Use another HTTP client only when curl is unavailable or insufficient; state why.
 - **A11.6** Never switch clients to bypass approval refusal.
 - **A11.7** Serialize JSON safely; send `Content-Type: application/json`.
-- **A11.8** Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`; delete temporary payloads.
+- **A11.8** Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`; temporary-file rules: A11.11.
 - **A11.9** Check HTTP status and error body.
 - **A11.10** Scripts may prepare/filter data, not replace curl when sufficient. Keep prescribed bundled analysis/export scripts.
+- **A11.11** All skills use `<cwd>/.em/.tmp/` for temporary files/folders; create as needed. Delete own temporary files after use; report leftovers if cleanup needs approval. Shared API docs own this rule.
 
 ## 12. Stressor analysis
 

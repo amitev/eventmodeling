@@ -1,11 +1,42 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
+import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { installSkills } from './init.js';
 
 const entry = fileURLToPath(new URL('./index.js', import.meta.url));
+
+test('init ignores temporary folders without overwriting or duplicating existing entries', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'em-init-ignore-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const sourceDir = path.join(root, 'source');
+  fs.mkdirSync(sourceDir);
+  fs.writeFileSync(path.join(sourceDir, 'skill.txt'), 'test');
+  const cases = [
+    [null, '.em/.slices\n.em/.tmp\n'],
+    ['# keep\n.em/.slices', '# keep\n.em/.slices\n.em/.tmp\n'],
+    ['/.em/.tmp/\n', '/.em/.tmp/\n.em/.slices\n'],
+    ['/.em/\n', '/.em/\n'],
+    ['.em/*\n', '.em/*\n'],
+    ['.em/*\n!.em/.tmp/\n', '.em/*\n!.em/.tmp/\n.em/.tmp\n'],
+  ];
+  for (const [index, [initial, expected]] of cases.entries()) {
+    const cwd = path.join(root, String(index));
+    fs.mkdirSync(cwd);
+    const file = path.join(cwd, '.gitignore');
+    if (initial !== null) fs.writeFileSync(file, initial);
+    installSkills({ cwd, sourceDir });
+    assert.equal(fs.readFileSync(file, 'utf8'), expected);
+    const rerun = installSkills({ cwd, sourceDir });
+    assert.equal(fs.readFileSync(file, 'utf8'), expected);
+    assert.ok(!rerun.actions.some((action) => action.includes('.gitignore')));
+  }
+});
 
 test('agent --type remains required and rejects invalid values and old flag', () => {
   for (const [args, message] of [

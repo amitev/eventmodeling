@@ -21,16 +21,23 @@ function readManifest(file) {
   }
 }
 
-const IGNORED_SLICES = '.em/.slices';
+const IGNORED_FOLDERS = ['.em/.slices', '.em/.tmp'];
 
-// Appends the slice definitions folder to `<cwd>/.gitignore` unless an entry already covers it.
-function ignoreSlices(cwd) {
+function ignoreFolders(cwd) {
   const file = path.join(cwd, '.gitignore');
   const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-  const covered = text.split(/\r?\n/).some((l) => /^\/?\.em\/(\.slices|\*)?\/?$/.test(l.trim()));
-  if (covered) return null;
-  fs.writeFileSync(file, `${text}${text && !text.endsWith('\n') ? '\n' : ''}${IGNORED_SLICES}\n`);
-  return `Added ${IGNORED_SLICES} to .gitignore`;
+  const patterns = text.split(/\r?\n/).map((line) => line.trim().replace(/^\//, '').replace(/\/$/, ''));
+  const missing = IGNORED_FOLDERS.filter((folder) => {
+    let ignored = false;
+    for (const pattern of patterns) {
+      const name = pattern.replace(/^!/, '').replace(/^\//, '');
+      if (name === folder || name === '.em' || name === '.em/*') ignored = !pattern.startsWith('!');
+    }
+    return !ignored;
+  });
+  if (!missing.length) return null;
+  fs.writeFileSync(file, `${text}${text && !text.endsWith('\n') ? '\n' : ''}${missing.join('\n')}\n`);
+  return `Added ${missing.join(', ')} to .gitignore`;
 }
 
 // Copies the packaged skills (and em-board-api.md) into `target`, replacing what an earlier run installed.
@@ -41,7 +48,7 @@ export function installSkills({ target = DEFAULT_TARGET, cwd = process.cwd(), so
   const manifestFile = path.join(dir, MANIFEST);
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(path.resolve(cwd, DATA_DIR), { recursive: true });
-  const actions = [ignoreSlices(cwd), allowClaudePermissions(cwd)].filter(Boolean);
+  const actions = [ignoreFolders(cwd), allowClaudePermissions(cwd)].filter(Boolean);
   const entries = fs.readdirSync(sourceDir).filter(isEntryName).sort();
   const removed = readManifest(manifestFile).filter((n) => !entries.includes(n));
   for (const name of readManifest(manifestFile)) fs.rmSync(path.join(dir, name), { recursive: true, force: true });
