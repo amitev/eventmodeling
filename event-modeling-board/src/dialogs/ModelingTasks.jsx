@@ -89,7 +89,7 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
   const top = useBelowHeader(headerRef);
   return createPortal(
     <div
-      ref={popup} className="tasks-dialog modeling-tasks" style={{ top, maxHeight: `calc(100vh - ${top + 8}px)` }}
+      ref={popup} className="tasks-dialog modeling-tasks" style={{ top, height: `calc(100vh - ${top + 20}px)` }}
       tabIndex={-1} role="dialog" aria-modal="false" aria-label="Agent Tasks"
       onKeyDown={(e) => {
         e.stopPropagation();
@@ -106,16 +106,18 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
           <ul className="tasks-list">
             {queue.tasks.map((task) => (
               <li key={task.id}>
-                <div className="task-heading"><strong>{task.label}</strong><span>{STATUS[task.status]}</span></div>
-                <div className="task-location">{task.scope.type} - {task.modeler}</div>
-                <details><summary>Task prompt</summary><div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} /></details>
-                {task.response && (
-                  <div className="modeling-task-response">
-                    <strong>Agent response</strong>
-                    <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.response) }} />
-                  </div>
-                )}
-                {task.error && task.error !== task.response && <div className="tasks-error" role="alert">{task.error}</div>}
+                <details className="modeling-task-item" open={task.status !== 'done'}>
+                  <summary className="task-heading"><strong>{task.label}</strong><span>{STATUS[task.status]}</span></summary>
+                  <div className="task-location">{task.scope.type} - {task.modeler}</div>
+                  <details><summary>Task prompt</summary><div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} /></details>
+                  {task.response && (
+                    <div className="modeling-task-response">
+                      <strong>Agent response</strong>
+                      <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.response) }} />
+                    </div>
+                  )}
+                  {task.error && task.error !== task.response && <div className="tasks-error" role="alert">{task.error}</div>}
+                </details>
               </li>
             ))}
           </ul>

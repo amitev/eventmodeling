@@ -206,7 +206,7 @@ export function AgentTaskButton({ id, className = 'info-btn' }) {
     <button
       type="button"
       className={`${className} nodrag`}
-      title="Agent Task"
+      title="Agent Task (Shift+A)"
       aria-label="Agent Task"
       onDoubleClick={(e) => e.stopPropagation()}
       onClick={(e) => {
