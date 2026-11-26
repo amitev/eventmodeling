@@ -797,6 +797,11 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .tasks-list li { padding: 12px 0; border-bottom: 1px solid #ddd; }
 .tasks-list li:first-child { padding-top: 0; }
 .tasks-list li:last-child { border-bottom: 0; }
+.task-status-icon { display: inline-flex; flex: none; }
+.task-status-icon.queued { color: #bc8500; }
+.task-status-icon.running { color: #1a73e8; }
+.task-status-icon.done { color: #169143; }
+.task-status-icon.failed { color: #c62828; }
 .task-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .task-heading strong, .task-title-input { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
 .task-heading strong:hover, .task-description:hover { cursor: text; }

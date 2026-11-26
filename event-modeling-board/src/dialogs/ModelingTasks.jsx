@@ -5,6 +5,21 @@ import { MarkdownEditor, renderMarkdown } from './InfoDialog.jsx';
 import { useBackdropClose, useBelowHeader, useModalFocus, useOutsideClose } from './popup.js';
 
 const STATUS = { queued: 'Queued', running: 'In progress', done: 'Done', failed: 'Failed' };
+const STATUS_ICON = {
+  queued: <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />,
+  running: <path d="M8 2.5a5.5 5.5 0 1 0 5.5 5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />,
+  done: <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  failed: <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />,
+};
+
+function TaskStatusIcon({ status }) {
+  const label = STATUS[status] ?? status;
+  return (
+    <span className={`task-status-icon ${status}`} role="img" aria-label={label} title={label}>
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">{STATUS_ICON[status]}</svg>
+    </span>
+  );
+}
 
 function ModelingAgentSelect({ agents, selected, onSelect, disabled }) {
   const [open, setOpen] = useState(false);
@@ -141,10 +156,14 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
           if (e.key === 'Escape') {
             e.stopPropagation();
             onClose();
+          } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!e.repeat) send();
           }
         }}
       >
-        <div className="info-title">Agent Task <small>Enter submits - Shift+Enter new line</small></div>
+        <div className="info-title">Agent Task <small>Enter or Ctrl+S submits - Shift+Enter new line</small></div>
         <div className="modeling-task-target">{target.label}</div>
         <div className="modeling-task-agent">
           {modelers.length ? (
@@ -204,8 +223,11 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
           <ul className="tasks-list">
             {queue.tasks.map((task) => (
               <li key={task.id}>
-                <details className="modeling-task-item" open={task.status !== 'done'}>
-                  <summary className="task-heading"><strong>{task.label}</strong><span>{STATUS[task.status]}</span></summary>
+                <details className="modeling-task-item" open={task.status !== 'done' && task.status !== 'failed'}>
+                  <summary className="task-heading">
+                    <TaskStatusIcon status={task.status} />
+                    <strong>{task.label}</strong>
+                  </summary>
                   <div className="task-location">{task.scope.type} - {task.modeler}</div>
                   <div className="modeling-task-prompt">
                     <strong>Task prompt</strong>
