@@ -2141,7 +2141,7 @@ function Board() {
       {modelingTarget && (
         <ModelingTaskComposer
           target={modelingTarget} agents={agents}
-          onSend={async (task) => { await modelingTasks.add(task); setModelingTasksOpen(true); }}
+          onSend={async (task) => { await modelingTasks.add(task); }}
           onClose={() => setModelingTarget(null)}
         />
       )}

@@ -1,9 +1,107 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { RobotIcon } from '../AgentIcons.jsx';
 import { MarkdownEditor, renderMarkdown } from './InfoDialog.jsx';
 import { useBackdropClose, useBelowHeader, useModalFocus, useOutsideClose } from './popup.js';
 
 const STATUS = { queued: 'Queued', running: 'In progress', done: 'Done', failed: 'Failed' };
+
+function ModelingAgentSelect({ agents, selected, onSelect, disabled }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const root = useRef(null);
+  const trigger = useRef(null);
+  const menu = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => {
+      if (!root.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOutside, true);
+    return () => document.removeEventListener('pointerdown', closeOutside, true);
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const options = menu.current?.querySelectorAll('[role="menuitemradio"]');
+    const index = agents.findIndex((agent) => agent.id === selected?.id);
+    options?.[Math.max(0, index)]?.focus();
+  }, [open, agents, selected?.id]);
+  const focusOption = (index) => {
+    const options = menu.current?.querySelectorAll('[role="menuitemradio"]');
+    options?.[(index + agents.length) % agents.length]?.focus();
+  };
+  return (
+    <div
+      ref={root}
+      className="modeling-task-selector"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+      onKeyDown={(event) => {
+        const options = menu.current?.querySelectorAll('[role="menuitemradio"]');
+        const current = Array.from(options ?? []).indexOf(document.activeElement);
+        if (event.key === 'Escape' && open) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (!open) setOpen(true);
+          else focusOption((current < 0 ? Math.max(0, agents.findIndex((agent) => agent.id === selected?.id)) : current) + (event.key === 'ArrowDown' ? 1 : -1));
+        } else if (open && event.key === 'Home') {
+          event.preventDefault();
+          focusOption(0);
+        } else if (open && event.key === 'End') {
+          event.preventDefault();
+          focusOption(agents.length - 1);
+        }
+      }}
+    >
+      <button
+        ref={trigger}
+        type="button"
+        className="modeling-task-select"
+        aria-label="Modeling agent"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {selected ? (
+          <>
+            <RobotIcon name={selected.name} />
+            <span>{selected.name} ({selected.model})</span>
+          </>
+        ) : <span>Choose a modeling agent</span>}
+        <svg className="modeling-task-chevron" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="m3 6 5 5 5-5" />
+        </svg>
+      </button>
+      {open && (
+        <div ref={menu} id={id} className="modeling-task-agent-menu" role="menu" aria-label="Modeling agents">
+          {agents.map((agent) => (
+            <button
+              key={agent.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={selected?.id === agent.id}
+              onClick={() => {
+                onSelect(agent.id);
+                setOpen(false);
+                trigger.current?.focus();
+              }}
+            >
+              <RobotIcon name={agent.name} />
+              <span>{agent.name} ({agent.model})</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
   const popup = useModalFocus();
@@ -48,13 +146,13 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
       >
         <div className="info-title">Agent Task <small>Enter submits - Shift+Enter new line</small></div>
         <div className="modeling-task-target">{target.label}</div>
-        <label className="modeling-task-agent">
-          Modeling agent
-          <select aria-label="Modeling agent" value={selected?.id ?? ''} disabled={sending} onChange={(e) => setAgentId(e.target.value)}>
-            <option value="">{modelers.length ? 'Choose a modeling agent' : agents === null ? 'Agents unavailable' : 'No modeling agent connected'}</option>
-            {modelers.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} ({agent.model})</option>)}
-          </select>
-        </label>
+        <div className="modeling-task-agent">
+          {modelers.length ? (
+            <ModelingAgentSelect agents={modelers} selected={selected} onSelect={setAgentId} disabled={sending} />
+          ) : (
+            <div className="modeling-task-empty">{agents === null ? 'Agents unavailable' : 'No modeling agent connected'}</div>
+          )}
+        </div>
         {selected?.harness === 'copilot' && (
           <div className="modeling-task-target">Copilot currently has file tools only; tasks requiring model API access will report failure.</div>
         )}
@@ -109,7 +207,10 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
                 <details className="modeling-task-item" open={task.status !== 'done'}>
                   <summary className="task-heading"><strong>{task.label}</strong><span>{STATUS[task.status]}</span></summary>
                   <div className="task-location">{task.scope.type} - {task.modeler}</div>
-                  <details><summary>Task prompt</summary><div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} /></details>
+                  <div className="modeling-task-prompt">
+                    <strong>Task prompt</strong>
+                    <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} />
+                  </div>
                   {task.response && (
                     <div className="modeling-task-response">
                       <strong>Agent response</strong>

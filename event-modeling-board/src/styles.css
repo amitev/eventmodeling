@@ -754,12 +754,35 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .modeling-task-composer .info-title { flex-wrap: wrap; }
 .modeling-task-composer .info-title small { margin-left: auto; font-size: 11px; font-weight: 400; color: #667; }
 .modeling-task-target { padding: 8px 14px; font-size: 13px; color: #667; overflow-wrap: anywhere; }
-.modeling-task-agent { display: flex; align-items: center; gap: 8px; padding: 8px 14px; }
-.modeling-task-agent select { min-width: 0; flex: 1; padding: 4px; }
+.modeling-task-agent { min-width: 0; padding: 8px 14px; }
+.modeling-task-selector { position: relative; }
+.modeling-task-select {
+  display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 6px 8px;
+  border: 1px solid #999; border-radius: 4px; background: #fff; color: #222; font: inherit; text-align: left; cursor: pointer;
+}
+.modeling-task-select > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.modeling-task-select > svg { width: 20px; height: 20px; flex: none; }
+.modeling-task-select .modeling-task-chevron { width: 16px; height: 16px; }
+.modeling-task-agent-menu {
+  position: absolute; z-index: 2; top: calc(100% + 2px); left: 0; right: 0; max-height: 180px; overflow-y: auto;
+  padding: 4px; border: 1px solid #bbb; border-radius: 4px; background: #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.modeling-task-agent-menu button {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 3px;
+  background: #fff; color: #222; font: inherit; text-align: left; cursor: pointer;
+}
+.modeling-task-agent-menu button[aria-checked="true"] { background: #e3eeff; }
+.modeling-task-agent-menu button:hover:not([aria-checked="true"]),
+.modeling-task-agent-menu button:focus-visible:not([aria-checked="true"]) { background: #f1f3f5; outline: none; }
+.modeling-task-agent-menu button > svg { width: 20px; height: 20px; flex: none; }
+.modeling-task-agent-menu button > span { min-width: 0; overflow-wrap: anywhere; }
+.modeling-task-empty { font-size: 13px; color: #667; }
 .modeling-task-editor { display: flex; flex-direction: column; min-height: 100px; height: 220px; overflow: auto; }
 .modeling-task-composer .info-editor { font-size: 14px; }
 .modeling-task-composer .info-actions button:disabled { opacity: 0.5; cursor: default; }
 .modeling-task-response { margin-top: 10px; overflow-wrap: anywhere; }
+.modeling-task-prompt { margin-top: 8px; overflow-wrap: anywhere; }
+.modeling-task-prompt .info-preview { padding-bottom: 0; }
 .modeling-tasks details { margin-top: 8px; }
 .modeling-tasks .modeling-task-item { margin-top: 0; }
 .modeling-tasks .modeling-task-item > summary,
