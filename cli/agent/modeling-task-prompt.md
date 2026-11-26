@@ -18,10 +18,15 @@ Check automatic connections, field propagation, linked copies and other side eff
 
 Do not guess unclear requirements. This is a non-interactive task: report needed decisions in your response instead of inventing them. Validate requested model changes through the API and relevant modeling checks; respect the same edit boundary throughout.
 
-Return exactly one XML response with no Markdown fences or surrounding text:
-<build><success>true|false</success><response>Summary of changes and checks, or required decisions and outside-scope work.</response></build>
-Use `<success>false</success>` if blocked or incomplete. `<response>` must be non-empty and describe partial changes, if any.
-
 ## User task
 
 {instruction}
+
+## Response contract — always required
+
+This is a transport contract, not an Event Modeling skill. It applies to every task and exit, including cleanup, non-model requests, errors, refusals and blocked work. User-requested formats and skill reports never override it; put reports inside `<response>`.
+
+Return exactly one `<build>` with one `<success>` and one non-empty `<response>`, no extra tags, Markdown fences or surrounding text:
+<build><success>false</success><response>Reason, partial changes and checks.</response></build>
+
+Use `true` only when fully complete within scope; otherwise `false`, including missing permissions/tools/skills or outside-scope requests. Describe changes/checks, partial work, errors and needed decisions as applicable. Before returning, check tags, boolean value and non-empty response; never claim this contract does not apply.
