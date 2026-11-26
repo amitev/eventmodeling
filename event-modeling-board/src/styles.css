@@ -781,6 +781,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .modeling-task-composer .info-editor { font-size: 14px; }
 .modeling-task-composer .info-actions button:disabled { opacity: 0.5; cursor: default; }
 .modeling-task-response { margin-top: 10px; overflow-wrap: anywhere; }
+.modeling-task-response .info-preview { padding-bottom: 0; }
 .modeling-task-prompt { margin-top: 8px; overflow-wrap: anywhere; }
 .modeling-task-prompt .info-preview { padding-bottom: 0; }
 .modeling-tasks details { margin-top: 8px; }
