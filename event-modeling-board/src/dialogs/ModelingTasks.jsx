@@ -46,7 +46,7 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
           }
         }}
       >
-        <div className="info-title">Agent Task <small>Enter sends - Shift+Enter new line</small></div>
+        <div className="info-title">Agent Task <small>Enter submits - Shift+Enter new line</small></div>
         <div className="modeling-task-target">{target.label}</div>
         <label className="modeling-task-agent">
           Modeling agent
@@ -73,10 +73,10 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
         </div>
         {error && <div className="tasks-error" role="alert">{error}</div>}
         <div className="info-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
           <button type="button" className="primary" disabled={sending || !prompt.trim() || !selected} onClick={send}>
-            {sending ? 'Sending...' : 'Send'}
+            {sending ? 'Submitting...' : 'Submit'}
           </button>
+          <button type="button" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>, document.body,
