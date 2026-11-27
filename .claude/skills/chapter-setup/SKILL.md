@@ -30,7 +30,7 @@ Read `eventmodeling-core-rules` first; use `model-navigation` for lookups. Do no
 
 1. Use the Chapter-only outline for names and positions; request full structure only when needed (`model-navigation`). Never guess ids.
 2. Multiple name matches: ask which, naming Chapters.
-3. **Ask before content loss or unexpected changes:** lane/slice/Chapter/Context deletion, adding a lane to an existing Chapter, moving a Chapter between Contexts.
+3. **Ask before content loss or unexpected changes:** lane/slice/Chapter/Context deletion, adding a lane to an existing Chapter unless the user explicitly requests it, moving a Chapter between Contexts.
 
 ## Step 2 — Contexts
 

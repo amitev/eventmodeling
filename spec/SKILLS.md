@@ -105,4 +105,8 @@ Requirements and learnings for skills and agent workflows, not board or server b
 - **A13.1** `html-screen` adds unique, semantic `id` attributes to relevant field controls and highlightable targets when applicable; omit decorative wrappers.
 - **A13.2** Screen highlights prefer unique, non-empty HTML ids; structural paths are fallback.
 
+## 14. Slice-scoped lane changes
+
+- **A14.1** In slice-scoped Agent Tasks, `chapter-setup` permits requested lane additions and edits to lane name, info or color; never remove lanes or change lane type.
+
 Board rules: [Fields](./MODELING_BOARD.md#9-fields). API rules: [Editing API](./SERVER.md#4-editing-api).
