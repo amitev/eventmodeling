@@ -22,7 +22,7 @@ const HOTKEYS = [
       ['Backspace / Delete', 'Delete the selected elements or arrows'],
       ['Ctrl+F', 'Search elements by name'],
       ['Ctrl+H', 'High level view (Esc leaves it)'],
-      ['Shift+A', 'Run Agent Task for the selected element, empty Cell, slice header or Chapter'],
+      ['Shift+A', 'Run Agent Task for the selected element, empty Cell, slice header or Chapter; with no board target, the selected Context (not All contexts)'],
       ['Shift+T', 'Toggle Agent Tasks history'],
       ['Shift+C', 'Open Agent cockpit'],
       ['Shift+F', 'Fit view: show the whole board'],

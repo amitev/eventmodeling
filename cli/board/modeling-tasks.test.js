@@ -33,10 +33,16 @@ test('modeling tasks serialize per modeler, retain feedback and resume after dis
 
 test('scope validation rejects stale Cells, moved elements and extra target IDs', () => {
   const model = {
-    contexts: [{ id: 'ctx', name: 'Sales' }],
+    contexts: [{ id: 'ctx', name: 'Sales' }, { id: 'other', name: 'Support' }],
     chapters: [{ id: 'c', context: 'ctx', name: 'Orders', lanes: [{ id: 'l', name: 'Buyer' }],
       slices: [{ id: 's', name: 'Order', elements: [{ id: 'e', lane: 'l', name: 'Place Order' }] }] }],
   };
+  const contextScope = { type: 'context', contextId: 'other' };
+  assert.deepEqual(resolveModelingScope(model, contextScope), {
+    scope: contextScope, contextId: 'other', label: 'Support',
+  });
+  assert.throws(() => resolveModelingScope(model, { type: 'context', contextId: 'missing' }), /Scope Context not found/);
+  assert.throws(() => resolveModelingScope(model, { ...contextScope, chapterId: 'c' }), /Invalid/);
   const scope = { type: 'element', chapterId: 'c', sliceId: 's', laneId: 'l', elementId: 'e' };
   assert.equal(resolveModelingScope(model, scope).label, 'Sales / Orders / Order / Buyer / Place Order');
   const sliceScope = { type: 'slice', chapterId: 'c', sliceId: 's' };
@@ -148,4 +154,13 @@ test('modeling API routes only to selected modelers and expose queued history an
   assert.equal(history[0].status, 'done');
   await request('POST', `/agents/${modeler.id}/modeling-tasks/${second.id}/failed`, { response: 'Needs a decision.' }, 204);
   assert.equal((await request('GET', '/modeling-tasks', undefined, 200))[1].error, 'Needs a decision.');
+  await request('POST', `/agents/${other.id}/modeling-tasks/${separate.id}/done`, { response: 'Reviewed the Chapter.' }, 204);
+  const contextScope = { type: 'context', contextId: context.id };
+  const contextTask = await request('POST', '/modeling-tasks', {
+    agentId: other.id, prompt: 'Review this Context', scope: contextScope,
+  }, 201);
+  assert.equal((await other.event('modeling-task')).id, contextTask.id);
+  const contextTarget = await request('GET', `/agents/${other.id}/modeling-tasks/${contextTask.id}/scope`, undefined, 200);
+  assert.deepEqual(contextTarget.scope, contextScope);
+  assert.equal(contextTarget.label, 'Sales');
 });

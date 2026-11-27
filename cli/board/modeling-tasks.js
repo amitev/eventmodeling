@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { HttpError } from './http-error.js';
 
 export function resolveModelingScope(model, scope) {
-  if (!scope || !['chapter', 'slice', 'cell', 'element'].includes(scope.type)) {
-    throw new HttpError(400, 'Scope type must be chapter, slice, cell or element');
+  if (!scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(scope.type)) {
+    throw new HttpError(400, 'Scope type must be context, chapter, slice, cell or element');
   }
   const keys = {
+    context: ['type', 'contextId'],
     chapter: ['type', 'chapterId'],
     slice: ['type', 'chapterId', 'sliceId'],
     cell: ['type', 'chapterId', 'sliceId', 'laneId'],
@@ -15,10 +16,15 @@ export function resolveModelingScope(model, scope) {
       keys.some((key) => typeof scope[key] !== 'string' || !scope[key].trim())) {
     throw new HttpError(400, 'Invalid modeling task scope');
   }
+  const normalized = Object.fromEntries(keys.map((key) => [key, scope[key]]));
+  if (scope.type === 'context') {
+    const context = model.contexts.find((item) => item.id === scope.contextId);
+    if (!context) throw new HttpError(404, 'Scope Context not found');
+    return { scope: normalized, contextId: context.id, label: context.name };
+  }
   const chapter = model.chapters.find((item) => item.id === scope.chapterId);
   if (!chapter) throw new HttpError(404, 'Scope Chapter not found');
   const context = model.contexts.find((item) => item.id === chapter.context);
-  const normalized = Object.fromEntries(keys.map((key) => [key, scope[key]]));
   let label = `${context.name} / ${chapter.name}`;
   if (scope.type !== 'chapter') {
     const slice = chapter.slices.find((item) => item.id === scope.sliceId);

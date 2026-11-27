@@ -1641,6 +1641,9 @@ function Board() {
       } else if (selected.length === 0 && !selectedEdges && selectedCell && cellElements(ns, selectedCell).length === 0) {
         e.preventDefault();
         openModelingTask({ type: 'cell', ...selectedCell });
+      } else if (selected.length === 0 && !selectedEdges && !selectedCell && filterId) {
+        e.preventDefault();
+        openModelingTask({ type: 'context', contextId: filterId });
       }
       return;
     }
@@ -1768,6 +1771,11 @@ function Board() {
   };
 
   const openModelingTask = (scope) => {
+    if (scope.type === 'context') {
+      const context = contexts.find((item) => item.id === scope.contextId);
+      if (context) setModelingTarget({ scope, label: context.name });
+      return;
+    }
     const chapter = nodes.find((node) => node.id === scope.chapterId);
     const context = contexts.find((item) => item.id === chapter.data.context);
     const slice = nodes.find((node) => node.id === scope.sliceId);
@@ -1860,6 +1868,17 @@ function Board() {
           ))}
           <option value={NEW_CONTEXT}>+ New context...</option>
         </select>
+        <button
+          className="hotkeys-btn search-btn"
+          onClick={() => openModelingTask({ type: 'context', contextId: filterId })}
+          disabled={!filterId}
+          title={filterId
+            ? 'Agent Task for the selected Context (Shift+A)'
+            : 'Agent Task for the selected Context (choose a Context first; Shift+A has no Context target for All contexts)'}
+          aria-label="Agent Task for the selected Context"
+        >
+          <AgentTaskIcon />
+        </button>
         <button
           className="hotkeys-btn search-btn"
           onClick={() => renameContext(filterId)}
