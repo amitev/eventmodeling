@@ -36,9 +36,12 @@ export function StickyNode({ id, data, selected }) {
   }, [editingTitle]);
 
   const isScreen = data.kind === 'screen';
-  const compact = useStore((s) =>
-    (data.kind === 'command' || data.kind === 'event' || data.kind === 'read_model') && s.transform[2] < 0.5
-  );
+  const compact = useStore((s) => {
+    const shownData = data.copyOf ? s.nodeLookup.get(data.copyOf)?.data : data;
+    const compactKind = data.kind === 'command' || data.kind === 'event' || data.kind === 'read_model';
+    const emptyScreen = data.kind === 'screen' && !shownData?.html && !shownData?.url;
+    return (compactKind || emptyScreen) && s.transform[2] < 0.5;
+  });
   // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
   const width = useStore((s) => {
     const me = s.nodeLookup.get(id);
@@ -279,7 +282,8 @@ export function StickyNode({ id, data, selected }) {
     );
   }
 
-  const zoomable = screenHoverZoom && isScreen && !!(shown.html || shown.url);
+  const hasMockup = !!(shown.html || shown.url);
+  const zoomable = screenHoverZoom && isScreen && hasMockup;
   // The handles are siblings of the scaled `.sticky`: React Flow measures them from their screen position, so
   // inside the hover zoom (R3.10a) they were measured scaled and the arrows ended at wrong points.
   return (
@@ -347,9 +351,9 @@ export function StickyNode({ id, data, selected }) {
           <ProcessorIcon name={shown.icon ?? DEFAULT_PROCESSOR_ICON} />
         </div>
       ) : (
-        <div ref={bodyRef} className={`sticky-body${isScreen && (shown.html || shown.url) ? ' has-mockup' : ''}${scrolls && selected ? ' nowheel' : ''}`}>
-        {!isScreen && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
-        {isScreen && (shown.html || shown.url) && <ScreenPreview html={shown.html} url={shown.url} highlights={shown.highlights} title={shown.name || 'Screen mockup'} />}
+        <div ref={bodyRef} className={`sticky-body${isScreen && hasMockup ? ' has-mockup' : ''}${scrolls && selected ? ' nowheel' : ''}`}>
+        {(!isScreen || !hasMockup) && shown.fields?.length > 0 && <FieldList fields={shown.fields} />}
+        {isScreen && hasMockup && <ScreenPreview html={shown.html} url={shown.url} highlights={shown.highlights} title={shown.name || 'Screen mockup'} />}
         </div>
       )}
     </div>
