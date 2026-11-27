@@ -209,12 +209,16 @@ export function agentApi(store, rootDir) {
   for (const result of ['done', 'failed']) {
     router.post(`/agents/:id/modeling-tasks/:taskId/${result}`, (req, res) => {
       const session = liveModeler(req.params.id);
-      const response = text(req.body?.response, 'Agent response is required');
-      const error = result === 'failed' ? text(req.body?.error ?? response, 'Task error is required') : undefined;
+      const response = req.body?.response == null ? null : text(req.body.response, 'Agent response must not be blank');
+      const error = result === 'failed' && req.body?.error != null
+        ? text(req.body.error, 'Task error must not be blank') : null;
+      if (result === 'done' ? response === null : response === null && error === null) {
+        throw new HttpError(400, result === 'done' ? 'Agent response is required' : 'Agent response or task error is required');
+      }
       const cost = typeof req.body?.cost === 'number' && Number.isFinite(req.body.cost) && req.body.cost >= 0
         ? req.body.cost : null;
       const currency = typeof req.body?.currency === 'string' ? req.body.currency : null;
-      modelingTasks.finish(req.params.taskId, session.name, response, error, cost, currency);
+      modelingTasks.finish(req.params.taskId, session.name, result, response, error, cost, currency);
       res.status(204).end();
       dispatchModeling(session.name);
     });

@@ -21,14 +21,15 @@ test('modeling tasks serialize per modeler, retain feedback and resume after dis
   assert.equal(tasks.next('mozart').id, first.id);
   assert.equal(tasks.next('Mozart'), null);
   assert.equal(tasks.next('Haydn').id, other.id);
-  assert.throws(() => tasks.finish(first.id, 'Haydn', 'Wrong agent'), /not running on this agent/);
+  assert.throws(() => tasks.finish(first.id, 'Haydn', 'done', 'Wrong agent'), /not running on this agent/);
   tasks.release('Mozart');
   assert.equal(tasks.next('Mozart').id, first.id);
-  tasks.finish(first.id, 'Mozart', 'Needs a decision', 'Needs a decision');
+  tasks.finish(first.id, 'Mozart', 'failed', 'Needs a decision', 'Needs a decision');
   assert.equal(tasks.next('Mozart').id, second.id);
   assert.deepEqual(tasks.list().map(({ id }) => id), [other.id, second.id, first.id]);
   assert.deepEqual(tasks.list().map(({ status }) => status), ['running', 'running', 'failed']);
   assert.equal(tasks.list()[2].response, 'Needs a decision');
+  assert.equal(tasks.list()[2].error, null);
   const snapshot = tasks.list();
   snapshot[0].scope.chapterId = 'mutated';
   assert.equal(tasks.list()[0].scope.chapterId, 'c');
@@ -49,10 +50,10 @@ test('modeling history retains the last 10 completions and all unfinished tasks 
     const task = tasks.add(input);
     finished.push(task);
     assert.equal(tasks.next('Mozart').id, task.id);
-    tasks.finish(task.id, 'Mozart', `Response ${index}`, index % 2 ? 'Needs input' : undefined, 0.125, 'USD');
+    tasks.finish(task.id, 'Mozart', index % 2 ? 'failed' : 'done', `Response ${index}`, null, 0.125, 'USD');
   }
   // An old task finishing last must survive retention without moving above newer-created tasks.
-  tasks.finish(interrupted.id, 'Haydn', 'Finished late');
+  tasks.finish(interrupted.id, 'Haydn', 'done', 'Finished late');
   const running = tasks.add(input);
   tasks.next('Mozart');
   const queued = tasks.add(input);
@@ -85,12 +86,12 @@ test('modeling history write failures leave task state unchanged and allow retry
   const file = path.join(root, '.em', '.tasks', 'modeling.json');
   await fs.unlink(file);
   await fs.mkdir(file);
-  assert.throws(() => tasks.finish(task.id, 'Mozart', 'Reviewed'));
+  assert.throws(() => tasks.finish(task.id, 'Mozart', 'done', 'Reviewed'));
   assert.throws(() => tasks.add(input));
   assert.deepEqual(tasks.list(), before);
   assert.deepEqual(await fs.readdir(path.dirname(file)), ['modeling.json']);
   await fs.rmdir(file);
-  tasks.finish(task.id, 'Mozart', 'Reviewed');
+  tasks.finish(task.id, 'Mozart', 'done', 'Reviewed');
   assert.equal(createModelingTasks(root).list()[0].response, 'Reviewed');
 });
 
@@ -221,6 +222,7 @@ test('modeling API routes only to selected modelers and expose queued history an
   assert.deepEqual((await request('GET', `${endpoint}/scope`, undefined, 200)).scope, scope);
   await request('POST', `/agents/${other.id}/modeling-tasks/${first.id}/done`, { response: 'Wrong agent' }, 409);
   await request('POST', `${endpoint}/done`, { response: ' ' }, 400);
+  await request('POST', `${endpoint}/failed`, {}, 400);
   await request('POST', `${endpoint}/done`, { response: 'Checked all slices.' }, 204);
   assert.equal((await modeler.event('modeling-task')).id, second.id);
   const history = await request('GET', '/modeling-tasks', undefined, 200);
@@ -228,8 +230,15 @@ test('modeling API routes only to selected modelers and expose queued history an
   assert.equal(history[2].response, 'Checked all slices.');
   assert.equal(history[2].status, 'done');
   await request('POST', `/agents/${modeler.id}/modeling-tasks/${second.id}/failed`, { response: 'Needs a decision.' }, 204);
-  assert.equal((await request('GET', '/modeling-tasks', undefined, 200))[1].error, 'Needs a decision.');
-  await request('POST', `/agents/${other.id}/modeling-tasks/${separate.id}/done`, { response: 'Reviewed the Chapter.' }, 204);
+  const failed = (await request('GET', '/modeling-tasks', undefined, 200))[1];
+  assert.equal(failed.status, 'failed');
+  assert.equal(failed.response, 'Needs a decision.');
+  assert.equal(failed.error, null);
+  await request('POST', `/agents/${other.id}/modeling-tasks/${separate.id}/failed`, { error: 'Could not reach model API.' }, 204);
+  const technical = (await request('GET', '/modeling-tasks', undefined, 200))[0];
+  assert.equal(technical.status, 'failed');
+  assert.equal(technical.response, null);
+  assert.equal(technical.error, 'Could not reach model API.');
   const contextScope = { type: 'context', contextId: context.id };
   const contextTask = await request('POST', '/modeling-tasks', {
     agentId: other.id, prompt: 'Review this Context', scope: contextScope,

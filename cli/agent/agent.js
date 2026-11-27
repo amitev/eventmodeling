@@ -305,7 +305,7 @@ export function modelingPrompt(template, apiUrl, target, instruction, tempDir) {
 
 async function modelTask(url, agentId, task, dialect, model, children, signal) {
   let status = 'failed';
-  let response;
+  let response = null;
   let error;
   let cost;
   let currency;
@@ -329,10 +329,9 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt, tempDir);
     const output = await runHarness(dialect, model, prompt, children);
     ({ status, response, cost, currency } = parseModelingResponse(dialect, output));
-    if (status === 'failed') error = response;
   } catch (e) {
     if (signal.aborted) return;
-    response = error = e.message;
+    error = e.message;
     console.error(`Modeling task failed: ${error}`);
   } finally {
     if (tempDir) {
@@ -342,7 +341,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
         status = 'failed';
         const message = `Could not clean task temporary directory "${tempDir}": ${e.message}`;
         console.error(message);
-        response = error = response ? `${response}\n\n${message}` : message;
+        error = error ? `${error}\n\n${message}` : message;
       }
     }
   }

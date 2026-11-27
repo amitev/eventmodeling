@@ -25,7 +25,9 @@ function readTasks(file) {
     !task.scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(task.scope.type) ||
     !['queued', 'running', 'done', 'failed'].includes(task.status) || !timestamp(task.createdAt) ||
     (task.startedAt !== null && !timestamp(task.startedAt)) ||
-    (completed(task) ? !timestamp(task.completedAt) || typeof task.response !== 'string' : task.completedAt !== null) ||
+    (task.response !== null && typeof task.response !== 'string') ||
+    (completed(task) ? !timestamp(task.completedAt) ||
+      (task.status === 'done' ? !task.response : !task.response && !task.error) : task.completedAt !== null) ||
     (task.error !== null && typeof task.error !== 'string') ||
     (task.cost !== null && (typeof task.cost !== 'number' || !Number.isFinite(task.cost) || task.cost < 0)) ||
     (task.currency !== null && typeof task.currency !== 'string')
@@ -132,11 +134,11 @@ export function createModelingTasks(rootDir) {
       return copy(task);
     },
     assigned: (id, name) => copy(assigned(id, name)),
-    finish(id, name, response, error, cost = null, currency = null) {
+    finish(id, name, status, response, error = null, cost = null, currency = null) {
       const finished = {
         ...assigned(id, name),
-        status: error === undefined ? 'done' : 'failed',
-        response, error: error ?? null, cost, currency, completedAt: new Date().toISOString(),
+        status, response, error: error === response ? null : error,
+        cost, currency, completedAt: new Date().toISOString(),
       };
       const retained = new Set([finished, ...tasks.filter(completed)]
         .sort((a, b) => b.completedAt.localeCompare(a.completedAt))

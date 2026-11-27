@@ -73,6 +73,13 @@ test('modeling task temp directories are prepared and cleaned before reporting s
       });
       await runAgent({ port: 3300, name: 'Mozart', model: 'test', agentType: 'modeler' });
       assert.equal(report.status, expectedStatus);
+      if (name === 'invalid response') {
+        assert.equal(report.response, null);
+        assert.match(report.error, /Invalid build response/);
+      } else {
+        assert.equal(report.response, name === 'success' ? 'Reviewed.' : 'Needs a decision.');
+        assert.equal(report.error, undefined);
+      }
       assert.deepEqual(remainingAtReport, ['keep.txt']);
       assert.equal(await fs.readFile(path.join(tempRoot, 'keep.txt'), 'utf8'), 'unrelated');
     });
