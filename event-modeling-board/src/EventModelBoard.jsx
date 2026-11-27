@@ -54,7 +54,7 @@ import {
   DEFAULT_PROCESSOR_ICON,
 } from './model/model.js';
 import { STORAGE_KEY, boardText, load, compareIds } from './state/io.js';
-import { pushBoard, pullBoard, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
+import { pushBoard, pullBoard, pullRevision, watchRevision, createRevisionSync, StaleError } from './state/sync.js';
 import { useConnectedAgents } from './state/agents.js';
 import { useBuildQueue } from './state/buildQueue.js';
 import { useModelingTasks } from './state/modelingTasks.js';
@@ -1342,6 +1342,24 @@ function Board() {
   // Open and auto-pull (R10.2, R10.6): the server model replaces the board when it has no known
   // revision (opening, or after a lost connection that never answered) or a revision of someone else.
   useEffect(() => watchRevision(revisionSync.notify), [revisionSync]);
+
+  const completedModelingTasks = modelingTasks.tasks
+    .filter((task) => task.status === 'done' || task.status === 'failed')
+    .map((task) => task.id).join(',');
+  useEffect(() => {
+    if (!completedModelingTasks) return;
+    const controller = new AbortController();
+    const check = async () => {
+      try {
+        const revision = await pullRevision(controller.signal);
+        if (!controller.signal.aborted) await revisionSync.notify(revision);
+      } catch (err) {
+        if (!controller.signal.aborted) setNotice(`Could not check the server model after an Agent Task: ${err.message}`);
+      }
+    };
+    check();
+    return () => controller.abort();
+  }, [completedModelingTasks, revisionSync]);
 
   const isValidConnection = useCallback(
     (c) => {

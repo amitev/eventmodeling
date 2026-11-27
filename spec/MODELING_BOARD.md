@@ -616,6 +616,7 @@ The Screens of a Chapter shown one after the other, like a prototype walk-throug
 - **R15.6** **Shift+A** starts Agent Task: explicit slice-header selection targets its slice, else exactly one selected element targets that element, else exactly one selected Chapter targets that Chapter, else an empty selected Cell targets that Cell. No action for occupied Cells without exactly one selected element or ambiguous selection. Replaces the Copy Context hotkey; its buttons remain. Ignore while typing, in overview, or while a popup/context menu is open. Not an undo step.
 - **R15.7** **Shift+T** toggles the Agent Tasks history dialog, including in high level view. Ignore while typing, on key repeat, when a modal popup or Cell context menu is open. Not an undo step.
 - **R15.8** A header Agent Task button after the Context filter starts a task for the selected Context; its tooltip shows **Shift+A**. Disabled for **All contexts**. Shift+A with no selected board target also starts a task for the selected Context, but does nothing for **All contexts**.
+- **R15.9** When task polling first finds done/failed tasks or finds another completion, recheck the server revision via `GET /api/model/revision`; apply R10.6 if changed. No page reload or pull for a known revision. Show check errors in a notice.
 
 ## Out of scope for now
 

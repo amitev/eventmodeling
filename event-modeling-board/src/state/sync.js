@@ -15,14 +15,14 @@ class StatusError extends Error {
 // The revision (SERVER.md S4.1) of a response: its ETag without the quotes.
 const revisionOf = (res) => res.headers.get('ETag')?.replace(/^"(.*)"$/, '$1') ?? null;
 
-async function request(method, url, body, revision) {
+async function request(method, url, body, revision, signal) {
   const headers = {
     ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     ...(revision == null ? {} : { 'If-Match': `"${revision}"` }),
   };
   let res;
   try {
-    res = await fetch(url, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    res = await fetch(url, { method, headers, signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   } catch {
     throw new Error('the server cannot be reached');
   }
@@ -72,6 +72,11 @@ export async function pullBoard() {
     const { data } = await request('GET', '/api/model/revision');
     return { board: makeEmptyBoard(), revision: data.revision };
   }
+}
+
+export async function pullRevision(signal) {
+  const { data } = await request('GET', '/api/model/revision', undefined, undefined, signal);
+  return data.revision;
 }
 
 // Coalesce notifications during sync, then check against the revision the sync actually reached.
