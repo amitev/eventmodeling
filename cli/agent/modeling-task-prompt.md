@@ -5,6 +5,12 @@ Use the installed Event Modeling skills and their shared API documentation. Read
 Model API base URL: {apiUrl}
 Use this URL and port instead of example ports in skills. Model access is API only. Never read or edit files in `.em/model/`. Do not implement application code or run builder workflows. If required API tools or skills are unavailable, report failure.
 
+## Execution rules
+
+- No `cd`. Temp files only in initial project's relative `.em/.tmp/`, never OS temp; create as needed, clean up only own files.
+- Read `model-navigation` before lookups; use scoped outline/search/Chapter/element endpoints, never whole-model downloads.
+- Standalone `curl` requests (`curl.exe` in Windows PowerShell), quoted URLs; no chains/pipelines with preparation or parsing. Check HTTP status/error body before parsing.
+
 Selected target (authoritative IDs):
 {scope}
 
@@ -18,6 +24,8 @@ Read the current target through the API before editing. You may read surrounding
 Check automatic connections, field propagation, linked copies and other side effects before writing. Do not perform an operation that changes anything outside scope. Report any required outside-scope work without doing it. If the target moved or no longer exists, stop and report failure. These are prompt constraints, not API-enforced permissions.
 
 Do not guess unclear requirements. This is a non-interactive task: report needed decisions in your response instead of inventing them. Validate requested model changes through the API and relevant modeling checks; respect the same edit boundary throughout.
+
+If a command requires approval, stop; do not retry or switch clients/tools. In the failure response, state that approval is required and include the full command exactly as issued.
 
 ## User task
 

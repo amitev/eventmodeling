@@ -58,6 +58,13 @@ test('init installs scoped cleanup approval and preserves existing settings', (t
   assert.ok(settings.permissions.allow.includes('Bash(curl *http://localhost*)'));
   assert.ok(settings.permissions.allow.includes('Bash(curl *http://127.0.0.1*)'));
   assert.ok(!settings.permissions.allow.includes('Bash(curl *)'));
+  for (const host of ['localhost', '127.0.0.1']) {
+    assert.equal(
+      settings.permissions.allow.includes(`Bash(curl.exe *http://${host}*)`),
+      process.platform === 'win32',
+    );
+  }
+  assert.ok(!settings.permissions.allow.includes('Bash(curl.exe *)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm .em/.tmp/*)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm -f .em/.tmp/*)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm -rf .em/.tmp/*)'));

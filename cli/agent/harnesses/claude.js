@@ -10,6 +10,8 @@ const CLAUDE_PERMISSIONS = [
   'Bash(rm -f .em/.tmp/*)',
   'Bash(rm -rf .em/.tmp/*)',
   ...(process.platform === 'win32' ? [
+    'Bash(curl.exe *http://localhost*)',
+    'Bash(curl.exe *http://127.0.0.1*)',
     'PowerShell(curl *http://localhost*)',
     'PowerShell(curl *http://127.0.0.1*)',
     'PowerShell(curl.exe *http://localhost*)',
