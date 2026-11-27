@@ -40,7 +40,8 @@ export function StickyNode({ id, data, selected }) {
     const shownData = data.copyOf ? s.nodeLookup.get(data.copyOf)?.data : data;
     const compactKind = data.kind === 'command' || data.kind === 'event' || data.kind === 'read_model';
     const emptyScreen = data.kind === 'screen' && !shownData?.html && !shownData?.url;
-    return (compactKind || emptyScreen) && s.transform[2] < 0.6;
+    const compactThreshold = window.innerWidth > 2200 ? 0.7 : 0.6;
+    return (compactKind || emptyScreen) && s.transform[2] < compactThreshold;
   });
   // The shown width: Scenarios and Notes stretch to fill the slice when alone in their Cell.
   const width = useStore((s) => {
