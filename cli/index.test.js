@@ -55,6 +55,9 @@ test('init installs scoped cleanup approval and preserves existing settings', (t
   installSkills({ cwd, sourceDir });
   const text = fs.readFileSync(file, 'utf8');
   const settings = JSON.parse(text);
+  assert.ok(settings.permissions.allow.includes('Bash(curl *http://localhost*)'));
+  assert.ok(settings.permissions.allow.includes('Bash(curl *http://127.0.0.1*)'));
+  assert.ok(!settings.permissions.allow.includes('Bash(curl *)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm .em/.tmp/*)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm -f .em/.tmp/*)'));
   assert.ok(settings.permissions.allow.includes('Bash(rm -rf .em/.tmp/*)'));

@@ -4,10 +4,8 @@ import path from 'node:path';
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
 const CLAUDE_PERMISSIONS = [
   'Read', 'Write', 'Edit', 'Grep', 'Glob',
-  'Bash(curl http://localhost*)',
-  'Bash(curl http://127.0.0.1*)',
-  'Bash(curl * http://localhost*)',
-  'Bash(curl * http://127.0.0.1*)',
+  'Bash(curl *http://localhost*)',
+  'Bash(curl *http://127.0.0.1*)',
   'Bash(rm .em/.tmp/*)',
   'Bash(rm -f .em/.tmp/*)',
   'Bash(rm -rf .em/.tmp/*)',
