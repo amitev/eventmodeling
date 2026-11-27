@@ -23,6 +23,21 @@ function formatCost({ cost, currency }) {
   return `Cost: ${currency === 'USD' ? '$' : ''}${cost.toFixed(3)}`;
 }
 
+function formatTotalCost(turns) {
+  const totals = new Map();
+  let incomplete = false;
+  for (const { cost, currency } of turns) {
+    if (typeof cost !== 'number') {
+      incomplete = true;
+      continue;
+    }
+    totals.set(currency, (totals.get(currency) ?? 0) + cost);
+  }
+  const amounts = Array.from(totals, ([currency, cost]) =>
+    `${currency === 'USD' ? '$' : `${currency || 'Unknown currency'} `}${cost.toFixed(3)}`);
+  return `Total cost: ${amounts.join(' + ') || 'N/A'}${incomplete ? ' (incomplete)' : ''}`;
+}
+
 function TaskStatusIcon({ status }) {
   const label = STATUS[status] ?? status;
   return (
@@ -242,6 +257,7 @@ function TaskConversation({ task, agents, onReply }) {
       <summary className="task-heading">
         <TaskStatusIcon status={task.status} />
         <strong>{task.label}</strong>
+        <span>{formatTotalCost(task.turns)}</span>
       </summary>
       <div className="task-location">{task.scope.type} - {task.modeler}</div>
       {task.turns.map((turn, index) => (
@@ -262,13 +278,13 @@ function TaskConversation({ task, agents, onReply }) {
           {turn.error && turn.error !== turn.response && <div className="tasks-error" role="alert">{turn.error}</div>}
         </section>
       ))}
-      <div className="modeling-task-followup">
-        <strong>Follow-up message</strong>
+      {!active && <div className="modeling-task-followup">
+        <strong>Reply</strong>
         <small>Enter or Ctrl+S sends - Shift+Enter adds a line</small>
         <div className="modeling-task-editor">
           <MarkdownEditor
             text={prompt} onChange={setPrompt} active={open && !blocked && !sending} autoFocus={false}
-            label={`Follow-up message for ${task.label}`} disabled={!!blocked || sending}
+            label={`Reply to ${task.label}`} disabled={!!blocked || sending}
             onKeyDown={(event) => {
               if (event.nativeEvent.isComposing) return;
               if ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
@@ -286,7 +302,7 @@ function TaskConversation({ task, agents, onReply }) {
             {sending ? 'Sending...' : 'Send'}
           </button>
         </div>
-      </div>
+      </div>}
     </details>
   );
 }
@@ -301,7 +317,10 @@ export function ModelingTasksDialog({ queue, agents, buttonRef, headerRef, onClo
       tabIndex={-1} role="dialog" aria-modal="false" aria-label="Agent Tasks"
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Escape' || (!e.repeat && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 't')) {
+        const target = e.target;
+        const typing = target instanceof HTMLElement &&
+          (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+        if (e.key === 'Escape' || (!typing && !e.repeat && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 't')) {
           e.preventDefault();
           onClose();
         }

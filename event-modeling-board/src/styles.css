@@ -746,7 +746,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
   background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); overflow: hidden;
 }
 .tasks-dialog:focus { outline: none; }
-.tasks-dialog.modeling-tasks { width: 90vw; max-height: none; }
+.tasks-dialog.modeling-tasks { width: 90vw; max-height: none; overflow-y: scroll; }
 @media (min-width: 2201px) {
   .tasks-dialog.modeling-tasks { width: 80vw; }
 }
@@ -778,7 +778,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .modeling-task-agent-menu button > span { min-width: 0; overflow-wrap: anywhere; }
 .modeling-task-empty { font-size: 13px; color: #667; }
 .modeling-task-editor { display: flex; flex-direction: column; min-height: 100px; height: 220px; overflow: auto; }
-.modeling-task-composer .info-editor { font-size: 14px; }
+.modeling-task-editor .info-editor { font-size: 14px; }
 .modeling-task-composer .info-actions button:disabled { opacity: 0.5; cursor: default; }
 .modeling-task-response { margin-top: 10px; overflow-wrap: anywhere; }
 .modeling-task-response .info-preview { padding-bottom: 0; }
@@ -789,7 +789,7 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .modeling-tasks .modeling-task-item > summary,
 .modeling-tasks .modeling-task-item > summary strong { cursor: pointer; }
 .modeling-tasks .info-preview { font-size: 14px; }
-.modeling-tasks .tasks-body { flex: 1; }
+.modeling-tasks .tasks-body { flex: 1 0 auto; overflow: visible; }
 .modeling-task-turn { padding: 10px 12px; margin-top: 10px; border-left: 3px solid #d6e5fa; background: #f8fafc; border-radius: 4px; }
 .modeling-task-turn > .task-location { display: flex; align-items: center; gap: 6px; }
 .modeling-task-followup { margin-top: 14px; }

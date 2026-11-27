@@ -1949,8 +1949,8 @@ function Board() {
           ref={tasksButtonRef}
           className="tasks-button keep"
           onClick={() => setTasksOpen((open) => !open)}
-          title={`Tasks (${openTaskCount} open)`}
-          aria-label={`Tasks (${openTaskCount} open)`}
+          title={`Human Tasks (${openTaskCount} open)`}
+          aria-label={`Human Tasks (${openTaskCount} open)`}
           aria-haspopup="dialog"
           aria-expanded={tasksOpen}
         >
