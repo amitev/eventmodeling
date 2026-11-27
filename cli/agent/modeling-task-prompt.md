@@ -7,7 +7,7 @@ Use this URL and port instead of example ports in skills. Model access is API on
 
 ## Execution rules
 
-- No `cd`. Temp files only in initial project's relative `.em/.tmp/`, never OS temp; create as needed, clean up only own files.
+- No `cd`. Temp files only in `{tempDir}` (relative to initial project). CLI created this task-only directory and removes it after execution, including failure. Do not create or clean temp directories or run cleanup commands; this overrides general skill temp setup/cleanup instructions.
 - Read `model-navigation` before lookups; use scoped outline/search/Chapter/element endpoints, never whole-model downloads.
 - Standalone `curl` requests (`curl.exe` in Windows PowerShell), quoted URLs; no chains/pipelines with preparation or parsing. Check HTTP status/error body before parsing.
 - Read saved API responses with file-read tools; use narrower scoped API reads for oversized results. Do not run ad hoc scripts (e.g. `node -e`) merely to inspect, filter or summarize JSON. Keep prescribed bundled analysis scripts.

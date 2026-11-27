@@ -65,9 +65,7 @@ API
 - load slice should include context and chapter info
 
 Agent tasks
-- Wider?
-- Needs coloring when it fails
-- Should be hidden by default
+- Task = chats?
 - Copy rules from Dilger
 
 Cockpit

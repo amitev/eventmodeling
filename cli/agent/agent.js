@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -298,9 +298,9 @@ export function parseModelingResponse(dialect, output) {
   return { status, response, cost, currency };
 }
 
-export function modelingPrompt(template, apiUrl, target, instruction) {
-  const values = { apiUrl, scope: JSON.stringify(target), instruction };
-  return template.replace(/\{(apiUrl|scope|instruction)\}/g, (_, key) => values[key]);
+export function modelingPrompt(template, apiUrl, target, instruction, tempDir) {
+  const values = { apiUrl, scope: JSON.stringify(target), instruction, tempDir };
+  return template.replace(/\{(apiUrl|scope|instruction|tempDir)\}/g, (_, key) => values[key]);
 }
 
 async function modelTask(url, agentId, task, dialect, model, children, signal) {
@@ -309,6 +309,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
   let error;
   let cost;
   let currency;
+  let tempDir;
   const endpoint = `/api/agents/${encodeURIComponent(agentId)}/modeling-tasks/${encodeURIComponent(task.id)}`;
   try {
     console.log(`Modeling "${task.label}". Task: ${task.id}`);
@@ -321,8 +322,11 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     }
     const target = await scoped.json();
     const template = await readFile(path.join(__dirname, 'modeling-task-prompt.md'), 'utf8');
+    const tempRoot = path.join('.em', '.tmp');
+    await mkdir(tempRoot, { recursive: true });
+    tempDir = await mkdtemp(path.join(tempRoot, 'modeling-'));
     signal.throwIfAborted();
-    const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt);
+    const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt, tempDir);
     const output = await runHarness(dialect, model, prompt, children);
     ({ status, response, cost, currency } = parseModelingResponse(dialect, output));
     if (status === 'failed') error = response;
@@ -330,6 +334,17 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     if (signal.aborted) return;
     response = error = e.message;
     console.error(`Modeling task failed: ${error}`);
+  } finally {
+    if (tempDir) {
+      try {
+        await rm(tempDir, { recursive: true, force: true });
+      } catch (e) {
+        status = 'failed';
+        const message = `Could not clean task temporary directory "${tempDir}": ${e.message}`;
+        console.error(message);
+        response = error = response ? `${response}\n\n${message}` : message;
+      }
+    }
   }
   if (signal.aborted) return;
   try {
