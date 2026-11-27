@@ -8,7 +8,8 @@ Base: `http://localhost:3300/api/model` (`npx em-cli board`, `--port` override).
 - Safely serialize JSON; send `Content-Type: application/json`. Complex bodies: `--data-binary @<payload-file>`, UTF-8, outside `.em/model/`. Check HTTP status/error body.
 - Scripts may prepare/filter data, not replace curl when sufficient. Keep prescribed bundled analysis/export scripts.
 - All skill temporary files/folders belong in `<cwd>/.em/.tmp/`; create as needed. Delete own temporary files after use; if cleanup needs approval, report leftovers.
-- **NEVER delete files/folders outside the task's working directory.** Resolve each target before deletion; reject paths escaping through `..`, symlinks or junctions. Never change directories to evade this boundary. Temporary-file cleanup: Bash `rm .em/.tmp/<file>`; Windows PowerShell `Remove-Item -LiteralPath .em\.tmp\<file>`. Inspected, task-owned files only; no extra targets outside `.em/.tmp/`.
+- Prefer relative paths over absolute ones in commands.
+- **NEVER delete files/folders outside the task's working directory.** Resolve each target before deletion; reject paths escaping through `..`, symlinks or junctions. Never change directories to evade this boundary. Temporary-file cleanup: Bash `rm [-f|-rf] .em/.tmp/<file>`; Windows PowerShell `Remove-Item -LiteralPath .em\.tmp\<file>`. Inspected, task-owned files only; no extra targets outside `.em/.tmp/`.
 
 ## Agent rules and storage
 

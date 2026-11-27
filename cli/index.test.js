@@ -56,6 +56,9 @@ test('init installs scoped cleanup approval and preserves existing settings', (t
   const text = fs.readFileSync(file, 'utf8');
   const settings = JSON.parse(text);
   assert.ok(settings.permissions.allow.includes('Bash(rm .em/.tmp/*)'));
+  assert.ok(settings.permissions.allow.includes('Bash(rm -f .em/.tmp/*)'));
+  assert.ok(settings.permissions.allow.includes('Bash(rm -rf .em/.tmp/*)'));
+  assert.ok(!settings.permissions.allow.includes('Bash(rm -rf *)'));
   assert.ok(settings.permissions.allow.includes('Read'));
   assert.ok(!settings.permissions.allow.includes('Bash(rm *)'));
   assert.equal(
