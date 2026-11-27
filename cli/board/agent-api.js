@@ -1,10 +1,10 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import express from 'express';
 import { HttpError } from './http-error.js';
 import { createBuildQueue } from './build-queue.js';
 import { createModelingTasks, resolveModelingScope } from './modeling-tasks.js';
 
-const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler'];
+const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler', 'von Karajan', 'Czerny'];
 
 export function agentApi(store, rootDir) {
   const router = express.Router();
@@ -76,9 +76,15 @@ export function agentApi(store, rootDir) {
 
     const usedNames = new Set([...sessions.values()].map((session) => session.name.toLowerCase()));
     if (name === undefined) {
-      const available = COMPOSER_NAMES.filter((candidate) => !usedNames.has(candidate.toLowerCase()));
-      if (!available.length) throw new HttpError(409, 'All composer names are in use. Provide --name with a unique name.');
-      name = available[randomInt(available.length)];
+      const hostname = text(req.query.hostname, 'Agent hostname is required for automatic names').toLowerCase();
+      const order = COMPOSER_NAMES.map((candidate) => ({
+        name: candidate,
+        hash: createHash('sha256').update(JSON.stringify([agentType, hostname, candidate])).digest(),
+      })).sort((a, b) => Buffer.compare(a.hash, b.hash));
+      for (let suffix = 1; name === undefined; suffix++) {
+        name = order.map((candidate) => suffix === 1 ? candidate.name : `${candidate.name} ${suffix}`)
+          .find((candidate) => !usedNames.has(candidate.toLowerCase()));
+      }
     } else if (usedNames.has(name.toLowerCase())) {
       throw new HttpError(409, `Agent name "${name}" is already in use`);
     }

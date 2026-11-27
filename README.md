@@ -66,7 +66,7 @@ Use `em-cli --help` for commands or `em-cli <command> --help` for command option
 | `board` | `--host <host>` | `localhost` | Host to bind to |
 | `board` | `--dev` | | API only, no build needed (used by `npm run dev`) |
 | `init` | `--target <dir>` | `.claude/skills` | Skills folder |
-| `agent` | `--name <name>` | Random Austrian composer | Display name on the board |
+| `agent` | `--name <name>` | Stable composer by type + hostname | Display name on the board |
 | `agent` | `--model <model>` | Required | Model identifier sent to the server |
 | `agent` | `--type <type>` | Required | `modeler` or `builder` |
 | `agent` | `--harness <name>` | `claude` | Only `claude` (Claude Code) |
@@ -83,7 +83,7 @@ npx em-cli agent --name frontend --model model-a --type modeler
 npx em-cli agent --name backend --model model-b --type builder
 ```
 
-Omit `--name` to pick an unused Austrian composer surname, for example `npx em-cli agent --model model-a --type modeler`. If all six names are taken, supply a unique `--name`. Names are unique regardless of case or surrounding spaces and become available after disconnect. The predefined list is in [spec/AGENT.md](spec/AGENT.md#cli-and-sessions). `--model` and `--type` stay required.
+Omit `--name` for a stable composer order based on agent type and the agent machine's hostname, for example `npx em-cli agent --model model-a --type modeler`. The server picks the first free name, including `von Karajan` and `Czerny`; when all eight are taken, it tries the same order with ` 2`, then ` 3`, etc. Same inputs and free slots give the same names; peers take slots in connection order. Reconnects keep their assigned name. Explicit `--name` is unchanged. Names are unique regardless of case or surrounding spaces and become available after disconnect. The predefined list is in [spec/AGENT.md](spec/AGENT.md#cli-and-sessions). `--model` and `--type` stay required.
 
 Each connected CLI appears as a robot icon in the board header; the same name always has the same color. Hover over it to see its name, model and last acknowledged heartbeat, or to stop that CLI. **Cancel run** is disabled until cancellation is supported.
 

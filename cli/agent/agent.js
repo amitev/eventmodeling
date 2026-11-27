@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { hostname } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -20,6 +21,7 @@ export async function runAgent({ port, name, model, agentType, harness = 'claude
   url.searchParams.set('model', model);
   url.searchParams.set('agentType', agentType);
   url.searchParams.set('harness', harness);
+  url.searchParams.set('hostname', hostname());
   let attempts = 0;
   const session = { id: null };
   while (true) {

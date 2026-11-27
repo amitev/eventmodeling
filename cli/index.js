@@ -40,7 +40,7 @@ Options:
 const AGENT_HELP = `Usage: em-cli agent [options]
 
 Options:
-      --name <name>  Display name on the board (default: random Austrian composer)
+      --name <name>  Display name on the board (default: stable composer by type and hostname)
       --model <model> Model identifier sent to the server (required)
       --type <type>  Agent type: modeler or builder (required)
       --harness <name> Harness: claude (default)

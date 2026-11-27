@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { installSkills } from './init.js';
+import { createServer } from './board/app.js';
 
 const entry = fileURLToPath(new URL('./index.js', import.meta.url));
 
@@ -132,5 +133,89 @@ test('agent --type forwards modeler and builder as agentType', { timeout: 10000 
   }
   assert.deepEqual(received.map((url) => url.searchParams.get('agentType')), ['modeler', 'builder']);
   assert.ok(received.every((url) => url.searchParams.get('harness') === 'claude'));
+  assert.ok(received.every((url) => url.searchParams.get('hostname') === os.hostname()));
   assert.ok(received.every((url) => url.pathname === '/api/agent/events' && url.searchParams.get('model') === 'test-model'));
+});
+
+test('automatic agent names are stable by type and hostname and avoid collisions', { timeout: 10000 }, async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'em-agent-names-'));
+  let server = createServer({ rootDir: root, publicDir: null });
+  const controllers = [];
+  t.after(async () => {
+    for (const controller of controllers) controller.abort();
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const listen = async () => {
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    return `http://127.0.0.1:${server.address().port}/api`;
+  };
+  let base = await listen();
+  const connect = async (values = {}) => {
+    const query = new URLSearchParams({ model: 'test', agentType: 'modeler', hostname: 'test-machine', ...values });
+    const controller = new AbortController();
+    controllers.push(controller);
+    const response = await fetch(`${base}/agent/events?${query}`, { signal: controller.signal });
+    assert.equal(response.status, 200);
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = '';
+    while (!buffer.includes('\n\n')) {
+      const chunk = await reader.read();
+      assert.equal(chunk.done, false);
+      buffer += chunk.value;
+    }
+    return JSON.parse(buffer.split('\ndata: ')[1].split('\n')[0]);
+  };
+  const disconnect = async (agent) => {
+    const response = await fetch(`${base}/agents/${agent.id}`, { method: 'DELETE' });
+    assert.equal(response.status, 204);
+  };
+  const connectPool = async (values) => {
+    const agents = [];
+    for (let index = 0; index < 8; index++) agents.push(await connect(values));
+    return agents;
+  };
+  for (const hostname of [null, '', ' ', ['first', 'second']]) {
+    const query = new URLSearchParams({ model: 'test', agentType: 'modeler' });
+    for (const value of Array.isArray(hostname) ? hostname : hostname === null ? [] : [hostname]) {
+      query.append('hostname', value);
+    }
+    const response = await fetch(`${base}/agent/events?${query}`);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /hostname is required/);
+  }
+  const original = await connectPool();
+  assert.deepEqual(new Set(original.map((agent) => agent.name)), new Set([
+    'Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler', 'von Karajan', 'Czerny',
+  ]));
+  const overflow = await Promise.all([connect(), connect()]);
+  assert.deepEqual(new Set(overflow.map((agent) => agent.name)), new Set([
+    `${original[0].name} 2`, `${original[1].name} 2`,
+  ]));
+  await disconnect(original[3]);
+  const replacement = await connect({ hostname: ' TEST-MACHINE ' });
+  assert.equal(replacement.name, original[3].name);
+  const duplicate = await fetch(`${base}/agent/events?${new URLSearchParams({
+    model: 'test', agentType: 'builder', name: ` ${original[0].name.toUpperCase()} `,
+  })}`);
+  assert.equal(duplicate.status, 409);
+  await duplicate.body.cancel();
+  await Promise.all([...original.filter((_, index) => index !== 3), ...overflow, replacement].map(disconnect));
+  for (const values of [undefined, { agentType: 'builder' }, { hostname: 'other-machine' }]) {
+    const agents = await connectPool(values);
+    const names = agents.map((agent) => agent.name);
+    if (values === undefined) assert.deepEqual(names, original.map((agent) => agent.name));
+    else assert.notDeepEqual(names, original.map((agent) => agent.name));
+    await Promise.all(agents.map(disconnect));
+  }
+  const explicit = await connect({ name: ' Custom Agent ', hostname: '' });
+  assert.equal(explicit.name, 'Custom Agent');
+  await disconnect(explicit);
+  server.closeAllConnections();
+  await new Promise((resolve) => server.close(resolve));
+  server = createServer({ rootDir: root, publicDir: null });
+  base = await listen();
+  assert.equal((await connect()).name, original[0].name);
 });
