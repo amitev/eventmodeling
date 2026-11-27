@@ -790,6 +790,12 @@ html, body, #root { height: 100%; margin: 0; font-family: system-ui, sans-serif;
 .modeling-tasks .modeling-task-item > summary strong { cursor: pointer; }
 .modeling-tasks .info-preview { font-size: 14px; }
 .modeling-tasks .tasks-body { flex: 1; }
+.modeling-task-turn { padding: 10px 12px; margin-top: 10px; border-left: 3px solid #d6e5fa; background: #f8fafc; border-radius: 4px; }
+.modeling-task-turn > .task-location { display: flex; align-items: center; gap: 6px; }
+.modeling-task-followup { margin-top: 14px; }
+.modeling-task-followup > small { display: block; margin: 4px 0; color: #667; }
+.modeling-task-followup .modeling-task-editor { height: 140px; border: 1px solid #ddd; border-radius: 4px; }
+.modeling-task-followup .info-actions button:disabled { opacity: 0.5; cursor: default; }
 .tasks-title { flex-wrap: wrap; }
 .tasks-title select { min-width: 0; max-width: 100%; }
 .tasks-body { padding: 12px 14px; min-height: 0; overflow: auto; }

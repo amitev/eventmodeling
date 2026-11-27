@@ -133,9 +133,9 @@ function logOutput(dialect, stdout) {
   }
 }
 
-async function runHarness(dialect, model, prompt, children, taskId, signal) {
+async function runHarness(dialect, model, prompt, children, taskId, signal, requireResume = false) {
   if (verbosity >= 1) console.log(`${dialect.label} prompt: ${prompt}`);
-  const args = await dialect.args(model, prompt, taskId);
+  const args = await dialect.args(model, prompt, taskId, requireResume);
   signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const child = spawn(dialect.command, args, {
@@ -316,7 +316,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
   const endpoint = `/api/agents/${encodeURIComponent(agentId)}/modeling-tasks/${encodeURIComponent(task.id)}`;
   try {
     console.log(`Modeling "${task.label}". Task: ${task.id}`);
-    const scoped = await fetch(new URL(`${endpoint}/scope`, url), {
+    const scoped = await fetch(new URL(`${endpoint}/scope?turnId=${encodeURIComponent(task.turnId)}`, url), {
       redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
     });
     if (!scoped.ok) {
@@ -330,7 +330,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     tempDir = await mkdtemp(path.join(tempRoot, 'modeling-'));
     signal.throwIfAborted();
     const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt, tempDir);
-    const output = await runHarness(dialect, model, prompt, children, task.id, signal);
+    const output = await runHarness(dialect, model, prompt, children, task.id, signal, task.turns.length > 1);
     ({ status, response, cost, currency } = parseModelingResponse(dialect, output));
   } catch (e) {
     if (signal.aborted) return;
@@ -353,7 +353,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     const reported = await fetch(new URL(`${endpoint}/${status}`, url), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        response, ...(error === undefined ? {} : { error }),
+        turnId: task.turnId, response, ...(error === undefined ? {} : { error }),
         ...(typeof cost === 'number' ? { cost } : {}), ...(currency ? { currency } : {}),
       }),
       redirect: 'error', signal: AbortSignal.timeout(5000),

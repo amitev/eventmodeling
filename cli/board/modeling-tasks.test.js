@@ -10,6 +10,46 @@ import { modelingPrompt, parseModelingResponse } from '../agent/agent.js';
 import { claude } from '../agent/harnesses/claude.js';
 import { copilot } from '../agent/harnesses/copilot.js';
 
+const requeued = (task) => task.status === 'running' ? {
+  ...task, status: 'queued', startedAt: null,
+  turns: task.turns.map((turn) => turn.status === 'running' ? { ...turn, status: 'queued', startedAt: null } : turn),
+} : task;
+
+test('modeling conversations retain turns, queue follow-ups FIFO and reject stale completions', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-chat-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const tasks = createModelingTasks(root);
+  const input = {
+    scope: { type: 'chapter', chapterId: 'c' }, contextId: 'ctx',
+    label: 'Orders', prompt: 'Review', modeler: 'Mozart',
+  };
+  const first = tasks.add(input);
+  tasks.next('Mozart');
+  tasks.finish(first.id, 'Mozart', 'failed', 'Which cases should I cover?');
+  const previous = tasks.get(first.id).turns[0];
+  const other = tasks.add(input);
+  const next = tasks.reply(first.id, 'Cover all cases');
+  assert.equal(next.id, first.id);
+  assert.notEqual(next.turnId, first.turnId);
+  assert.deepEqual(next.scope, first.scope);
+  assert.deepEqual(next.turns[0], previous);
+  assert.equal(next.turns.length, 2);
+  assert.throws(() => tasks.reply(first.id, 'Too soon'), /Wait for the current reply/);
+  assert.equal(tasks.next('Mozart').id, other.id);
+  tasks.finish(other.id, 'Mozart', 'done', 'Reviewed.');
+  assert.equal(tasks.next('Mozart').id, first.id);
+  assert.throws(() => tasks.finish(first.id, 'Mozart', 'done', 'Stale'), /not running on this agent/);
+  tasks.finish(first.id, 'Mozart', 'done', 'All scenarios added.', null, null, null, next.turnId);
+  assert.deepEqual(createModelingTasks(root).get(first.id), tasks.get(first.id));
+  const snapshot = tasks.get(first.id);
+  snapshot.turns[0].prompt = 'mutated';
+  assert.equal(tasks.get(first.id).turns[0].prompt, 'Review');
+  const copilot = tasks.add({ ...input, harness: 'copilot' });
+  tasks.next('Mozart', 'copilot');
+  tasks.finish(copilot.id, 'Mozart', 'done', 'Reviewed.');
+  assert.throws(() => tasks.reply(copilot.id, 'Continue'), /Copilot follow-ups/);
+});
+
 test('modeling tasks serialize per modeler, retain feedback and resume after disconnect', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-tasks-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
@@ -33,6 +73,25 @@ test('modeling tasks serialize per modeler, retain feedback and resume after dis
   const snapshot = tasks.list();
   snapshot[0].scope.chapterId = 'mutated';
   assert.equal(tasks.list()[0].scope.chapterId, 'c');
+});
+
+test('saved single-task history becomes a conversation without losing its exchange', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-existing-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const tasks = createModelingTasks(root);
+  const task = tasks.add({
+    scope: { type: 'context', contextId: 'ctx' }, contextId: 'ctx',
+    label: 'Sales', prompt: 'Review', modeler: 'Mozart',
+  });
+  tasks.next('Mozart');
+  tasks.finish(task.id, 'Mozart', 'done', 'Reviewed.');
+  const { turns, turnId, harness, ...previous } = tasks.get(task.id);
+  await fs.writeFile(path.join(root, '.em', '.tasks', 'modeling.json'), JSON.stringify([previous]));
+  const restored = createModelingTasks(root).get(task.id);
+  assert.equal(restored.harness, null);
+  assert.equal(restored.turns.length, 1);
+  assert.equal(restored.turns[0].prompt, 'Review');
+  assert.equal(restored.turns[0].response, 'Reviewed.');
 });
 
 test('modeling history retains the last 10 completions and all unfinished tasks across restart', async (t) => {
@@ -64,10 +123,9 @@ test('modeling history retains the last 10 completions and all unfinished tasks 
   assert.equal(before.filter(({ status }) => status === 'done' || status === 'failed').length, 10);
   const stored = JSON.parse(await fs.readFile(path.join(root, '.em', '.tasks', 'modeling.json'), 'utf8'));
   assert.deepEqual(stored.map(({ id }) => id), before.map(({ id }) => id));
-  assert.equal(stored[1].status, 'queued');
+  assert.equal(stored[1].turns.at(-1).status, 'queued');
   const restored = createModelingTasks(root);
-  assert.deepEqual(restored.list(), before.map((task) =>
-    task.status === 'running' ? { ...task, status: 'queued', startedAt: null } : task));
+  assert.deepEqual(restored.list(), before.map(requeued));
   assert.equal(restored.next('Mozart').id, running.id);
   assert.equal(restored.next('Mozart'), null);
 });
@@ -130,6 +188,7 @@ test('scope validation rejects stale Cells, moved elements and extra target IDs'
   assert.throws(() => resolveModelingScope(model, { type: 'chapter', chapterId: 'c', elementId: 'e' }), /Invalid/);
   const cell = { type: 'cell', chapterId: 'c', sliceId: 's', laneId: 'l' };
   assert.throws(() => resolveModelingScope(model, cell), (error) => error.status === 409 && /Cell must be empty/.test(error.message));
+  assert.deepEqual(resolveModelingScope(model, cell, { followUp: true }).scope, cell);
   model.chapters[0].slices[0].elements[0].lane = 'other';
   assert.throws(() => resolveModelingScope(model, scope), /element not found in Cell/);
   assert.deepEqual(resolveModelingScope(model, cell).scope, cell);
@@ -171,6 +230,8 @@ test('modeling API routes only to selected modelers and expose queued history an
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}/api`;
   const request = async (method, resource, body, status) => {
+    const completion = resource.match(/\/modeling-tasks\/([^/]+)\/(?:done|failed)$/);
+    if (method === 'POST' && completion) body = { turnId: completion[1], ...body };
     const response = await fetch(base + resource, {
       method, ...(body === undefined ? {} : {
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -180,10 +241,10 @@ test('modeling API routes only to selected modelers and expose queued history an
     assert.equal(response.status, status, JSON.stringify(detail));
     return detail;
   };
-  const connect = async (name, agentType) => {
+  const connect = async (name, agentType, harness = 'claude') => {
     const controller = new AbortController();
     controllers.push(controller);
-    const response = await fetch(`${base}/agent/events?name=${name}&agentType=${agentType}&model=test`, { signal: controller.signal });
+    const response = await fetch(`${base}/agent/events?name=${name}&agentType=${agentType}&harness=${harness}&model=test`, { signal: controller.signal });
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
     const event = async (type) => {
@@ -219,9 +280,11 @@ test('modeling API routes only to selected modelers and expose queued history an
   assert.equal((await other.event('modeling-task')).id, separate.id);
   assert.deepEqual((await request('GET', '/modeling-tasks', undefined, 200)).map(({ status }) => status), ['running', 'queued', 'running']);
   const endpoint = `/agents/${modeler.id}/modeling-tasks/${first.id}`;
-  assert.deepEqual((await request('GET', `${endpoint}/scope`, undefined, 200)).scope, scope);
+  await request('GET', `${endpoint}/scope`, undefined, 400);
+  assert.deepEqual((await request('GET', `${endpoint}/scope?turnId=${first.turnId}`, undefined, 200)).scope, scope);
   await request('POST', `/agents/${other.id}/modeling-tasks/${first.id}/done`, { response: 'Wrong agent' }, 409);
   await request('POST', `${endpoint}/done`, { response: ' ' }, 400);
+  await request('POST', `${endpoint}/done`, { turnId: null, response: 'Missing turn.' }, 400);
   await request('POST', `${endpoint}/failed`, {}, 400);
   await request('POST', `${endpoint}/done`, { response: 'Checked all slices.' }, 204);
   assert.equal((await modeler.event('modeling-task')).id, second.id);
@@ -239,12 +302,41 @@ test('modeling API routes only to selected modelers and expose queued history an
   assert.equal(technical.status, 'failed');
   assert.equal(technical.response, null);
   assert.equal(technical.error, 'Could not reach model API.');
+  const messages = `/modeling-tasks/${second.id}/messages`;
+  await request('POST', '/modeling-tasks/missing/messages', { prompt: 'Continue.' }, 404);
+  await request('POST', messages, { prompt: ' ' }, 400);
+  const followUp = await request('POST', messages, { prompt: 'Cover all cases.' }, 201);
+  assert.equal(followUp.id, second.id);
+  assert.equal(followUp.turns.length, 2);
+  assert.equal(followUp.turns[0].response, 'Needs a decision.');
+  assert.equal((await modeler.event('modeling-task')).turnId, followUp.turnId);
+  await request('POST', messages, { prompt: 'Too early.' }, 409);
+  const followUpEndpoint = `/agents/${modeler.id}/modeling-tasks/${second.id}`;
+  await request('GET', `${followUpEndpoint}/scope?turnId=${second.turnId}`, undefined, 409);
+  const followUpScope = await request('GET', `${followUpEndpoint}/scope?turnId=${followUp.turnId}`, undefined, 200);
+  assert.equal(followUpScope.followUp, true);
+  await request('POST', `${followUpEndpoint}/done`, { response: 'Stale reply.' }, 409);
+  await request('POST', `${followUpEndpoint}/done`, { turnId: followUp.turnId, response: 'All scenarios added.' }, 204);
+  await request('DELETE', `/agents/${modeler.id}`, undefined, 204);
+  await request('POST', messages, { prompt: 'Continue.' }, 409);
+  const wrongHarness = await connect('Mozart', 'modeler', 'copilot');
+  await request('POST', messages, { prompt: 'Continue.' }, 409);
+  const copilotTask = await request('POST', '/modeling-tasks', { ...body, agentId: wrongHarness.id }, 201);
+  assert.equal((await wrongHarness.event('modeling-task')).id, copilotTask.id);
+  await request('POST', `/agents/${wrongHarness.id}/modeling-tasks/${copilotTask.id}/done`, { response: 'Reviewed.' }, 204);
+  await request('POST', `/modeling-tasks/${copilotTask.id}/messages`, { prompt: 'Continue.' }, 409);
+  await request('DELETE', `/agents/${wrongHarness.id}`, undefined, 204);
+  const reconnected = await connect('Mozart', 'modeler');
+  const resumed = await request('POST', messages, { prompt: 'Check the corner cases too.' }, 201);
+  assert.equal((await reconnected.event('modeling-task')).turnId, resumed.turnId);
+  assert.equal(resumed.turns.length, 3);
+  assert.deepEqual(resumed.scope, scope);
   const contextScope = { type: 'context', contextId: context.id };
   const contextTask = await request('POST', '/modeling-tasks', {
     agentId: other.id, prompt: 'Review this Context', scope: contextScope,
   }, 201);
   assert.equal((await other.event('modeling-task')).id, contextTask.id);
-  const contextTarget = await request('GET', `/agents/${other.id}/modeling-tasks/${contextTask.id}/scope`, undefined, 200);
+  const contextTarget = await request('GET', `/agents/${other.id}/modeling-tasks/${contextTask.id}/scope?turnId=${contextTask.turnId}`, undefined, 200);
   assert.deepEqual(contextTarget.scope, contextScope);
   assert.equal(contextTarget.label, 'Sales');
   const restarted = createServer({ rootDir: root, publicDir: null });
@@ -253,8 +345,7 @@ test('modeling API routes only to selected modelers and expose queued history an
     await once(restarted, 'listening');
     const response = await fetch(`http://127.0.0.1:${restarted.address().port}/api/modeling-tasks`);
     assert.equal(response.status, 200);
-    const expected = (await request('GET', '/modeling-tasks', undefined, 200)).map((task) =>
-      task.status === 'running' ? { ...task, status: 'queued', startedAt: null } : task);
+    const expected = (await request('GET', '/modeling-tasks', undefined, 200)).map(requeued);
     assert.deepEqual(await response.json(), expected);
     assert.equal(expected[0].id, contextTask.id);
   } finally {

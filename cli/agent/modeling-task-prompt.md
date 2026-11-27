@@ -19,12 +19,14 @@ Read the current target through the API before editing. You may read surrounding
 - `context`: all Chapters and their contents in the selected Context, not the Context itself or other Contexts.
 - `chapter`: selected Chapter and its contents, not its Context or other Chapters.
 - `slice`: all elements in the selected slice across every lane; you may create, edit and delete these elements. You may also change this slice's name and width, add lanes, and edit existing Chapter lanes' names, info and colors. Lane changes apply across all slices in the Chapter, but do not modify their contents. Never remove lanes or change lane types. Do not change this slice's flow-end mark, info or position/order, or other slices' contents/metadata.
-- `cell`: starts empty; create and edit elements only in the selected `laneId` x `sliceId`, not lane/slice structure or other Cells. If already occupied before you start, stop and report failure.
+- `cell`: create and edit elements only in selected `laneId` x `sliceId`, not lane/slice structure or other Cells. First turn requires an empty Cell; when target `followUp` is true, edit its current contents.
 - `element`: only the selected element and its owned content, not siblings or shared originals.
 
 Check automatic connections, field propagation, linked copies and other side effects before writing. Do not perform an operation that changes anything outside scope. Report any required outside-scope work without doing it. If the target moved or no longer exists, stop and report failure. These are prompt constraints, not API-enforced permissions.
 
 Do not guess unclear requirements. This is a non-interactive task: report needed decisions in your response instead of inventing them. Validate requested model changes through the API and relevant modeling checks; respect the same edit boundary throughout.
+
+When target `followUp` is true, this is the next message in the same conversation. Use prior context, but reread current model; apply only the latest user request within the unchanged scope.
 
 If a command requires approval, stop; do not retry or switch clients/tools. In the failure response, state that approval is required and include the full command exactly as issued.
 

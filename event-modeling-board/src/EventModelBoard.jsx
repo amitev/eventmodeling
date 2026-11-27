@@ -1345,7 +1345,7 @@ function Board() {
 
   const completedModelingTasks = modelingTasks.tasks
     .filter((task) => task.status === 'done' || task.status === 'failed')
-    .map((task) => task.id).join(',');
+    .map((task) => task.turnId).join(',');
   useEffect(() => {
     if (!completedModelingTasks) return;
     const controller = new AbortController();
@@ -2191,7 +2191,7 @@ function Board() {
         />
       )}
       {modelingTasksOpen && (
-        <ModelingTasksDialog queue={modelingTasks} buttonRef={modelingTasksButtonRef} headerRef={headerRef} onClose={() => setModelingTasksOpen(false)} />
+        <ModelingTasksDialog queue={modelingTasks} agents={agents} buttonRef={modelingTasksButtonRef} headerRef={headerRef} onClose={() => setModelingTasksOpen(false)} />
       )}
       {helpOpen && <HotkeysDialog onClose={() => setHelpOpen(false)} />}
       {tasksOpen && (

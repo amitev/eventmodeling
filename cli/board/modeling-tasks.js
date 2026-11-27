@@ -5,6 +5,25 @@ import { HttpError } from './http-error.js';
 
 const completed = (task) => task.status === 'done' || task.status === 'failed';
 const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const current = (task) => task.turns.at(-1);
+const validTurn = (turn) => turn && typeof turn.id === 'string' &&
+  Number.isSafeInteger(turn.sequence) && turn.sequence > 0 &&
+  typeof turn.prompt === 'string' && turn.prompt.trim() &&
+  ['queued', 'running', 'done', 'failed'].includes(turn.status) && timestamp(turn.createdAt) &&
+  (turn.startedAt === null || timestamp(turn.startedAt)) &&
+  (turn.response === null || typeof turn.response === 'string') &&
+  (turn.error === null || typeof turn.error === 'string') &&
+  (completed(turn)
+    ? timestamp(turn.completedAt) && (turn.status === 'done' ? turn.response : turn.response || turn.error)
+    : turn.completedAt === null) &&
+  (turn.cost === null || typeof turn.cost === 'number' && Number.isFinite(turn.cost) && turn.cost >= 0) &&
+  (turn.currency === null || typeof turn.currency === 'string');
+
+function copy(task) {
+  const clone = structuredClone(task);
+  const { id: turnId, sequence, createdAt, ...state } = current(clone);
+  return { ...clone, ...state, turnId };
+}
 
 function readTasks(file) {
   let text;
@@ -20,24 +39,33 @@ function readTasks(file) {
   } catch (error) {
     throw new Error(`Invalid modeling task history: ${file}`, { cause: error });
   }
+  if (Array.isArray(tasks)) {
+    tasks = tasks.map((task, index) => {
+      if (!task || typeof task !== 'object' || 'turns' in task) return task;
+      const { id, scope, contextId, label, modeler, createdAt, harness = null, ...state } = task;
+      return {
+        id, scope, contextId, label, modeler, createdAt, harness,
+        turns: [{ id, sequence: tasks.length - index, createdAt, ...state }],
+      };
+    });
+  }
   if (!Array.isArray(tasks) || tasks.some((task) =>
-    !task || ['id', 'contextId', 'label', 'prompt', 'modeler'].some((key) => typeof task[key] !== 'string' || !task[key].trim()) ||
+    !task || ['id', 'contextId', 'label', 'modeler'].some((key) => typeof task[key] !== 'string' || !task[key].trim()) ||
     !task.scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(task.scope.type) ||
-    !['queued', 'running', 'done', 'failed'].includes(task.status) || !timestamp(task.createdAt) ||
-    (task.startedAt !== null && !timestamp(task.startedAt)) ||
-    (task.response !== null && typeof task.response !== 'string') ||
-    (completed(task) ? !timestamp(task.completedAt) ||
-      (task.status === 'done' ? !task.response : !task.response && !task.error) : task.completedAt !== null) ||
-    (task.error !== null && typeof task.error !== 'string') ||
-    (task.cost !== null && (typeof task.cost !== 'number' || !Number.isFinite(task.cost) || task.cost < 0)) ||
-    (task.currency !== null && typeof task.currency !== 'string')
+    !timestamp(task.createdAt) || ![null, 'claude', 'copilot'].includes(task.harness) ||
+    !Array.isArray(task.turns) || !task.turns.length || task.turns.some((turn, index) =>
+      !validTurn(turn) || index < task.turns.length - 1 && !completed(turn)) ||
+    new Set(task.turns.map((turn) => turn.id)).size !== task.turns.length
   ) || new Set(tasks.map((task) => task.id)).size !== tasks.length) {
     throw new Error(`Invalid modeling task history: ${file}`);
   }
-  return tasks.map((task) => completed(task) ? task : { ...task, status: 'queued', startedAt: null });
+  return tasks.map((task) => ({
+    ...task,
+    turns: task.turns.map((turn) => completed(turn) ? turn : { ...turn, status: 'queued', startedAt: null }),
+  }));
 }
 
-export function resolveModelingScope(model, scope) {
+export function resolveModelingScope(model, scope, { followUp = false } = {}) {
   if (!scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(scope.type)) {
     throw new HttpError(400, 'Scope type must be context, chapter, slice, cell or element');
   }
@@ -69,7 +97,7 @@ export function resolveModelingScope(model, scope) {
     if (scope.type === 'slice') return { scope: normalized, contextId: context.id, label };
     const lane = chapter.lanes.find((item) => item.id === scope.laneId);
     if (!lane) throw new HttpError(404, 'Scope Cell not found');
-    if (scope.type === 'cell' && slice.elements.some((item) => item.lane === lane.id)) {
+    if (scope.type === 'cell' && !followUp && slice.elements.some((item) => item.lane === lane.id)) {
       throw new HttpError(409, 'Cell must be empty for a modeling task; select an element instead');
     }
     label += ` / ${lane.name || lane.type}`;
@@ -86,12 +114,21 @@ export function createModelingTasks(rootDir) {
   const directory = path.join(rootDir, '.em', '.tasks');
   const file = path.join(directory, 'modeling.json');
   let tasks = readTasks(file);
+  let sequence = tasks.reduce((maximum, task) =>
+    task.turns.reduce((value, turn) => Math.max(value, turn.sequence), maximum), 0);
+  const newTurn = (id, prompt) => ({
+    id, prompt, sequence: ++sequence, createdAt: new Date().toISOString(),
+    status: 'queued', response: null, error: null, startedAt: null, completedAt: null, cost: null, currency: null,
+  });
   const commit = (next) => {
     fs.mkdirSync(directory, { recursive: true });
     const temporary = path.join(directory, `.modeling-${randomUUID()}.tmp`);
     try {
       // Unfinished work restarts queued; dispatch and disconnect need no disk writes.
-      const stored = next.map((task) => completed(task) ? task : { ...task, status: 'queued', startedAt: null });
+      const stored = next.map((task) => ({
+        ...task,
+        turns: task.turns.map((turn) => completed(turn) ? turn : { ...turn, status: 'queued', startedAt: null }),
+      }));
       fs.writeFileSync(temporary, `${JSON.stringify(stored, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
       fs.renameSync(temporary, file);
     } finally {
@@ -100,55 +137,68 @@ export function createModelingTasks(rootDir) {
     tasks = next;
   };
   const same = (a, b) => a.toLowerCase() === b.toLowerCase();
-  const copy = (task) => ({ ...task, scope: { ...task.scope } });
   const find = (id) => {
     const task = tasks.find((item) => item.id === id);
     if (!task) throw new HttpError(404, 'Modeling task not found');
     return task;
   };
-  const running = (name) => tasks.find((task) => task.status === 'running' && same(task.modeler, name));
-  const assigned = (id, name) => {
+  const running = (name) => tasks.find((task) => current(task).status === 'running' && same(task.modeler, name));
+  const assigned = (id, name, turnId = id) => {
     const task = find(id);
-    if (task.status !== 'running' || !same(task.modeler, name)) {
+    if (current(task).status !== 'running' || current(task).id !== turnId || !same(task.modeler, name)) {
       throw new HttpError(409, 'Modeling task is not running on this agent');
     }
     return task;
   };
   return {
     list: () => tasks.map(copy),
-    add({ scope, contextId, label, prompt, modeler }) {
+    get: (id) => copy(find(id)),
+    add({ scope, contextId, label, prompt, modeler, harness = 'claude' }) {
+      const id = randomUUID();
+      const turn = newTurn(id, prompt);
       const task = {
-        id: randomUUID(), scope: { ...scope }, contextId, label, prompt, modeler,
-        createdAt: new Date().toISOString(),
-        status: 'queued', response: null, error: null, startedAt: null, completedAt: null, cost: null, currency: null,
+        id, scope: { ...scope }, contextId, label, modeler, harness,
+        createdAt: turn.createdAt, turns: [turn],
       };
       commit([task, ...tasks]);
       return copy(task);
     },
-    next(name) {
+    reply(id, prompt) {
+      const task = find(id);
+      if (!completed(current(task))) throw new HttpError(409, 'Wait for the current reply to finish');
+      if (task.harness === 'copilot') throw new HttpError(409, 'Copilot follow-ups are not supported yet');
+      const updated = { ...task, harness: 'claude', turns: [...task.turns, newTurn(randomUUID(), prompt)] };
+      commit(tasks.map((item) => item.id === id ? updated : item));
+      return copy(updated);
+    },
+    next(name, harness = 'claude') {
       if (running(name)) return null;
-      const task = tasks.findLast((item) => item.status === 'queued' && same(item.modeler, name));
+      const task = tasks.filter((item) => current(item).status === 'queued' && same(item.modeler, name) &&
+        (!item.harness || item.harness === harness))
+        .sort((a, b) => current(a).sequence - current(b).sequence)[0];
       if (!task) return null;
-      task.status = 'running';
-      task.startedAt = new Date().toISOString();
+      current(task).status = 'running';
+      current(task).startedAt = new Date().toISOString();
       return copy(task);
     },
-    assigned: (id, name) => copy(assigned(id, name)),
-    finish(id, name, status, response, error = null, cost = null, currency = null) {
+    assigned: (id, name, turnId) => copy(assigned(id, name, turnId)),
+    finish(id, name, status, response, error = null, cost = null, currency = null, turnId = id) {
+      const task = assigned(id, name, turnId);
       const finished = {
-        ...assigned(id, name),
+        ...current(task),
         status, response, error: error === response ? null : error,
         cost, currency, completedAt: new Date().toISOString(),
       };
-      const retained = new Set([finished, ...tasks.filter(completed)]
-        .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
-        .slice(0, 10).map((task) => task.id));
-      commit(tasks.map((task) => task.id === id ? finished : task)
-        .filter((task) => !completed(task) || retained.has(task.id)));
+      const updated = { ...task, turns: [...task.turns.slice(0, -1), finished] };
+      const retained = new Set([updated, ...tasks.filter((item) => item.id !== id && completed(current(item)))]
+        .sort((a, b) => current(b).completedAt.localeCompare(current(a).completedAt))
+        .slice(0, 10).map((item) => item.id));
+      commit(tasks.map((item) => item.id === id ? updated : item)
+        .filter((item) => !completed(current(item)) || retained.has(item.id)));
     },
     release(name) {
       const task = running(name);
-      if (task) Object.assign(task, { status: 'queued', startedAt: null });
+      if (task) Object.assign(current(task), { status: 'queued', startedAt: null });
     },
   };
 }

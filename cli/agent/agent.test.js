@@ -19,10 +19,12 @@ test('Claude task sessions use task UUIDs and resume existing transcripts', asyn
   const taskId = 'c0f8f807-96c6-4f0a-bcc5-ad8513983769';
   const baseArgs = ['-p', 'Review', '--model', 'test-model', '--output-format', 'json'];
   assert.deepEqual(await claude.args('test-model', 'Review', taskId), [...baseArgs, '--session-id', taskId]);
+  await assert.rejects(claude.args('test-model', 'Review', taskId, true), /missing.*context/);
   const directory = path.join(root, 'projects', 'stored-project');
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, `${taskId}.jsonl`), '');
   assert.deepEqual(await claude.args('test-model', 'Review', taskId), [...baseArgs, '--resume', taskId]);
+  assert.deepEqual(await claude.args('test-model', 'Review', taskId, true), [...baseArgs, '--resume', taskId]);
   assert.deepEqual(await claude.args('test-model', 'Review'), baseArgs);
   const otherId = '9952a499-20c7-4619-966e-b33b5489d1de';
   assert.deepEqual(await claude.args('test-model', 'Review', otherId), [...baseArgs, '--session-id', otherId]);
@@ -64,11 +66,17 @@ test('modeling task temp directories are prepared and cleaned before reporting s
     ['success', '<build><success>true</success><response>Reviewed.</response></build>', 'done'],
     ['failure', '<build><success>false</success><response>Needs a decision.</response></build>', 'failed'],
     ['invalid response', 'invalid', 'failed'],
+    ['follow-up', '<build><success>true</success><response>Reviewed.</response></build>', 'done'],
   ]) {
     await t.test(name, async (t) => {
       let stream;
       let report;
       let remainingAtReport;
+      const task = {
+        id: 'task', label: 'Sales', prompt: 'Review',
+        turnId: name === 'follow-up' ? 'second-turn' : 'task',
+        turns: name === 'follow-up' ? [{ id: 'task' }, { id: 'second-turn' }] : [{ id: 'task' }],
+      };
       const encoder = new TextEncoder();
       t.mock.method(globalThis, 'fetch', async (url, options) => {
         const resource = new URL(url).pathname;
@@ -78,12 +86,15 @@ test('modeling task temp directories are prepared and cleaned before reporting s
               stream = controller;
               controller.enqueue(encoder.encode(
                 'event: welcome\ndata: {"id":"session","name":"Mozart"}\n\n' +
-                'event: modeling-task\ndata: {"id":"task","label":"Sales","prompt":"Review"}\n\n'
+                `event: modeling-task\ndata: ${JSON.stringify(task)}\n\n`
               ));
             },
           }), { headers: { 'Content-Type': 'text/event-stream' } });
         }
-        if (resource.endsWith('/scope')) return Response.json({ scope: { type: 'context', contextId: 'ctx' } });
+        if (resource.endsWith('/scope')) {
+          assert.equal(new URL(url).searchParams.get('turnId'), task.turnId);
+          return Response.json({ scope: { type: 'context', contextId: 'ctx' }, followUp: name === 'follow-up' });
+        }
         if (resource.endsWith('/done') || resource.endsWith('/failed')) {
           report = { status: resource.split('/').pop(), ...JSON.parse(options.body) };
           remainingAtReport = await fs.readdir(tempRoot);
@@ -93,8 +104,9 @@ test('modeling task temp directories are prepared and cleaned before reporting s
         }
         throw new Error(`Unexpected request: ${resource}`);
       });
-      t.mock.method(claude, 'args', (_model, prompt, taskId) => {
+      t.mock.method(claude, 'args', (_model, prompt, taskId, requireResume) => {
         assert.equal(taskId, 'task');
+        assert.equal(requireResume, name === 'follow-up');
         const tempDir = prompt.match(/Temp files only in `([^`]+)`/)?.[1];
         assert.ok(tempDir);
         assert.equal(path.dirname(tempDir), tempRoot);
@@ -112,18 +124,19 @@ test('modeling task temp directories are prepared and cleaned before reporting s
       });
       await runAgent({ port: 3300, name: 'Mozart', model: 'test', agentType: 'modeler' });
       assert.equal(report.status, expectedStatus);
+      assert.equal(report.turnId, task.turnId);
       if (name === 'invalid response') {
         assert.equal(report.response, null);
         assert.match(report.error, /Invalid build response/);
       } else {
-        assert.equal(report.response, name === 'success' ? 'Reviewed.' : 'Needs a decision.');
+        assert.equal(report.response, name === 'failure' ? 'Needs a decision.' : 'Reviewed.');
         assert.equal(report.error, undefined);
       }
       assert.deepEqual(remainingAtReport, ['keep.txt']);
       assert.equal(await fs.readFile(path.join(tempRoot, 'keep.txt'), 'utf8'), 'unrelated');
     });
   }
-  assert.equal(directories.size, 3);
+  assert.equal(directories.size, 4);
 });
 
 test('build response maps success and failure to queue outcomes', () => {

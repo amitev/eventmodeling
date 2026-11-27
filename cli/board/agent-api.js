@@ -33,11 +33,15 @@ export function agentApi(store, rootDir) {
     session.res.write(`event: build\ndata: ${JSON.stringify({ id, contextId, chapterId, sliceId, sliceName })}\n\n`);
   }
 
-  function dispatchModeling(name) {
-    const session = [...sessions.values()].find((item) => item.agentType === 'modeler' &&
+  function modelerByName(name) {
+    return [...sessions.values()].find((item) => item.agentType === 'modeler' &&
       item.name.toLowerCase() === name.toLowerCase() && !item.res.destroyed && !item.res.writableEnded);
+  }
+
+  function dispatchModeling(name) {
+    const session = modelerByName(name);
     if (!session || session.res.writableNeedDrain) return;
-    const task = modelingTasks.next(session.name);
+    const task = modelingTasks.next(session.name, session.harness);
     if (task) session.res.write(`event: modeling-task\ndata: ${JSON.stringify(task)}\n\n`);
   }
 
@@ -192,23 +196,41 @@ export function agentApi(store, rootDir) {
     const prompt = text(req.body?.prompt, 'Task prompt is required');
     const target = await store.read((model) => resolveModelingScope(model, req.body?.scope));
     const session = liveModeler(agentId);
-    const task = modelingTasks.add({ ...target, prompt, modeler: session.name });
+    const task = modelingTasks.add({ ...target, prompt, modeler: session.name, harness: session.harness });
     res.status(201).json(task);
+    dispatchModeling(session.name);
+  });
+
+  router.post('/modeling-tasks/:taskId/messages', async (req, res) => {
+    const prompt = text(req.body?.prompt, 'Message is required');
+    const task = modelingTasks.get(req.params.taskId);
+    if (!['done', 'failed'].includes(task.status)) throw new HttpError(409, 'Wait for the current reply to finish');
+    if (task.harness === 'copilot') throw new HttpError(409, 'Copilot follow-ups are not supported yet');
+    const session = modelerByName(task.modeler);
+    if (!session) throw new HttpError(409, `Modeler "${task.modeler}" must be connected`);
+    if (session.harness !== 'claude') throw new HttpError(409, 'Follow-ups require the original modeler using Claude');
+    await store.read((model) => resolveModelingScope(model, task.scope, { followUp: true }));
+    if (modelerByName(task.modeler) !== session) throw new HttpError(409, 'Original modeler disconnected');
+    const updated = modelingTasks.reply(task.id, prompt);
+    res.status(201).json(updated);
     dispatchModeling(session.name);
   });
 
   router.get('/agents/:id/modeling-tasks/:taskId/scope', async (req, res) => {
     const session = liveModeler(req.params.id);
-    const task = modelingTasks.assigned(req.params.taskId, session.name);
-    const target = await store.read((model) => resolveModelingScope(model, task.scope));
+    const turnId = text(req.query.turnId, 'Turn id is required');
+    const task = modelingTasks.assigned(req.params.taskId, session.name, turnId);
+    const followUp = task.turns.length > 1;
+    const target = await store.read((model) => resolveModelingScope(model, task.scope, { followUp }));
     liveModeler(req.params.id);
-    modelingTasks.assigned(req.params.taskId, session.name);
-    res.set('Cache-Control', 'no-store').json(target);
+    modelingTasks.assigned(req.params.taskId, session.name, turnId);
+    res.set('Cache-Control', 'no-store').json({ ...target, followUp });
   });
 
   for (const result of ['done', 'failed']) {
     router.post(`/agents/:id/modeling-tasks/:taskId/${result}`, (req, res) => {
       const session = liveModeler(req.params.id);
+      const turnId = text(req.body?.turnId, 'Turn id is required');
       const response = req.body?.response == null ? null : text(req.body.response, 'Agent response must not be blank');
       const error = result === 'failed' && req.body?.error != null
         ? text(req.body.error, 'Task error must not be blank') : null;
@@ -218,7 +240,7 @@ export function agentApi(store, rootDir) {
       const cost = typeof req.body?.cost === 'number' && Number.isFinite(req.body.cost) && req.body.cost >= 0
         ? req.body.cost : null;
       const currency = typeof req.body?.currency === 'string' ? req.body.currency : null;
-      modelingTasks.finish(req.params.taskId, session.name, result, response, error, cost, currency);
+      modelingTasks.finish(req.params.taskId, session.name, result, response, error, cost, currency, turnId);
       res.status(204).end();
       dispatchModeling(session.name);
     });

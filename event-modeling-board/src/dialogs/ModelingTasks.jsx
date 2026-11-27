@@ -211,7 +211,92 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
   );
 }
 
-export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
+function TaskConversation({ task, agents, onReply }) {
+  const active = task.status === 'queued' || task.status === 'running';
+  const [open, setOpen] = useState(active);
+  const [prompt, setPrompt] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const inFlight = useRef(false);
+  const modeler = (agents ?? []).find((agent) => agent.agentType === 'modeler' &&
+    agent.name.toLowerCase() === task.modeler.toLowerCase());
+  const blocked = task.harness === 'copilot' ? 'Copilot follow-ups are not supported yet.'
+    : active ? 'Wait for the current reply to finish.'
+      : !modeler ? `Connect modeler "${task.modeler}" to continue this conversation.`
+        : modeler.harness !== 'claude' ? 'The original modeler must use Claude for follow-ups.' : '';
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
+  const send = async () => {
+    if (inFlight.current || blocked || !prompt.trim()) return;
+    inFlight.current = true;
+    setSending(true);
+    setError('');
+    try {
+      await onReply(task.id, prompt);
+      setPrompt('');
+    } catch (err) {
+      setError(`Could not send message: ${err.message}`);
+    } finally {
+      inFlight.current = false;
+      setSending(false);
+    }
+  };
+  return (
+    <details className="modeling-task-item" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="task-heading">
+        <TaskStatusIcon status={task.status} />
+        <strong>{task.label}</strong>
+      </summary>
+      <div className="task-location">{task.scope.type} - {task.modeler}</div>
+      {task.turns.map((turn, index) => (
+        <section className="modeling-task-turn" key={turn.id} aria-label={`Message ${index + 1}`}>
+          <div className="task-location">
+            <TaskStatusIcon status={turn.status} /> {formatDuration(turn)} - {formatCost(turn)}
+          </div>
+          <div className="modeling-task-prompt">
+            <strong>You</strong>
+            <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.prompt) }} />
+          </div>
+          {turn.response && (
+            <div className="modeling-task-response">
+              <strong>{task.modeler}</strong>
+              <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.response) }} />
+            </div>
+          )}
+          {turn.error && turn.error !== turn.response && <div className="tasks-error" role="alert">{turn.error}</div>}
+        </section>
+      ))}
+      <div className="modeling-task-followup">
+        <strong>Follow-up message</strong>
+        <small>Enter or Ctrl+S sends - Shift+Enter adds a line</small>
+        <div className="modeling-task-editor">
+          <MarkdownEditor
+            text={prompt} onChange={setPrompt} active={open && !blocked && !sending} autoFocus={false}
+            label={`Follow-up message for ${task.label}`} disabled={!!blocked || sending}
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) return;
+              if ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+                  ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 's')) {
+                event.preventDefault();
+                if (!event.repeat) send();
+              }
+            }}
+          />
+        </div>
+        {blocked && <p className="modeling-task-empty">{blocked}</p>}
+        {error && <div className="tasks-error" role="alert">{error}</div>}
+        <div className="info-actions">
+          <button type="button" className="primary" disabled={!!blocked || sending || !prompt.trim()} onClick={send}>
+            {sending ? 'Sending...' : 'Send'}
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+export function ModelingTasksDialog({ queue, agents, buttonRef, headerRef, onClose }) {
   const popup = useModalFocus();
   useOutsideClose(popup, onClose, buttonRef);
   const top = useBelowHeader(headerRef);
@@ -234,24 +319,7 @@ export function ModelingTasksDialog({ queue, buttonRef, headerRef, onClose }) {
           <ul className="tasks-list">
             {queue.tasks.map((task) => (
               <li key={task.id}>
-                <details className="modeling-task-item" open={task.status !== 'done' && task.status !== 'failed'}>
-                  <summary className="task-heading">
-                    <TaskStatusIcon status={task.status} />
-                    <strong>{task.label}</strong>
-                  </summary>
-                  <div className="task-location">{task.scope.type} - {task.modeler} - {formatDuration(task)} - {formatCost(task)}</div>
-                  <div className="modeling-task-prompt">
-                    <strong>Task prompt</strong>
-                    <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.prompt) }} />
-                  </div>
-                  {task.response && (
-                    <div className="modeling-task-response">
-                      <strong>Agent response</strong>
-                      <div className="info-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.response) }} />
-                    </div>
-                  )}
-                  {task.error && task.error !== task.response && <div className="tasks-error" role="alert">{task.error}</div>}
-                </details>
+                <TaskConversation task={task} agents={agents} onReply={queue.reply} />
               </li>
             ))}
           </ul>
