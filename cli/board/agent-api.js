@@ -41,7 +41,7 @@ export function agentApi(store, rootDir) {
   function dispatchModeling(name) {
     const session = modelerByName(name);
     if (!session || session.res.writableNeedDrain) return;
-    const task = modelingTasks.next(session.name, session.harness);
+    const task = modelingTasks.next(session.name);
     if (task) session.res.write(`event: modeling-task\ndata: ${JSON.stringify(task)}\n\n`);
   }
 
@@ -72,7 +72,7 @@ export function agentApi(store, rootDir) {
       throw new HttpError(400, 'Agent type must be modeler or builder');
     }
     const harness = req.query.harness ?? 'claude';
-    if (!['claude', 'copilot'].includes(harness)) throw new HttpError(400, 'Harness must be claude or copilot');
+    if (harness !== 'claude') throw new HttpError(400, 'Harness must be claude');
 
     const usedNames = new Set([...sessions.values()].map((session) => session.name.toLowerCase()));
     if (name === undefined) {
@@ -205,10 +205,8 @@ export function agentApi(store, rootDir) {
     const prompt = text(req.body?.prompt, 'Message is required');
     const task = modelingTasks.get(req.params.taskId);
     if (!['done', 'failed'].includes(task.status)) throw new HttpError(409, 'Wait for the current reply to finish');
-    if (task.harness === 'copilot') throw new HttpError(409, 'Copilot follow-ups are not supported yet');
     const session = modelerByName(task.modeler);
     if (!session) throw new HttpError(409, `Modeler "${task.modeler}" must be connected`);
-    if (session.harness !== 'claude') throw new HttpError(409, 'Follow-ups require the original modeler using Claude');
     await store.read((model) => resolveModelingScope(model, task.scope, { followUp: true }));
     if (modelerByName(task.modeler) !== session) throw new HttpError(409, 'Original modeler disconnected');
     const updated = modelingTasks.reply(task.id, prompt);

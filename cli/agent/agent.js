@@ -5,18 +5,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { claude } from './harnesses/claude.js';
-import { copilot } from './harnesses/copilot.js';
 
 class ConnectionError extends Error {}
-const HARNESSES = new Map([['claude', claude], ['copilot', copilot]]);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let verbosity = 0;
 
 export async function runAgent({ port, name, model, agentType, harness = 'claude', verbosity: level = 0 }) {
   verbosity = level;
-  const dialect = HARNESSES.get(harness);
-  if (!dialect) throw new Error('Harness must be claude or copilot');
+  if (harness !== 'claude') throw new Error('Harness must be claude');
+  const dialect = claude;
   const url = new URL(`http://localhost:${port}/api/agent/events`);
   if (name !== undefined) url.searchParams.set('name', name);
   url.searchParams.set('model', model);

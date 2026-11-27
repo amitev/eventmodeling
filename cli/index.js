@@ -43,7 +43,7 @@ Options:
       --name <name>  Display name on the board (default: random Austrian composer)
       --model <model> Model identifier sent to the server (required)
       --type <type>  Agent type: modeler or builder (required)
-      --harness <name> Harness: claude or copilot (default claude)
+      --harness <name> Harness: claude (default)
   -p, --port <port>  Board server port on localhost (default: PORT environment variable, else 3300)
   -v, --verbose      Also log the prompt and the response; repeat (-vv) for the raw harness output
   -h, --help         Show this help
@@ -130,7 +130,7 @@ if (command === 'agent') {
   const agentType = values.type;
   if (!['modeler', 'builder'].includes(agentType)) fail('--type must be modeler or builder');
   const harness = values.harness;
-  if (!['claude', 'copilot'].includes(harness)) fail('--harness must be claude or copilot');
+  if (harness !== 'claude') fail('--harness must be claude');
   await runAgent({ port, name, model, agentType, harness, verbosity: Math.min(values.verbose.length, 2) });
 } else {
   startBoard();

@@ -8,7 +8,6 @@ import { createServer } from './app.js';
 import { createModelingTasks, resolveModelingScope } from './modeling-tasks.js';
 import { modelingPrompt, parseModelingResponse } from '../agent/agent.js';
 import { claude } from '../agent/harnesses/claude.js';
-import { copilot } from '../agent/harnesses/copilot.js';
 
 const requeued = (task) => task.status === 'running' ? {
   ...task, status: 'queued', startedAt: null,
@@ -44,10 +43,6 @@ test('modeling conversations retain turns, queue follow-ups FIFO and reject stal
   const snapshot = tasks.get(first.id);
   snapshot.turns[0].prompt = 'mutated';
   assert.equal(tasks.get(first.id).turns[0].prompt, 'Review');
-  const copilot = tasks.add({ ...input, harness: 'copilot' });
-  tasks.next('Mozart', 'copilot');
-  tasks.finish(copilot.id, 'Mozart', 'done', 'Reviewed.');
-  assert.throws(() => tasks.reply(copilot.id, 'Continue'), /Copilot follow-ups/);
 });
 
 test('modeling tasks serialize per modeler, retain feedback and resume after disconnect', async (t) => {
@@ -199,9 +194,6 @@ test('modeling response preserves agent feedback and rejects success-shaped inva
   assert.deepEqual(parseModelingResponse(claude, JSON.stringify({ result: response })), {
     status: 'failed', response: 'Outside-scope work is needed.',
   });
-  assert.deepEqual(parseModelingResponse(copilot, JSON.stringify({
-    type: 'assistant.message', data: { content: '<build><success>true</success><response>Reviewed.</response></build>' },
-  })), { status: 'done', response: 'Reviewed.' });
   for (const value of [
     '{"success":true,"response":"Done"}',
     '<build><success>true</success></build>',
@@ -241,10 +233,10 @@ test('modeling API routes only to selected modelers and expose queued history an
     assert.equal(response.status, status, JSON.stringify(detail));
     return detail;
   };
-  const connect = async (name, agentType, harness = 'claude') => {
+  const connect = async (name, agentType) => {
     const controller = new AbortController();
     controllers.push(controller);
-    const response = await fetch(`${base}/agent/events?name=${name}&agentType=${agentType}&harness=${harness}&model=test`, { signal: controller.signal });
+    const response = await fetch(`${base}/agent/events?name=${name}&agentType=${agentType}&model=test`, { signal: controller.signal });
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
     const event = async (type) => {
@@ -270,6 +262,10 @@ test('modeling API routes only to selected modelers and expose queued history an
   const chapter = await request('POST', '/model/chapters', { name: 'Orders', context: context.id }, 201);
   const scope = { type: 'chapter', chapterId: chapter.id };
   const body = { agentId: modeler.id, prompt: 'Review this Chapter', scope };
+  for (const agentType of ['modeler', 'builder']) {
+    const error = await request('GET', `/agent/events?model=test&agentType=${agentType}&harness=copilot`, undefined, 400);
+    assert.equal(error.error, 'Harness must be claude');
+  }
   await request('POST', '/modeling-tasks', { ...body, agentId: builder.id }, 400);
   await request('POST', '/modeling-tasks', { ...body, scope: { type: 'chapter', chapterId: 'missing' } }, 404);
   await request('POST', '/modeling-tasks', { ...body, prompt: ' ' }, 400);
@@ -319,13 +315,6 @@ test('modeling API routes only to selected modelers and expose queued history an
   await request('POST', `${followUpEndpoint}/done`, { turnId: followUp.turnId, response: 'All scenarios added.' }, 204);
   await request('DELETE', `/agents/${modeler.id}`, undefined, 204);
   await request('POST', messages, { prompt: 'Continue.' }, 409);
-  const wrongHarness = await connect('Mozart', 'modeler', 'copilot');
-  await request('POST', messages, { prompt: 'Continue.' }, 409);
-  const copilotTask = await request('POST', '/modeling-tasks', { ...body, agentId: wrongHarness.id }, 201);
-  assert.equal((await wrongHarness.event('modeling-task')).id, copilotTask.id);
-  await request('POST', `/agents/${wrongHarness.id}/modeling-tasks/${copilotTask.id}/done`, { response: 'Reviewed.' }, 204);
-  await request('POST', `/modeling-tasks/${copilotTask.id}/messages`, { prompt: 'Continue.' }, 409);
-  await request('DELETE', `/agents/${wrongHarness.id}`, undefined, 204);
   const reconnected = await connect('Mozart', 'modeler');
   const resumed = await request('POST', messages, { prompt: 'Check the corner cases too.' }, 201);
   assert.equal((await reconnected.event('modeling-task')).turnId, resumed.turnId);

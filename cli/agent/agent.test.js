@@ -5,7 +5,6 @@ import path from 'node:path';
 import test from 'node:test';
 import { parseBuildResponse, runAgent } from './agent.js';
 import { claude } from './harnesses/claude.js';
-import { copilot } from './harnesses/copilot.js';
 
 test('Claude task sessions use task UUIDs and resume existing transcripts', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-claude-session-'));
@@ -150,17 +149,11 @@ test('build response maps success and failure to queue outcomes', () => {
   });
 });
 
-test('Copilot JSONL assistant deltas are parsed as the build response', () => {
-  const response = JSON.stringify({ success: false, response: 'Could not finish the slice.' });
-  const output = [
-    { type: 'assistant.message_delta', data: { deltaContent: response.slice(0, 20) } },
-    { type: 'assistant.message_delta', data: { deltaContent: response.slice(20) } },
-  ].map((record) => JSON.stringify(record)).join('\n');
-
-  assert.deepEqual(parseBuildResponse(copilot, output), {
-    status: 'failed',
-    error: 'Could not finish the slice.',
-  });
+test('agent rejects unsupported harnesses before connecting', async (t) => {
+  t.mock.method(globalThis, 'fetch', () => assert.fail('Unsupported harness must not connect'));
+  for (const harness of ['copilot', 'invalid']) {
+    await assert.rejects(runAgent({ harness }), /Harness must be claude/);
+  }
 });
 
 test('invalid build response is rejected instead of reported done', () => {

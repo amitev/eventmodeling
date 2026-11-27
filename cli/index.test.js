@@ -99,6 +99,16 @@ test('agent --type remains required and rejects invalid values and old flag', ()
   }
 });
 
+test('agent --harness rejects unsupported harnesses', () => {
+  for (const harness of ['copilot', 'invalid']) {
+    const result = spawnSync(process.execPath, [
+      entry, 'agent', '--model', 'test-model', '--type', 'modeler', '--harness', harness,
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /--harness must be claude/);
+  }
+});
+
 test('agent --type forwards modeler and builder as agentType', { timeout: 10000 }, async (t) => {
   const received = [];
   const server = http.createServer((req, res) => {
@@ -121,5 +131,6 @@ test('agent --type forwards modeler and builder as agentType', { timeout: 10000 
     assert.equal(code, 0, stderr);
   }
   assert.deepEqual(received.map((url) => url.searchParams.get('agentType')), ['modeler', 'builder']);
+  assert.ok(received.every((url) => url.searchParams.get('harness') === 'claude'));
   assert.ok(received.every((url) => url.pathname === '/api/agent/events' && url.searchParams.get('model') === 'test-model'));
 });

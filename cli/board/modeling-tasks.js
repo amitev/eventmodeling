@@ -52,7 +52,7 @@ function readTasks(file) {
   if (!Array.isArray(tasks) || tasks.some((task) =>
     !task || ['id', 'contextId', 'label', 'modeler'].some((key) => typeof task[key] !== 'string' || !task[key].trim()) ||
     !task.scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(task.scope.type) ||
-    !timestamp(task.createdAt) || ![null, 'claude', 'copilot'].includes(task.harness) ||
+    !timestamp(task.createdAt) || ![null, 'claude'].includes(task.harness) ||
     !Array.isArray(task.turns) || !task.turns.length || task.turns.some((turn, index) =>
       !validTurn(turn) || index < task.turns.length - 1 && !completed(turn)) ||
     new Set(task.turns.map((turn) => turn.id)).size !== task.turns.length
@@ -166,15 +166,13 @@ export function createModelingTasks(rootDir) {
     reply(id, prompt) {
       const task = find(id);
       if (!completed(current(task))) throw new HttpError(409, 'Wait for the current reply to finish');
-      if (task.harness === 'copilot') throw new HttpError(409, 'Copilot follow-ups are not supported yet');
       const updated = { ...task, harness: 'claude', turns: [...task.turns, newTurn(randomUUID(), prompt)] };
       commit(tasks.map((item) => item.id === id ? updated : item));
       return copy(updated);
     },
-    next(name, harness = 'claude') {
+    next(name) {
       if (running(name)) return null;
-      const task = tasks.filter((item) => current(item).status === 'queued' && same(item.modeler, name) &&
-        (!item.harness || item.harness === harness))
+      const task = tasks.filter((item) => current(item).status === 'queued' && same(item.modeler, name))
         .sort((a, b) => current(a).sequence - current(b).sequence)[0];
       if (!task) return null;
       current(task).status = 'running';

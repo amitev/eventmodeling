@@ -183,9 +183,6 @@ export function ModelingTaskComposer({ target, agents, onSend, onClose }) {
             <div className="modeling-task-empty">{agents === null ? 'Agents unavailable' : 'No modeling agent connected'}</div>
           )}
         </div>
-        {selected?.harness === 'copilot' && (
-          <div className="modeling-task-target">Copilot currently has file tools only; tasks requiring model API access will report failure.</div>
-        )}
         <div className="modeling-task-editor">
           <MarkdownEditor
             text={prompt} onChange={setPrompt} active={!sending}
@@ -220,10 +217,8 @@ function TaskConversation({ task, agents, onReply }) {
   const inFlight = useRef(false);
   const modeler = (agents ?? []).find((agent) => agent.agentType === 'modeler' &&
     agent.name.toLowerCase() === task.modeler.toLowerCase());
-  const blocked = task.harness === 'copilot' ? 'Copilot follow-ups are not supported yet.'
-    : active ? 'Wait for the current reply to finish.'
-      : !modeler ? `Connect modeler "${task.modeler}" to continue this conversation.`
-        : modeler.harness !== 'claude' ? 'The original modeler must use Claude for follow-ups.' : '';
+  const blocked = active ? 'Wait for the current reply to finish.'
+    : !modeler ? `Connect modeler "${task.modeler}" to continue this conversation.` : '';
   useEffect(() => {
     if (active) setOpen(true);
   }, [active]);
