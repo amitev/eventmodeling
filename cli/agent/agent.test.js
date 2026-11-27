@@ -7,6 +7,44 @@ import { parseBuildResponse, runAgent } from './agent.js';
 import { claude } from './harnesses/claude.js';
 import { copilot } from './harnesses/copilot.js';
 
+test('Claude task sessions use task UUIDs and resume existing transcripts', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-claude-session-'));
+  const originalConfig = process.env.CLAUDE_CONFIG_DIR;
+  t.after(async () => {
+    if (originalConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = originalConfig;
+    await fs.rm(root, { recursive: true, force: true });
+  });
+  process.env.CLAUDE_CONFIG_DIR = root;
+  const taskId = 'c0f8f807-96c6-4f0a-bcc5-ad8513983769';
+  const baseArgs = ['-p', 'Review', '--model', 'test-model', '--output-format', 'json'];
+  assert.deepEqual(await claude.args('test-model', 'Review', taskId), [...baseArgs, '--session-id', taskId]);
+  const directory = path.join(root, 'projects', 'stored-project');
+  await fs.mkdir(directory, { recursive: true });
+  await fs.writeFile(path.join(directory, `${taskId}.jsonl`), '');
+  assert.deepEqual(await claude.args('test-model', 'Review', taskId), [...baseArgs, '--resume', taskId]);
+  assert.deepEqual(await claude.args('test-model', 'Review'), baseArgs);
+  const otherId = '9952a499-20c7-4619-966e-b33b5489d1de';
+  assert.deepEqual(await claude.args('test-model', 'Review', otherId), [...baseArgs, '--session-id', otherId]);
+  await assert.rejects(claude.args('test-model', 'Review', '../invalid'), /must be a UUID/);
+});
+
+test('Claude session lookup errors are surfaced instead of starting a new conversation', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-claude-session-error-'));
+  const originalConfig = process.env.CLAUDE_CONFIG_DIR;
+  t.after(async () => {
+    if (originalConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = originalConfig;
+    await fs.rm(root, { recursive: true, force: true });
+  });
+  process.env.CLAUDE_CONFIG_DIR = root;
+  await fs.writeFile(path.join(root, 'projects'), 'not a directory');
+  await assert.rejects(
+    claude.args('test-model', 'Review', 'c0f8f807-96c6-4f0a-bcc5-ad8513983769'),
+    { code: 'ENOTDIR' },
+  );
+});
+
 test('modeling task temp directories are prepared and cleaned before reporting success or failure', { timeout: 15000 }, async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-agent-temp-'));
   const originalCwd = process.cwd();
@@ -55,7 +93,8 @@ test('modeling task temp directories are prepared and cleaned before reporting s
         }
         throw new Error(`Unexpected request: ${resource}`);
       });
-      t.mock.method(claude, 'args', (_model, prompt) => {
+      t.mock.method(claude, 'args', (_model, prompt, taskId) => {
+        assert.equal(taskId, 'task');
         const tempDir = prompt.match(/Temp files only in `([^`]+)`/)?.[1];
         assert.ok(tempDir);
         assert.equal(path.dirname(tempDir), tempRoot);

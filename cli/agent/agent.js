@@ -80,7 +80,8 @@ async function listenForAgentEvents(url, model, dialect, session, onConnected) {
         }
         if (event === 'run') {
           console.log('Running harness check.');
-          runHarness(dialect, model, 'What model are you', children).catch((error) => console.error(error.message));
+          runHarness(dialect, model, 'What model are you', children, undefined, connection.signal)
+            .catch((error) => console.error(error.message));
           continue;
         }
         const data = lines.find((line) => line.startsWith('data:'));
@@ -132,10 +133,12 @@ function logOutput(dialect, stdout) {
   }
 }
 
-function runHarness(dialect, model, prompt, children) {
+async function runHarness(dialect, model, prompt, children, taskId, signal) {
   if (verbosity >= 1) console.log(`${dialect.label} prompt: ${prompt}`);
+  const args = await dialect.args(model, prompt, taskId);
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
-    const child = spawn(dialect.command, dialect.args(model, prompt), {
+    const child = spawn(dialect.command, args, {
       cwd: process.cwd(),
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -254,7 +257,7 @@ async function buildSlice(url, agentId, task, dialect, model, children, signal) 
       .replaceAll('{contextId}', contextId)
       .replaceAll('{definitionPath}', definitionPath);
     
-    const output = await runHarness(dialect, model, prompt, children);
+    const output = await runHarness(dialect, model, prompt, children, id, signal);
     const buildResponse = parseBuildResponse(dialect, output);
     result = buildResponse.status;
     error = buildResponse.error;
@@ -327,7 +330,7 @@ async function modelTask(url, agentId, task, dialect, model, children, signal) {
     tempDir = await mkdtemp(path.join(tempRoot, 'modeling-'));
     signal.throwIfAborted();
     const prompt = modelingPrompt(template, new URL('/api/model', url).href, target, task.prompt, tempDir);
-    const output = await runHarness(dialect, model, prompt, children);
+    const output = await runHarness(dialect, model, prompt, children, task.id, signal);
     ({ status, response, cost, currency } = parseModelingResponse(dialect, output));
   } catch (e) {
     if (signal.aborted) return;

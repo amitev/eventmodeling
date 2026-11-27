@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
@@ -62,9 +63,37 @@ function parseResponse(stdout) {
   };
 }
 
+async function sessionArgs(taskId) {
+  if (taskId === undefined) return [];
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(taskId)) {
+    throw new Error('Claude task session ID must be a UUID');
+  }
+  const projects = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(homedir(), '.claude'), 'projects');
+  let directories;
+  try {
+    directories = await fs.promises.readdir(projects, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return ['--session-id', taskId];
+    throw error;
+  }
+  for (const directory of directories) {
+    if (!directory.isDirectory()) continue;
+    try {
+      const transcript = await fs.promises.stat(path.join(projects, directory.name, `${taskId}.jsonl`));
+      if (transcript.isFile()) return ['--resume', taskId];
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  return ['--session-id', taskId];
+}
+
 export const claude = {
   label: 'Claude',
   command: 'claude',
   parseResponse,
-  args: (model, prompt) => ['-p', prompt, '--model', model, '--output-format', 'json'],
+  args: async (model, prompt, taskId) => [
+    '-p', prompt, '--model', model, '--output-format', 'json',
+    ...await sessionArgs(taskId),
+  ],
 };
