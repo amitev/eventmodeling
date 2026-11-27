@@ -10,6 +10,7 @@ Use this URL and port instead of example ports in skills. Model access is API on
 - No `cd`. Temp files only in initial project's relative `.em/.tmp/`, never OS temp; create as needed, clean up only own files.
 - Read `model-navigation` before lookups; use scoped outline/search/Chapter/element endpoints, never whole-model downloads.
 - Standalone `curl` requests (`curl.exe` in Windows PowerShell), quoted URLs; no chains/pipelines with preparation or parsing. Check HTTP status/error body before parsing.
+- Read saved API responses with file-read tools; use narrower scoped API reads for oversized results. Do not run ad hoc scripts (e.g. `node -e`) merely to inspect, filter or summarize JSON. Keep prescribed bundled analysis scripts.
 
 Selected target (authoritative IDs):
 {scope}

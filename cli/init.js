@@ -21,7 +21,7 @@ function readManifest(file) {
   }
 }
 
-const IGNORED_FOLDERS = ['.em/.slices', '.em/.tmp'];
+const IGNORED_FOLDERS = ['.em/.slices', '.em/.tmp', '.em/.tasks'];
 
 function ignoreFolders(cwd) {
   const file = path.join(cwd, '.gitignore');

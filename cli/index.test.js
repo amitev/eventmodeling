@@ -18,12 +18,14 @@ test('init ignores temporary folders without overwriting or duplicating existing
   fs.mkdirSync(sourceDir);
   fs.writeFileSync(path.join(sourceDir, 'skill.txt'), 'test');
   const cases = [
-    [null, '.em/.slices\n.em/.tmp\n'],
-    ['# keep\n.em/.slices', '# keep\n.em/.slices\n.em/.tmp\n'],
-    ['/.em/.tmp/\n', '/.em/.tmp/\n.em/.slices\n'],
+    [null, '.em/.slices\n.em/.tmp\n.em/.tasks\n'],
+    ['# keep\n.em/.slices', '# keep\n.em/.slices\n.em/.tmp\n.em/.tasks\n'],
+    ['/.em/.tmp/\n', '/.em/.tmp/\n.em/.slices\n.em/.tasks\n'],
+    ['/.em/.tasks/\n', '/.em/.tasks/\n.em/.slices\n.em/.tmp\n'],
     ['/.em/\n', '/.em/\n'],
     ['.em/*\n', '.em/*\n'],
     ['.em/*\n!.em/.tmp/\n', '.em/*\n!.em/.tmp/\n.em/.tmp\n'],
+    ['.em/*\n!.em/.tasks/\n', '.em/*\n!.em/.tasks/\n.em/.tasks\n'],
   ];
   for (const [index, [initial, expected]] of cases.entries()) {
     const cwd = path.join(root, String(index));

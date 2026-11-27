@@ -10,8 +10,10 @@ import { modelingPrompt, parseModelingResponse } from '../agent/agent.js';
 import { claude } from '../agent/harnesses/claude.js';
 import { copilot } from '../agent/harnesses/copilot.js';
 
-test('modeling tasks serialize per modeler, retain feedback and resume after disconnect', () => {
-  const tasks = createModelingTasks();
+test('modeling tasks serialize per modeler, retain feedback and resume after disconnect', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-tasks-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const tasks = createModelingTasks(root);
   const input = { scope: { type: 'chapter', chapterId: 'c' }, contextId: 'ctx', label: 'Chapter', prompt: 'Review' };
   const first = tasks.add({ ...input, modeler: 'Mozart' });
   const second = tasks.add({ ...input, modeler: 'Mozart' });
@@ -24,11 +26,83 @@ test('modeling tasks serialize per modeler, retain feedback and resume after dis
   assert.equal(tasks.next('Mozart').id, first.id);
   tasks.finish(first.id, 'Mozart', 'Needs a decision', 'Needs a decision');
   assert.equal(tasks.next('Mozart').id, second.id);
-  assert.deepEqual(tasks.list().map(({ status }) => status), ['failed', 'running', 'running']);
-  assert.equal(tasks.list()[0].response, 'Needs a decision');
+  assert.deepEqual(tasks.list().map(({ id }) => id), [other.id, second.id, first.id]);
+  assert.deepEqual(tasks.list().map(({ status }) => status), ['running', 'running', 'failed']);
+  assert.equal(tasks.list()[2].response, 'Needs a decision');
   const snapshot = tasks.list();
   snapshot[0].scope.chapterId = 'mutated';
   assert.equal(tasks.list()[0].scope.chapterId, 'c');
+});
+
+test('modeling history retains the last 10 completions and all unfinished tasks across restart', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-history-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const tasks = createModelingTasks(root);
+  const input = {
+    scope: { type: 'chapter', chapterId: 'c' }, contextId: 'ctx',
+    label: 'Orders', prompt: 'Review the Chapter', modeler: 'Mozart',
+  };
+  const interrupted = tasks.add({ ...input, modeler: 'Haydn' });
+  tasks.next('Haydn');
+  const finished = [];
+  for (let index = 0; index < 12; index++) {
+    const task = tasks.add(input);
+    finished.push(task);
+    assert.equal(tasks.next('Mozart').id, task.id);
+    tasks.finish(task.id, 'Mozart', `Response ${index}`, index % 2 ? 'Needs input' : undefined, 0.125, 'USD');
+  }
+  // An old task finishing last must survive retention without moving above newer-created tasks.
+  tasks.finish(interrupted.id, 'Haydn', 'Finished late');
+  const running = tasks.add(input);
+  tasks.next('Mozart');
+  const queued = tasks.add(input);
+  const before = tasks.list();
+  assert.deepEqual(before.map(({ id }) => id), [
+    queued.id, running.id, ...finished.slice(3).reverse().map(({ id }) => id), interrupted.id,
+  ]);
+  assert.equal(before.filter(({ status }) => status === 'done' || status === 'failed').length, 10);
+  const stored = JSON.parse(await fs.readFile(path.join(root, '.em', '.tasks', 'modeling.json'), 'utf8'));
+  assert.deepEqual(stored.map(({ id }) => id), before.map(({ id }) => id));
+  assert.equal(stored[1].status, 'queued');
+  const restored = createModelingTasks(root);
+  assert.deepEqual(restored.list(), before.map((task) =>
+    task.status === 'running' ? { ...task, status: 'queued', startedAt: null } : task));
+  assert.equal(restored.next('Mozart').id, running.id);
+  assert.equal(restored.next('Mozart'), null);
+});
+
+test('modeling history write failures leave task state unchanged and allow retry', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-write-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const tasks = createModelingTasks(root);
+  const input = {
+    scope: { type: 'context', contextId: 'ctx' }, contextId: 'ctx',
+    label: 'Sales', prompt: 'Review', modeler: 'Mozart',
+  };
+  const task = tasks.add(input);
+  tasks.next('Mozart');
+  const before = tasks.list();
+  const file = path.join(root, '.em', '.tasks', 'modeling.json');
+  await fs.unlink(file);
+  await fs.mkdir(file);
+  assert.throws(() => tasks.finish(task.id, 'Mozart', 'Reviewed'));
+  assert.throws(() => tasks.add(input));
+  assert.deepEqual(tasks.list(), before);
+  assert.deepEqual(await fs.readdir(path.dirname(file)), ['modeling.json']);
+  await fs.rmdir(file);
+  tasks.finish(task.id, 'Mozart', 'Reviewed');
+  assert.equal(createModelingTasks(root).list()[0].response, 'Reviewed');
+});
+
+test('invalid saved modeling history fails explicitly', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'em-modeling-invalid-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const directory = path.join(root, '.em', '.tasks');
+  await fs.mkdir(directory, { recursive: true });
+  for (const content of ['[{"status":"done"}]', '{invalid']) {
+    await fs.writeFile(path.join(directory, 'modeling.json'), content);
+    assert.throws(() => createModelingTasks(root), /Invalid modeling task history/);
+  }
 });
 
 test('scope validation rejects stale Cells, moved elements and extra target IDs', () => {
@@ -150,8 +224,9 @@ test('modeling API routes only to selected modelers and expose queued history an
   await request('POST', `${endpoint}/done`, { response: 'Checked all slices.' }, 204);
   assert.equal((await modeler.event('modeling-task')).id, second.id);
   const history = await request('GET', '/modeling-tasks', undefined, 200);
-  assert.equal(history[0].response, 'Checked all slices.');
-  assert.equal(history[0].status, 'done');
+  assert.deepEqual(history.map(({ id }) => id), [separate.id, second.id, first.id]);
+  assert.equal(history[2].response, 'Checked all slices.');
+  assert.equal(history[2].status, 'done');
   await request('POST', `/agents/${modeler.id}/modeling-tasks/${second.id}/failed`, { response: 'Needs a decision.' }, 204);
   assert.equal((await request('GET', '/modeling-tasks', undefined, 200))[1].error, 'Needs a decision.');
   await request('POST', `/agents/${other.id}/modeling-tasks/${separate.id}/done`, { response: 'Reviewed the Chapter.' }, 204);
@@ -163,4 +238,18 @@ test('modeling API routes only to selected modelers and expose queued history an
   const contextTarget = await request('GET', `/agents/${other.id}/modeling-tasks/${contextTask.id}/scope`, undefined, 200);
   assert.deepEqual(contextTarget.scope, contextScope);
   assert.equal(contextTarget.label, 'Sales');
+  const restarted = createServer({ rootDir: root, publicDir: null });
+  try {
+    restarted.listen(0, '127.0.0.1');
+    await once(restarted, 'listening');
+    const response = await fetch(`http://127.0.0.1:${restarted.address().port}/api/modeling-tasks`);
+    assert.equal(response.status, 200);
+    const expected = (await request('GET', '/modeling-tasks', undefined, 200)).map((task) =>
+      task.status === 'running' ? { ...task, status: 'queued', startedAt: null } : task);
+    assert.deepEqual(await response.json(), expected);
+    assert.equal(expected[0].id, contextTask.id);
+  } finally {
+    restarted.closeAllConnections();
+    await new Promise((resolve) => restarted.close(resolve));
+  }
 });

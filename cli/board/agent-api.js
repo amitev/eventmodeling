@@ -6,11 +6,11 @@ import { createModelingTasks, resolveModelingScope } from './modeling-tasks.js';
 
 const COMPOSER_NAMES = ['Mozart', 'Haydn', 'Schubert', 'Strauss', 'Bruckner', 'Mahler'];
 
-export function agentApi(store) {
+export function agentApi(store, rootDir) {
   const router = express.Router();
   const sessions = new Map();
   const queue = createBuildQueue();
-  const modelingTasks = createModelingTasks();
+  const modelingTasks = createModelingTasks(rootDir);
 
   function liveSession(id) {
     const session = sessions.get(id);

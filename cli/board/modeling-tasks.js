@@ -1,5 +1,39 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { HttpError } from './http-error.js';
+
+const completed = (task) => task.status === 'done' || task.status === 'failed';
+const timestamp = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+
+function readTasks(file) {
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+  let tasks;
+  try {
+    tasks = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Invalid modeling task history: ${file}`, { cause: error });
+  }
+  if (!Array.isArray(tasks) || tasks.some((task) =>
+    !task || ['id', 'contextId', 'label', 'prompt', 'modeler'].some((key) => typeof task[key] !== 'string' || !task[key].trim()) ||
+    !task.scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(task.scope.type) ||
+    !['queued', 'running', 'done', 'failed'].includes(task.status) || !timestamp(task.createdAt) ||
+    (task.startedAt !== null && !timestamp(task.startedAt)) ||
+    (completed(task) ? !timestamp(task.completedAt) || typeof task.response !== 'string' : task.completedAt !== null) ||
+    (task.error !== null && typeof task.error !== 'string') ||
+    (task.cost !== null && (typeof task.cost !== 'number' || !Number.isFinite(task.cost) || task.cost < 0)) ||
+    (task.currency !== null && typeof task.currency !== 'string')
+  ) || new Set(tasks.map((task) => task.id)).size !== tasks.length) {
+    throw new Error(`Invalid modeling task history: ${file}`);
+  }
+  return tasks.map((task) => completed(task) ? task : { ...task, status: 'queued', startedAt: null });
+}
 
 export function resolveModelingScope(model, scope) {
   if (!scope || !['context', 'chapter', 'slice', 'cell', 'element'].includes(scope.type)) {
@@ -46,8 +80,23 @@ export function resolveModelingScope(model, scope) {
   return { scope: normalized, contextId: context.id, label };
 }
 
-export function createModelingTasks() {
-  const tasks = [];
+export function createModelingTasks(rootDir) {
+  const directory = path.join(rootDir, '.em', '.tasks');
+  const file = path.join(directory, 'modeling.json');
+  let tasks = readTasks(file);
+  const commit = (next) => {
+    fs.mkdirSync(directory, { recursive: true });
+    const temporary = path.join(directory, `.modeling-${randomUUID()}.tmp`);
+    try {
+      // Unfinished work restarts queued; dispatch and disconnect need no disk writes.
+      const stored = next.map((task) => completed(task) ? task : { ...task, status: 'queued', startedAt: null });
+      fs.writeFileSync(temporary, `${JSON.stringify(stored, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+      fs.renameSync(temporary, file);
+    } finally {
+      fs.rmSync(temporary, { force: true });
+    }
+    tasks = next;
+  };
   const same = (a, b) => a.toLowerCase() === b.toLowerCase();
   const copy = (task) => ({ ...task, scope: { ...task.scope } });
   const find = (id) => {
@@ -68,14 +117,15 @@ export function createModelingTasks() {
     add({ scope, contextId, label, prompt, modeler }) {
       const task = {
         id: randomUUID(), scope: { ...scope }, contextId, label, prompt, modeler,
+        createdAt: new Date().toISOString(),
         status: 'queued', response: null, error: null, startedAt: null, completedAt: null, cost: null, currency: null,
       };
-      tasks.push(task);
+      commit([task, ...tasks]);
       return copy(task);
     },
     next(name) {
       if (running(name)) return null;
-      const task = tasks.find((item) => item.status === 'queued' && same(item.modeler, name));
+      const task = tasks.findLast((item) => item.status === 'queued' && same(item.modeler, name));
       if (!task) return null;
       task.status = 'running';
       task.startedAt = new Date().toISOString();
@@ -83,10 +133,16 @@ export function createModelingTasks() {
     },
     assigned: (id, name) => copy(assigned(id, name)),
     finish(id, name, response, error, cost = null, currency = null) {
-      Object.assign(assigned(id, name), {
+      const finished = {
+        ...assigned(id, name),
         status: error === undefined ? 'done' : 'failed',
         response, error: error ?? null, cost, currency, completedAt: new Date().toISOString(),
-      });
+      };
+      const retained = new Set([finished, ...tasks.filter(completed)]
+        .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+        .slice(0, 10).map((task) => task.id));
+      commit(tasks.map((task) => task.id === id ? finished : task)
+        .filter((task) => !completed(task) || retained.has(task.id)));
     },
     release(name) {
       const task = running(name);

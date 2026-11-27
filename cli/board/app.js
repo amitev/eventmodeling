@@ -11,7 +11,7 @@ export const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url))
 export function createServer({ publicDir = PUBLIC_DIR, rootDir = process.cwd() } = {}) {
   const app = express();
   app.disable('x-powered-by');
-  app.use('/api', modelApi(new ModelStore(rootDir)));
+  app.use('/api', modelApi(new ModelStore(rootDir), rootDir));
   if (publicDir) {
     app.use(express.static(publicDir));
     app.use((req, res, next) => {

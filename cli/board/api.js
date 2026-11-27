@@ -20,11 +20,11 @@ function pushRevision(req) {
 
 // The board pushes the contexts, then every Context with its Chapters (spec/SERVER.md section 3). Agents
 // edit it in small steps (section 4).
-export function modelApi(store) {
+export function modelApi(store, rootDir) {
   const router = express.Router();
   router.use(express.json({ limit: '50mb' }));
 
-  router.use(agentApi(store));
+  router.use(agentApi(store, rootDir));
 
   router.get('/model', async (req, res) => {
     const { data, revision } = await store.pull();
